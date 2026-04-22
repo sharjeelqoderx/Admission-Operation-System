@@ -96,7 +96,7 @@ function ProfileContent() {
                                 Welcome to the next generation of admissions. Complete your basic profile now to unlock our Eligibility Engine and see exactly where you qualify to study.                            </Typography>
                         </div>
                         <div className="flex flex-col gap-3 w-full">
-                            <Button className="w-full uppercase" onClick={startProfile}>
+                            <Button className="w-full capitalize" onClick={startProfile}>
                                 Start Creating your Profile
                             </Button>
                             {/* <Button variant="ghost" className="hover:bg-transparent" onClick={skipProfile}>

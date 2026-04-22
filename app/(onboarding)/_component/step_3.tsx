@@ -64,19 +64,26 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
                             error={field.state.meta.errors?.[0]}
                             label="Do you have professional work experience?"
                         >
-                            <div className="flex flex-wrap gap-4 sm:gap-6 min-h-[50px] items-center">
-                                {(["yes", "no"] as const).map(opt => (
-                                    <label key={opt} className="flex items-center gap-2 cursor-pointer capitalize">
-                                        <input
-                                            type="radio"
-                                            value={opt}
-                                            checked={field.state.value === opt}
-                                            onChange={() => field.handleChange(opt)}
-                                            className="accent-brand-byzantine size-4"
-                                        />
-                                        {opt}
-                                    </label>
-                                ))}
+                            <div className="flex gap-3">
+                                {(["yes", "no"] as const).map((opt) => {
+                                    const isActive = field.state.value === opt
+
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={opt}
+                                            onClick={() => field.handleChange(opt)}
+                                            className={`
+                                flex-1 cursor-pointer capitalize px-4 py-2 rounded-md border text-sm font-medium transition
+                                ${isActive
+                                                    ? "bg-brand-byzantine text-white"
+                                                    : "bg-background hover:bg-muted border-border text-muted-foreground"}
+                            `}
+                                        >
+                                            {opt}
+                                        </button>
+                                    )
+                                })}
                             </div>
                         </F>
                     )}
@@ -132,16 +139,14 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
                                         error={field.state.meta.errors?.[0]}
                                         label="Industry / Sector"
                                     >
-                                        <Select value={field.state.value} onValueChange={field.handleChange}>
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select industry" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {INDUSTRIES.map(i => (
-                                                    <SelectItem key={i} value={i}>{i}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Input
+                                            id={field.name}
+                                            value={field.state.value}
+                                            onBlur={field.handleBlur}
+                                            onChange={(e) => field.handleChange(e.target.value)}
+                                            placeholder="e.g. Information Technology"
+                                            className="w-full"
+                                        />
                                     </F>
                                 )}
                             </form.Field>
@@ -153,16 +158,14 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
                                         error={field.state.meta.errors?.[0]}
                                         label="Country / Location"
                                     >
-                                        <Select value={field.state.value} onValueChange={field.handleChange}>
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Select country" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {COUNTRIES.map(c => (
-                                                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Input
+                                            id={field.name}
+                                            value={field.state.value}
+                                            onBlur={field.handleBlur}
+                                            onChange={(e) => field.handleChange(e.target.value)}
+                                            placeholder="e.g. Pakistan"
+                                            className="w-full"
+                                        />
                                     </F>
                                 )}
                             </form.Field>
@@ -212,7 +215,7 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
                                                 onChange={e => field.handleChange(e.target.value)}
                                                 placeholder="Describe your key responsibilities..."
                                                 rows={4}
-                                                className="w-full rounded-none border border-input bg-brand-input px-2.5 py-3 text-sm outline-none focus:ring-3 focus:ring-ring/50 resize-none placeholder:text-muted-foreground"
+                                                className="w-full rounded-none border border-input bg-brand-input px-2.5 py-3 text-sm outline-none resize-none placeholder:text-muted-foreground"
                                             />
                                         </F>
                                     </div>
@@ -244,7 +247,7 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
 
                 <Button
                     type="submit"
-                    className="flex-1 min-w-40 uppercase"
+                    className="flex-1 min-w-40 capitalize"
                     disabled={saveExperience.isPending}
                 >
                     {saveExperience.isPending ? "Saving..." : "Submit"}

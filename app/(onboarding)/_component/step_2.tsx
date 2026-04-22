@@ -3,7 +3,7 @@
 import { useForm } from "@tanstack/react-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Typography } from "@/components/shared/Typography"
 import { degreeStep2Schema } from "@/types/schemas/auth"
 import { F, DEGREES, ENGLISH_TESTS, CAMPUSES } from "./_shared"
@@ -37,22 +37,17 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
                             error={field.state.meta.errors?.[0]}
                             label="Highest Degree"
                         >
-                            <Select value={field.state.value} onValueChange={field.handleChange}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select degree" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {DEGREES.map((d) => (
-                                        <SelectItem key={d} value={d}>
-                                            {d}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Input
+                                id={field.name}
+                                value={field.state.value}
+                                onBlur={field.handleBlur}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="e.g. Bachelor's in Computer Science"
+                                className="w-full"
+                            />
                         </F>
                     )}
                 </form.Field>
-
                 <form.Field name="instituteName">
                     {(field) => (
                         <F
@@ -91,7 +86,7 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
                     )}
                 </form.Field>
 
-                <form.Field name="desiredProgram">
+                {/* <form.Field name="desiredProgram">
                     {(field) => (
                         <F
                             isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
@@ -154,7 +149,7 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
                             </Select>
                         </F>
                     )}
-                </form.Field>
+                </form.Field> */}
 
                 <form.Field name="about">
                     {(field) => (
@@ -171,7 +166,7 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
                                     onChange={(e) => field.handleChange(e.target.value)}
                                     placeholder="Tell us about your plans..."
                                     rows={4}
-                                    className="w-full rounded-none border border-input bg-brand-input px-2.5 py-3 text-sm outline-none focus:ring-3 focus:ring-ring/50 resize-none placeholder:text-muted-foreground"
+                                    className="w-full rounded-none border border-input bg-brand-input px-2.5 py-3 text-sm outline-none resize-none placeholder:text-muted-foreground"
                                 />
                             </F>
                         </div>
@@ -197,7 +192,7 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
 
                 <Button
                     type="submit"
-                    className="flex-1 min-w-40 uppercase"
+                    className="flex-1 min-w-40 capitalize"
                     disabled={saveAcademic.isPending}
                 >
                     {saveAcademic.isPending ? "Saving..." : "Continue"}
@@ -217,9 +212,9 @@ export function Step2Academic({ onBack, onNext, onSkip }: { onBack: () => void; 
         highestDegree: me?.academic?.highestDegree ?? "",
         instituteName: me?.academic?.instituteName ?? "",
         gpa: me?.academic?.gpa ?? "",
-        desiredProgram: me?.academic?.desiredProgram ?? "",
-        campus: me?.academic?.campus ?? "",
-        englishTest: me?.academic?.englishTest ?? "",
+        desiredProgram: "Invoked", // me?.academic?.desiredProgram ??
+        campus: "Invoked", // me?.academic?.campus ?? 
+        englishTest: "Invoked", // me?.academic?.englishTest ?? 
         about: me?.academic?.about ?? "",
     }
 

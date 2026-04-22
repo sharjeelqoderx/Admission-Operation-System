@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
-import { Mail } from "lucide-react"
+import { Mail, Eye, EyeOff } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -51,6 +51,7 @@ function CheckEmailScreen({ email, role }: { email: string, role: string }) {
 export function SignupForm() {
     const router = useRouter()
     const searchParams = useSearchParams()
+    const [showPassword, setShowPassword] = useState(false)
     const role = searchParams.get("role") ?? "student"
     const normalizedRole = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
     const submittedEmail = searchParams.get("email") ?? ""
@@ -110,7 +111,7 @@ export function SignupForm() {
                                     return (
                                         <Field data-invalid={isInvalid}>
                                             <FieldLabel htmlFor={field.name}>Full Name</FieldLabel>
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="John Doe" aria-invalid={isInvalid} />
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your name" aria-invalid={isInvalid} />
                                             {isInvalid && error && <FieldError errors={[error]} />}
                                         </Field>
                                     )
@@ -124,7 +125,7 @@ export function SignupForm() {
                                     return (
                                         <Field data-invalid={isInvalid}>
                                             <FieldLabel htmlFor={field.name}>Email</FieldLabel>
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="you@example.com" aria-invalid={isInvalid} />
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your email" aria-invalid={isInvalid} />
                                             {isInvalid && error && <FieldError errors={[error]} />}
                                         </Field>
                                     )
@@ -142,7 +143,7 @@ export function SignupForm() {
                                                 id={field.name} type="number" value={field.state.value}
                                                 onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)}
                                                 onKeyDown={(e) => { if (["e", "E", "+", "-", ".", "ArrowUp", "ArrowDown"].includes(e.key)) e.preventDefault() }}
-                                                placeholder="+1234567890" aria-invalid={isInvalid}
+                                                placeholder="Enter your phone number" aria-invalid={isInvalid}
                                                 className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                             />
                                             {isInvalid && error && <FieldError errors={[error]} />}
@@ -155,10 +156,32 @@ export function SignupForm() {
                                 {(field) => {
                                     const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
                                     const error = field.state.meta.errors?.[0]
+
                                     return (
                                         <Field data-invalid={isInvalid}>
                                             <FieldLabel htmlFor={field.name}>Password</FieldLabel>
-                                            <Input type="password" id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="••••••••" aria-invalid={isInvalid} />
+
+                                            <div className="relative">
+                                                <Input
+                                                    type={showPassword ? "text" : "password"}
+                                                    id={field.name}
+                                                    value={field.state.value}
+                                                    onBlur={field.handleBlur}
+                                                    onChange={(e) => field.handleChange(e.target.value)}
+                                                    placeholder="••••••••"
+                                                    aria-invalid={isInvalid}
+                                                    className="pr-10"
+                                                />
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword((prev) => !prev)}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                                >
+                                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                </button>
+                                            </div>
+
                                             {isInvalid && error && <FieldError errors={[error]} />}
                                         </Field>
                                     )
@@ -175,7 +198,7 @@ export function SignupForm() {
 
                     <form.Subscribe selector={(s) => s.isSubmitting}>
                         {(isSubmitting) => (
-                            <Button type="submit" form="signup-form" className="w-full uppercase" disabled={isSubmitting || signup.isPending}>
+                            <Button type="submit" form="signup-form" className="w-full capitalize" disabled={isSubmitting || signup.isPending}>
                                 {signup.isPending ? "Creating account..." : "Create Account"}
                             </Button>
                         )}

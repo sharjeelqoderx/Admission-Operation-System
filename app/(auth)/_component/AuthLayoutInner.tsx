@@ -14,18 +14,19 @@ export function AuthLayoutInner({ children }: { children: React.ReactNode }) {
             <div className="flex">
                 {!noSidebar && (
                     <aside className={cn(
-                        "hidden lg:flex flex-col shrink-0 sticky top-0 h-screen overflow-hidden",
+                        "hidden lg:flex flex-col sticky top-0 h-screen overflow-hidden",
                         "transition-all duration-500 ease-in-out",
-                        "md:w-[420px] lg:w-[480px] xl:w-[655px]"
+                        "lg:w-1/2"
                     )}>
                         <AuthSidebarWrapper />
                     </aside>
                 )}
-                <main className="flex-1 size-full min-h-screen">
+
+                <main className="lg:p-4 w-full lg:w-1/2 min-w-0 min-h-screen">
                     {children}
                 </main>
             </div>
-            <AuthFooter />
+            {/* <AuthFooter /> */}
         </div>
     )
 }

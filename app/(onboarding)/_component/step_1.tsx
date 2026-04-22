@@ -10,6 +10,7 @@ import { DragDropCard, UploadedFile } from "@/components/shared/drag-drop-card"
 import { Typography } from "@/components/shared/Typography"
 import { F, DatePicker, COUNTRIES, GENDERS } from "./_shared"
 import { useProfile, useMe } from "@/lib/hooks/useAuth"
+import { UserPlus } from "lucide-react"
 
 // Passport is optional on this step — user may already have uploaded it
 const step1Schema = z.object({
@@ -37,7 +38,7 @@ function Step1Form({ defaultValues, onNext, onSkip }: {
             dob: defaultValues.dob,
             gender: defaultValues.gender,
             country: defaultValues.country,
-            nationality: defaultValues.nationality,
+            nationality: 'revoked', // defaultValues.nationality,
             guardianEmail: defaultValues.guardianEmail,
             guardianPhone: defaultValues.guardianPhone,
             passport: null as File | null,
@@ -62,7 +63,50 @@ function Step1Form({ defaultValues, onNext, onSkip }: {
         <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <form.Field name="passport">
+                    {(field) => (
+                        <div className="flex flex-col items-center mb-6">
+                            <div className="relative">
+                                <div className="size-24 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                                    {field.state.value ? (
+                                        <img
+                                            src={URL.createObjectURL(field.state.value)}
+                                            alt="Profile"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <span className="text-xs text-muted-foreground">No Image</span>
+                                    )}
+                                </div>
 
+                                <label className="absolute bottom-0 right-0 bg-brand text-white p-2 rounded-full cursor-pointer hover:bg-brand/90">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0]
+                                            if (!file) return
+
+                                            // validation
+                                            if (file.size > 5 * 1024 * 1024) {
+                                                alert("Max file size is 5MB")
+                                                return
+                                            }
+
+                                            field.handleChange(file) // ✅ store in form
+                                        }}
+                                    />
+                                    <UserPlus size={14}/>
+                                </label>
+                            </div>
+
+                            <p className="text-xs text-muted-foreground mt-2">
+                                Upload profile picture
+                            </p>
+                        </div>
+                    )}
+                </form.Field>
                 <form.Field name="dob">
                     {(field) => (
                         <F
@@ -87,7 +131,7 @@ function Step1Form({ defaultValues, onNext, onSkip }: {
                         >
                             <Select value={field.state.value} onValueChange={field.handleChange}>
                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select gender" />
+                                    <SelectValue className="capitalize" placeholder="Select gender" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {GENDERS.map((g) => (
@@ -108,23 +152,19 @@ function Step1Form({ defaultValues, onNext, onSkip }: {
                             error={field.state.meta.errors?.[0]}
                             label="Country"
                         >
-                            <Select value={field.state.value} onValueChange={field.handleChange}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select country" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {COUNTRIES.map((c) => (
-                                        <SelectItem key={c} value={c}>
-                                            {c}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Input
+                                id={field.name}
+                                value={field.state.value}
+                                onBlur={field.handleBlur}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="Enter your country"
+                                className="w-full"
+                            />
                         </F>
                     )}
                 </form.Field>
 
-                <form.Field name="nationality">
+                {/* <form.Field name="nationality">
                     {(field) => (
                         <F
                             isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
@@ -141,7 +181,7 @@ function Step1Form({ defaultValues, onNext, onSkip }: {
                             />
                         </F>
                     )}
-                </form.Field>
+                </form.Field> */}
 
                 <form.Field name="guardianEmail">
                     {(field) => (
@@ -155,7 +195,7 @@ function Step1Form({ defaultValues, onNext, onSkip }: {
                                 value={field.state.value}
                                 onBlur={field.handleBlur}
                                 onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="guardian@example.com"
+                                placeholder="Enter your guardian email"
                                 className="w-full"
                             />
                         </F>
@@ -180,14 +220,14 @@ function Step1Form({ defaultValues, onNext, onSkip }: {
                                         e.preventDefault()
                                     }
                                 }}
-                                placeholder="+1234567890"
+                                placeholder="Enter you guardian phone number"
                                 className="w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                         </F>
                     )}
                 </form.Field>
 
-                <form.Field name="passport">
+                {/* <form.Field name="passport">
                     {(field) => (
                         <div className="sm:col-span-2">
                             <F
@@ -210,7 +250,7 @@ function Step1Form({ defaultValues, onNext, onSkip }: {
                             </F>
                         </div>
                     )}
-                </form.Field>
+                </form.Field> */}
 
             </div>
 
@@ -227,7 +267,7 @@ function Step1Form({ defaultValues, onNext, onSkip }: {
             <div className="flex gap-3 mt-8">
                 <Button
                     type="submit"
-                    className="flex-1 uppercase"
+                    className="flex-1 capitalize"
                     disabled={updateProfile.isPending}
                 >
                     {updateProfile.isPending ? "Saving..." : "Continue"}

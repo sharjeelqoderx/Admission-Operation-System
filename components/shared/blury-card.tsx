@@ -61,7 +61,7 @@ export const BluryCard = ({
 
             <div
                 className={cn(
-                    "relative z-10 h-full w-full p-8",
+                    "relative z-10 h-full w-full p-4 md:p-8",
                     isCentered
                         ? "flex flex-col items-center justify-center text-center"
                         : "block"

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { loginSchema } from "@/types/schemas/auth"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Typography } from "@/components/shared/Typography"
-import { Checkbox } from "@/components/ui/checkbox"
+// import { Checkbox } from "@/components/ui/checkbox"
 import { useLogin } from "@/lib/hooks/useAuth"
 
 export function LoginForm() {
@@ -64,7 +64,7 @@ export function LoginForm() {
                                                 id={field.name} value={field.state.value}
                                                 onBlur={field.handleBlur}
                                                 onChange={(e) => { field.handleChange(e.target.value); setApiError("") }}
-                                                placeholder="you@example.com" aria-invalid={isInvalid}
+                                                placeholder="Enter your email" aria-invalid={isInvalid}
                                             />
                                             {isInvalid && error && <FieldError errors={[error]} />}
                                         </Field>
@@ -91,7 +91,7 @@ export function LoginForm() {
                                 }}
                             </form.Field>
 
-                            <form.Field name="isRemember">
+                            {/* <form.Field name="isRemember">
                                 {(field) => (
                                     <Field orientation="horizontal" className="items-center gap-2">
                                         <Checkbox
@@ -102,19 +102,19 @@ export function LoginForm() {
                                         <FieldLabel htmlFor="remember" className="text-[18px]">Remember me</FieldLabel>
                                     </Field>
                                 )}
-                            </form.Field>
+                            </form.Field> */}
                         </FieldGroup>
                     </form>
 
                     {apiError && (
-                        <Typography as="p" font="text" className="text-destructive text-sm">
+                        <Typography as="p" font="text" className="text-destructive text-sm capitalize">
                             {apiError}
                         </Typography>
                     )}
 
                     <form.Subscribe selector={(s) => s.isSubmitting}>
                         {(isSubmitting) => (
-                            <Button type="submit" form="login-form" className="w-full uppercase" disabled={isSubmitting || login.isPending}>
+                            <Button type="submit" form="login-form" className="w-full capitalize" disabled={isSubmitting || login.isPending}>
                                 {login.isPending ? "Signing in..." : "Login"}
                             </Button>
                         )}

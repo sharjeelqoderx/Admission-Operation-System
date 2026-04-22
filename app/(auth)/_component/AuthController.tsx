@@ -35,7 +35,7 @@ export const AuthController = ({ mode, role }: Props) => {
 
 function SizeControll({ children }: { children: React.ReactNode }) {
     return (
-        <div className="size-full min-h-screen flex-center">
+        <div className="p-4 sm:p-0 size-full min-h-screen flex-center">
             {children}
         </div>
     )
