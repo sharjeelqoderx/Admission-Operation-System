@@ -48,6 +48,12 @@ export async function POST(req: NextRequest) {
 
     if (!authData.user) return err("Signup failed", 500)
 
+    // Supabase returns a fake user when email already exists (security)
+    // Detect this: identities array is empty for existing unconfirmed users
+    if (authData.user.identities && authData.user.identities.length === 0) {
+        return err("Email already in use", 409)
+    }
+
     // Create initial profile row (unverified)
     const { error: profileError } = await supabase
         .from("profiles")
@@ -60,7 +66,11 @@ export async function POST(req: NextRequest) {
             is_verified: false,
         })
 
-    if (profileError) return err(profileError.message, 500)
+    if (profileError) {
+        if (profileError.code === "23503" || profileError.message.includes("foreign key"))
+            return err("Email already in use", 409)
+        return err(profileError.message, 500)
+    }
 
     return ok({ message: "Verification email sent. Please check your inbox." }, 201)
 }

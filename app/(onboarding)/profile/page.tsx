@@ -16,6 +16,8 @@ import { AgentStep1 } from "../_component/agent_step_1"
 import { AgentStep2 } from "../_component/agent_step_2"
 import { AgentStep3 } from "../_component/agent_step_3"
 
+import { useMe } from "@/lib/hooks/useAuth"
+
 type Screen = "success" | "step1" | "step2" | "step3"
 
 const STUDENT_STEPS = [{ key: "step1", label: "Basic" }, { key: "step2", label: "Academic" }, { key: "step3", label: "Experience" }] as const
@@ -50,7 +52,11 @@ function Stepper({ screen, isAgent }: { screen: Screen; isAgent: boolean }) {
 function ProfileContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const role = searchParams.get("role") ?? "Student"
+    const { data: me } = useMe()
+
+    // Role from DB is source of truth, URL param is fallback while loading
+    const roleParam = searchParams.get("role") ?? "Student"
+    const role = me?.role ?? roleParam
     const isAgent = role.toLowerCase() === "agent"
 
     const screenParam = (searchParams.get("screen") ?? "success") as Screen
