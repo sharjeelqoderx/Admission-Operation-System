@@ -26,7 +26,7 @@ export function AgentStep1({ onNext, onSkip }: { onNext: () => void; onSkip: () 
                 <form.Field name="website">{(field) => (<div className="col-span-2"><F isInvalid={field.state.meta.isTouched && !field.state.meta.isValid} error={field.state.meta.errors?.[0]} label="Website (optional)"><Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="https://youragency.com" /></F></div>)}</form.Field>
             </div>
             <div className="flex gap-3 mt-8">
-                <Button type="button" variant="ghost" className="flex-1 hover:bg-transparent" onClick={onSkip}>Skip for now</Button>
+                {/* <Button type="button" variant="ghost" className="flex-1 hover:bg-transparent" onClick={onSkip}>Skip for now</Button> */}
                 <Button type="submit" form="agent-step1-form" className="flex-1 uppercase">Continue</Button>
             </div>
         </form>

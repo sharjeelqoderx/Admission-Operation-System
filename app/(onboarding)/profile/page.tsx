@@ -99,9 +99,9 @@ function ProfileContent() {
                             <Button className="w-full uppercase" onClick={startProfile}>
                                 Start Creating your Profile
                             </Button>
-                            <Button variant="ghost" className="hover:bg-transparent" onClick={skipProfile}>
+                            {/* <Button variant="ghost" className="hover:bg-transparent" onClick={skipProfile}>
                                 Skip for now
-                            </Button>
+                            </Button> */}
                         </div>
                     </div>
                 </BluryCard>
