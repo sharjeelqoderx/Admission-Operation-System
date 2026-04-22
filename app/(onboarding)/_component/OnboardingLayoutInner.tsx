@@ -21,7 +21,9 @@ export function OnboardingLayoutInner({ children }: { children: React.ReactNode 
                     </aside>
                 )}
 
-                <main className="lg:p-4 w-full lg:w-1/2 min-w-0 min-h-screen">
+                <main className={cn("lg:p-4 w-full min-w-0 min-h-screen",
+                    !noSidebar ? 'lg:w-1/2' : ''
+                )}>
                     {children}
                 </main>
             </div>
