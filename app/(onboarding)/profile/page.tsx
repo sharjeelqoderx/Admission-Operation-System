@@ -111,7 +111,7 @@ function ProfileContent() {
 
     // Profile steps — rendered inside scrollable main
     return (
-        <div className="flex items-start justify-center min-h-screen p-6">
+        <div className="flex items-center justify-center h-full p-6">
             <BluryCard
                 isCentered={false}
                 blurAmount="backdrop-blur-2xl"

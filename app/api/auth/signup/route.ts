@@ -26,7 +26,9 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createSupabaseServerClient()
 
-    const origin = req.headers.get("origin") ?? "http://localhost:3000"
+    const origin = req.headers.get("origin")
+        ?? process.env.NEXT_PUBLIC_APP_URL
+        ?? "http://localhost:3000"
 
     // signUp — Supabase sends confirmation email with link to /auth/callback
     const { data: authData, error: authError } = await supabase.auth.signUp({
