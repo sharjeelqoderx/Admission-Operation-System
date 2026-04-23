@@ -241,7 +241,7 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
                                                 onChange={e => field.handleChange(e.target.value)}
                                                 placeholder="Describe your key responsibilities..."
                                                 rows={4}
-                                                className="w-full rounded-none border border-input bg-brand-input px-2.5 py-3 text-sm outline-none resize-none placeholder:text-muted-foreground"
+                                                className="w-full rounded-sm border border-input bg-brand-input px-2.5 py-3 text-sm outline-none resize-none placeholder:text-muted-foreground"
                                             />
                                         </F>
                                     </div>
