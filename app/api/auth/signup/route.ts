@@ -54,17 +54,17 @@ export async function POST(req: NextRequest) {
         return err("Email already in use", 409)
     }
 
-    // Create initial profile row (unverified)
+    // Create or update initial profile row (unverified)
     const { error: profileError } = await supabase
         .from("profiles")
-        .insert({
+        .upsert({
             user_id: authData.user.id,
             email,
             full_name: fullName,
             phone,
             role,
             is_verified: false,
-        })
+        }, { onConflict: "user_id" })
 
     if (profileError) {
         if (profileError.code === "23503" || profileError.message.includes("foreign key"))
