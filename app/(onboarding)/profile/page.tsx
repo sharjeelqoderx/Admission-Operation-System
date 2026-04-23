@@ -21,11 +21,11 @@ import { useMe } from "@/lib/hooks/useAuth"
 type Screen = "success" | "step1" | "step2" | "step3"
 
 const STUDENT_STEPS = [{ key: "step1", label: "Basic" }, { key: "step2", label: "Academic" }, { key: "step3", label: "Experience" }] as const
-const AGENT_STEPS = [{ key: "step1", label: "Agency" }, { key: "step2", label: "Contact" }, { key: "step3", label: "Business" }] as const
+const AGENT_STEPS   = [{ key: "step1", label: "Profile" }, { key: "step2", label: "KYC" }, { key: "step3", label: "Contact" }] as const
 const STEP_INDEX: Record<Screen, number> = { success: -1, step1: 0, step2: 1, step3: 2 }
 
 const STUDENT_META: Record<Screen, string> = { success: "", step1: "Basic Information", step2: "Academic Background", step3: "Work Experience" }
-const AGENT_META: Record<Screen, string> = { success: "", step1: "Agency Information", step2: "Contact & Representative", step3: "Business Details" }
+const AGENT_META: Record<Screen, string> = { success: "", step1: "Agent Profile", step2: "KYC / Verification", step3: "Contact" }
 
 function Stepper({ screen, isAgent }: { screen: Screen; isAgent: boolean }) {
     const current = STEP_INDEX[screen]
