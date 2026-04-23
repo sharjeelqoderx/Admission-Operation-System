@@ -2,13 +2,35 @@
 
 import { useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
+import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Typography } from "@/components/shared/Typography"
-import { workExperienceSchema } from "@/types/schemas/auth"
 import { F, DatePicker, COUNTRIES, INDUSTRIES } from "./_shared"
 import { useExperience, useMe } from "@/lib/hooks/useAuth"
+
+// Local schema — academicGap is fully optional (string, no default)
+const schema = z.object({
+    academicGap: z.string().trim().regex(/^\d*$/, "Must be a number").refine(v => v === "" || (Number(v) >= 0 && Number(v) <= 50), "Must be between 0 and 50"),
+    hasExperience: z.enum(["yes", "no"], { message: "Please select an option" }),
+    jobTitle: z.string(),
+    organization: z.string(),
+    industry: z.string(),
+    country: z.string(),
+    startDate: z.string(),
+    endDate: z.string(),
+    responsibilities: z.string(),
+}).superRefine((data, ctx) => {
+    if (data.hasExperience === "yes") {
+        if (!data.jobTitle?.trim()) ctx.addIssue({ path: ["jobTitle"], code: "custom", message: "Job title is required" })
+        if (!data.organization?.trim()) ctx.addIssue({ path: ["organization"], code: "custom", message: "Organization is required" })
+        if (!data.industry?.trim()) ctx.addIssue({ path: ["industry"], code: "custom", message: "Industry is required" })
+        if (!data.country?.trim()) ctx.addIssue({ path: ["country"], code: "custom", message: "Country is required" })
+        if (!data.startDate?.trim()) ctx.addIssue({ path: ["startDate"], code: "custom", message: "Start date is required" })
+        if (!data.endDate?.trim()) ctx.addIssue({ path: ["endDate"], code: "custom", message: "End date is required" })
+        if (!data.responsibilities?.trim()) ctx.addIssue({ path: ["responsibilities"], code: "custom", message: "Responsibilities are required" })
+    }
+})
 
 type Defaults = { academicGap: string; hasExperience: "yes" | "no"; jobTitle: string; organization: string; industry: string; country: string; startDate: string; endDate: string; responsibilities: string }
 
@@ -19,7 +41,7 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
 
     const form = useForm({
         defaultValues,
-        validators: { onSubmit: workExperienceSchema },
+        validators: { onSubmit: schema },
         onSubmit: async ({ value }) => {
             if (!me?.id) return
             await saveExperience.mutateAsync({ userId: me.id, academicGap: Number(value.academicGap), hasExperience: value.hasExperience, name: value.jobTitle, organization: value.organization, industry: value.industry, country: value.country, startDate: value.startDate, endDate: value.endDate, responsibility: value.responsibilities })
@@ -35,57 +57,61 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
                 {/* Academic Gap */}
                 <form.Field name="academicGap">
                     {(field) => (
-                        <F
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                            label="Academic Gap (in years)"
-                        >
-                            <Input
-                                id={field.name}
-                                type="number"
-                                value={field.state.value}
-                                onBlur={field.handleBlur}
-                                onChange={e => field.handleChange(e.target.value)}
-                                onKeyDown={e => {
-                                    if (["e", "E", "+", "-", ".", "ArrowUp", "ArrowDown"].includes(e.key)) e.preventDefault()
-                                }}
-                                placeholder="e.g. 1"
-                                className="w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                        </F>
+                        <div className="sm:col-span-2">
+                            <F
+                                isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                                error={field.state.meta.errors?.[0]}
+                                label="Academic Gap (in years)"
+                            >
+                                <Input
+                                    id={field.name}
+                                    type="number"
+                                    value={field.state.value}
+                                    onBlur={field.handleBlur}
+                                    onChange={e => field.handleChange(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (["e", "E", "+", "-", ".", "ArrowUp", "ArrowDown"].includes(e.key)) e.preventDefault()
+                                    }}
+                                    placeholder="e.g. 1"
+                                    className="w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                            </F>
+                        </div>
                     )}
                 </form.Field>
 
                 {/* Experience Yes/No */}
                 <form.Field name="hasExperience">
                     {(field) => (
-                        <F
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                            label="Do you have professional work experience?"
-                        >
-                            <div className="flex gap-3">
-                                {(["yes", "no"] as const).map((opt) => {
-                                    const isActive = field.state.value === opt
+                        <div className="sm:col-span-2">
+                            <F
+                                isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                                error={field.state.meta.errors?.[0]}
+                                label="Do you have professional work experience?"
+                            >
+                                <div className="flex gap-3">
+                                    {(["yes", "no"] as const).map((opt) => {
+                                        const isActive = field.state.value === opt
 
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={opt}
-                                            onClick={() => field.handleChange(opt)}
-                                            className={`
-                                flex-1 cursor-pointer capitalize px-4 py-2 rounded-md border text-sm font-medium transition
-                                ${isActive
-                                                    ? "bg-brand-byzantine text-white"
-                                                    : "bg-background hover:bg-muted border-border text-muted-foreground"}
-                            `}
-                                        >
-                                            {opt}
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        </F>
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={opt}
+                                                onClick={() => field.handleChange(opt)}
+                                                className={`
+                  flex-1 cursor-pointer capitalize px-4 py-2 rounded-md border text-sm font-medium transition
+                  ${isActive
+                                                        ? "bg-brand-byzantine text-white"
+                                                        : "bg-background hover:bg-muted border-border text-muted-foreground"}
+                `}
+                                            >
+                                                {opt}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </F>
+                        </div>
                     )}
                 </form.Field>
 

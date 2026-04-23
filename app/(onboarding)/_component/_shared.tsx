@@ -32,7 +32,7 @@ export function DatePicker({ value, onChange }: { value: string; onChange: (val:
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" className="h-[50px] w-full rounded-none border border-input bg-brand-input px-2.5 justify-start font-normal hover:bg-brand-input">
+                <Button variant="outline" className="h-[50px] w-full rounded-sm border border-input bg-brand-input px-2.5 justify-start font-normal hover:bg-brand-input">
                     <CalendarIcon className="mr-2 size-4 opacity-50" />
                     {parsed ? format(parsed, "PPP") : <span className="text-muted-foreground">Pick a date</span>}
                 </Button>

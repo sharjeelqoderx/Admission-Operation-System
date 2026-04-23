@@ -5,7 +5,7 @@ import { ok, err } from "@/lib/api"
 
 const schema = z.object({
     userId: z.string().uuid(),
-    academicGap: z.number().min(0).max(50),
+    academicGap: z.number().min(0).max(50).optional(),
     hasExperience: z.enum(["yes", "no"]),
     name: z.string().optional(),
     organization: z.string().optional(),

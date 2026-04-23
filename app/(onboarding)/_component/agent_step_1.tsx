@@ -12,7 +12,7 @@ const schema = z.object({
     contactPersonName: z.string().trim().min(2, "Contact person name is required"),
     gender: z.enum(["male", "female", "other"], { message: "Select gender" }),
     primaryBaseCountry: z.string().trim().min(2, "Country is required"),
-    website: z.string().url("Enter a valid URL").or(z.literal("")),
+    website: z.string().trim().refine(v => v === "" || v.includes("."), "Enter a valid URL").or(z.literal("")),
 })
 
 export function AgentStep1({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {

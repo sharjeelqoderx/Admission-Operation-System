@@ -81,7 +81,7 @@ export const agentStep1Schema = z.object({
         .refine(v => Number(v) >= 1900 && Number(v) <= new Date().getFullYear(), "Invalid year"),
     country: z.string().min(1, "Select country"),
     city: z.string().trim().min(1, "City is required"),
-    website: z.string().url("Enter a valid URL").or(z.literal("")),
+    website: z.string().trim().refine(v => v === "" || v.includes("."), "Enter a valid URL").or(z.literal("")),
 })
 
 /* =========================
@@ -130,9 +130,9 @@ export const workExperienceSchema = z.object({
     academicGap: z
         .string()
         .trim()
-        .min(1, "Academic gap is required")
-        .regex(/^\d+$/, "Must be a number")
-        .refine(v => Number(v) >= 0 && Number(v) <= 50, "Must be between 0 and 50"),
+        .regex(/^\d*$/, "Must be a number")
+        .refine(v => v === "" || (Number(v) >= 0 && Number(v) <= 50), "Must be between 0 and 50")
+        .default(""),
     hasExperience: z.enum(["yes", "no"], { message: "Please select an option" }),
     jobTitle: z.string(),
     organization: z.string(),

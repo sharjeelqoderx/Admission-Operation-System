@@ -262,28 +262,35 @@
 //             </div>
 //         </div>
 //     )
-// }
+// }import { Construction, Home } from "lucide-react"
 
-import { Construction } from "lucide-react"
-import { Button } from "@/components/ui/button"
+
+import { Construction, Home } from "lucide-react"
 import { LogoutButton } from "./_component/LogoutButton"
 
-export default function UnderDevelopment() {
+export default function HomeUnderDevelopment() {
     return (
         <div className="flex flex-col items-center justify-center text-center h-full min-h-[60vh] px-4">
 
+            {/* Icon */}
             <div className="size-16 rounded-full bg-brand/10 flex items-center justify-center mb-4">
-                <Construction className="size-8 text-brand" />
+                <Home className="size-6 text-brand mr-1" />
+                <Construction className="size-6 text-brand" />
             </div>
 
+            {/* Title */}
             <h2 className="text-xl font-semibold tracking-tight">
-                Under Development
+                Home Page Under Development
             </h2>
 
+            {/* Description */}
             <p className="text-sm text-muted-foreground mt-2 max-w-sm">
-                This section is currently being built. We're working hard to bring it live soon.
+                Welcome! This is your home dashboard, and it's currently under development.
+                We're working to bring you a better experience soon.
             </p>
-            <div>
+
+            {/* Logout */}
+            <div className="mt-6">
                 <LogoutButton />
             </div>
         </div>

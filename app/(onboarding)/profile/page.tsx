@@ -97,7 +97,7 @@ function ProfileContent() {
                         </div> */}
                         <Image src="/logo-dark.png" alt="FHM" width={256} height={80} />
                         <div className="space-y-4">
-                            <Typography as="h2" font="sub-heading" className="font-bold">you’re One Step Closer</Typography>
+                            <Typography as="h2" font="sub-heading" className="font-bold">You’re One Step Closer</Typography>
                             <Typography as="p" font="text">
                                 Welcome to the next generation of admissions. Complete your basic profile now to unlock our Eligibility Engine and see exactly where you qualify to study.                            </Typography>
                         </div>

@@ -26,10 +26,16 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
     })
 
     return (
-        <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}>
-
+        <form
+            onSubmit={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                form.handleSubmit()
+            }}
+        >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
 
+                {/* Highest Degree */}
                 <form.Field name="highestDegree">
                     {(field) => (
                         <F
@@ -48,6 +54,8 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
                         </F>
                     )}
                 </form.Field>
+
+                {/* Institute */}
                 <form.Field name="instituteName">
                     {(field) => (
                         <F
@@ -67,90 +75,29 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
                     )}
                 </form.Field>
 
+                {/* GPA → full width always */}
                 <form.Field name="gpa">
                     {(field) => (
-                        <F
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                            label="GPA (0–4)"
-                        >
-                            <Input
-                                id={field.name}
-                                value={field.state.value}
-                                onBlur={field.handleBlur}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="e.g. 3.5"
-                                className="w-full"
-                            />
-                        </F>
+                        <div className="sm:col-span-2">
+                            <F
+                                isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                                error={field.state.meta.errors?.[0]}
+                                label="GPA (0–4)"
+                            >
+                                <Input
+                                    id={field.name}
+                                    value={field.state.value}
+                                    onBlur={field.handleBlur}
+                                    onChange={(e) => field.handleChange(e.target.value)}
+                                    placeholder="e.g. 3.5"
+                                    className="w-full"
+                                />
+                            </F>
+                        </div>
                     )}
                 </form.Field>
 
-                {/* <form.Field name="desiredProgram">
-                    {(field) => (
-                        <F
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                            label="Desired Program"
-                        >
-                            <Input
-                                id={field.name}
-                                value={field.state.value}
-                                onBlur={field.handleBlur}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="e.g. MBA"
-                                className="w-full"
-                            />
-                        </F>
-                    )}
-                </form.Field>
-
-                <form.Field name="campus">
-                    {(field) => (
-                        <F
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                            label="Campus"
-                        >
-                            <Select value={field.state.value} onValueChange={field.handleChange}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select campus" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {CAMPUSES.map((c) => (
-                                        <SelectItem key={c} value={c}>
-                                            {c}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </F>
-                    )}
-                </form.Field>
-
-                <form.Field name="englishTest">
-                    {(field) => (
-                        <F
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                            label="English Test"
-                        >
-                            <Select value={field.state.value} onValueChange={field.handleChange}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select test" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {ENGLISH_TESTS.map((t) => (
-                                        <SelectItem key={t} value={t}>
-                                            {t}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </F>
-                    )}
-                </form.Field> */}
-
+                {/* About */}
                 <form.Field name="about">
                     {(field) => (
                         <div className="sm:col-span-2">
@@ -166,7 +113,7 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
                                     onChange={(e) => field.handleChange(e.target.value)}
                                     placeholder="Tell us about your plans..."
                                     rows={4}
-                                    className="w-full rounded-none border border-input bg-brand-input px-2.5 py-3 text-sm outline-none resize-none placeholder:text-muted-foreground"
+                                    className="w-full rounded-md border border-input bg-brand-input px-3 py-3 text-sm outline-none resize-none placeholder:text-muted-foreground"
                                 />
                             </F>
                         </div>
@@ -175,6 +122,7 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
 
             </div>
 
+            {/* Error */}
             {saveAcademic.isError && (
                 <Typography
                     as="p"
@@ -185,20 +133,25 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
                 </Typography>
             )}
 
-            <div className="flex flex-wrap gap-3 mt-8">
-                <Button type="button" variant="outline" className="flex-1 min-w-40" onClick={onBack}>
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 mt-8">
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full sm:w-auto sm:flex-1"
+                    onClick={onBack}
+                >
                     Back
                 </Button>
 
                 <Button
                     type="submit"
-                    className="flex-1 min-w-40 capitalize"
+                    className="w-full sm:w-auto sm:flex-1 capitalize"
                     disabled={saveAcademic.isPending}
                 >
                     {saveAcademic.isPending ? "Saving..." : "Continue"}
                 </Button>
             </div>
-
         </form>
     )
 }
