@@ -6,7 +6,7 @@ import { ok, err } from "@/lib/api"
 const schema = z.object({
     fullName: z.string().trim().min(2, "Name too short"),
     email: z.string().email("Invalid email"),
-    phone: z.string().regex(/^\+?\d{10,15}$/, "Invalid phone"),
+    phone: z.string().regex(/^\+?\d{7,15}$/, "Invalid phone"),
     role: z.enum(["Agent", "Student"]).default("Student"),
     password: z
         .string()
@@ -20,17 +20,39 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
     const body = await req.json()
     const parsed = schema.safeParse(body)
-    if (!parsed.success) return err(parsed.error.issues[0].message)
+    if (!parsed.success) return err(parsed.error.issues[0].message, 400)
 
     const { fullName, email, phone, password, role } = parsed.data
-
     const supabase = await createSupabaseServerClient()
 
     const origin = req.headers.get("origin")
         ?? process.env.NEXT_PUBLIC_APP_URL
         ?? "http://localhost:3000"
 
-    // signUp — Supabase sends confirmation email with link to /auth/callback
+    // 1. Check if profile already exists
+    const { data: existing } = await supabase
+        .from("profiles")
+        .select("user_id, is_verified")
+        .eq("email", email.toLowerCase())
+        .maybeSingle()
+
+    if (existing) {
+        if (existing.is_verified) {
+            // Active verified account — block
+            return err("An account with this email already exists. Please login.", 409)
+        } else {
+            // Exists but not verified — resend confirmation email
+            const { error: resendError } = await supabase.auth.resend({
+                type: "signup",
+                email,
+                options: { emailRedirectTo: `${origin}/auth/callback?role=${role}` },
+            })
+            if (resendError) return err(resendError.message, 500)
+            return ok({ message: "Verification email resent. Please check your inbox." })
+        }
+    }
+
+    // 2. New user — sign up
     const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -40,37 +62,27 @@ export async function POST(req: NextRequest) {
         },
     })
 
-    if (authError) {
-        if (authError.message.toLowerCase().includes("already registered"))
-            return err("Email already in use", 409)
-        return err(authError.message, 500)
-    }
-
+    if (authError) return err(authError.message, 500)
     if (!authData.user) return err("Signup failed", 500)
 
-    // Supabase returns a fake user when email already exists (security)
-    // Detect this: identities array is empty for existing unconfirmed users
-    if (authData.user.identities && authData.user.identities.length === 0) {
-        return err("Email already in use", 409)
+    // Supabase fake user check (existing confirmed email)
+    if (authData.user.identities?.length === 0) {
+        return err("An account with this email already exists. Please login.", 409)
     }
 
-    // Create or update initial profile row (unverified)
+    // 3. Create profile row
     const { error: profileError } = await supabase
         .from("profiles")
-        .upsert({
+        .insert({
             user_id: authData.user.id,
-            email,
+            email: email.toLowerCase(),
             full_name: fullName,
             phone,
             role,
             is_verified: false,
-        }, { onConflict: "user_id" })
+        })
 
-    if (profileError) {
-        if (profileError.code === "23503" || profileError.message.includes("foreign key"))
-            return err("Email already in use", 409)
-        return err(profileError.message, 500)
-    }
+    if (profileError) return err(profileError.message, 500)
 
     return ok({ message: "Verification email sent. Please check your inbox." }, 201)
 }
