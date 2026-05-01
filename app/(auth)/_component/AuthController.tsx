@@ -4,13 +4,20 @@ import { AuthMode, UserRole } from "@/types"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { LoginForm } from "./LoginForm"
-import { SignupForm } from "./SignupForm"
-
+import { SignupStepHandler } from './SignupStepHandler'
 const VALID_ROLES = ["agent", "student"]
 
 interface Props {
     mode: AuthMode
     role: UserRole
+}
+
+function SizeControll({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="p-4 sm:p-0 size-full min-h-screen flex-center">
+            {children}
+        </div>
+    )
 }
 
 export const AuthController = ({ mode, role }: Props) => {
@@ -23,20 +30,20 @@ export const AuthController = ({ mode, role }: Props) => {
     }, [mode, role, router])
 
     if (mode === AuthMode.LOGIN) {
-        return <SizeControll><LoginForm /></SizeControll>
+        return (
+            <SizeControll>
+                <LoginForm />
+            </SizeControll>
+        )
     }
 
     if (mode === AuthMode.SIGNUP) {
-        return <SizeControll><SignupForm /></SizeControll>
+        return (
+            <SizeControll>
+                <SignupStepHandler />
+            </SizeControll>
+        )
     }
 
     return null
-}
-
-function SizeControll({ children }: { children: React.ReactNode }) {
-    return (
-        <div className="p-4 sm:p-0 size-full min-h-screen flex-center">
-            {children}
-        </div>
-    )
 }

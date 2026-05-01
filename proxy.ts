@@ -7,24 +7,26 @@ export async function proxy(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     const path = req.nextUrl.pathname
-    const search = req.nextUrl.searchParams
 
-    // Logged-in user on /login or / → redirect to home
+    // Logged-in → redirect away from login / root
     if (user && (path.startsWith("/login") || path === "/")) {
-        return NextResponse.redirect(new URL("/home", req.url))
+        return NextResponse.redirect(new URL("/dashboard", req.url))
     }
 
-    // Logged-in user on /signup → only redirect if NOT in profile setup flow or success
+    // Logged-in on /signup → redirect unless checking email (?email=)
     if (user && path.startsWith("/signup")) {
-        const inProfileFlow = search.has("noSidebar") || search.has("profile") || search.has("uid")
-        const isSuccess = path.startsWith("/signup/success")
-        if (!inProfileFlow && !isSuccess) {
-            return NextResponse.redirect(new URL("/home", req.url))
+        const hasEmail = req.nextUrl.searchParams.has("email")
+        if (!hasEmail) {
+            return NextResponse.redirect(new URL("/dashboard", req.url))
         }
     }
 
     // Not logged in → redirect away from protected pages
-    if (!user && (path.startsWith("/home") || path.startsWith("/profile"))) {
+    if (!user && (
+        path.startsWith("/dashboard") ||
+        path.startsWith("/onboarding") ||
+        path.startsWith("/profile")
+    )) {
         return NextResponse.redirect(new URL("/login", req.url))
     }
 
@@ -32,5 +34,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/", "/home/:path*", "/profile/:path*", "/profile", "/login", "/signup", "/signup/:path*"],
+    matcher: ["/", "/dashboard/:path*", "/onboarding/:path*", "/onboarding", "/profile/:path*", "/profile", "/login", "/forget-password", "/signup", "/signup/:path*"],
 }

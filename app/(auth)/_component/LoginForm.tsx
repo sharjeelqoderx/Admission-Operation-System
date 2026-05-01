@@ -11,21 +11,21 @@ import { loginSchema } from "@/types/schemas/auth"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Typography } from "@/components/shared/Typography"
 // import { Checkbox } from "@/components/ui/checkbox"
-import { useLogin } from "@/lib/hooks/useAuth"
+import { useAuth } from "@/hooks/useAuth"
 
 export function LoginForm() {
     const router = useRouter()
-    const login = useLogin()
+    const { login } = useAuth()
     const [apiError, setApiError] = useState("")
 
     const form = useForm({
-        defaultValues: { email: "", password: "", isRemember: false },
+        defaultValues: { email: "", password: "" },
         validators: { onSubmit: loginSchema },
         onSubmit: async ({ value }) => {
             setApiError("")
             try {
                 await login.mutateAsync({ email: value.email, password: value.password })
-                router.push("/home")
+                router.push("/dashboard")
                 router.refresh()
             } catch (e: any) {
                 setApiError(e.message)
@@ -78,7 +78,12 @@ export function LoginForm() {
                                     const error = field.state.meta.errors?.[0]
                                     return (
                                         <Field data-invalid={isInvalid}>
-                                            <FieldLabel htmlFor={field.name}>Password</FieldLabel>
+                                            <div className="flex items-center justify-between">
+                                                <FieldLabel htmlFor={field.name}>Password</FieldLabel>
+                                                <Link href="/forget-password" className="text-xs text-primary hover:underline">
+                                                    Forgot your password?
+                                                </Link>
+                                            </div>
                                             <Input
                                                 type="password" id={field.name} value={field.state.value}
                                                 onBlur={field.handleBlur}
@@ -124,7 +129,7 @@ export function LoginForm() {
 
             <p className="text-center text-sm text-muted-foreground mt-4">
                 Don&apos;t have an account?{" "}
-                <Link href="/" className="text-primary font-medium hover:underline">Sign Up</Link>
+                <Link href="/signup?role=agent" className="text-primary font-medium hover:underline">Sign Up</Link>
             </p>
         </BluryCard>
     )

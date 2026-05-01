@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { F, GENDERS } from "./_shared"
+import { useAuth } from "@/hooks/useAuth"
 
 const schema = z.object({
     agentName: z.string().trim().min(2, "Agent name is required"),
@@ -16,11 +17,18 @@ const schema = z.object({
 })
 
 export function AgentStep1({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+    const { agentProfile } = useAuth()
     const form = useForm({
         defaultValues: { agentName: "", contactPersonName: "", gender: "", primaryBaseCountry: "", website: "" },
         validators: { onSubmit: schema },
         onSubmit: async ({ value }) => {
-            console.log("Agent Step 1 — Agent Profile:", value)
+            const fd = new FormData()
+            fd.append("agent_name", value.agentName)
+            fd.append("contact_person_name", value.contactPersonName)
+            fd.append("gender", value.gender === "male" ? "MALE" : value.gender === "female" ? "FEMALE" : "")
+            fd.append("country", value.primaryBaseCountry)
+            fd.append("website", value.website)
+            await agentProfile.mutateAsync(fd)
             onNext()
         },
     })

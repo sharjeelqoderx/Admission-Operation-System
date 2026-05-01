@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { DragDropCard, UploadedFile } from "@/components/shared/drag-drop-card"
 import { F } from "./_shared"
+import { useAuth } from "@/hooks/useAuth"
 
 const EXPERIENCE_OPTIONS = [
     { label: "1 – 3 years", value: "1-3" },
@@ -22,6 +23,8 @@ const schema = z.object({
 })
 
 export function AgentStep2({ onBack, onNext, onSkip }: { onBack: () => void; onNext: () => void; onSkip: () => void }) {
+    const { agentProfile } = useAuth()
+    const [submitError, setSubmitError] = useState<string | null>(null)
     const form = useForm({
         defaultValues: {
             profilePicture: null as File | null,
@@ -31,8 +34,26 @@ export function AgentStep2({ onBack, onNext, onSkip }: { onBack: () => void; onN
         },
         validators: { onSubmit: schema },
         onSubmit: async ({ value }) => {
-            console.log("Agent Step 2 — KYC:", value)
-            onNext()
+            setSubmitError(null)
+            try {
+                const years =
+                    value.professionalExperience === "1-3"
+                        ? 2
+                        : value.professionalExperience === "4-10"
+                            ? 7
+                            : 10
+
+                const fd = new FormData()
+                fd.append("experience_years", String(years))
+                if (value.profilePicture) fd.append("registration_certificate", value.profilePicture)
+                if (value.idCardFront) fd.append("id_card_front", value.idCardFront)
+                if (value.idCardBack) fd.append("id_card_back", value.idCardBack)
+
+                await agentProfile.mutateAsync(fd)
+                onNext()
+            } catch (e: any) {
+                setSubmitError(e?.message ?? "Failed to save KYC")
+            }
         },
     })
 
@@ -122,6 +143,12 @@ export function AgentStep2({ onBack, onNext, onSkip }: { onBack: () => void; onN
                 {/* <Button type="button" variant="ghost" className="flex-1 hover:bg-transparent" onClick={onSkip}>Skip</Button> */}
                 <Button type="submit" className="flex-1 min-w-40 capitalize">Continue</Button>
             </div>
+
+            {submitError && (
+                <div className="mt-4 text-sm text-destructive">
+                    {submitError}
+                </div>
+            )}
         </form>
     )
 }

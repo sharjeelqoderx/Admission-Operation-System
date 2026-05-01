@@ -8,55 +8,61 @@ export async function GET() {
     if (error || !user) return err("Unauthorized", 401)
 
     const { data: profile } = await supabase
-        .from("profiles")
+        .from("profile")
         .select("*")
-        .eq("user_id", user.id)
-        .single()
+        .eq("id", user.id)
+        .maybeSingle()
+
+    const { data: student } = await supabase
+        .from("student")
+        .select("*")
+        .eq("profile_id", user.id)
+        .maybeSingle()
 
     const { data: academic } = await supabase
-        .from("academic_background")
+        .from("education")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("profile_id", user.id)
         .maybeSingle()
 
     const { data: experience } = await supabase
-        .from("experience")
+        .from("work_experience")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("profile_id", user.id)
         .maybeSingle()
 
     return ok({
         id: user.id,
         email: profile?.email ?? user.email ?? "",
-        fullName: profile?.full_name ?? user.user_metadata?.full_name ?? "User",
-        role: profile?.role ?? "Student",
+        fullName: profile?.name ?? user.user_metadata?.full_name ?? "User",
+        role: profile?.role ?? "STUDENT",
         profile: {
             dateOfBirth: profile?.date_of_birth ?? "",
             gender: profile?.gender ?? "",
-            country: profile?.country ?? "",
-            nationality: profile?.nationality ?? "",
-            guardianEmail: profile?.guardian_email ?? "",
-            guardianPhone: profile?.guardian_phone ?? "",
+            country: student?.country ?? "",
+            nationality: student?.nationality ?? "",
+            guardianEmail: student?.guardian_email ?? "",
+            guardianPhone: student?.guardian_phone ?? "",
         },
         academic: academic ? {
             highestDegree: academic.qualification ?? "",
-            instituteName: academic.institute_name ?? "",
-            gpa: academic.gpa ? String(academic.gpa) : "",
-            desiredProgram: academic.desired_program ?? "",
-            campus: academic.campus ?? "",
-            englishTest: academic.english_test ?? "",
-            about: academic.about ?? "",
+            instituteName: academic.institution_name ?? "",
+            gpa: academic.cumulative_gpa ? String(academic.cumulative_gpa) : "",
+            desiredProgram: "",
+            campus: "",
+            englishTest: "",
+            about: academic.honors ?? "",
         } : null,
         experience: experience ? {
-            academicGap: experience.academic_gap ? String(experience.academic_gap) : "",
+            academicGap: experience.timeline_gap_years ? String(experience.timeline_gap_years) : "",
             hasExperience: "yes" as const,
-            jobTitle: experience.name ?? "",
-            organization: experience.organization ?? "",
-            industry: experience.industry ?? "",
+            jobTitle: experience.title ?? "",
+            organization: experience.organization_name ?? "",
+            industry: experience.industry_sector ?? "",
             country: experience.country ?? "",
             startDate: experience.start_date ?? "",
             endDate: experience.end_date ?? "",
-            responsibilities: experience.responsibility ?? "",
+            responsibilities: experience.key_responsibilities ?? "",
         } : null,
     })
 }

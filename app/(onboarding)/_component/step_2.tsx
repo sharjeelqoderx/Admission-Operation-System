@@ -7,20 +7,20 @@ import { Input } from "@/components/ui/input"
 import { Typography } from "@/components/shared/Typography"
 import { degreeStep2Schema } from "@/types/schemas/auth"
 import { F, DEGREES, ENGLISH_TESTS, CAMPUSES } from "./_shared"
-import { useAcademic, useMe } from "@/lib/hooks/useAuth"
+import { useAuth } from "@/hooks/useAuth"
 
 type Defaults = { highestDegree: string; instituteName: string; gpa: string; desiredProgram: string; campus: string; englishTest: string; about: string }
 
 function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: Defaults; onBack: () => void; onNext: () => void; onSkip: () => void }) {
-    const { data: me } = useMe()
-    const saveAcademic = useAcademic()
+    const { me, academic: saveAcademic } = useAuth()
+    const { data: meData } = me
 
     const form = useForm({
         defaultValues,
         validators: { onSubmit: degreeStep2Schema },
         onSubmit: async ({ value }) => {
-            if (!me?.id) return
-            await saveAcademic.mutateAsync({ userId: me.id, qualification: value.highestDegree, instituteName: value.instituteName, gpa: Number(value.gpa), desiredProgram: value.desiredProgram, campus: value.campus, englishTest: value.englishTest, about: value.about })
+            if (!meData?.id) return
+            await saveAcademic.mutateAsync({ userId: meData.id, qualification: value.highestDegree, instituteName: value.instituteName, gpa: Number(value.gpa), desiredProgram: value.desiredProgram, campus: value.campus, englishTest: value.englishTest, about: value.about })
             onNext()
         },
     })
@@ -157,18 +157,19 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
 }
 
 export function Step2Academic({ onBack, onNext, onSkip }: { onBack: () => void; onNext: () => void; onSkip: () => void }) {
-    const { data: me, isLoading } = useMe()
+    const { me } = useAuth()
+    const { data: meData, isLoading } = me
 
     if (isLoading) return <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
 
     const defaults: Defaults = {
-        highestDegree: me?.academic?.highestDegree ?? "",
-        instituteName: me?.academic?.instituteName ?? "",
-        gpa: me?.academic?.gpa ?? "",
+        highestDegree: meData?.academic?.highestDegree ?? "",
+        instituteName: meData?.academic?.instituteName ?? "",
+        gpa: meData?.academic?.gpa ?? "",
         desiredProgram: "Invoked", // me?.academic?.desiredProgram ??
         campus: "Invoked", // me?.academic?.campus ?? 
         englishTest: "Invoked", // me?.academic?.englishTest ?? 
-        about: me?.academic?.about ?? "",
+        about: meData?.academic?.about ?? "",
     }
 
     return <Step2Form key={JSON.stringify(defaults)} defaultValues={defaults} onBack={onBack} onNext={onNext} onSkip={onSkip} />

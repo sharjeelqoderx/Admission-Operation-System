@@ -4,8 +4,11 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { GraduationCap, HatGlasses } from 'lucide-react'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 const page = () => {
+    redirect('/login?role=agent')
+    return null;
     return (
         <div className='min-h-screen animate-in fade-in slide-in-from-bottom-4 duration-500 flex-center p-8 sm:p-16'>
             <div className='w-full max-w-[515px] mx-auto space-y-8'>

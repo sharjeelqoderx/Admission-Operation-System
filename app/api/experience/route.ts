@@ -29,25 +29,38 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
     const body = await req.json()
     const parsed = schema.safeParse(body)
-    if (!parsed.success) return err(parsed.error.issues[0].message)
+    if (!parsed.success) return err(parsed.error.issues[0].message, 400)
 
     const { userId, academicGap, hasExperience, ...exp } = parsed.data
 
     const supabase = await createSupabaseServerClient()
-
-    await supabase.from("profiles").update({ academic_gap: academicGap }).eq("user_id", userId)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) return err("Unauthorized", 401)
+    if (user.id !== userId) return err("Forbidden", 403)
 
     if (hasExperience === "yes") {
-        const { error } = await supabase.from("experience").insert({
-            user_id: userId,
-            name: exp.name,
-            organization: exp.organization,
-            industry: exp.industry,
+        const payload = {
+            profile_id: userId,
+            timeline_gap_years: academicGap,
+            title: exp.name,
+            organization_name: exp.organization,
+            industry_sector: exp.industry,
             country: exp.country,
             start_date: exp.startDate,
             end_date: exp.endDate,
-            responsibility: exp.responsibility,
-        })
+            key_responsibilities: exp.responsibility,
+        }
+
+        const { data: existing } = await supabase
+            .from("work_experience")
+            .select("id")
+            .eq("profile_id", userId)
+            .maybeSingle()
+
+        const { error } = existing
+            ? await supabase.from("work_experience").update(payload).eq("id", existing.id)
+            : await supabase.from("work_experience").insert(payload)
+
         if (error) return err(error.message, 500)
     }
 

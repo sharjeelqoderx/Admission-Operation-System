@@ -74,7 +74,7 @@ export function DatePicker({ value, onChange }: { value: string; onChange: (val:
     )
 }
 
-export function F({ isInvalid, error, label, children }: { isInvalid: boolean; error: any; label: string; children: React.ReactNode }) {
+export function F({ isInvalid = false, error, label, children }: { isInvalid?: boolean; error?: any; label: string; children: React.ReactNode }) {
     return (
         <Field data-invalid={isInvalid}>
             <FieldLabel>{label}</FieldLabel>
