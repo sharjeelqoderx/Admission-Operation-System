@@ -9,15 +9,21 @@ import { Navbar } from '@/components/shared/navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/shared/page-loader';
 import {
-  LayoutDashboard,
-  Users,
+  LayoutGrid,
+  Users2,
   FileText,
   Settings,
   BookOpen,
   MessageSquare,
+  BarChart3,
+  Award,
+  Wallet,
+  Folder,
+  UserCircle,
+  Building,
+  UserPlus,
+  Eye,
 } from 'lucide-react';
-
-import { DollarSign, Building, Folder } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -29,36 +35,36 @@ export enum Role {
   AGENT = 'AGENT',
 }
 
-export const sidebarRoutes = [
+const sidebarRoutes = [
   {
     label: 'Dashboard',
     href: '/dashboard',
-    icon: LayoutDashboard,
+    icon: LayoutGrid,
     allowFor: [Role.UNIVERSITY, Role.STUDENT, Role.AGENT],
   },
 
   {
-    label: 'Students',
-    icon: Users,
+    label: 'All Students',
+    icon: Users2,
     allowFor: [Role.UNIVERSITY, Role.AGENT],
     children: [
       {
-        label: 'All Students',
-        href: '/dashboard/student',
-        icon: Users,
-        allowFor: [Role.UNIVERSITY, Role.AGENT],
-      },
-      {
         label: 'Add Student',
         href: '/dashboard/student/new',
-        icon: Users,
+        icon: UserPlus,
+        allowFor: [Role.AGENT],
+      },
+      {
+        label: 'View Student',
+        href: '/dashboard/student',
+        icon: Eye,
         allowFor: [Role.AGENT],
       },
     ],
   },
 
   {
-    label: 'Applications',
+    label: 'All Applications',
     href: '/dashboard/applications',
     icon: FileText,
     allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
@@ -67,33 +73,12 @@ export const sidebarRoutes = [
   {
     label: 'Programs',
     href: '/dashboard/programs',
-    icon: BookOpen,
+    icon: BarChart3,
     allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
   },
 
   {
-    label: 'Campus',
-    href: '/dashboard/campus',
-    icon: Building,
-    allowFor: [Role.UNIVERSITY],
-  },
-
-  {
-    label: 'Payments',
-    href: '/dashboard/payments',
-    icon: DollarSign,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
-  },
-
-  {
-    label: 'Commissions',
-    href: '/dashboard/commissions',
-    icon: DollarSign,
-    allowFor: [Role.AGENT],
-  },
-
-  {
-    label: 'Documents',
+    label: 'All Documents',
     href: '/dashboard/documents',
     icon: Folder,
     allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
@@ -102,8 +87,22 @@ export const sidebarRoutes = [
   {
     label: 'Offers',
     href: '/dashboard/offers',
-    icon: FileText,
+    icon: Award,
     allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+  },
+
+  {
+    label: 'Payments',
+    href: '/dashboard/payments',
+    icon: Wallet,
+    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+  },
+
+  {
+    label: 'Commissions',
+    href: '/dashboard/commissions',
+    icon: BarChart3,
+    allowFor: [Role.AGENT],
   },
 
   {
@@ -114,9 +113,9 @@ export const sidebarRoutes = [
   },
 
   {
-    label: 'Profile',
+    label: 'Agent Profile',
     href: '/dashboard/profile',
-    icon: Settings,
+    icon: UserCircle,
     allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
   },
 ];
@@ -206,6 +205,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       icon={<ChildIcon className="w-5 h-5" />}
                       label={child.label}
                       isActive={active}
+                      isChild={true}
                     />
                   );
                 })}
@@ -234,8 +234,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           isSidebarOpen={sidebarOpen}
         />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#eef4ff] relative">
-          {children}
+        <main className="flex-1 overflow-y-auto relative bg-[#f0f4ff]">
+          {/* Fixed Background Layer */}
+          <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+            <div 
+              className="absolute inset-0 opacity-[0.85]"
+              style={{ 
+                backgroundImage: 'url("/bg-pattern.png")',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            />
+          </div>
+
+          {/* Page Content */}
+          <div className="relative z-10 p-4 sm:p-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -10,29 +10,32 @@ interface SidebarItemProps {
     icon: ReactNode;
     label: string;
     isActive?: boolean;
+    isChild?: boolean;
 }
 
-export function SidebarItem({ href, icon, label, isActive }: SidebarItemProps) {
+export function SidebarItem({ href, icon, label, isActive, isChild }: SidebarItemProps) {
     const pathname = usePathname();
     const active = isActive ?? pathname === href;
 
     const itemClasses = cn(
-        "w-full flex items-center gap-4 px-6 h-11 text-sm font-medium transition-colors",
+        "w-full flex items-center gap-3 px-6 transition-all duration-200 border-b border-gray-100 mt-1",
+        isChild ? "h-10 border-none pl-12" : "h-10",
         active
-            ? "bg-[#9B51E0] text-white"
-            : "text-gray-700 hover:bg-[#e0dceb] hover:text-[#9B51E0]"
+            ? "bg-[#9B51E0] text-white border-transparent"
+            : isChild ? "text-white/70 hover:text-white" : "text-[#333] bg-transparent hover:bg-gray-50",
+        isChild && active && "text-white"
     );
 
     const content = (
         <div className={itemClasses} aria-current={active ? "page" : undefined}>
-            <span className="w-5 h-5 flex items-center justify-center">
+            <span className={cn("w-6 h-6 flex items-center justify-center opacity-80", isChild && "w-5 h-5")}>
                 {icon}
             </span>
-            <span>{label}</span>
+            <span className={cn("text-[14px] font-semibold", isChild && "text-[13px] font-medium")}>{label}</span>
         </div>
     );
 
-    if (active) return content;
+    if (active && !isChild) return content;
 
-    return <Link href={href}>{content}</Link>;
+    return <Link href={href} className="block">{content}</Link>;
 }
