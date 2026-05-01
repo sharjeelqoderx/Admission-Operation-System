@@ -36,7 +36,6 @@ const password = z
 export const loginSchema = z.object({
     email,
     password,
-    isRemember: z.boolean()
 });
 
 /* =========================
@@ -53,6 +52,7 @@ export const signupSchema = z.object({
     email,
     phone,
     password,
+    role: z.enum(["AGENT", "STUDENT"]).default("STUDENT"),
 });
 
 /* =========================
@@ -63,8 +63,29 @@ export const otpSchema = z.object({
     otp: z
         .string()
         .trim()
-        .length(4, "OTP must be exactly 4 digits")
-        .regex(/^\d{4}$/, "OTP must be numeric"),
+        .min(1, "Please enter OTP")
+        .length(8, "OTP must be exactly 8 digits")
+        .regex(/^\d{8}$/, "OTP must be numeric"),
+});
+
+/* =========================
+   FORGOT PASSWORD
+========================= */
+
+export const forgotPasswordSchema = z.object({
+    email,
+});
+
+/* =========================
+   RESET PASSWORD
+========================= */
+
+export const resetPasswordSchema = z.object({
+    password,
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+}).refine(d => d.password === d.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match",
 });
 
 /* =========================
@@ -191,6 +212,31 @@ export const profileStep1Schema = z.object({
             "Invalid file type"
         ),
 });
+
+/* =========================
+   PROFILE (DB payloads - snake_case)
+========================= */
+
+export const studentProfileSchema = z.object({
+    user_id: z.string().uuid(),
+    avatar_url: z.string().url().optional(),
+    date_of_birth: z.string().optional(),
+    gender: z.enum(["MALE", "FEMALE"]).optional(),
+    country: z.string().min(1).max(200).optional(),
+    nationality: z.string().min(1).max(200).optional(),
+    guardian_email: email.optional(),
+    guardian_phone: phone.optional(),
+})
+
+export const agentProfileSchema = z.object({
+    agent_name: z.string().trim().min(2).optional(),
+    contact_person_name: z.string().trim().min(2).optional(),
+    gender: z.enum(["MALE", "FEMALE"]).optional(),
+    country: z.string().trim().min(2).optional(),
+    website: z.string().trim().optional(),
+    experience_years: z.number().min(0).optional(),
+    address: z.string().trim().min(5).optional(),
+})
 
 /* =========================
    DEGREE STEP 2

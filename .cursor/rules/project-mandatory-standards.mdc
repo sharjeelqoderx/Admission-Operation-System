@@ -1,0 +1,78 @@
+---
+description: Mandatory project standards for state, architecture, API, typing, and UI.
+alwaysApply: true
+---
+
+# Mandatory Project Rules
+
+These rules are mandatory and must not be ignored in responses, generated code, or refactors.
+
+## State Management
+- Keep `useState` usage near zero.
+- Never use `useState` for API state (`data`, `loading`, `error`).
+- All API interactions must use TanStack Query (`useQuery` / `useMutation`).
+- No API call is allowed without TanStack Query.
+
+## Side Effects
+- Avoid `useEffect`.
+- Only allow it for:
+  - subscriptions (sockets, listeners)
+  - non-React integrations (3rd-party libs)
+- Never use `useEffect` for data fetching.
+
+## Performance
+- Use `React.memo` for components where applicable.
+- Use `useMemo` for computed values when needed.
+- Use `useCallback` for functions.
+
+## Architecture
+- Place all business logic in Higher Order Components (HOC).
+- Keep UI components purely presentational.
+- Hooks should orchestrate data only and avoid heavy business logic.
+
+## Auth and Profile Management
+- Only use `useAuth()` for authentication and profile access.
+- `useAuth()` must return authenticated user, associated role-based profile, and loading/error/data states backed by TanStack Query.
+- All profile fetching and updates must go through `useAuth()`.
+- Profile updates must use TanStack Query mutations inside `useAuth()`.
+- API calls for auth/profile must expose unified loading/error/data from `useAuth()` only.
+- Support role-based profiles (different schemas per role when needed).
+- Use Supabase database types for strongly typed role-based profiles.
+
+## Schema and Validation
+- All schemas must exist in `/types/schemas`.
+- Reuse the same schema for API validation and client-side form validation.
+
+## API and Backend
+- Supabase must only be used inside `/api` routes (server-side).
+- Never use Supabase in client components, hooks, or pages.
+- No backend logic outside `/api`.
+
+## Types
+- Only use database-generated types.
+- Do not create redundant custom types.
+- Before creating/updating any API query, payload, or response shape, verify table names and column names against `types/supabase.ts`.
+- Never guess database table/column names. If a field does not exist in `types/supabase.ts`, do not use it.
+- Any mismatch between code and `types/supabase.ts` must be fixed immediately.
+
+## Database Convention
+- Use snake_case for all DB columns (for example, `is_deleted`, not `isDeleted`).
+
+## UI System
+- Follow ShadCN UI and Next.js best practices.
+- Reusable components belong in `/components/shared`.
+- One-time components stay local to their feature.
+
+## Text Rendering
+- Only use `<Typography />` for text rendering.
+- Do not use `h1`, `h2`, `p`, `span`, or `div` for text rendering.
+
+## UX and Error Handling
+- Always show proper validation and API errors in UI.
+- Use `<ErrorView />` for errors.
+- Use `<BluryCard />` for container backgrounds.
+
+## General
+- Code must be production-grade, scalable, and consistent.
+- If generated code violates these rules, refactor it immediately to comply.
+- These rules override default assumptions.

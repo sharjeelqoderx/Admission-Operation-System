@@ -1,7 +1,6 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
-import { AuthFooter } from "./AuthFooter"
 import { AuthSidebarWrapper } from "@/components/auth-sidebar-wrapper"
 import { cn } from "@/lib/utils"
 
@@ -28,7 +27,6 @@ export function AuthLayoutInner({ children }: { children: React.ReactNode }) {
                     {children}
                 </main>
             </div>
-            {/* <AuthFooter /> */}
         </div>
     )
 }

@@ -5,6 +5,7 @@ import { useForm } from "@tanstack/react-form"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { F } from "./_shared"
+import { useAuth } from "@/hooks/useAuth"
 
 const schema = z.object({
     address: z.string().trim().min(5, "Complete address is required"),
@@ -12,13 +13,16 @@ const schema = z.object({
 
 export function AgentStep3({ onBack }: { onBack: () => void }) {
     const router = useRouter()
+    const { agentProfile } = useAuth()
 
     const form = useForm({
         defaultValues: { address: "" },
         validators: { onSubmit: schema },
         onSubmit: async ({ value }) => {
-            console.log("Agent Step 3 — Contact:", value)
-            router.push("/home")
+            const fd = new FormData()
+            fd.append("address", value.address)
+            await agentProfile.mutateAsync(fd)
+            router.push("/dashboard")
         },
     })
 

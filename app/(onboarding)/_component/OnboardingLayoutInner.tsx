@@ -6,12 +6,12 @@ import { AuthSidebarWrapper } from "@/components/auth-sidebar-wrapper"
 
 export function OnboardingLayoutInner({ children }: { children: React.ReactNode }) {
     const searchParams = useSearchParams()
-    const noSidebar = searchParams.get("noSidebar") === "true"
+    const showSidebar = searchParams.get("sidebar") !== "false"
 
     return (
         <div className="min-h-screen">
             <div className="flex">
-                {!noSidebar && (
+                {showSidebar && (
                     <aside className={cn(
                         "hidden lg:flex flex-col sticky top-0 h-screen overflow-hidden",
                         "transition-all duration-500 ease-in-out",
@@ -20,9 +20,9 @@ export function OnboardingLayoutInner({ children }: { children: React.ReactNode 
                         <AuthSidebarWrapper />
                     </aside>
                 )}
-
-                <main className={cn("lg:p-4 w-full min-w-0 min-h-screen",
-                    !noSidebar ? 'lg:w-1/2' : ''
+                <main className={cn(
+                    "lg:p-4 w-full min-w-0 min-h-screen",
+                    showSidebar ? "lg:w-1/2" : ""
                 )}>
                     {children}
                 </main>

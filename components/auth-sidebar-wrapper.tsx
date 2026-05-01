@@ -54,8 +54,8 @@ const routeConfig: Record<string, RouteConfig> = {
             sharpCorners: ["tl", "bl", "tr", "br"],
         },
     },
-    
-    "/profile": {
+
+    "/onboarding": {
         content: (
             <SidebarContent
                 withOverlay={true}

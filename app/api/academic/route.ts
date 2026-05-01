@@ -17,23 +17,34 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
     const body = await req.json()
     const parsed = schema.safeParse(body)
-    if (!parsed.success) return err(parsed.error.issues[0].message)
+    if (!parsed.success) return err(parsed.error.issues[0].message, 400)
 
     const { userId, ...data } = parsed.data
 
     const supabase = await createSupabaseServerClient()
-    const { error } = await supabase.from("academic_background").insert({
-        user_id: userId,
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) return err("Unauthorized", 401)
+    if (user.id !== userId) return err("Forbidden", 403)
+
+    const payload = {
+        profile_id: userId,
         qualification: data.qualification,
-        institute_name: data.instituteName,
-        gpa: data.gpa,
-        desired_program: data.desiredProgram,
-        campus: data.campus,
-        english_test: data.englishTest,
-        about: data.about,
-    })
+        institution_name: data.instituteName,
+        cumulative_gpa: String(data.gpa),
+        honors: data.about,
+    }
+
+    const { data: existing } = await supabase
+        .from("education")
+        .select("id")
+        .eq("profile_id", userId)
+        .maybeSingle()
+
+    const { error } = existing
+        ? await supabase.from("education").update(payload).eq("id", existing.id)
+        : await supabase.from("education").insert(payload)
 
     if (error) return err(error.message, 500)
 
-    return ok({ message: "Academic background saved" }, 201)
+    return ok({ message: "Academic background saved" }, 200)
 }
