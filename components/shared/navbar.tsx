@@ -28,7 +28,17 @@ const getTitleFromPathname = (pathname: string): string => {
 
     if (segments.length === 0) return 'Dashboard';
 
-    return segments[segments.length - 1]
+    const lastSegment = segments[segments.length - 1];
+    
+    // Check if the path is for a student detail/view page
+    if (pathname.includes('/dashboard/student/') && segments.length >= 3) {
+        // If it's the exact detail page or edit page, show relevant title
+        if (segments[segments.length - 2] === 'student' || segments.includes('[student-id]')) {
+             return 'Student Profile';
+        }
+    }
+
+    return lastSegment
         .split('-')
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
@@ -59,12 +69,12 @@ export function Navbar({
     return (
         <nav
             className={cn(
-                'h-16 bg-background border-b border-border',
-                'flex items-center justify-between px-4 sm:px-6',
+                'h-20 bg-background/80 backdrop-blur-md border-b border-border/50',
+                'flex items-center justify-between px-4 sm:px-8',
                 'sticky top-0 z-40'
             )}
         >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
                 <Button
                     variant="ghost"
                     size="icon"
@@ -79,66 +89,68 @@ export function Navbar({
                     )}
                 </Button>
 
-                <h1 className="text-lg sm:text-xl font-semibold truncate">{title}</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{title}</h1>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-4">
-                {/* <div className="hidden lg:block relative w-48 xl:w-64">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <div className="flex items-center gap-4 sm:gap-8">
+                <div className="hidden lg:flex relative w-64 xl:w-80">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input
                         type="text"
-                        placeholder="Search..."
-                        className="pl-10 pr-4 py-2 rounded-lg bg-accent text-sm"
+                        placeholder="Search for services"
+                        className="pl-10 pr-4 py-2 h-10 rounded-lg bg-gray-100 border-none text-sm focus-visible:ring-1 focus-visible:ring-purple-400"
                     />
-                </div> */}
+                </div>
 
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="relative"
-                    aria-label="Notifications"
-                >
-                    <Bell className="w-5 h-5" />
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                </Button>
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="relative text-gray-600 hover:text-purple-600"
+                        aria-label="Notifications"
+                    >
+                        <Bell className="w-5 h-5" />
+                        <span className="absolute top-2 right-2 w-2 h-2 bg-purple-500 rounded-full" />
+                    </Button>
 
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="gap-2 pl-1 sm:pl-2 pr-2 sm:pr-3">
-                            <div className="hidden sm:flex flex-col items-start">
-                                <span className="text-xs sm:text-sm font-medium">{userName}</span>
-                                <span className="text-xs text-muted-foreground">{userRole}</span>
-                            </div>
-                            <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
-                                <AvatarImage src={userImage} alt={userName} />
-                                <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
-                                    {userName
-                                        .split(' ')
-                                        .map((n) => n[0])
-                                        .join('')}
-                                </AvatarFallback>
-                            </Avatar>
-                            <ChevronDown className="w-4 h-4 text-muted-foreground hidden sm:block" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuItem className="flex flex-col items-start gap-1 cursor-pointer">
-                            <span className="font-medium">{userName}</span>
-                            <span className="text-xs capitalize text-muted-foreground">{userRole.toLowerCase().replace(' ', '_')}</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>Profile</DropdownMenuItem>
-                        <DropdownMenuItem>Settings</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                            className="text-red-600"
-                            disabled={logout.isPending}
-                            onClick={handleLogout}
-                        >
-                            {logout.isPending ? 'Logging out...' : 'Logout'}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="h-14 gap-3 px-4 py-2 border-purple-200 rounded-xl hover:bg-purple-50 transition-colors">
+                                <div className="hidden sm:flex flex-col items-end">
+                                    <span className="text-sm font-bold text-gray-800 leading-tight">{userName}</span>
+                                    <span className="text-xs text-purple-600 font-medium">{userRole}</span>
+                                </div>
+                                <Avatar className="w-9 h-9 border-2 border-purple-100">
+                                    <AvatarImage src={userImage} alt={userName} />
+                                    <AvatarFallback className="bg-purple-600 text-white text-xs font-bold">
+                                        {userName
+                                            .split(' ')
+                                            .map((n) => n[0])
+                                            .join('')}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 mt-2">
+                            <DropdownMenuItem className="flex flex-col items-start gap-1 cursor-pointer">
+                                <span className="font-bold text-gray-800">{userName}</span>
+                                <span className="text-xs text-purple-600 font-medium">{userRole}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="cursor-pointer">Agent Profile</DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                className="text-red-600 cursor-pointer"
+                                disabled={logout.isPending}
+                                onClick={handleLogout}
+                            >
+                                {logout.isPending ? 'Logging out...' : 'Logout'}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </div>
         </nav>
     );

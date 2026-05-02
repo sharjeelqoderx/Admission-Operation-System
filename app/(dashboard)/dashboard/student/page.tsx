@@ -73,33 +73,31 @@ export default function StudentsPage() {
                         </Link>
                     </div>
 
-                    {/* Minimal Stats */}
-                    <div className="flex flex-col sm:flex-row gap-8 py-2">
-                        <div className="flex items-center gap-4">
-                            <div className="size-10 rounded-full bg-white/60 shadow-sm flex items-center justify-center border border-white shrink-0">
-                                <GraduationCap className="size-5 text-gray-800" />
+                    {/* Stats Header Area */}
+                    <div className="bg-white/10 backdrop-blur-sm border border-white/40 rounded-2xl p-8 flex flex-col md:flex-row items-center gap-16">
+                        <div className="flex items-center gap-6">
+                            <div className="size-14 rounded-2xl bg-white/20 flex items-center justify-center border border-white/40">
+                                <GraduationCap className="size-7 text-gray-800" />
                             </div>
                             <div className="flex flex-col">
-                                <Typography as="span" className="text-xs font-semibold text-gray-800 tracking-wide">
+                                <Typography as="span" className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
                                     Total Students
                                 </Typography>
-                                <Typography as="span" className="text-[28px] font-bold text-gray-900 leading-none mt-1">
+                                <Typography as="span" className="text-[34px] font-extrabold text-gray-900 leading-none mt-1">
                                     1,284
                                 </Typography>
                             </div>
                         </div>
 
-                        <div className="hidden sm:block w-px h-12 bg-gray-300/50" />
-
-                        <div className="flex items-center gap-4">
-                            <div className="size-10 rounded-full bg-white/60 shadow-sm flex items-center justify-center border border-white shrink-0">
-                                <FileText className="size-5 text-gray-800" />
+                        <div className="flex items-center gap-6">
+                            <div className="size-14 rounded-2xl bg-white/20 flex items-center justify-center border border-white/40">
+                                <FileText className="size-7 text-gray-800" />
                             </div>
                             <div className="flex flex-col">
-                                <Typography as="span" className="text-xs font-semibold text-gray-800 tracking-wide">
+                                <Typography as="span" className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
                                     Active Applications
                                 </Typography>
-                                <Typography as="span" className="text-[28px] font-bold text-gray-900 leading-none mt-1">
+                                <Typography as="span" className="text-[34px] font-extrabold text-gray-900 leading-none mt-1">
                                     422
                                 </Typography>
                             </div>

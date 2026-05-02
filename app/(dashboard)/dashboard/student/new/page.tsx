@@ -18,17 +18,17 @@ export default function AddStudentPage() {
 
     return (
         <main className="min-h-screen">
-            <div className="relative z-10 max-w-5xl mx-auto space-y-8">
-                <div className="space-y-1">
-                    <Typography as="h2" className="text-[28px] font-bold text-gray-900 tracking-tight">
+            <div className="relative z-10 max-w-7xl mx-auto space-y-10 ">
+                <div className="flex flex-col gap-2">
+                    <Typography as="h2" className="text-3xl font-extrabold text-gray-900 tracking-tight ml-12 mt-4">
                         Add New Student
                     </Typography>
-                    <Typography as="p" className="text-sm text-gray-600 leading-relaxed max-w-2xl">
-                        Initiate a new student profile and link them to global academic programs. Ensure all mandatory fields are verified before submission.
+                    <Typography as="p" className="text-[15px] text-gray-600 font-medium max-w-3xl leading-relaxed opacity-80 ml-12">
+                        Create a comprehensive student profile. All information will be securely stored and used for academic processing.
                     </Typography>
                 </div>
 
-                <div className="w-full h-px bg-gray-200/60" />
+                <div className="w-full h- bg-gray-200/60" />
 
                 <AddStudentForm />
             </div>

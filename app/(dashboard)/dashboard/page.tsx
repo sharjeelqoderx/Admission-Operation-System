@@ -1,152 +1,168 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GraduationCap, FileText, ClipboardCheck, Clock, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { BluryCard } from '@/components/shared/blury-card';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
+
+const stats = [
+  {
+    title: 'Total Students',
+    value: '1,284',
+    icon: GraduationCap,
+    color: 'text-black',
+  },
+  {
+    title: 'Active Applications',
+    value: '422',
+    icon: FileText,
+    color: 'text-black',
+  },
+  {
+    title: 'Documents Signed',
+    value: '3,102',
+    icon: ClipboardCheck,
+    color: 'text-black',
+  },
+  {
+    title: 'Pending Actions',
+    value: '18',
+    icon: Clock,
+    color: 'text-black',
+  },
+];
+
+const applications = [
+  {
+    name: 'Aisha Mohammed',
+    initials: 'AM',
+    program: 'MSc Data Science',
+    status: 'Contract Sent',
+    date: 'Oct 24, 2024',
+  },
+  {
+    name: 'Julian Lee',
+    initials: 'JL',
+    program: 'BEng Mechanical',
+    status: 'Created',
+    date: 'Oct 23, 2024',
+  },
+  {
+    name: 'Sofia Kovac',
+    initials: 'SK',
+    program: 'MBA Global Business',
+    status: 'Documents Pending',
+    date: 'Oct 22, 2024',
+  },
+  {
+    name: 'Rajesh Thapa',
+    initials: 'RT',
+    program: 'BSc Psychology',
+    status: 'Contract Sent',
+    date: 'Oct 21, 2024',
+  },
+];
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Welcome Section */}
-      <div>
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Welcome back!</h2>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">
-          Here&apos;s your dashboard overview for today.
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <div className="space-y-2">
+        <h2 className="text-3xl font-extrabold tracking-tight text-gray-900">Agent Dashboard</h2>
+        <p className="text-lg  max-w-2xl">
+          Here is a summary of your global student recruitment performance and pending administrative tasks.
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-        <Card>
-          <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="text-xs sm:text-sm font-medium">Total Courses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              +2 this semester
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="text-xs sm:text-sm font-medium">GPA</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">3.8</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Excellent performance
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="text-xs sm:text-sm font-medium">Assignments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              2 due this week
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="text-xs sm:text-sm font-medium">Messages</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              3 unread
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => (
+          <BluryCard
+            key={index}
+            isCentered={false}
+            blurAmount="backdrop-blur-lg"
+            blendColorClass="bg-white/10"
+            className="border-x border-white/40 p-2  shadow-none transition-all duration-300"
+          >
+            <div className="space-y-4">
+              <div className={cn(stat.color, "border-x border-white/40 p-2 w-fit rounded-l-lg rounded-r-lg")}>
+                <stat.icon className="w-8 h-8 opacity-80" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium  capitalize tracking-wider">{stat.title}</p>
+                <p className="text-3xl font-bold">{stat.value}</p>
+              </div>
+            </div>
+          </BluryCard>
+        ))}
       </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>
-            Your latest actions and course updates
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between py-3 border-b last:border-0">
-              <div>
-                <p className="font-medium text-sm">Assignment Submitted</p>
-                <p className="text-xs text-muted-foreground">
-                  Data Structures - Linked Lists
-                </p>
-              </div>
-              <span className="text-xs text-muted-foreground">2 hours ago</span>
-            </div>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-2xl font-bold text-gray-800">Recent Applications</h3>
+          <Button variant="link" className="text-purple-600 font-bold flex items-center gap-2 hover:gap-3 transition-all" asChild>
+            <Link href="/dashboard/applications">
+                View All Applications <ArrowRight className="w-4 h-4" />
+            </Link>
+          </Button>
+        </div>
 
-            <div className="flex items-center justify-between py-3 border-b last:border-0">
-              <div>
-                <p className="font-medium text-sm">Grade Posted</p>
-                <p className="text-xs text-muted-foreground">
-                  Web Development - Midterm Exam
-                </p>
-              </div>
-              <span className="text-xs text-muted-foreground">1 day ago</span>
-            </div>
+        <BluryCard
+          isCentered={false}
+          blurAmount="backdrop-blur-xl"
+          blendColorClass="bg-white/10"
+          className="border border-white/40 shadow-none p-0 overflow-hidden"
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100/20">
+                  <th className="px-8 py-6 text-left text-xs font-bold capitalize text-[18px] tracking-wider">Student Name</th>
+                  <th className="px-8 py-6 text-left text-xs font-bold capitalize text-[18px] tracking-wider">Program</th>
+                  <th className="px-8 py-6 text-left text-xs font-bold capitalize text-[18px] tracking-wider">Status</th>
+                  <th className="px-8 py-6 text-left text-xs font-bold capitalize text-[18px] tracking-wider">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100/10">
+                {applications.map((app, index) => (
+                  <tr key={index} className="hover:bg-white/10 transition-colors group">
+                    <td className="px-8 py-6 whitespace-nowrap">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-purple-100/50 flex items-center justify-center text-purple-700 font-bold text-xs">
+                          {app.initials}
+                        </div>
+                        <div className="text-sm font-bold text-gray-800">{app.name}</div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 whitespace-nowrap">
+                      <div className="text-sm text-gray-600 font-medium">{app.program}</div>
+                    </td>
+                    <td className="px-8 py-6 whitespace-nowrap">
+                      <span className="inline-flex items-center px-4 py-1.5 rounded-lg text-xs font-bold bg-gray-100/30 text-gray-600 border border-white/20">
+                        {app.status}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{app.date}</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-            <div className="flex items-center justify-between py-3 border-b last:border-0">
-              <div>
-                <p className="font-medium text-sm">New Announcement</p>
-                <p className="text-xs text-muted-foreground">
-                  Semester Timetable Updated
-                </p>
-              </div>
-              <span className="text-xs text-muted-foreground">3 days ago</span>
+          <div className="px-8 py-6 border-t border-gray-100/20 flex items-center justify-between bg-white/5">
+            <p className="text-sm text-gray-500">Showing <span className="font-bold">4</span> of <span className="font-bold">1,284</span> entries</p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" className="w-9 h-9 rounded-lg bg-white/20 border-white/40 hover:bg-white/40">
+                <ChevronLeft className="w-4 h-4 text-gray-400" />
+              </Button>
+              <Button variant="outline" size="icon" className="w-9 h-9 rounded-lg bg-white/20 border-white/40 hover:bg-white/40">
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Deadlines</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-sm">
-              <li className="flex justify-between">
-                <span>Project Submission</span>
-                <span className="text-red-600 font-medium">2 days</span>
-              </li>
-              <li className="flex justify-between">
-                <span>Quiz 5</span>
-                <span className="text-yellow-600 font-medium">5 days</span>
-              </li>
-              <li className="flex justify-between">
-                <span>Final Project</span>
-                <span className="text-green-600 font-medium">14 days</span>
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button variant="outline" className="w-full justify-start">
-              View Courses
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              Submit Assignment
-            </Button>
-            <Button variant="outline" className="w-full justify-start">
-              Check Grades
-            </Button>
-          </CardContent>
-        </Card>
+        </BluryCard>
       </div>
     </div>
   );
 }
+

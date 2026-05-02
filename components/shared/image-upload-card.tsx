@@ -52,10 +52,9 @@ export function ImageUploadCard({
                 if (file) handleFile(file)
             }}
             className={cn(
-                "relative group flex flex-col items-center justify-center w-full min-h-[160px]",
-                "border-2 border-dashed rounded-xl transition-all duration-200 cursor-pointer",
-                "bg-secondary/10 border-muted-foreground/20 hover:border-primary/50 hover:bg-secondary/20",
-                preview ? "border-solid border-muted-foreground/10" : "p-6",
+                "relative group flex flex-col items-center justify-center w-full min-h-[120px]",
+                "rounded-xl transition-all duration-200 cursor-pointer",
+                "bg-[#EDEDED] border-none hover:bg-gray-200",
                 className
             )}
         >
@@ -72,37 +71,31 @@ export function ImageUploadCard({
             />
 
             {preview ? (
-                <div className="relative w-full h-full p-4 flex flex-col items-center gap-4">
-                    <div className="relative">
-                        <img
-                            src={preview}
-                            alt="Preview"
-                            className="w-auto h-28 rounded-xl object-cover"
-                        />
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                onChange?.(null)
-                            }}
-                            className="absolute -top-2 -right-2 p-1.5 bg-destructive text-destructive-foreground rounded-full shadow-lg hover:scale-110 transition-transform"
-                        >
-                            <X size={14} />
-                        </button>
-                    </div>
-                    <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                        <ImageIcon size={12} /> Change Image
-                    </p>
+                <div className="relative w-full h-full p-2 flex flex-col items-center justify-center">
+                    <img
+                        src={preview}
+                        alt="Preview"
+                        className="max-h-24 rounded-lg object-contain"
+                    />
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onChange?.(null)
+                        }}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-sm hover:scale-110 transition-transform"
+                    >
+                        <X size={12} />
+                    </button>
                 </div>
             ) : (
-                <div className="flex flex-col items-center gap-3">
-                    <div className="p-3 bg-background rounded-full shadow-sm border border-border group-hover:scale-110 transition-transform">
-                        <UploadCloud size={24} className="text-muted-foreground" />
+                <div className="flex flex-col items-center gap-2 p-4">
+                    <div className="text-gray-400 group-hover:scale-110 transition-transform">
+                        <ImageIcon size={32} strokeWidth={1.5} />
                     </div>
-                    <div className="space-y-1 text-center">
-                        <p className="text-sm font-medium text-foreground">{message}</p>
-                        <p className="text-xs text-muted-foreground">PNG, JPG or GIF (max. 5MB)</p>
-                    </div>
+                    <p className="text-[11px] font-medium text-gray-500 text-center">
+                        <span className="text-[#4285f4] font-bold">Click here</span> to upload {message.toLowerCase()}
+                    </p>
                 </div>
             )}
         </div>

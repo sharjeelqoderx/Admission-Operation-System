@@ -12,21 +12,23 @@ export async function GET(
         if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
         const { id } = await params
+        console.log("Fetching student profile for ID:", id)
 
         // 1. Profile
         const { data: profile, error: profileError } = await supabase
             .from("profile")
             .select("*")
             .eq("id", id)
-            .eq("role", "STUDENT")
             .single()
 
         if (profileError || !profile) {
+            console.error("Profile not found or error:", profileError)
             return NextResponse.json(
-                { error: "Student not found" },
+                { error: "Student profile not found" },
                 { status: 404 }
             )
         }
+        console.log("Found profile:", profile.name, "Role:", profile.role)
 
         // 2. Student details
         const { data: student } = await supabase
