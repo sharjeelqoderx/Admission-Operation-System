@@ -68,7 +68,6 @@ export async function POST(req: NextRequest) {
             full_name: getString("full_name"),
             email: getString("email"),
             phone: getString("phone"),
-            password: getString("password"),
             dob: getString("dob"),
             gender: getString("gender"),
             country: getString("country"),
@@ -78,8 +77,7 @@ export async function POST(req: NextRequest) {
             qualification: getString("qualification"),
             institution_name: getString("institution_name"),
             gpa: getString("gpa"),
-            avatar: getFile("avatar"),
-            passport_file: getFile("passport_file"),
+            avatar_url: getFile("avatar"),
         })
 
         // Only AGENT can create students, and we store agent.id in student.created_by_agent_id
@@ -109,7 +107,7 @@ export async function POST(req: NextRequest) {
         // 1. Create auth user with server client
         const { data: authData, error: createUserError } = await supabase.auth.signUp({
             email: validatedData.email,
-            password: validatedData.password,
+            password: 'student@123',
             options: {
                 data: {
                     full_name: validatedData.full_name,
