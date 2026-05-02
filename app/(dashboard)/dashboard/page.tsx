@@ -35,28 +35,24 @@ const stats = [
 const applications = [
   {
     name: 'Aisha Mohammed',
-    initials: 'AM',
     program: 'MSc Data Science',
     status: 'Contract Sent',
     date: 'Oct 24, 2024',
   },
   {
     name: 'Julian Lee',
-    initials: 'JL',
     program: 'BEng Mechanical',
     status: 'Created',
     date: 'Oct 23, 2024',
   },
   {
     name: 'Sofia Kovac',
-    initials: 'SK',
     program: 'MBA Global Business',
     status: 'Documents Pending',
     date: 'Oct 22, 2024',
   },
   {
     name: 'Rajesh Thapa',
-    initials: 'RT',
     program: 'BSc Psychology',
     status: 'Contract Sent',
     date: 'Oct 21, 2024',
@@ -105,62 +101,79 @@ export default function DashboardPage() {
           </Button>
         </div>
 
-        <BluryCard
-          isCentered={false}
-          blurAmount="backdrop-blur-xl"
-          blendColorClass="bg-white/10"
-          className="border border-white/40 shadow-none p-0 overflow-hidden"
-        >
+        <div className="bg-white/5 backdrop-blur-xl border border-white/30 rounded-[32px] overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
-                <tr className="border-b border-gray-100/20">
-                  <th className="px-8 py-6 text-left text-xs font-bold capitalize text-[18px] tracking-wider">Student Name</th>
-                  <th className="px-8 py-6 text-left text-xs font-bold capitalize text-[18px] tracking-wider">Program</th>
-                  <th className="px-8 py-6 text-left text-xs font-bold capitalize text-[18px] tracking-wider">Status</th>
-                  <th className="px-8 py-6 text-left text-xs font-bold capitalize text-[18px] tracking-wider">Date</th>
+                <tr className="border-b border-white/20 bg-white/10">
+                  <th className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Student Name</th>
+                  <th className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Program</th>
+                  <th className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Agent Name</th>
+                  <th className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Status</th>
+                  <th className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Date</th>
+                  <th className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100/10">
+              <tbody className="divide-y divide-white/10">
                 {applications.map((app, index) => (
                   <tr key={index} className="hover:bg-white/10 transition-colors group">
                     <td className="px-8 py-6 whitespace-nowrap">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-purple-100/50 flex items-center justify-center text-purple-700 font-bold text-xs">
-                          {app.initials}
+                        <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(app.name)}&background=random`} alt={app.name} className="size-10 rounded-xl object-cover border-2 border-white/50 shadow-sm" />
+                        <div className="flex flex-col">
+                          <span className="text-[14px] font-bold text-[#1e3a8a]">{app.name}</span>
+                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">ID: SH-2024-{1000 + index}</span>
                         </div>
-                        <div className="text-sm font-bold text-gray-800">{app.name}</div>
                       </div>
                     </td>
                     <td className="px-8 py-6 whitespace-nowrap">
-                      <div className="text-sm text-gray-600 font-medium">{app.program}</div>
+                      <div className="flex flex-col">
+                        <span className="text-[13px] font-bold text-gray-900 leading-snug">{app.program}</span>
+                        <span className="text-[11px] font-medium text-gray-500 mt-0.5">Fall 2024 Intake</span>
+                      </div>
                     </td>
                     <td className="px-8 py-6 whitespace-nowrap">
-                      <span className="inline-flex items-center px-4 py-1.5 rounded-lg text-xs font-bold bg-gray-100/30 text-gray-600 border border-white/20">
-                        {app.status}
+                      <span className="text-[13px] font-medium text-gray-600">Horizon Global Education</span>
+                    </td>
+                    <td className="px-8 py-6 whitespace-nowrap">
+                      <span className={cn(
+                        "inline-flex items-center justify-center px-4 py-1.5 rounded-full text-[9px] font-extrabold text-white tracking-widest min-w-[100px]",
+                        app.status === 'Contract Sent' ? 'bg-[#eb4335]' : app.status === 'Created' ? 'bg-blue-500' : app.status === 'Documents Pending' ? 'bg-yellow-500' : 'bg-[#34a853]'
+                      )}>
+                        {app.status.toUpperCase()}
                       </span>
                     </td>
                     <td className="px-8 py-6 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{app.date}</div>
+                      <span className="text-[13px] font-medium text-gray-600">{app.date}</span>
+                    </td>
+                    <td className="px-8 py-6 whitespace-nowrap">
+                      <Button variant="outline" className="h-9 px-6 bg-white/20 border-white/40 text-[#1e3a8a] hover:bg-white/40 hover:text-[#1e3a8a] rounded-lg font-bold text-[12px] transition-all shadow-sm">
+                        View
+                      </Button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-
-          <div className="px-8 py-6 border-t border-gray-100/20 flex items-center justify-between bg-white/5">
-            <p className="text-sm text-gray-500">Showing <span className="font-bold">4</span> of <span className="font-bold">1,284</span> entries</p>
+          <div className="flex items-center justify-between px-8 py-5 border-t border-white/20 bg-white/5">
+            <div className="flex items-center text-[12px] font-medium text-gray-500 space-x-1">
+              <span>Showing</span>
+              <span className="font-bold text-[#1e3a8a]">4</span>
+              <span>of</span>
+              <span className="font-bold text-[#1e3a8a]">1,284</span>
+              <span>entries</span>
+            </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" className="w-9 h-9 rounded-lg bg-white/20 border-white/40 hover:bg-white/40">
-                <ChevronLeft className="w-4 h-4 text-gray-400" />
-              </Button>
-              <Button variant="outline" size="icon" className="w-9 h-9 rounded-lg bg-white/20 border-white/40 hover:bg-white/40">
-                <ChevronRight className="w-4 h-4 text-gray-400" />
-              </Button>
+              <button className="size-8 rounded-lg bg-white/40 hover:bg-white/60 flex items-center justify-center border border-white/40 transition-all text-gray-600 shadow-sm">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button className="size-8 rounded-lg bg-white/40 hover:bg-white/60 flex items-center justify-center border border-white/40 transition-all text-gray-600 shadow-sm">
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
-        </BluryCard>
+        </div>
       </div>
     </div>
   );
