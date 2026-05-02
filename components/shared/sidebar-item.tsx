@@ -18,11 +18,11 @@ export function SidebarItem({ href, icon, label, isActive, isChild }: SidebarIte
     const active = isActive ?? pathname === href;
 
     const itemClasses = cn(
-        "w-full flex items-center gap-3 px-6 transition-all duration-200 border-b border-gray-100 mt-1",
-        isChild ? "h-10 border-none pl-12" : "h-10",
+        "w-full flex items-center gap-3 px-6 py-2 transition-all duration-200 mt-1",
+        isChild ? "border-none pl-12" : "",
         active
             ? "bg-[#9B51E0] text-white border-transparent"
-            : isChild ? "text-white/70 hover:text-white" : "text-[#333] bg-transparent hover:bg-gray-50",
+            : isChild ? "text-white/70 hover:text-white" : "text-[#333] bg-white/40 hover:bg-gray-50",
         isChild && active && "text-white"
     );
 

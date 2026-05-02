@@ -24,8 +24,8 @@ export function SidebarGroup({
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    'w-full flex items-center gap-4 px-6 h-12 transition-all duration-200',
-                    'text-[14px] font-semibold cursor-pointer border-b border-gray-100',
+                    'w-full flex items-center gap-4 px-6 py-2 transition-all duration-200',
+                    'text-[14px] font-semibold cursor-pointer bg-white/40',
                     isOpen ? 'text-white border-transparent' : 'text-[#333]'
                 )}
             >

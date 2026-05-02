@@ -23,24 +23,24 @@ export function Sidebar({ children, className, isOpen = true }: SidebarProps) {
             )}
         >
             {/* Logo Section */}
-            <div className="px-6 py-6 flex items-center justify-center relative z-10 bg-[rgba(153,51,255,0.1)]">
-                <Image
-                    src="/logo-dark.png"
-                    alt="Logo"
-                    width={180}
-                    height={60}
-                    className="w-auto h-auto object-contain"
-                    priority
-                />
-            </div>
+            <nav className="flex-1 space-y-0.5 relative z-10 bg-[rgba(153,51,255,0.1)]">
+                <div className="px-6 py-6 flex items-center justify-center">
+                    <Image
+                        src="/logo-dark.png"
+                        alt="Logo"
+                        width={180}
+                        height={60}
+                        className="w-auto h-auto object-contain"
+                        priority
+                    />
+                </div>
 
-            {/* Navigation Section */}
-            <nav className="flex-1 space-y-0.5 relative z-10">
+                {/* Navigation Section */}
                 {children}
             </nav>
 
             {/* Bottom Pattern Image (Decorative Background) */}
-           
+
         </aside>
     );
 }

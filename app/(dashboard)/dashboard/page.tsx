@@ -3,31 +3,32 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BluryCard } from '@/components/shared/blury-card';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 const stats = [
   {
     title: 'Total Students',
     value: '1,284',
     icon: GraduationCap,
-    color: 'text-purple-600',
+    color: 'text-black',
   },
   {
     title: 'Active Applications',
     value: '422',
     icon: FileText,
-    color: 'text-blue-600',
+    color: 'text-black',
   },
   {
     title: 'Documents Signed',
     value: '3,102',
     icon: ClipboardCheck,
-    color: 'text-green-600',
+    color: 'text-black',
   },
   {
     title: 'Pending Actions',
     value: '18',
     icon: Clock,
-    color: 'text-orange-600',
+    color: 'text-black',
   },
 ];
 
@@ -65,15 +66,13 @@ const applications = [
 export default function DashboardPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Welcome Section */}
       <div className="space-y-2">
         <h2 className="text-3xl font-extrabold tracking-tight text-gray-900">Agent Dashboard</h2>
-        <p className="text-lg text-gray-500 max-w-2xl">
+        <p className="text-lg  max-w-2xl">
           Here is a summary of your global student recruitment performance and pending administrative tasks.
         </p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
           <BluryCard
@@ -81,22 +80,21 @@ export default function DashboardPage() {
             isCentered={false}
             blurAmount="backdrop-blur-lg"
             blendColorClass="bg-white/10"
-            className="border border-white/40 shadow-none hover:bg-white/20 transition-all duration-300"
+            className="border-x border-white/40 p-2  shadow-none transition-all duration-300"
           >
             <div className="space-y-4">
-              <div className={stat.color}>
+              <div className={cn(stat.color, "border-x border-white/40 p-2 w-fit rounded-l-lg rounded-r-lg")}>
                 <stat.icon className="w-8 h-8 opacity-80" />
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">{stat.title}</p>
-                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm font-medium  capitalize tracking-wider">{stat.title}</p>
+                <p className="text-3xl font-bold">{stat.value}</p>
               </div>
             </div>
           </BluryCard>
         ))}
       </div>
 
-      {/* Recent Applications */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-2xl font-bold text-gray-800">Recent Applications</h3>
@@ -117,10 +115,10 @@ export default function DashboardPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100/20">
-                  <th className="px-8 py-6 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Student Name</th>
-                  <th className="px-8 py-6 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Program</th>
-                  <th className="px-8 py-6 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                  <th className="px-8 py-6 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Date</th>
+                  <th className="px-8 py-6 text-left text-xs font-bold capitalize text-[18px] tracking-wider">Student Name</th>
+                  <th className="px-8 py-6 text-left text-xs font-bold capitalize text-[18px] tracking-wider">Program</th>
+                  <th className="px-8 py-6 text-left text-xs font-bold capitalize text-[18px] tracking-wider">Status</th>
+                  <th className="px-8 py-6 text-left text-xs font-bold capitalize text-[18px] tracking-wider">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100/10">
@@ -151,7 +149,6 @@ export default function DashboardPage() {
             </table>
           </div>
 
-          {/* Table Footer */}
           <div className="px-8 py-6 border-t border-gray-100/20 flex items-center justify-between bg-white/5">
             <p className="text-sm text-gray-500">Showing <span className="font-bold">4</span> of <span className="font-bold">1,284</span> entries</p>
             <div className="flex items-center gap-2">
