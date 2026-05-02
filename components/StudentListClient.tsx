@@ -326,7 +326,7 @@ export function StudentListClient() {
     const students = studentsQuery.data || []
 
     return (
-        <div className="space-y-4 pt-4 overflow-x-scroll">
+        <div className="space-y-4 pt-4">
             <Typography as="h3" className="text-xl font-bold text-[#1e3a8a]">
                 Students list
             </Typography>
@@ -362,7 +362,7 @@ export function StudentListClient() {
             </div>
 
             {/* ✅ Table */}
-            <div className="bg-white/5 backdrop-blur-xl border-x border-white/40 p-2 w-fit rounded-l-lg rounded-r-lg shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)] rounded-2xl overflow-hidden">
+            <div className="w-full bg-white/5 backdrop-blur-xl border-x border-white/40 p-2 w-fit rounded-l-lg rounded-r-lg shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)] rounded-2xl overflow-hidden">
 
                 {/* ✅ horizontal scroll preserved */}
                 <div className="overflow-x-auto">

@@ -128,7 +128,7 @@ export default async function ViewStudentPage() {
                 </header>
 
                 <main className="flex-1 overflow-y-auto p-6 lg:p-10 z-10">
-                    <div className="max-w-5xl space-y-10 pb-10">
+                    <div className="w-full space-y-10 pb-10">
                         <Suspense fallback={<div className="py-10 text-center"><Typography as="p">Loading...</Typography></div>}>
                             <ViewStudentProfile />
                         </Suspense>

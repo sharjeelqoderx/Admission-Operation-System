@@ -23,7 +23,7 @@ export function ViewStudentProfile({ id: propId }: { id?: string } = {}) {
     const edu = student.education
 
     return (
-        <div className="max-w-7xl mx-auto space-y-12 pb-20 px-6 lg:px-12">
+        <div className="w-full space-y-12 pb-20 px-6 lg:px-12">
             
             {/* ── Header ── */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 ">
@@ -45,7 +45,7 @@ export function ViewStudentProfile({ id: propId }: { id?: string } = {}) {
                     </div>
                 </div>
                 <Link href={`/dashboard/student/edit?id=${id}`}>
-                    <Button className="bg-[#9B51E0] hover:bg-[#8a42cf] text-white px-10 h-12 rounded-xl font-bold shadow-lg shadow-purple-500/20 transition-all">
+                    <Button className="bg-brand-byzantine hover:bg-[#8a42cf] text-white px-10 h-12 rounded-xl font-bold shadow-lg shadow-purple-500/20 transition-all">
                         Edit Profile
                     </Button>
                 </Link>
