@@ -21,7 +21,7 @@ export function SidebarItem({ href, icon, label, isActive, isChild }: SidebarIte
         "w-full flex items-center gap-3 px-6 py-2 transition-all duration-200 mt-1",
         isChild ? "border-none pl-12" : "",
         active
-            ? "bg-[#9B51E0] text-white border-transparent"
+            ? "bg-brand-byzantine text-white border-transparent"
             : isChild ? "text-white/70 hover:text-white" : "text-[#333] bg-white/40 hover:bg-gray-50",
         isChild && active && "text-white"
     );

@@ -30,9 +30,7 @@ const getTitleFromPathname = (pathname: string): string => {
 
     const lastSegment = segments[segments.length - 1];
     
-    // Check if the path is for a student detail/view page
     if (pathname.includes('/dashboard/student/') && segments.length >= 3) {
-        // If it's the exact detail page or edit page, show relevant title
         if (segments[segments.length - 2] === 'student' || segments.includes('[student-id]')) {
              return 'Student Profile';
         }
@@ -69,7 +67,7 @@ export function Navbar({
     return (
         <nav
             className={cn(
-                'h-20 bg-background/80 backdrop-blur-md border-b border-border/50',
+                'h-20 bg-background/10 backdrop-blur-md border-b border-border/50',
                 'flex items-center justify-between px-4 sm:px-8',
                 'sticky top-0 z-40'
             )}
@@ -106,23 +104,23 @@ export function Navbar({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="relative text-gray-600 hover:text-purple-600"
+                        className="relative text-gray-600 hover:text-brand-byzantine"
                         aria-label="Notifications"
                     >
                         <Bell className="w-5 h-5" />
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-purple-500 rounded-full" />
+                        <span className="absolute top-2 right-2 w-2 h-2 bg-brand-byzantine rounded-full" />
                     </Button>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-14 gap-3 px-4 py-2 border-purple-200 rounded-xl hover:bg-purple-50 transition-colors">
+                            <Button variant="outline" className="h-14 gap-3 px-4 py-2 border-brand-byzantine rounded-xl hover:bg-brand-byzantine/10 bg-brand-byzantine/5 transition-colors">
                                 <div className="hidden sm:flex flex-col items-end">
                                     <span className="text-sm font-bold text-gray-800 leading-tight">{userName}</span>
-                                    <span className="text-xs text-purple-600 font-medium">{userRole}</span>
+                                    <span className="text-xs text-brand-byzantine font-medium">{userRole}</span>
                                 </div>
                                 <Avatar className="w-9 h-9 border-2 border-purple-100">
                                     <AvatarImage src={userImage} alt={userName} />
-                                    <AvatarFallback className="bg-purple-600 text-white text-xs font-bold">
+                                    <AvatarFallback className="bg-brand-byzantine text-white text-xs font-bold">
                                         {userName
                                             .split(' ')
                                             .map((n) => n[0])
@@ -135,7 +133,7 @@ export function Navbar({
                         <DropdownMenuContent align="end" className="w-56 mt-2">
                             <DropdownMenuItem className="flex flex-col items-start gap-1 cursor-pointer">
                                 <span className="font-bold text-gray-800">{userName}</span>
-                                <span className="text-xs text-purple-600 font-medium">{userRole}</span>
+                                <span className="text-xs text-brand-byzantine font-medium">{userRole}</span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="cursor-pointer">Agent Profile</DropdownMenuItem>

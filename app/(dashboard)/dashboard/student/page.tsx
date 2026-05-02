@@ -1,38 +1,13 @@
 "use client"
-import { redirect } from "next/navigation"
-import Image from "next/image"
 import Link from "next/link"
 import {
-    LayoutDashboard,
-    Users,
     FileText,
-    BookOpen,
-    Files,
-    Award,
-    CreditCard,
-    BadgeDollarSign,
-    MessageSquare,
-    UserCircle,
-    Bell,
-    Search,
     GraduationCap,
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    Menu,
     Plus,
-    Eye,
-    Pencil,
-    Trash2,
-    UserPlus,
-    UserCircle2
 } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Typography } from "@/components/shared/Typography"
 
-import { NavContent } from "@/components/shared/NavContent"
 import { StudentListClient } from "@/components/StudentListClient"
 import { useAuth } from "@/hooks/useAuth"
 import { PageLoader } from "@/components/shared/page-loader"
@@ -50,7 +25,7 @@ export default function StudentsPage() {
     const initials = fullName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
 
     return (
-        <main className="relative">
+        <main className="relative overflow-x-hidden">
 
             {/* Content */}
             <div className="relative z-10">
@@ -66,7 +41,7 @@ export default function StudentsPage() {
                             </Typography>
                         </div>
                         <Link href="/dashboard/student/new">
-                            <Button className="bg-[#9B51E0] hover:bg-[#8a42cf] text-white px-6 h-11 rounded-md shrink-0 shadow-md">
+                            <Button className="bg-brand-byzantine hover:bg-brand-byzantine text-white px-6 h-11 rounded-md shrink-0 shadow-md">
                                 <Plus className="size-4 mr-2" />
                                 <Typography as="span" className="text-inherit font-medium">Add Student</Typography>
                             </Button>
@@ -74,9 +49,9 @@ export default function StudentsPage() {
                     </div>
 
                     {/* Stats Header Area */}
-                    <div className="bg-white/10 backdrop-blur-sm border border-white/40 rounded-2xl p-8 flex flex-col md:flex-row items-center gap-16">
+                    <div className="bg-white/10 backdrop-blur-sm border-x border-white/40 rounded-l-lg rounded-r-lg rounded-2xl p-8 flex flex-col md:flex-row items-center gap-16">
                         <div className="flex items-center gap-6">
-                            <div className="size-14 rounded-2xl bg-white/20 flex items-center justify-center border border-white/40">
+                            <div className="size-14 border-x border-white/40 rounded-l-lg rounded-r-lg bg-white/20 flex items-center justify-center">
                                 <GraduationCap className="size-7 text-gray-800" />
                             </div>
                             <div className="flex flex-col">
@@ -90,7 +65,7 @@ export default function StudentsPage() {
                         </div>
 
                         <div className="flex items-center gap-6">
-                            <div className="size-14 rounded-2xl bg-white/20 flex items-center justify-center border border-white/40">
+                            <div className="size-14 border-x border-white/40 rounded-l-lg rounded-r-lg bg-white/20 flex items-center justify-center">
                                 <FileText className="size-7 text-gray-800" />
                             </div>
                             <div className="flex flex-col">

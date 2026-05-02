@@ -19,16 +19,17 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import ImageUploadCard from "./shared/image-upload-card"
-import { Building, FileText, ChevronDown, GraduationCap } from "lucide-react"
+import { Building, FileText, ChevronDown, GraduationCap, School, FileUp } from "lucide-react"
 
 function F({ field, label, children }: { field: any; label: string; children: React.ReactNode }) {
     const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
-    const error = field.state.meta.errors?.[0] as string | undefined
+    const error = field.state.meta.errors?.[0]
+    const errorMessage = typeof error === "string" ? error : (error as any)?.message
     return (
         <Field data-invalid={isInvalid}>
             <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
             {children}
-            {isInvalid && error && <FieldError errors={[{ message: error }]} />}
+            {isInvalid && errorMessage && <FieldError errors={[{ message: errorMessage }]} />}
         </Field>
     )
 }
@@ -43,7 +44,7 @@ export function AddStudentForm() {
             full_name: "",
             email: "",
             phone: "",
-            password: "",
+            // password: "",
             dob: "",
             gender: "" as "MALE" | "FEMALE",
             country: "",
@@ -61,7 +62,7 @@ export function AddStudentForm() {
             fd.set("full_name", value.full_name)
             fd.set("email", value.email)
             fd.set("phone", value.phone)
-            fd.set("password", value.password)
+            // fd.set("password", value.password)
             fd.set("dob", value.dob)
             fd.set("gender", value.gender)
             fd.set("country", value.country)
@@ -80,7 +81,7 @@ export function AddStudentForm() {
     })
 
     return (
-        <div className="space-y-8 pb-20">
+        <div className="space-y-8 ">
             {/* Transparent Form Card */}
             <div className="bg-white/5  p-8 relative overflow-hidden">
                 <form id="add-student-form" onSubmit={(e) => { e.preventDefault(); form.handleSubmit() }} className="space-y-12 relative z-10">
@@ -90,7 +91,7 @@ export function AddStudentForm() {
                         <div className="space-y-6">
                             <div className="flex items-center gap-2">
                                 <Building className="size-5 text-gray-700" strokeWidth={2.5} />
-                                <Typography as="h3" className="text-[17px] font-extrabold text-gray-900 tracking-tight">Enter Student Details</Typography>
+                                <Typography as="h3" className="text-[24px] font-extrabold text-gray-900 tracking-tight">Enter Student Details</Typography>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
@@ -98,7 +99,7 @@ export function AddStudentForm() {
                                     <form.Field name="full_name">
                                         {(field) => (
                                             <F field={field} label="Full Name">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter full name" className="h-12 bg-white border-none rounded-sm shadow-sm focus:ring-1 focus:ring-purple-500 transition-all text-sm" />
+                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter full name" />
                                             </F>
                                         )}
                                     </form.Field>
@@ -106,7 +107,7 @@ export function AddStudentForm() {
                                     <form.Field name="email">
                                         {(field) => (
                                             <F field={field} label="Email">
-                                                <Input id={field.name} type="email" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your email" className="h-12 bg-white border-none rounded-sm shadow-sm focus:ring-1 focus:ring-purple-500 transition-all text-sm" />
+                                                <Input id={field.name} type="email" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your email" />
                                             </F>
                                         )}
                                     </form.Field>
@@ -114,18 +115,18 @@ export function AddStudentForm() {
                                     <form.Field name="phone">
                                         {(field) => (
                                             <F field={field} label="Phone">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter phone number" className="h-12 bg-white border-none rounded-sm shadow-sm focus:ring-1 focus:ring-purple-500 transition-all text-sm" />
+                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter phone number" />
                                             </F>
                                         )}
                                     </form.Field>
 
-                                    <form.Field name="password">
+                                    {/* <form.Field name="password">
                                         {(field) => (
                                             <F field={field} label="Password">
                                                 <Input id={field.name} type="password" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter password" className="h-12 bg-white border-none rounded-sm shadow-sm focus:ring-1 focus:ring-purple-500 transition-all text-sm" />
                                             </F>
                                         )}
-                                    </form.Field>
+                                    </form.Field> */}
                                 </div>
 
                                 <div className="md:col-span-1">
@@ -148,17 +149,17 @@ export function AddStudentForm() {
 
                         {/* ── Section: Basic Info ── */}
                         <div className="space-y-6">
-                            <div className="flex items-center gap-2 border-b border-gray-200/40 pb-2">
-                                <FileText className="size-5 text-gray-700" strokeWidth={2.5} />
-                                <Typography as="h3" className="text-[17px] font-extrabold text-gray-900 tracking-tight flex-1">Basic Info</Typography>
+                            <div className="flex items-center gap-2 pb-2">
+                                <FileUp className="size-5" strokeWidth={2.5} />
+                                <Typography as="h3" font="text-lg" className="font-bold">Basic Info</Typography>
                                 <ChevronDown className="size-5 text-gray-500" />
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
                                 <form.Field name="guardian_phone">
                                     {(field) => (
-                                        <F field={field} label="Contact Number">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter phone number" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                        <F field={field} label="Parent/Guardian Phone">
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter phone number" />
                                         </F>
                                     )}
                                 </form.Field>
@@ -166,7 +167,7 @@ export function AddStudentForm() {
                                 <form.Field name="dob">
                                     {(field) => (
                                         <F field={field} label="Date Of Birth">
-                                            <Input id={field.name} type="date" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                            <Input id={field.name} type="date" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} />
                                         </F>
                                     )}
                                 </form.Field>
@@ -188,7 +189,7 @@ export function AddStudentForm() {
                                 <form.Field name="country">
                                     {(field) => (
                                         <F field={field} label="Country/Location">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter country name" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter country name" />
                                         </F>
                                     )}
                                 </form.Field>
@@ -196,15 +197,7 @@ export function AddStudentForm() {
                                 <form.Field name="guardian_email">
                                     {(field) => (
                                         <F field={field} label="Parent/Guardian Email">
-                                            <Input id={field.name} type="email" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your guardian Email" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
-                                        </F>
-                                    )}
-                                </form.Field>
-
-                                <form.Field name="phone">
-                                    {(field) => (
-                                        <F field={field} label="Parent/Guardian Phone">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="+123-456-7890" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                            <Input id={field.name} type="email" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your guardian Email" />
                                         </F>
                                     )}
                                 </form.Field>
@@ -213,7 +206,7 @@ export function AddStudentForm() {
                                     <form.Field name="nationality">
                                         {(field) => (
                                             <F field={field} label="Nationality">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your nationality" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your nationality" />
                                             </F>
                                         )}
                                     </form.Field>
@@ -234,15 +227,15 @@ export function AddStudentForm() {
                         {/* ── Section: Academic Background ── */}
                         <div className="space-y-6">
                             <div className="flex items-center gap-2">
-                                <GraduationCap className="size-5 text-gray-700" strokeWidth={2.5} />
-                                <Typography as="h3" className="text-[17px] font-extrabold text-gray-900 tracking-tight">Academic Background</Typography>
+                                <School className="size-5" strokeWidth={2.5} />
+                                <Typography as="h3" font="text-lg" className="font-bold">Academic Background</Typography>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
                                 <form.Field name="qualification">
                                     {(field) => (
                                         <F field={field} label="Qualification">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your qualification" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your qualification" />
                                         </F>
                                     )}
                                 </form.Field>
@@ -250,7 +243,7 @@ export function AddStudentForm() {
                                 <form.Field name="institution_name">
                                     {(field) => (
                                         <F field={field} label="Institution Name">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter Institute Name" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter Institute Name" />
                                         </F>
                                     )}
                                 </form.Field>
@@ -258,7 +251,7 @@ export function AddStudentForm() {
                                 <form.Field name="gpa">
                                     {(field) => (
                                         <F field={field} label="Cumulative GPA">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your GPA" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your GPA" />
                                         </F>
                                     )}
                                 </form.Field>
@@ -271,10 +264,10 @@ export function AddStudentForm() {
                 <div className="mt-12 pt-10 border-t border-gray-200/40 flex flex-row items-center justify-between gap-4 w-full">
                     <ErrorView message={apiError} />
 
-                    <Button variant="outline" className="flex-1 h-12 border-[#9B51E0] text-[#9B51E0] hover:bg-[#9B51E0]/5 rounded-sm font-bold text-sm">
+                    <Button disabled variant="outline" className="flex-1 h-12 border-brand-byzantine text-brand-byzantine hover:bg-brand-byzantine/5 rounded-sm font-bold text-sm">
                         Save Student Info
                     </Button>
-                    <Button variant="outline" className="flex-1 h-12 border-[#9B51E0] text-[#9B51E0] hover:bg-[#9B51E0]/5 rounded-sm font-bold text-sm">
+                    <Button disabled variant="outline" className="flex-1 h-12 border-brand-byzantine text-brand-byzantine hover:bg-brand-byzantine/5 rounded-sm font-bold text-sm">
                         + Add More
                     </Button>
 
@@ -283,7 +276,7 @@ export function AddStudentForm() {
                             <Button 
                                 type="submit" 
                                 form="add-student-form" 
-                                className="flex-1 h-12 bg-[#9B51E0] hover:bg-[#8a42cf] text-white rounded-sm font-extrabold text-sm shadow-lg shadow-purple-500/20 transition-all" 
+                                className="flex-1 h-12 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white rounded-sm text-sm transition-all" 
                                 disabled={isSubmitting || addStudent.isPending || !isValid}
                             >
                                 {addStudent.isPending ? "Processing..." : "Register"}
