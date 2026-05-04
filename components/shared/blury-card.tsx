@@ -8,6 +8,7 @@ interface CustomAuthCardProps {
     blurAmount?: string;
     sharpCorners?: ("tl" | "tr" | "bl" | "br")[];
     isCentered?: boolean;
+    childClass?: string;
     className?: string;
     overlayColor?: string; // Example: "bg-blue-900/50" ya "bg-black/40"
     blendMode?: string;    // Example: "mix-blend-multiply" ya "mix-blend-overlay
@@ -15,6 +16,7 @@ interface CustomAuthCardProps {
 export const BluryCard = ({
     children,
     backgroundImage,
+    childClass = "",
     blurAmount = "blur-md",
     sharpCorners = [],
     isCentered = true,
@@ -34,7 +36,7 @@ export const BluryCard = ({
     return (
         <Card
             className={cn(
-                "relative overflow-hidden border-none bg-transparent",
+                "relative overflow-hidden bg-transparent ring-0 border-x border-white/40 rounded-l-lg rounded-r-lg",
                 "rounded-[2rem]",
                 sharpClasses,
                 (!backgroundImage ? blurAmount : ''),
@@ -62,6 +64,7 @@ export const BluryCard = ({
             <div
                 className={cn(
                     "relative z-10 h-full w-full p-4 md:p-8",
+                    childClass,
                     isCentered
                         ? "flex flex-col items-center justify-center text-center"
                         : "block"

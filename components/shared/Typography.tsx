@@ -6,6 +6,7 @@ type FontVariant =
     | "sub-heading"
     | "title"
     | "text-lg"
+    | "text-xl"
     | "text"
     | "small"
     | "sub-text";
@@ -27,6 +28,7 @@ export const Typography = ({
         "heading": "text-[34px] font-bold leading-tight",
         "sub-heading": "text-[30px] font-semibold leading-tight",
         "title": "text-[20px] font-semibold",
+        "text-xl": "text-[24px] font-bold",
         "text-lg": "text-[18px] font-normal",
         "text": "text-[16px] font-normal",
         "sub-text": "text-[14px] font-normal", // text-muted-foreground

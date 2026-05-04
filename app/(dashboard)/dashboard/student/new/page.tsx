@@ -1,21 +1,8 @@
 "use client"
 import { Typography } from "@/components/shared/Typography"
-import { AddStudentForm } from "@/components/AddStudentForm"
-import { useAuth } from "@/hooks/useAuth"
-import { PageLoader } from "@/components/shared/page-loader"
+import { StudentForm } from "@/components/StudentForm"
 
 export default function AddStudentPage() {
-    const { me } = useAuth()
-    const { data, isLoading, status } = me
-
-    if (isLoading || status === "pending") {
-        return <PageLoader label="Loading profile..." />
-    }
-
-    const fullName = data?.fullName || "Benson Ronald"
-    const role = data?.role || "AGENT"
-    const initials = fullName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
-
     return (
         <main className="min-h-screen">
             <div className="relative z-10 max-w-7xl mx-auto space-y-10 border-x border-white/40 rounded-l-lg rounded-r-lg">
@@ -28,9 +15,7 @@ export default function AddStudentPage() {
                     </Typography>
                 </div>
 
-                {/* <div className="w-full h- bg-gray-200/60" /> */}
-
-                <AddStudentForm />
+                <StudentForm mode="create" />
             </div>
         </main>
     )

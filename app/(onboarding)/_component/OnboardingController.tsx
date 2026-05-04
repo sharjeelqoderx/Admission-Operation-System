@@ -105,7 +105,7 @@ function OnboardingControllerInner() {
                 <BluryCard
                     isCentered
                     blurAmount="backdrop-blur-2xl"
-                    className="w-full max-w-[1000px] border-2 border-white rounded-xl shadow-none"
+                    className="w-full max-w-[1000px]"
                 >
                     <div className="flex flex-col items-center text-center space-y-6 py-4">
                         <Image src="/logo-dark.png" alt="FHM" width={180} height={54} />
@@ -136,7 +136,7 @@ function OnboardingControllerInner() {
             <BluryCard
                 isCentered={false}
                 blurAmount="backdrop-blur-2xl"
-                className="w-full max-w-[618px] border-2 border-white rounded-xl shadow-none"
+                className="w-full max-w-[618px]"
             >
                 <div className="space-y-6">
                     <Stepper step={step} isAgent={isAgent} />

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { AddStudentSchema } from "@/types/schemas/student"
 
 export async function GET(
     req: NextRequest,
@@ -12,7 +11,6 @@ export async function GET(
         if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
         const { id } = await params
-        console.log("Fetching student profile for ID:", id)
 
         // 1. Profile
         const { data: profile, error: profileError } = await supabase
@@ -28,7 +26,6 @@ export async function GET(
                 { status: 404 }
             )
         }
-        console.log("Found profile:", profile.name, "Role:", profile.role)
 
         // 2. Student details
         const { data: student } = await supabase
@@ -42,8 +39,6 @@ export async function GET(
             .from("education")
             .select("*")
             .eq("profile_id", id)
-            .maybeSingle()
-
         return NextResponse.json(
             {
                 data: {
@@ -64,10 +59,10 @@ export async function GET(
 }
 
 /**
- * PUT /api/student/[id]
- * Update student profile + details + education
+ * PATCH /api/student/[id]
+ * Update student profile + details + education (accepts FormData)
  */
-export async function PUT(
+export async function PATCH(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
@@ -77,10 +72,32 @@ export async function PUT(
         if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
         const { id } = await params
-        const body = await req.json()
-        const data = AddStudentSchema.partial().parse(body)
+        const formData = await req.formData()
+        const getString = (key: string) => { const v = formData.get(key); return typeof v === "string" ? v : undefined }
+        const getFile = (key: string) => { const v = formData.get(key); return v instanceof File ? v : undefined }
+
+        const academicRaw = getString("academic_background")
+        const academic = academicRaw ? JSON.parse(academicRaw) : []
+
+        const data = {
+            full_name: getString("full_name"),
+            email: getString("email"),
+            phone: getString("phone"),
+            dob: getString("dob"),
+            gender: getString("gender"),
+            country: getString("country"),
+            nationality: getString("nationality"),
+            guardian_email: getString("guardian_email"),
+            guardian_phone: getString("guardian_phone"),
+            avatar: getFile("avatar"),
+            academic,
+        }
 
         // 1. Update profile
+        const avatarUpload = data.avatar
+            ? await (await import("@/lib/supabase/upload-public-image")).uploadPublicImage({ supabase, bucket: "student-admission", userId: id, file: data.avatar })
+            : null
+
         const { error: profileError } = await supabase
             .from("profile")
             .update({
@@ -88,7 +105,7 @@ export async function PUT(
                 email: data.email,
                 phone: data.phone,
                 date_of_birth: data.dob,
-                avatar_url: data.avatar_url,
+                ...(avatarUpload ? { avatar_url: avatarUpload.publicUrl } : {}),
                 gender: data.gender
                     ? (data.gender.toUpperCase() as "MALE" | "FEMALE")
                     : undefined,
@@ -97,10 +114,7 @@ export async function PUT(
 
         if (profileError) {
             console.error(profileError)
-            return NextResponse.json(
-                { error: "Profile update failed" },
-                { status: 400 }
-            )
+            return NextResponse.json({ error: "Profile update failed" }, { status: 400 })
         }
 
         // 2. Upsert student details
@@ -119,53 +133,36 @@ export async function PUT(
 
         if (studentError) {
             console.error(studentError)
-            return NextResponse.json(
-                { error: "Student update failed" },
-                { status: 400 }
-            )
+            return NextResponse.json({ error: "Student update failed" }, { status: 400 })
         }
 
-        // 3. Upsert education
-        if (data.qualification || data.institution_name || data.gpa) {
+        // 3. Upsert education rows
+        for (const row of data.academic) {
+            if (!row.qualification && !row.institution_name && !row.gpa) continue
             const { error: eduError } = await supabase
                 .from("education")
                 .upsert(
                     {
                         profile_id: id,
-                        qualification: data.qualification || "",
-                        institution_name: data.institution_name || "",
-                        cumulative_gpa: data.gpa || null,
+                        qualification: row.qualification || "",
+                        institution_name: row.institution_name || "",
+                        cumulative_gpa: row.gpa || null,
                     },
                     { onConflict: "profile_id" }
                 )
-
             if (eduError) {
                 console.error(eduError)
-                return NextResponse.json(
-                    { error: "Education update failed" },
-                    { status: 400 }
-                )
+                return NextResponse.json({ error: "Education update failed" }, { status: 400 })
             }
         }
 
-        return NextResponse.json(
-            { message: "Student updated successfully" },
-            { status: 200 }
-        )
+        return NextResponse.json({ message: "Student updated successfully" }, { status: 200 })
     } catch (e: any) {
-        console.error("PUT /student/[id] error:", e)
-
+        console.error("PATCH /student/[id] error:", e)
         if (e.name === "ZodError") {
-            return NextResponse.json(
-                { error: "Validation failed", details: e.errors },
-                { status: 400 }
-            )
+            return NextResponse.json({ error: "Validation failed", details: e.errors }, { status: 400 })
         }
-
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        )
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
 }
 

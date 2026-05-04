@@ -8,11 +8,15 @@ import {
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 
-import { StudentListClient } from "@/components/StudentListClient"
+import { StudentTable } from "../_component/StudentTable"
 import { useAuth } from "@/hooks/useAuth"
 import { PageLoader } from "@/components/shared/page-loader"
+import { BluryCard } from "@/components/shared/blury-card"
 
-export default function StudentsPage() {
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+
+export default function Page() {
     const { me } = useAuth()
     const { data, isLoading, status } = me
 
@@ -24,65 +28,113 @@ export default function StudentsPage() {
     const role = data?.role || "AGENT"
     const initials = fullName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
 
+
+    const queryClient = useQueryClient()
+    const [deletingId, setDeletingId] = useState<string | null>(null)
+
+
+    const studentsQuery = useQuery({
+        queryKey: ["students"],
+        queryFn: async () => {
+            const res = await fetch("/api/student")
+            if (!res.ok) throw new Error("Failed to fetch students")
+            const json = await res.json()
+            return json.data
+        },
+    })
+
+    const deleteStudent = useMutation({
+        mutationFn: async (id: string) => {
+            const res = await fetch(`/api/student/${id}`, {
+                method: "DELETE",
+            })
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.error || "Failed to delete student")
+            }
+            return res.json()
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["students"] })
+        },
+    })
+
+    // ✅ handler
+    const handleDelete = async (id: string, name: string) => {
+        setDeletingId(id)
+        try {
+            await deleteStudent.mutateAsync(id)
+        } finally {
+            setDeletingId(null)
+        }
+    }
+
     return (
         <main className="relative overflow-x-hidden">
 
-            {/* Content */}
-            <div className="relative z-10">
-                <div className="max-w-7xl mx-auto px-6 lg:px-10 py-6 lg:py-10 space-y-8">
-                    {/* Page Header Area */}
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                        <div className="space-y-1 max-w-2xl">
-                            <Typography as="h2" className="text-[28px] font-bold text-gray-900 tracking-tight">
-                                All students
-                            </Typography>
-                            <Typography as="p" className="text-sm text-gray-600 leading-relaxed">
-                                Initiate a new student profile and link them to global academic programs. Ensure all mandatory fields are verified before submission.
-                            </Typography>
-                        </div>
-                        <Link href="/dashboard/student/new">
-                            <Button className="bg-brand-byzantine hover:bg-brand-byzantine text-white px-6 h-11 rounded-md shrink-0 shadow-md">
-                                <Plus className="size-4 mr-2" />
-                                <Typography as="span" className="text-inherit font-medium">Add Student</Typography>
-                            </Button>
-                        </Link>
+            <BluryCard
+                isCentered={false}
+                blurAmount="backdrop-blur-lg"
+                blendColorClass="bg-white/10"
+                childClass="space-y-12"
+            >
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between flex-wrap gap-4">
+                    <div className="space-y-1 max-w-2xl">
+                        <Typography font='text-xl' as={'h2'}>
+                            All students
+                        </Typography>
+                        <Typography as="p" font="text" className="text-gray-600">
+                            Initiate a new student profile and link them to global academic programs. Ensure all mandatory fields are verified before submission.
+                        </Typography>
                     </div>
-
-                    {/* Stats Header Area */}
-                    <div className="bg-white/10 backdrop-blur-sm border-x border-white/40 rounded-l-lg rounded-r-lg rounded-2xl p-8 flex flex-col md:flex-row items-center gap-16">
-                        <div className="flex items-center gap-6">
-                            <div className="size-14 border-x border-white/40 rounded-l-lg rounded-r-lg bg-white/20 flex items-center justify-center">
-                                <GraduationCap className="size-7 text-gray-800" />
-                            </div>
-                            <div className="flex flex-col">
-                                <Typography as="span" className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
-                                    Total Students
-                                </Typography>
-                                <Typography as="span" className="text-[34px] font-extrabold text-gray-900 leading-none mt-1">
-                                    1,284
-                                </Typography>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-6">
-                            <div className="size-14 border-x border-white/40 rounded-l-lg rounded-r-lg bg-white/20 flex items-center justify-center">
-                                <FileText className="size-7 text-gray-800" />
-                            </div>
-                            <div className="flex flex-col">
-                                <Typography as="span" className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
-                                    Active Applications
-                                </Typography>
-                                <Typography as="span" className="text-[34px] font-extrabold text-gray-900 leading-none mt-1">
-                                    422
-                                </Typography>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* List Section */}
-                    <StudentListClient />
+                    <Link href="/dashboard/student/new">
+                        <Button className="bg-brand-byzantine hover:bg-brand-byzantine/80 text-white px-6 h-11 rounded-md shrink-0 shadow-md">
+                            <Plus className="size-4 mr-2" />
+                            <Typography as="span" className="text-inherit font-medium">Add Student</Typography>
+                        </Button>
+                    </Link>
                 </div>
-            </div>
+
+                <div className="flex flex-col md:flex-row items-center gap-16">
+                    <div className="flex items-center gap-6">
+                        <div className="size-14 border-x border-white/40 rounded-l-lg rounded-r-lg bg-white/20 flex items-center justify-center">
+                            <GraduationCap className="size-7 text-gray-800" />
+                        </div>
+                        <div className="flex flex-col">
+                            <Typography as="span" className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
+                                Total Students
+                            </Typography>
+                            <Typography as="span" className="text-[34px] font-extrabold text-gray-900 leading-none mt-1">
+                                1,284
+                            </Typography>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                        <div className="size-14 border-x border-white/40 rounded-l-lg rounded-r-lg bg-white/20 flex items-center justify-center">
+                            <FileText className="size-7 text-gray-800" />
+                        </div>
+                        <div className="flex flex-col">
+                            <Typography as="span" className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
+                                Active Applications
+                            </Typography>
+                            <Typography as="span" className="text-[34px] font-extrabold text-gray-900 leading-none mt-1">
+                                422
+                            </Typography>
+                        </div>
+                    </div>
+                </div>
+            </BluryCard>
+
+            <StudentTable
+                students={studentsQuery.data || []}
+                isLoading={studentsQuery.isLoading}
+                isError={studentsQuery.isError}
+                onDelete={handleDelete}
+                onRetry={studentsQuery.refetch}
+                deletingId={deletingId}
+            />
+
         </main>
     )
 }

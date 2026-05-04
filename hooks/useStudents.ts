@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { type AddStudentInput } from "@/types/schemas/student"
+import { type StudentInput } from "@/types/schemas/student"
 
 export function useStudents() {
     const queryClient = useQueryClient()
@@ -29,7 +29,7 @@ export function useStudents() {
 
     // Add student
     const addStudent = useMutation({
-        mutationFn: async (data: AddStudentInput | FormData) => {
+        mutationFn: async (data: StudentInput | FormData) => {
             const res = await fetch("/api/student", {
                 method: "POST",
                 body: data instanceof FormData ? data : JSON.stringify(data),
@@ -48,7 +48,7 @@ export function useStudents() {
 
     // Edit student
     const editStudent = useMutation({
-        mutationFn: async ({ id, data }: { id: string, data: Partial<AddStudentInput> }) => {
+        mutationFn: async ({ id, data }: { id: string, data: Partial<StudentInput> }) => {
             const res = await fetch(`/api/student/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },

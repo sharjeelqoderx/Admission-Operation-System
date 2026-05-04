@@ -5,7 +5,7 @@ import { UploadCloud, X, ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type Props = {
-    value?: File | null
+    value?: File | string | null
     onChange?: (file: File | null) => void
     message?: string
     className?: string
@@ -23,6 +23,10 @@ export function ImageUploadCard({
     useEffect(() => {
         if (!value) {
             setPreview(null)
+            return
+        }
+        if (typeof value === "string") {
+            setPreview(value)
             return
         }
         const url = URL.createObjectURL(value)

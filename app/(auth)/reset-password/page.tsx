@@ -53,7 +53,7 @@ function ResetPasswordForm() {
 
     if (success) {
         return (
-            <BluryCard isCentered={false} sharpCorners={[]} blurAmount="backdrop-blur-2xl" className="w-full sm:max-w-[480px] border-2 border-white rounded-xl shadow-none text-center space-y-4">
+            <BluryCard isCentered={false} sharpCorners={[]} blurAmount="backdrop-blur-2xl" className="w-full sm:max-w-[480px] text-center space-y-4">
                 <Typography as="h2" font="sub-heading" className="font-bold text-emerald-600">Password Updated!</Typography>
                 <Typography as="p" font="text" className="text-muted-foreground">
                     Password updated successfully. Please login.
@@ -63,7 +63,7 @@ function ResetPasswordForm() {
     }
 
     return (
-        <BluryCard isCentered={false} sharpCorners={[]} blurAmount="backdrop-blur-2xl" className="w-full sm:max-w-[618px] border-2 border-white rounded-xl shadow-none">
+        <BluryCard isCentered={false} sharpCorners={[]} blurAmount="backdrop-blur-2xl" className="w-full sm:max-w-[618px]">
             <div className="w-full space-y-8">
                 <div className="flex flex-col items-center text-center space-y-2">
                     <div className="size-14 rounded-full bg-brand/10 flex items-center justify-center mb-2">

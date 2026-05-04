@@ -38,7 +38,7 @@ export function LoginForm() {
             isCentered={false}
             sharpCorners={[]}
             blurAmount={'backdrop-blur-2xl'}
-            className="w-full sm:max-w-[618px] border-2 border-white rounded-xl shadow-none"
+            className="w-full sm:max-w-[618px]"
         >
             <div className="w-full space-y-10">
                 <div>

@@ -51,7 +51,7 @@ export function ForgotPasswordForm() {
 
     if (sent) {
         return (
-            <BluryCard isCentered={false} sharpCorners={[]} blurAmount="backdrop-blur-2xl" className="w-full sm:max-w-[618px] border-2 border-white rounded-xl shadow-none">
+            <BluryCard isCentered={false} sharpCorners={[]} blurAmount="backdrop-blur-2xl" className="w-full sm:max-w-[618px]">
                 <div className="w-full space-y-6 text-center">
                     <div className="flex flex-col items-center space-y-2">
                         <div className="size-14 rounded-full bg-emerald-500/10 flex items-center justify-center mb-2">
@@ -72,7 +72,7 @@ export function ForgotPasswordForm() {
     }
 
     return (
-        <BluryCard isCentered={false} sharpCorners={[]} blurAmount="backdrop-blur-2xl" className="w-full sm:max-w-[618px] border-2 border-white rounded-xl shadow-none">
+        <BluryCard isCentered={false} sharpCorners={[]} blurAmount="backdrop-blur-2xl" className="w-full sm:max-w-[618px]">
             <div className="w-full space-y-8">
                 <div className="flex flex-col items-center text-center space-y-2">
                     <div className="size-14 rounded-full bg-brand/10 flex items-center justify-center mb-2">

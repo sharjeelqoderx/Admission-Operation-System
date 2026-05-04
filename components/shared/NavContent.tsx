@@ -82,7 +82,7 @@ export function NavContent() {
                     priority
                 />
             </div>
-            <nav className="flex-1 py-4 overflow-y-auto relative z-10 space-y-1">
+            <nav className="flex-1 py-4 overflow-y-auto relative z-10">
                 {navItems.map((item) => {
                     const isActive = pathname === item.href
                     const isExpanded = openMenu === item.label

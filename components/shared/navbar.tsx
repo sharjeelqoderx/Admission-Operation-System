@@ -113,7 +113,7 @@ export function Navbar({
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-14 gap-3 px-4 py-2 border-brand-byzantine rounded-xl hover:bg-brand-byzantine/10 bg-brand-byzantine/5 transition-colors">
+                            <Button variant="outline" className="h-14 gap-3 px-4 py-2 border border-brand-byzantine rounded-xl hover:bg-brand-byzantine/10 bg-brand-byzantine/5 transition-colors">
                                 <div className="hidden sm:flex flex-col items-end">
                                     <span className="text-sm font-bold text-gray-800 leading-tight">{userName}</span>
                                     <span className="text-xs text-brand-byzantine font-medium">{userRole}</span>

@@ -7,6 +7,7 @@ import { Mail, MapPin, Building2, Phone, Calendar, Globe, GraduationCap } from "
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { BluryCard } from "./shared/blury-card"
 
 export function ViewStudentProfile({ id: propId }: { id?: string } = {}) {
     const searchParams = useSearchParams()
@@ -23,8 +24,8 @@ export function ViewStudentProfile({ id: propId }: { id?: string } = {}) {
     const edu = student.education
 
     return (
-        <div className="w-full space-y-12 pb-20 px-6 lg:px-12">
-            
+        <div className="w-full space-y-12">
+
             {/* ── Header ── */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 ">
                 <div className="space-y-1 ">
@@ -44,7 +45,7 @@ export function ViewStudentProfile({ id: propId }: { id?: string } = {}) {
                         )}
                     </div>
                 </div>
-                <Link href={`/dashboard/student/edit?id=${id}`}>
+                <Link href={`/dashboard/student/${id}/edit`}>
                     <Button className="bg-brand-byzantine hover:bg-[#8a42cf] text-white px-10 h-12 rounded-xl font-bold shadow-lg shadow-purple-500/20 transition-all">
                         Edit Profile
                     </Button>
@@ -52,8 +53,8 @@ export function ViewStudentProfile({ id: propId }: { id?: string } = {}) {
             </div>
 
             {/* ── Main Info Container (Glass wrapper) ── */}
-            <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded-[32px] p-10 space-y-12">
-                {/* Academic Record Section */}
+            {/* <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded-[32px] p-10 space-y-12"> */}
+            <BluryCard isCentered={false} sharpCorners={[]} blurAmount="backdrop-blur-md" className="w-full space-y-12">
                 <div className="flex flex-col md:flex-row gap-12 relative overflow-hidden">
                     <div className="shrink-0 relative group">
                         <img
@@ -62,17 +63,17 @@ export function ViewStudentProfile({ id: propId }: { id?: string } = {}) {
                             className="size-40 rounded-[28px] object-cover border-4 border-white/40 shadow-xl"
                         />
                     </div>
-                    
+
                     <div className="flex-1 space-y-8 max-w-2xl">
                         <Typography as="h3" className="text-2xl font-bold text-gray-900">Academic Record</Typography>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                             <div className="space-y-1">
                                 <Typography as="p" className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Highest Degree</Typography>
                                 <Typography as="p" className="text-[16px] font-bold text-gray-900 leading-tight">{edu?.qualification ?? "BSc Economics & Finance"}</Typography>
                                 <Typography as="p" className="text-[12px] font-medium text-gray-500">{edu?.institution_name ?? "University of Athens"}</Typography>
                             </div>
-                            
+
                             <div className="space-y-1">
                                 <Typography as="p" className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Final GPA</Typography>
                                 <Typography as="p" className="text-[16px] font-bold text-gray-900">{edu?.cumulative_gpa ?? "3.8 / 4.0"}</Typography>
@@ -93,17 +94,17 @@ export function ViewStudentProfile({ id: propId }: { id?: string } = {}) {
                 {/* Basic Info Section */}
                 <div className="space-y-8">
                     <Typography as="h3" className="text-2xl font-bold text-gray-900">Basic Info</Typography>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-y-8 gap-x-12">
                         {[
-                            { label: "Email",          value: student.email,          placeholder: "mike@gmail.com" },
-                            { label: "Gender",         value: student.gender,         placeholder: "Male" },
-                            { label: "Nationality",    value: s?.nationality,         placeholder: "Spain" },
-                            { label: "Date of Birth",  value: student.date_of_birth,  placeholder: "10/12/1995" },
-                            { label: "Guardian Email", value: s?.guardian_email,      placeholder: "guardian@gmail.com" },
-                            { label: "Institution Name", value: edu?.institution_name,  placeholder: "guardian@gmail.com" },
-                            { label: "Phone",          value: student.phone,          placeholder: "+123-458-7890" },
-                            { label: "Guardian Phone", value: s?.guardian_phone,      placeholder: "+123-458-7890" },
+                            { label: "Email", value: student.email, placeholder: "mike@gmail.com" },
+                            { label: "Gender", value: student.gender, placeholder: "Male" },
+                            { label: "Nationality", value: s?.nationality, placeholder: "Spain" },
+                            { label: "Date of Birth", value: student.date_of_birth, placeholder: "10/12/1995" },
+                            { label: "Guardian Email", value: s?.guardian_email, placeholder: "guardian@gmail.com" },
+                            { label: "Institution Name", value: edu?.institution_name, placeholder: "guardian@gmail.com" },
+                            { label: "Phone", value: student.phone, placeholder: "+123-458-7890" },
+                            { label: "Guardian Phone", value: s?.guardian_phone, placeholder: "+123-458-7890" },
                         ].map(({ label, value, placeholder }) => (
                             <div key={label} className="flex items-center justify-between gap-4 border-b border-gray-200/40 pb-2">
                                 <Typography as="span" className="text-[14px] font-bold text-gray-900 shrink-0">{label}:</Typography>
@@ -112,12 +113,14 @@ export function ViewStudentProfile({ id: propId }: { id?: string } = {}) {
                         ))}
                     </div>
                 </div>
-            </div>
+            </BluryCard >
+            {/* </div> */}
+
 
             {/* ── Applications Applied For (Glass Table) ── */}
-            <div className="space-y-8">
+            <div div className="space-y-8" >
                 <Typography as="h3" className="text-2xl font-bold text-gray-900">Applications Applied For</Typography>
-                
+
                 <div className="bg-white/5 backdrop-blur-xl border border-white/20 rounded-[32px] overflow-hidden shadow-sm">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -161,6 +164,6 @@ export function ViewStudentProfile({ id: propId }: { id?: string } = {}) {
                     </table>
                 </div>
             </div>
-        </div>
+        </div >
     )
 }

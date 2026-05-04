@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { AddStudentSchema } from "@/types/schemas/student"
+import { StudentFormSchema } from "@/types/schemas/student"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 
 export async function GET(req: NextRequest) {
@@ -48,7 +48,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const supabase = await createSupabaseServerClient()
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser()
+
         if (authError || !user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
@@ -59,12 +64,16 @@ export async function POST(req: NextRequest) {
             const v = formData.get(key)
             return typeof v === "string" ? v : ""
         }
+
         const getFile = (key: string) => {
             const v = formData.get(key)
             return v instanceof File ? v : undefined
         }
 
-        const validatedData = AddStudentSchema.parse({
+        const academicRaw = getString("academic_background")
+        const academic_background = academicRaw ? JSON.parse(academicRaw) : []
+
+        const validatedData = StudentFormSchema.parse({
             full_name: getString("full_name"),
             email: getString("email"),
             phone: getString("phone"),
@@ -74,64 +83,84 @@ export async function POST(req: NextRequest) {
             nationality: getString("nationality"),
             guardian_email: getString("guardian_email"),
             guardian_phone: getString("guardian_phone"),
-            qualification: getString("qualification"),
-            institution_name: getString("institution_name"),
-            gpa: getString("gpa"),
             avatar_url: getFile("avatar"),
+            academic_background,
         })
 
-        // Only AGENT can create students, and we store agent.id in student.created_by_agent_id
-        const { data: meProfile, error: meProfileError } = await supabase
+        const { data: meProfile } = await supabase
             .from("profile")
             .select("id, role")
             .eq("id", user.id)
             .maybeSingle()
 
-        if (meProfileError || !meProfile) {
+        if (!meProfile) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
+
         if (meProfile.role !== "AGENT") {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        const { data: agentRow, error: agentError } = await supabase
+        const { data: agentRow } = await supabase
             .from("agent")
             .select("id")
             .eq("profile_id", user.id)
             .maybeSingle()
 
-        if (agentError || !agentRow) {
-            return NextResponse.json({ error: "Agent profile not found" }, { status: 400 })
+        if (!agentRow) {
+            return NextResponse.json(
+                { error: "Agent profile not found" },
+                { status: 400 }
+            )
         }
 
-        // 1. Create auth user with server client
-        const { data: authData, error: createUserError } = await supabase.auth.signUp({
-            email: validatedData.email,
-            password: 'student@123',
-            options: {
-                data: {
-                    full_name: validatedData.full_name,
-                    role: "STUDENT",
-                },
-            },
-        })
 
-        if (createUserError || !authData.user) {
-            console.error("Error creating auth user:", createUserError)
-            return NextResponse.json({
-                error: "Failed to create user account",
-                details: createUserError?.message
-            }, { status: 400 })
+        const { data: existingProfile } = await supabase
+            .from("profile")
+            .select("id, role")
+            .eq("email", validatedData.email)
+            .maybeSingle()
+
+        if (existingProfile) {
+            const msg = existingProfile.role === "STUDENT"
+                ? "A student with this email already exists."
+                : `This email is already registered as a ${existingProfile.role.toLowerCase()} account.`
+            return NextResponse.json({ error: msg }, { status: 409 })
+        }
+
+        const { data: authData, error: createUserError } =
+            await supabase.auth.signUp({
+                email: validatedData.email,
+                password: "student@123",
+                options: {
+                    data: {
+                        full_name: validatedData.full_name,
+                        role: "STUDENT",
+                    },
+                },
+            })
+
+        if (createUserError || !authData?.user) {
+            const msg = createUserError?.message?.toLowerCase().includes("already")
+                ? "An account with this email already exists."
+                : createUserError?.message ?? "Failed to create user account"
+            return NextResponse.json({ error: msg }, { status: 400 })
         }
 
         const newUserId = authData.user.id
 
         const bucket = "student-admission"
+
         const avatarUpload = validatedData.avatar_url
-            ? await uploadPublicImage({ supabase, bucket, userId: newUserId, file: validatedData.avatar_url })
+            ? await uploadPublicImage({
+                supabase,
+                bucket,
+                userId: newUserId,
+                file: validatedData.avatar_url,
+            })
             : null
 
-        // 2. Upsert profile linked to auth user
+        /* ---------------- PROFILE CREATE ---------------- */
         const { data: profile, error: profileError } = await supabase
             .from("profile")
             .upsert({
@@ -140,9 +169,13 @@ export async function POST(req: NextRequest) {
                 email: validatedData.email,
                 phone: validatedData.phone || null,
                 date_of_birth: validatedData.dob || null,
-                gender: (validatedData.gender?.toUpperCase() === "MALE" || validatedData.gender?.toUpperCase() === "FEMALE")
-                    ? validatedData.gender.toUpperCase() as "MALE" | "FEMALE"
-                    : null,
+                gender:
+                    validatedData.gender?.toUpperCase() === "MALE" ||
+                        validatedData.gender?.toUpperCase() === "FEMALE"
+                        ? (validatedData.gender.toUpperCase() as
+                            | "MALE"
+                            | "FEMALE")
+                        : null,
                 avatar_url: avatarUpload?.publicUrl ?? null,
                 role: "STUDENT",
             })
@@ -150,67 +183,98 @@ export async function POST(req: NextRequest) {
             .single()
 
         if (profileError) {
-            console.error("Error creating student profile:", profileError)
-            return NextResponse.json({
-                error: "Failed to create student profile",
-                details: profileError,
-            }, { status: 400 })
+            return NextResponse.json(
+                {
+                    error: "Failed to create student profile",
+                    details: profileError,
+                },
+                { status: 400 }
+            )
         }
 
-        // 3. Upsert student detail row
-        const { error: studentError } = await supabase
-            .from("student")
-            .upsert({
+        /* ---------------- STUDENT CREATE ---------------- */
+        const { error: studentError } = await supabase.from("student").upsert(
+            {
                 profile_id: newUserId,
                 created_by_agent_id: agentRow.id,
                 country: validatedData.country || null,
                 nationality: validatedData.nationality || null,
                 guardian_email: validatedData.guardian_email || null,
                 guardian_phone: validatedData.guardian_phone || null,
-            }, { onConflict: "profile_id" })
+            },
+            { onConflict: "profile_id" }
+        )
 
         if (studentError) {
-            console.error("Error creating student detail:", studentError)
-            return NextResponse.json({
-                error: "Failed to create student details",
-                details: studentError,
-            }, { status: 400 })
+            return NextResponse.json(
+                {
+                    error: "Failed to create student details",
+                    details: studentError,
+                },
+                { status: 400 }
+            )
         }
 
-        // 4. Create or update education row if provided
-        if (validatedData.qualification || validatedData.institution_name || validatedData.gpa) {
-            const payload = {
-                profile_id: newUserId,
-                qualification: validatedData.qualification || "",
-                institution_name: validatedData.institution_name || "",
-                cumulative_gpa: validatedData.gpa || null,
+        /* ---------------- EDUCATION (MULTIPLE) ---------------- */
+        if (validatedData.academic_background?.length) {
+            const educationRows = validatedData.academic_background.map(
+                (item: any) => ({
+                    profile_id: newUserId,
+                    qualification: item.qualification,
+                    institution_name: item.institution_name,
+                    cumulative_gpa: item.gpa,
+                })
+            )
+
+            const { error: deleteError } = await supabase
+                .from("education")
+                .delete()
+                .eq("profile_id", newUserId)
+
+            if (deleteError) {
+                return NextResponse.json(
+                    {
+                        error: "Failed to reset education",
+                        details: deleteError,
+                    },
+                    { status: 400 }
+                )
             }
 
-            const { data: existingEdu } = await supabase
+            const { error: eduError } = await supabase
                 .from("education")
-                .select("id")
-                .eq("profile_id", newUserId)
-                .maybeSingle()
-
-            const { error: eduError } = existingEdu
-                ? await supabase.from("education").update(payload).eq("id", existingEdu.id)
-                : await supabase.from("education").insert(payload)
+                .insert(educationRows)
 
             if (eduError) {
-                console.error("Error saving education:", eduError)
-                return NextResponse.json({
-                    error: "Failed to save education",
-                    details: eduError,
-                }, { status: 400 })
+                return NextResponse.json(
+                    {
+                        error: "Failed to save education",
+                        details: eduError,
+                    },
+                    { status: 400 }
+                )
             }
         }
 
-        return NextResponse.json({ data: profile, message: "Student created successfully" }, { status: 201 })
+        /* ---------------- SUCCESS ---------------- */
+        return NextResponse.json(
+            {
+                data: profile,
+                message: "Student created successfully",
+            },
+            { status: 201 }
+        )
     } catch (e: any) {
-        console.error("Error in POST /api/student:", e)
-        if (e.name === "ZodError") {
-            return NextResponse.json({ error: "Validation failed", details: e.errors }, { status: 400 })
+        if (e?.name === "ZodError") {
+            return NextResponse.json(
+                { error: "Validation failed", details: e.errors },
+                { status: 400 }
+            )
         }
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+
+        return NextResponse.json(
+            { error: "Internal Server Error" },
+            { status: 500 }
+        )
     }
 }
