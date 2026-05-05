@@ -9,16 +9,27 @@ export enum ApplicationStatus {
     SIGNED = "Signed",
 }
 
-const statusStyles: Record<ApplicationStatus, string> = {
+export enum DocStatus {
+    VERIFIED = "VERIFIED",
+    PENDING = "PENDING",
+    ACTION_REQUIRED = "ACTION_REQUIRED",
+    REJECTED = "REJECTED",
+}
+
+const statusStyles: Record<string, string> = {
     [ApplicationStatus.CONTRACT_SENT]: "bg-brand-danger",
     [ApplicationStatus.CREATED]: "bg-brand-sky",
     [ApplicationStatus.DOCUMENTS_PENDING]: "bg-yellow-500",
     [ApplicationStatus.SIGNED]: "bg-brand-success",
     [ApplicationStatus.COMPLETED]: "bg-brand-primary",
+    [DocStatus.VERIFIED]: "bg-green-500",
+    [DocStatus.PENDING]: "bg-yellow-500",
+    [DocStatus.ACTION_REQUIRED]: "bg-orange-500",
+    [DocStatus.REJECTED]: "bg-red-500",
 }
 
 interface Props {
-    status: ApplicationStatus
+    status: ApplicationStatus | DocStatus | string
 }
 
 export function StatusBadge({ status }: Props) {
@@ -26,10 +37,10 @@ export function StatusBadge({ status }: Props) {
         <Badge
             className={cn(
                 "inline-flex items-center justify-center px-4 py-1.5 rounded-full text-[9px] font-extrabold tracking-widest min-w-[100px]",
-                statusStyles[status]
+                statusStyles[status] ?? "bg-gray-400"
             )}
         >
-            {status.toUpperCase()}
+            {status.toString().replace(/_/g, " ").toUpperCase()}
         </Badge>
     )
 }

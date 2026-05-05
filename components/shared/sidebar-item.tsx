@@ -22,7 +22,7 @@ export function SidebarItem({ href, icon, label, isActive, isChild }: SidebarIte
         isChild ? "border-none pl-12" : "",
         active
             ? "bg-brand-byzantine text-white border-transparent"
-            : isChild ? "text-white/70 hover:text-white" : "text-[#333] bg-white/40 hover:bg-gray-50",
+            : isChild ? "" : "text-[#333] bg-white/40 hover:bg-gray-50", // text-white/70 hover:text-white
         isChild && active && "text-white"
     );
 
