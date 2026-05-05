@@ -28,13 +28,15 @@ const getTitleFromPathname = (pathname: string): string => {
 
     if (segments.length === 0) return 'Dashboard';
 
-    const lastSegment = segments[segments.length - 1];
-    
     if (pathname.includes('/dashboard/student/') && segments.length >= 3) {
         if (segments[segments.length - 2] === 'student' || segments.includes('[student-id]')) {
              return 'Student Profile';
         }
     }
+
+    if (pathname === '/dashboard/document/new') return 'Document';
+
+    const lastSegment = segments[segments.length - 1];
 
     return lastSegment
         .split('-')
