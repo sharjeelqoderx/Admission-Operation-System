@@ -20,13 +20,13 @@ export function SidebarGroup({
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return (
-        <div className={cn("relative transition-all duration-300 bg-white/40", defaultOpen && "text-white bg-brand-byzantine")}>
+        <div className={cn("relative transition-all duration-300 bg-white/40 text-[#333]", defaultOpen && "text-white bg-brand-byzantine")}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    'w-full flex items-center gap-3 px-6 py-2 transition-all duration-200',
+                    'w-full flex items-center gap-3 px-6 py-3 transition-all duration-200',
                     'text-[14px] font-semibold cursor-pointer',
-                    defaultOpen ? 'text-white border-transparent' : 'text-[#333]'
+                    isOpen ? 'border-transparent' : ''
                 )}
             >
                 <span className="w-6 h-6 flex items-center justify-center opacity-80">{icon}</span>
