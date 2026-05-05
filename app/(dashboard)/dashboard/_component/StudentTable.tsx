@@ -3,7 +3,6 @@
 import { Typography } from "@/components/shared/Typography"
 import {
     Search,
-    ChevronDown,
     ChevronLeft,
     ChevronRight,
     Eye,
@@ -13,6 +12,13 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 // shadcn table imports
 import {
@@ -23,6 +29,8 @@ import {
     TableHead,
     TableCell,
 } from "@/components/ui/table"
+import { BluryCard } from "@/components/shared/blury-card"
+import { StatusBadge } from "@/components/shared/StatusBadge"
 
 type Student = any
 
@@ -82,7 +90,7 @@ export function StudentTable({
 
                 <button
                     onClick={onRetry}
-                    className="px-5 py-2 rounded-xl text-sm font-semibold bg-[#9B51E0] text-white hover:bg-[#8a42cf] transition-colors"
+                    className="px-5 py-2 rounded-xl text-sm font-semibold bg-brand-byzantine text-white hover:bg-brand-byzantine transition-colors"
                 >
                     Retry
                 </button>
@@ -92,7 +100,7 @@ export function StudentTable({
 
     return (
         <div className="space-y-4 pt-4">
-            <Typography as="h3" className="text-xl font-bold text-[#1e3a8a]">
+            <Typography as="h3" className="text-xl font-bold text-brand-secondary">
                 Students list
             </Typography>
 
@@ -103,39 +111,52 @@ export function StudentTable({
                     <Input
                         type="text"
                         placeholder="Enter to search"
-                        className="w-full bg-white/40 backdrop-blur-md ps-12"
+                        className="w-full backdrop-blur-md ps-8"
                     />
                 </div>
 
                 <div className="relative w-full sm:w-64">
-                    <select className="w-full h-full px-4 appearance-none rounded-md bg-white/40 backdrop-blur-md border border-white/40 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#9B51E0]/20">
-                        <option>Status</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400 pointer-events-none" />
+                    <Select>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="created">Created</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
 
             {/* Tabs */}
             <div className="flex items-center gap-2 pt-2">
-                <button className="px-5 py-1.5 rounded-full bg-[#1e3a8a] text-white text-xs font-medium shadow-sm">
+                <button className="px-5 py-1.5 rounded-full bg-brand-secondary text-white text-xs font-medium shadow-sm">
                     All Students
                 </button>
-                <button className="px-5 py-1.5 rounded-full bg-[#8ba4d5] text-white text-xs font-medium hover:bg-[#1e3a8a]">
+                <button className="px-5 py-1.5 rounded-full bg-[#8ba4d5] text-white text-xs font-medium hover:bg-brand-secondary">
                     Program
                 </button>
-                <button className="px-5 py-1.5 rounded-full bg-[#8ba4d5] text-white text-xs font-medium hover:bg-[#1e3a8a]">
+                <button className="px-5 py-1.5 rounded-full bg-[#8ba4d5] text-white text-xs font-medium hover:bg-brand-secondary">
                     Country
                 </button>
             </div>
 
             {/* Table */}
-            <div className="w-full bg-white/5 backdrop-blur-xl border-x border-white/40 p-2 rounded-l-lg rounded-r-lg shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)] rounded-2xl overflow-hidden">
+            <BluryCard
+                isCentered={false}
+                blurAmount="backdrop-blur-lg"
+                blendColorClass="bg-white/10"
+                childClass='p-0!'
+                className='rounded-lg p-0'
+            >
                 <div className="overflow-x-auto">
-                    <Table className="w-full text-left border-collapse">
+                    <Table className="w-full text-left border-collapse min-w-[900px]">
                         <TableHeader>
-                            <TableRow className="border-b border-gray-200/20">
+                            <TableRow className="border-b border-white/20 bg-white/10">
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">Student Name</TableHead>
-                                <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">Program</TableHead>
+                                {/* <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">Program</TableHead> */}
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">Country</TableHead>
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">Status</TableHead>
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">
@@ -166,11 +187,11 @@ export function StudentTable({
                                             </Typography>
                                         </TableCell>
 
-                                        <TableCell className="px-6 py-6">
+                                        {/* <TableCell className="px-6 py-6">
                                             <Typography as="span" className="text-sm font-bold text-gray-700">
                                                 {student.program}
                                             </Typography>
-                                        </TableCell>
+                                        </TableCell> */}
 
                                         <TableCell className="px-6 py-6">
                                             <Typography as="span" className="text-sm font-bold text-gray-700">
@@ -179,9 +200,7 @@ export function StudentTable({
                                         </TableCell>
 
                                         <TableCell className="px-6 py-6">
-                                            <span className="inline-flex px-4 py-1.5 rounded-lg text-[10px] font-extrabold uppercase bg-[#4285f4] text-white">
-                                                {student.status || 'CREATED'}
-                                            </span>
+                                            <StatusBadge status={student.status || 'Created'} />
                                         </TableCell>
 
                                         <TableCell className="px-6 py-6">
@@ -230,7 +249,7 @@ export function StudentTable({
                         </button>
                     </div>
                 </div>
-            </div>
-        </div>
+            </BluryCard>
+        </div >
     )
 }

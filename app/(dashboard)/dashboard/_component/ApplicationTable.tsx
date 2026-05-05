@@ -20,7 +20,7 @@ export const ApplicationTable = ({ applications }: any) => {
             blurAmount="backdrop-blur-lg"
             blendColorClass="bg-white/10"
             childClass='p-0!'
-            className='p-0'
+            className='rounded-lg p-0'
         >
             <div className="overflow-x-auto">
                 <Table className="w-full text-left border-collapse min-w-[900px]">

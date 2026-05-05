@@ -136,23 +136,34 @@ export async function PATCH(
             return NextResponse.json({ error: "Student update failed" }, { status: 400 })
         }
 
-        // 3. Upsert education rows
+        // 3. Update or insert education rows
         for (const row of data.academic) {
             if (!row.qualification && !row.institution_name && !row.gpa) continue
-            const { error: eduError } = await supabase
-                .from("education")
-                .upsert(
-                    {
-                        profile_id: id,
-                        qualification: row.qualification || "",
-                        institution_name: row.institution_name || "",
-                        cumulative_gpa: row.gpa || null,
-                    },
-                    { onConflict: "profile_id" }
-                )
-            if (eduError) {
-                console.error(eduError)
-                return NextResponse.json({ error: "Education update failed" }, { status: 400 })
+
+            const payload = {
+                profile_id: id,
+                qualification: row.qualification || "",
+                institution_name: row.institution_name || "",
+                cumulative_gpa: row.gpa || null,
+            }
+
+            if (row.id) {
+                const { error: eduError } = await supabase
+                    .from("education")
+                    .update(payload)
+                    .eq("id", row.id)
+                if (eduError) {
+                    console.error(eduError)
+                    return NextResponse.json({ error: "Education update failed" }, { status: 400 })
+                }
+            } else {
+                const { error: eduError } = await supabase
+                    .from("education")
+                    .insert(payload)
+                if (eduError) {
+                    console.error(eduError)
+                    return NextResponse.json({ error: "Education update failed" }, { status: 400 })
+                }
             }
         }
 

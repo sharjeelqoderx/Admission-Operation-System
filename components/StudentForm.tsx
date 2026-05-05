@@ -48,10 +48,12 @@ type StudentData = {
         guardian_phone?: string | null
     } | null
     education?: Array<{
+        id?: string | null
         qualification?: string | null
         institution_name?: string | null
         cumulative_gpa?: number | string | null
     }> | {
+        id?: string | null
         qualification?: string | null
         institution_name?: string | null
         cumulative_gpa?: number | string | null
@@ -107,6 +109,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
             avatar_url: undefined as File | undefined,
             academic_background: eduList?.length
                 ? eduList.map(e => ({
+                    id: (e as any).id ?? undefined,
                     qualification: e.qualification ?? "",
                     institution_name: e.institution_name ?? "",
                     gpa: e.cumulative_gpa?.toString() ?? "",
@@ -286,15 +289,6 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                         Academic Background
                                     </Typography>
                                 </div>
-
-                                <Button
-                                    type="button"
-                                    size="lg"
-                                    className="font-light"
-                                    onClick={addRow}
-                                >
-                                    + Add More
-                                </Button>
                             </div>
 
                             <form.Field name="academic_background">
@@ -378,6 +372,16 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                     </div>
                                 )}
                             </form.Field>
+                            <div className="flex justify-end">
+                                <Button
+                                    type="button"
+                                    size="lg"
+                                    className="font-light"
+                                    onClick={addRow}
+                                >
+                                    + Add More
+                                </Button>
+                            </div>
                         </div>
                     </FieldGroup>
                 </form>

@@ -1,20 +1,245 @@
 "use client"
 
+import Image from "next/image"
+import Link from "next/link"
 import { use } from "react"
-import { Suspense } from "react"
-import { ViewStudentProfile } from "@/components/ViewStudentProfile"
+import { useQuery } from "@tanstack/react-query"
+import { Typography } from "@/components/shared/Typography"
+import { Button } from "@/components/ui/button"
+import { PageLoader } from "@/components/shared/page-loader"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { StatusBadge, ApplicationStatus } from "@/components/shared/StatusBadge"
+
+import { Mail, MapPin } from "lucide-react"
+import { BluryCard } from "@/components/shared/blury-card"
 
 type PageProps = {
     params: Promise<{ "student-id": string }>
 }
 
+const mockApplications = [
+    { id: "SH-2024-8902", program: "MSc Global Business Management", intake: "Fall 2024 Intake", agentName: "Horizon Global Education", status: ApplicationStatus.CREATED, date: "Oct 12, 2023" },
+    { id: "SH-2024-1234", program: "BA International Relations", intake: "Spring 2024 Intake", agentName: "Horizon Global Education", status: ApplicationStatus.CONTRACT_SENT, date: "Oct 10, 2023" },
+    { id: "SH-2024-5678", program: "PhD Artificial Intelligence", intake: "Fall 2024 Intake", agentName: "Horizon Global Education", status: ApplicationStatus.SIGNED, date: "Oct 08, 2023" },
+]
+
 export default function StudentDetailPage({ params }: PageProps) {
     const { "student-id": id } = use(params)
-    return (
-        <div className="space-y-10">
-            <Suspense fallback={<div className="py-10 text-center text-sm text-muted-foreground">Loading...</div>}>
-                <ViewStudentProfile id={id} />
-            </Suspense>
+
+    const { data: student, isLoading, isError } = useQuery({
+        queryKey: ["students", id],
+        queryFn: async () => {
+            const res = await fetch(`/api/student/${id}`)
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error ?? "Failed to fetch")
+            return json.data
+        },
+        enabled: !!id,
+    })
+
+    if (isLoading) return <PageLoader label="Loading profile..." />
+    if (isError || !student) return (
+        <div className="py-20 text-center">
+            <Typography as="p" className="text-sm font-bold text-gray-500">Student not found.</Typography>
         </div>
+    )
+
+    const s = student.student
+    const eduList: any[] = Array.isArray(student.education) ? student.education : student.education ? [student.education] : []
+    const edu = eduList[0]
+    const avatarSrc = student.avatar_url ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name ?? "S")}&background=random`
+
+    const basicInfo = [
+        { label: "Email", value: student.email },
+        { label: "Gender", value: student.gender },
+        { label: "Nationality", value: s?.nationality },
+        { label: "Date of Birth", value: student.date_of_birth },
+        { label: "Phone", value: student.phone },
+        { label: "Guardian Email", value: s?.guardian_email },
+        { label: "Country", value: s?.country },
+        { label: "Guardian Phone", value: s?.guardian_phone },
+    ]
+
+    return (
+        <div className="max-w-[1400px] mx-auto space-y-10 pb-20 px-6 lg:px-12 pt-4">
+
+            {/* ── Header ── */}
+            <div className="flex justify-between flex-wrap items-center gap-6">
+                <div className="space-y-6">
+                    <div className="space-y-2">
+                        <Typography as="h1" font="sub-text" className="text-gray-500 font-bold">
+                            {"ID: 1234"}
+                        </Typography>
+
+                        <Typography as="h1" font="text-xl">
+                            {student.name}
+                        </Typography>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 text-[14px] font-medium text-gray-500">
+                        {student.email && (
+                            <div className="flex items-center gap-2">
+                                <Mail className="size-4 opacity-60" />
+                                <span>{student.email}</span>
+                            </div>
+                        )}
+                        {s?.country && (
+                            <div className="flex items-center gap-2">
+                                <MapPin className="size-4 opacity-60" />
+                                <span>{s.city ? `${s.city}, ${s.country}` : s.country}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <Link href={`/dashboard/student/${id}/edit`}>
+                    <Button value={'default'} className="px-4">
+                        Edit Profile
+                    </Button>
+                </Link>
+            </div>
+
+            {/* ── Profile + Academic ── */}
+            <BluryCard
+                isCentered={false}
+                blurAmount="backdrop-blur-lg"
+                childClass="space-y-10"
+                className='rounded-lg'
+            >
+
+                <div className="flex flex-col sm:flex-row gap-8">
+                    <div className="shrink-0">
+                        <Image
+                            src={avatarSrc}
+                            alt={student.name ?? "Student"}
+                            width={160}
+                            height={160}
+                            className="size-40 rounded-[28px] object-cover border-4 border-white/40 shadow-xl"
+                            unoptimized
+                        />
+                    </div>
+
+                    <div className="flex-1 space-y-6">
+                        <Typography as="h3" className="text-xl font-bold text-gray-900">Academic Record</Typography>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                            <div className="space-y-1">
+                                <Typography as="p" className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Highest Degree</Typography>
+                                <Typography as="p" className="text-[15px] font-bold text-gray-900">{edu?.qualification ?? "—"}</Typography>
+                                <Typography as="p" className="text-[12px] font-medium text-gray-500">{edu?.institution_name ?? "—"}</Typography>
+                            </div>
+                            <div className="space-y-1">
+                                <Typography as="p" className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Final GPA</Typography>
+                                <Typography as="p" className="text-[15px] font-bold text-gray-900">{edu?.cumulative_gpa ?? "—"}</Typography>
+                            </div>
+                            {eduList.length > 1 && (
+                                <div className="space-y-1">
+                                    <Typography as="p" className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Qualifications</Typography>
+                                    {eduList.slice(1).map((e, i) => (
+                                        <Typography key={i} as="p" className="text-[13px] font-medium text-gray-700">{e.qualification} — {e.institution_name}</Typography>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+
+                {/* ── Basic Info ── */}
+                <div className="space-y-6">
+                    <Typography as="h3" className="text-xl font-bold text-gray-900">Basic Info</Typography>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-5">
+                        {basicInfo.map(({ label, value }) => (
+                            <div key={label} className="space-y-1 border-b border-gray-200/40 pb-3">
+                                <Typography as="p" className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">{label}</Typography>
+                                <Typography as="p" className="text-[14px] font-semibold text-gray-800">{value ?? "—"}</Typography>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </BluryCard>
+
+
+            {/* ── Applications Table ── */}
+            <div className="space-y-6">
+                <Typography as="h3" className="text-xl font-bold text-gray-900">Applications Applied For</Typography>
+
+                <BluryCard
+                    isCentered={false}
+                    blurAmount="backdrop-blur-lg"
+                    // blendColorClass="bg-white/10"
+                    childClass='p-0!'
+                    className='rounded-lg p-0'
+                >
+                    <div className="overflow-x-auto">
+                        <Table className="w-full min-w-[900px]">
+                            <TableHeader>
+                                <TableRow className="border-b border-white/20 bg-white/20">
+                                    <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Application</TableHead>
+                                    <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Program</TableHead>
+                                    <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Status</TableHead>
+                                    <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase leading-tight">Submission<br />Date</TableHead>
+                                    <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Action</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody className="divide-y divide-white/10">
+                                {mockApplications.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="px-8 py-10 text-center text-sm text-gray-500">
+                                            No applications found.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : mockApplications.map((app, i) => (
+                                    <TableRow key={i} className="hover:bg-white/10 transition-colors border-b border-white/10">
+                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                            <Typography font="sub-text" as="span" className="font-light">{app.id}</Typography>
+                                        </TableCell>
+                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                            <div className="flex flex-col">
+                                                <Typography as="span" font="sub-text" className="font-medium">{app.program}</Typography>
+                                                <Typography as="span" font="small" className="font-light mt-0.5">{app.intake}</Typography>
+                                            </div>
+                                        </TableCell>
+
+                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                            <StatusBadge status={app.status} />
+                                        </TableCell>
+                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                            <Typography as="span" className="text-[13px] font-medium text-gray-600">{app.date}</Typography>
+                                        </TableCell>
+                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                            <Button variant="outline" className="h-9 px-6 bg-white/20 border-white/40 text-[#1e3a8a] hover:bg-white/40 hover:text-[#1e3a8a] rounded-lg font-bold text-[12px] transition-all shadow-sm">
+                                                View
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    <div className="flex items-center justify-between px-8 py-5 border-t border-white/20 bg-white/5">
+                        <div className="flex items-center text-[12px] font-medium text-gray-500 space-x-1">
+                            <span>Showing</span>
+                            <span className="font-bold text-[#1e3a8a]">{mockApplications.length}</span>
+                            <span>entries</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button className="size-8 rounded-lg bg-white/40 hover:bg-white/60 flex items-center justify-center border border-white/40 transition-all text-gray-600 shadow-sm">
+                                <ChevronLeft className="size-4" />
+                            </button>
+                            <button className="size-8 rounded-lg bg-white/40 hover:bg-white/60 flex items-center justify-center border border-white/40 transition-all text-gray-600 shadow-sm">
+                                <ChevronRight className="size-4" />
+                            </button>
+                        </div>
+                    </div>
+                </BluryCard>
+            </div>
+        </div >
     )
 }
