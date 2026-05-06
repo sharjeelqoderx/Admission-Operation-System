@@ -40,8 +40,8 @@ const navItems: NavItem[] = [
         ]
     },
     { icon: FileText, label: "All Applications", href: "/applications" },
-    { icon: BookOpen, label: "Programs", href: "/programs" },
-    { icon: Files, label: "All Documents", href: "/documents" },
+    { icon: BookOpen, label: "Programs", href: "/program" },
+    { icon: Files, label: "All Documents", href: "/document" },
     { icon: Award, label: "Offers", href: "/offers" },
     { icon: CreditCard, label: "Payments", href: "/payments" },
     { icon: BadgeDollarSign, label: "Commissions", href: "/commissions" },

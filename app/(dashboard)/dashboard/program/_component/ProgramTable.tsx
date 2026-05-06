@@ -111,7 +111,7 @@ export function ProgramTable({ rows, isLoading, isError, onRetry }: Props) {
 
                             {/* Action Buttons Left */}
                             <div className="flex flex-wrap gap-3 pt-2">
-                                <Link href={`/dashboard/programs/${program.program_id}`}>
+                                <Link href={`/dashboard/program/${program.program_id}`}>
                                     <Button className="bg-[#4285f4] hover:bg-[#3367d6] text-white h-9 px-6 text-[11px] font-bold rounded-lg shadow-sm transition-all hover:scale-[1.02]">
                                         View Details
                                     </Button>
@@ -132,7 +132,7 @@ export function ProgramTable({ rows, isLoading, isError, onRetry }: Props) {
                                     Available Seats: {program.seats || "Unlimited"}
                                 </div>
                             </div>
-                            
+
                             <Button className="w-full bg-[#a855f7] hover:bg-[#9333ea] text-white h-12 px-10 text-[14px] font-bold rounded-xl shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 transition-all active:scale-95">
                                 Apply Now
                             </Button>
@@ -143,8 +143,8 @@ export function ProgramTable({ rows, isLoading, isError, onRetry }: Props) {
 
             {/* ── Footer Navigation ── */}
             <div className="flex items-center justify-between pt-10 px-2">
-                <Button 
-                    variant="outline" 
+                <Button
+                    variant="outline"
                     onClick={handlePrev}
                     disabled={currentPage === 1}
                     className="h-11 px-8 border-gray-200 text-[#0a1e42] hover:bg-white/50 font-bold rounded-lg border-2 disabled:opacity-30 transition-all"
@@ -152,12 +152,12 @@ export function ProgramTable({ rows, isLoading, isError, onRetry }: Props) {
                     <ArrowLeft className="size-4 mr-2" />
                     Previous
                 </Button>
-                
+
                 <div className="text-[12px] font-bold text-gray-400">
                     Page <span className="text-brand-byzantine">{currentPage}</span> of {totalPages || 1}
                 </div>
 
-                <Button 
+                <Button
                     onClick={handleNext}
                     disabled={currentPage === totalPages || totalPages === 0}
                     className="h-11 px-8 bg-[#1e3a8a] hover:bg-[#1e3a8a]/90 text-white font-bold rounded-xl shadow-lg flex items-center transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-30"

@@ -73,7 +73,7 @@ const sidebarRoutes = [
 
   {
     label: 'Programs',
-    href: '/dashboard/programs',
+    href: '/dashboard/program',
     icon: BarChart3,
     allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
   },
