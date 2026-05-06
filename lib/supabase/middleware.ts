@@ -2,9 +2,12 @@ import { createServerClient } from "@supabase/ssr"
 import { NextRequest, NextResponse } from "next/server"
 
 export async function createSupabaseMiddlewareClient(req: NextRequest, res: NextResponse) {
+    const supabaseUrl = process.env.SUPABASE_URL!
+    const supabaseKey = process.env.ANON_KEY!
+
     return createServerClient(
-        process.env.SUPABASE_URL!,
-        process.env.ANON_KEY!,
+        supabaseUrl,
+        supabaseKey,
         {
             cookies: {
                 getAll: () => req.cookies.getAll(),

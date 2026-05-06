@@ -163,6 +163,7 @@ export function useAuth() {
         staleTime: 5 * 60 * 1000,
         gcTime: 30 * 60 * 1000,
         refetchOnWindowFocus: false,
+        retry: false,
     })
     const profile = useMutation({
         mutationFn: async (payload: ProfileFormDataPayload) => {
