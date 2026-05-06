@@ -87,7 +87,7 @@ export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
                         <TableHeader>
                             <TableRow className="border-b border-white/20 bg-white/10">
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Student Name</TableHead>
-                                <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Documents</TableHead>
+                                <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Number of Documents</TableHead>
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Last Uploaded At</TableHead>
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Status</TableHead>
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Action</TableHead>
@@ -120,13 +120,13 @@ export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
 
                                         <TableCell className="px-6 py-5">
                                             <div className="flex items-center gap-2">
-                                                <FileText className="size-4 text-brand-byzantine" />
+                                                {/* <FileText className="size-4 text-brand-byzantine" /> */}
                                                 <Typography as="span" className="text-sm font-bold text-gray-800">
                                                     {row.document_count}
                                                 </Typography>
-                                                <Typography as="span" className="text-xs text-gray-500 font-light">
+                                                {/* <Typography as="span" className="text-xs text-gray-500 font-light">
                                                     {row.document_count === 1 ? "document" : "documents"}
-                                                </Typography>
+                                                </Typography> */}
                                             </div>
                                         </TableCell>
 
