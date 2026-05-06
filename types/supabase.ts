@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -411,7 +411,6 @@ export type Database = {
           profile_id: string
           updated_at: string
           uploaded_by_profile_id: string | null
-          url: string | null
         }
         Insert: {
           created_at?: string
@@ -420,7 +419,6 @@ export type Database = {
           profile_id: string
           updated_at?: string
           uploaded_by_profile_id?: string | null
-          url?: string | null
         }
         Update: {
           created_at?: string
@@ -429,7 +427,6 @@ export type Database = {
           profile_id?: string
           updated_at?: string
           uploaded_by_profile_id?: string | null
-          url?: string | null
         }
         Relationships: [
           {
@@ -444,6 +441,38 @@ export type Database = {
             columns: ["uploaded_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_files: {
+        Row: {
+          created_at: string
+          document_id: string
+          file_url: string
+          id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          file_url: string
+          id?: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          file_url?: string
+          id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_files_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document"
             referencedColumns: ["id"]
           },
         ]

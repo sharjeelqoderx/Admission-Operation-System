@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 import ImageUploadCard from "@/components/shared/image-upload-card"
-import { Plus } from "lucide-react"
+import { Plus, ImageIcon } from "lucide-react"
+import { Typography } from "@/components/shared/Typography"
 
 function F({ field, label, children }: { field: any; label: string; children: React.ReactNode }) {
     const isSubmitted = field.form.state.isSubmitted
@@ -62,7 +64,7 @@ export function UploadDocumentForm() {
         defaultValues: {
             student_id: "",
             name: "",
-            file: undefined as File | undefined,
+            files: [] as File[],
             comment: "",
         } as DocumentInput,
 
@@ -74,11 +76,23 @@ export function UploadDocumentForm() {
             const fd = new FormData()
             fd.set("student_id", parsed.data.student_id)
             fd.set("name", parsed.data.name)
-            fd.set("file", parsed.data.file)
+            parsed.data.files.forEach((file) => {
+                fd.append("files", file)
+            })
             if (parsed.data.comment) fd.set("comment", parsed.data.comment)
             await mutation.mutateAsync(fd)
         },
     })
+
+    const handleFileChange = (index: number, file: File | null) => {
+        const currentFiles = [...(form.state.values.files || [])]
+        if (file) {
+            currentFiles[index] = file
+        } else {
+            currentFiles.splice(index, 1)
+        }
+        form.setFieldValue("files", currentFiles.filter(Boolean))
+    }
 
     return (
         <div className="relative overflow-hidden">
@@ -124,34 +138,53 @@ export function UploadDocumentForm() {
                         )}
                     </form.Field>
 
-                    <form.Field name="file">
-                        {(field) => {
-                            const isSubmitted = field.form.state.isSubmitted
-                            const isInvalid = isSubmitted && !field.state.meta.isValid
-                            const error = field.state.meta.errors?.[0]
-                            const errorMessage = typeof error === "string" ? error : (error as any)?.message
-                            return (
-                                <Field data-invalid={isInvalid} className="max-w-[350px] max-h-[350px] size-full">
-                                    <FieldLabel>Upload File</FieldLabel>
-                                    <ImageUploadCard
-                                        value={field.state.value ?? null}
-                                        onChange={(file) => field.handleChange(file as unknown as File)}
-                                        message="PDF, XLSX, images supported"
-                                        accept="image/*,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                        className="min-h-[120px]"
-                                        emptyIcon={
-                                            <div className="w-10 h-10 rounded-full bg-transparent group-hover:bg-gray-100 transition-colors flex items-center justify-center">
-                                                <Plus size={22} strokeWidth={2.5} className="text-gray-600" />
-                                            </div>
-                                        }
-                                    />
-                                    {isInvalid && errorMessage && (
-                                        <FieldError errors={[{ message: errorMessage }]} />
-                                    )}
-                                </Field>
-                            )
-                        }}
-                    </form.Field>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:col-span-2">
+                        <form.Field name="files">
+                            {(field) => {
+                                const isSubmitted = field.form.state.isSubmitted
+                                const isInvalid = isSubmitted && (!field.state.value?.[0])
+                                const error = field.state.meta.errors?.[0]
+                                const errorMessage = typeof error === "string" ? error : (error as any)?.message
+                                return (
+                                    <>
+                                        <div className="space-y-3">
+                                            <Typography as="p" className="text-[12px] font-bold tracking-widest text-gray-400 uppercase">
+                                                Front Side <span className="text-red-500">*</span>
+                                            </Typography>
+                                            <ImageUploadCard
+                                                value={field.state.value?.[0] ?? null}
+                                                onChange={(file) => handleFileChange(0, file as unknown as File)}
+                                                message="Front Image"
+                                                accept="image/*,application/pdf"
+                                                className={cn(
+                                                    "min-h-[160px] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 hover:border-brand-byzantine/30 transition-all",
+                                                    isInvalid && "border-red-300 bg-red-50/30"
+                                                )}
+                                                emptyIcon={<ImageIcon size={32} className="text-gray-300" />}
+                                            />
+                                            {isInvalid && (
+                                                <p className="text-[11px] font-medium text-red-500 mt-1">Front side image is required</p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <Typography as="p" className="text-[12px] font-bold tracking-widest text-gray-400 uppercase">
+                                                Back Side (Optional)
+                                            </Typography>
+                                            <ImageUploadCard
+                                                value={field.state.value?.[1] ?? null}
+                                                onChange={(file) => handleFileChange(1, file as unknown as File)}
+                                                message="Back Image"
+                                                accept="image/*,application/pdf"
+                                                className="min-h-[160px] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 hover:border-brand-byzantine/30 transition-all"
+                                                emptyIcon={<ImageIcon size={32} className="text-gray-300" />}
+                                            />
+                                        </div>
+                                    </>
+                                )
+                            }}
+                        </form.Field>
+                    </div>
 
                     <div className="md:col-span-2">
                         <form.Field name="comment">
@@ -187,7 +220,7 @@ export function UploadDocumentForm() {
 
                 <form.Subscribe selector={(s) => ({ isSubmitting: s.isSubmitting, values: s.values })}>
                     {({ isSubmitting, values }) => {
-                        const canSubmit = !!values.student_id && !!values.name?.trim() && values.file instanceof File
+                        const canSubmit = !!values.student_id && !!values.name?.trim() && (values.files?.length || 0) >= 1
                         return (
                             <Button
                                 type="submit"
