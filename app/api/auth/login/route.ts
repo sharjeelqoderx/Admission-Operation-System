@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
                 guardianEmail: student?.guardian_email ?? "",
                 guardianPhone: student?.guardian_phone ?? "",
             }
-                ,
+            ,
             academic: academic
                 ? {
                     highestDegree: academic.qualification ?? "",
