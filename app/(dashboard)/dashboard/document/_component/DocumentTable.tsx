@@ -150,7 +150,7 @@ export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
                                         <TableCell className="px-6 py-5">
                                             <Link href={`/dashboard/student/${row.student_id}`}>
                                                 <Button variant="outline" className="h-9 px-5 gap-2">
-                                                    <Eye className="size-4" />
+                                                    {/* <Eye className="size-4" /> */}
                                                     View
                                                 </Button>
                                             </Link>
