@@ -126,13 +126,13 @@ export function UploadDocumentForm() {
 
                     <form.Field name="name">
                         {(field) => (
-                            <F field={field} label="Document Name">
+                            <F field={field} label="File Name">
                                 <Input
                                     id={field.name}
                                     value={field.state.value}
                                     onBlur={field.handleBlur}
                                     onChange={(e) => field.handleChange(e.target.value)}
-                                    placeholder="Enter document name"
+                                    placeholder="Enter file name (e.g. Passport, Degree)"
                                 />
                             </F>
                         )}
@@ -142,9 +142,9 @@ export function UploadDocumentForm() {
                         <form.Field name="files">
                             {(field) => {
                                 const isSubmitted = field.form.state.isSubmitted
-                                const isInvalid = isSubmitted && (!field.state.value?.[0])
-                                const error = field.state.meta.errors?.[0]
-                                const errorMessage = typeof error === "string" ? error : (error as any)?.message
+                                const firstFile = field.state.value?.[0]
+                                const isInvalid = isSubmitted && (!firstFile)
+                                
                                 return (
                                     <>
                                         <div className="space-y-3">
@@ -152,33 +152,39 @@ export function UploadDocumentForm() {
                                                 Front Side <span className="text-red-500">*</span>
                                             </Typography>
                                             <ImageUploadCard
-                                                value={field.state.value?.[0] ?? null}
+                                                value={firstFile ?? null}
                                                 onChange={(file) => handleFileChange(0, file as unknown as File)}
-                                                message="Front Image"
-                                                accept="image/*,application/pdf"
+                                                message="Front File"
+                                                accept="image/*,application/pdf,.doc,.docx"
                                                 className={cn(
                                                     "min-h-[160px] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 hover:border-brand-byzantine/30 transition-all",
                                                     isInvalid && "border-red-300 bg-red-50/30"
                                                 )}
-                                                emptyIcon={<ImageIcon size={32} className="text-gray-300" />}
+                                                emptyIcon={<Plus size={32} className="text-gray-300" />}
                                             />
                                             {isInvalid && (
-                                                <p className="text-[11px] font-medium text-red-500 mt-1">Front side image is required</p>
+                                                <p className="text-[11px] font-medium text-red-500 mt-1">Front side file is required</p>
                                             )}
                                         </div>
 
-                                        <div className="space-y-3">
+                                        <div className={cn("space-y-3 transition-opacity", !firstFile && "opacity-50")}>
                                             <Typography as="p" className="text-[12px] font-bold tracking-widest text-gray-400 uppercase">
                                                 Back Side (Optional)
                                             </Typography>
                                             <ImageUploadCard
                                                 value={field.state.value?.[1] ?? null}
-                                                onChange={(file) => handleFileChange(1, file as unknown as File)}
-                                                message="Back Image"
-                                                accept="image/*,application/pdf"
-                                                className="min-h-[160px] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 hover:border-brand-byzantine/30 transition-all"
-                                                emptyIcon={<ImageIcon size={32} className="text-gray-300" />}
+                                                onChange={(file) => firstFile && handleFileChange(1, file as unknown as File)}
+                                                message="Back File"
+                                                accept="image/*,application/pdf,.doc,.docx"
+                                                className={cn(
+                                                    "min-h-[160px] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 hover:border-brand-byzantine/30 transition-all",
+                                                    !firstFile && "cursor-not-allowed pointer-events-none"
+                                                )}
+                                                emptyIcon={<Plus size={32} className="text-gray-300" />}
                                             />
+                                            {!firstFile && (
+                                                <p className="text-[10px] text-gray-400">Please upload front side first</p>
+                                            )}
                                         </div>
                                     </>
                                 )
@@ -228,7 +234,7 @@ export function UploadDocumentForm() {
                                 className="flex-1 h-12 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white rounded-sm text-sm transition-all"
                                 disabled={isSubmitting || mutation.isPending || !canSubmit}
                             >
-                                {mutation.isPending ? "Uploading..." : "Save Document"}
+                                {mutation.isPending ? "Uploading..." : "Upload File"}
                             </Button>
                         )
                     }}
