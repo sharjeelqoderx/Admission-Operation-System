@@ -22,3 +22,19 @@ export async function createSupabaseServerClient() {
         }
     )
 }
+
+export async function createSupabaseAdminClient() {
+    const supabaseUrl = process.env.SUPABASE_URL!
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+    return createServerClient(
+        supabaseUrl,
+        serviceRoleKey,
+        {
+            cookies: {
+                getAll: () => [],
+                setAll: () => {},
+            },
+        }
+    )
+}

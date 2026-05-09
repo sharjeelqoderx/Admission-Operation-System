@@ -1,18 +1,30 @@
-import { Typography } from "@/components/shared/Typography";
-import { Button } from "@/components/ui/button";
-import { GraduationCap, FileText } from "lucide-react";
-import Link from "next/link";
-import { ApplicationTable } from "../_component/ApplicationTable";
-import { ApplicationStatus } from "@/components/shared/StatusBadge";
+"use client"
+
+import { useCallback, useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { Typography } from "@/components/shared/Typography"
+import { Button } from "@/components/ui/button"
+import { GraduationCap, FileText } from "lucide-react"
+import Link from "next/link"
+import { ApplicationsListTable, type ApplicationRow } from "./_component/ApplicationsListTable"
 
 export default function ApplicationsPage() {
-    const applications = [
-        { name: "Alexandros Pappas", program: "MSc Global Business Management", status: ApplicationStatus.CREATED, date: "Oct 12, 2023" },
-        { name: "Elena Rodriguez", program: "BA International Relations", status: ApplicationStatus.CONTRACT_SENT, date: "Oct 10, 2023" },
-        { name: "Wei Chen", program: "PhD Artificial Intelligence", status: ApplicationStatus.SIGNED, date: "Oct 09, 2023" },
-        { name: "Sarah O'Connor", program: "LLM Corporate Law", status: ApplicationStatus.COMPLETED, date: "Oct 05, 2023" },
-        { name: "Zahra Al-Farsi", program: "BEng Civil Engineering", status: ApplicationStatus.CREATED, date: "Oct 02, 2023" },
-    ]
+    const { data, isLoading, isError, refetch } = useQuery({
+        queryKey: ["applications"],
+        queryFn: async () => {
+            const res = await fetch("/api/application")
+            if (!res.ok) throw new Error("Failed to fetch applications")
+            const json = await res.json()
+            return json.data as ApplicationRow[]
+        },
+    })
+
+    const applications = useMemo(
+        () => (Array.isArray(data) ? data : []),
+        [data]
+    )
+
+    const handleRetry = useCallback(() => { refetch() }, [refetch])
 
     return (
         <div className="max-w-[1400px] mx-auto space-y-8 pb-20 px-6 lg:px-12 pt-4">
@@ -20,9 +32,11 @@ export default function ApplicationsPage() {
             {/* ── Header ── */}
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div className="space-y-3 max-w-2xl">
-                    <Typography as="h1" className="text-[32px] font-extrabold text-gray-900 tracking-tight">All Applications</Typography>
+                    <Typography as="h1" className="text-[32px] font-extrabold text-gray-900 tracking-tight">
+                        All Applications
+                    </Typography>
                     <Typography as="p" className="text-[14px] font-medium text-gray-500 leading-relaxed">
-                        Lorem Ipsum is simply dummy text of the printing and typesetting industry.
+                        Track and manage all student applications submitted through your agency.
                     </Typography>
                 </div>
                 <Link href="/dashboard/applications/new">
@@ -41,8 +55,12 @@ export default function ApplicationsPage() {
                         <GraduationCap className="size-6 text-gray-700" />
                     </div>
                     <div>
-                        <Typography as="p" className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">Total Students</Typography>
-                        <Typography as="p" className="text-[28px] font-extrabold text-gray-900 leading-none">1,284</Typography>
+                        <Typography as="p" className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                            Total Applications
+                        </Typography>
+                        <Typography as="p" className="text-[28px] font-extrabold text-gray-900 leading-none">
+                            {isLoading ? "—" : applications.length}
+                        </Typography>
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -50,13 +68,22 @@ export default function ApplicationsPage() {
                         <FileText className="size-6 text-gray-700" />
                     </div>
                     <div>
-                        <Typography as="p" className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">Active Applications</Typography>
-                        <Typography as="p" className="text-[28px] font-extrabold text-gray-900 leading-none">422</Typography>
+                        <Typography as="p" className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                            Pending
+                        </Typography>
+                        <Typography as="p" className="text-[28px] font-extrabold text-gray-900 leading-none">
+                            {isLoading ? "—" : applications.filter((a) => a.status === "PENDING").length}
+                        </Typography>
                     </div>
                 </div>
             </div>
 
-            <ApplicationTable applications={applications} />
+            <ApplicationsListTable
+                applications={applications}
+                isLoading={isLoading}
+                isError={isError}
+                onRetry={handleRetry}
+            />
         </div>
     )
 }

@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Failed to fetch students", details: studentsError }, { status: 500 })
         }
 
-        if (!students?.length) {
+        if (!Array.isArray(students) || !students.length) {
             return NextResponse.json({ data: [] }, { status: 200 })
         }
 

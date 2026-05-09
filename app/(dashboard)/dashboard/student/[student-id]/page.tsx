@@ -16,7 +16,7 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { StatusBadge, ApplicationStatus } from "@/components/shared/StatusBadge"
+import { StatusBadge } from "@/components/shared/StatusBadge"
 
 import { Mail, MapPin } from "lucide-react"
 import { BluryCard } from "@/components/shared/blury-card"
@@ -25,11 +25,7 @@ type PageProps = {
     params: Promise<{ "student-id": string }>
 }
 
-const mockApplications = [
-    { id: "SH-2024-8902", program: "MSc Global Business Management", intake: "Fall 2024 Intake", agentName: "Horizon Global Education", status: ApplicationStatus.CREATED, date: "Oct 12, 2023" },
-    { id: "SH-2024-1234", program: "BA International Relations", intake: "Spring 2024 Intake", agentName: "Horizon Global Education", status: ApplicationStatus.CONTRACT_SENT, date: "Oct 10, 2023" },
-    { id: "SH-2024-5678", program: "PhD Artificial Intelligence", intake: "Fall 2024 Intake", agentName: "Horizon Global Education", status: ApplicationStatus.SIGNED, date: "Oct 08, 2023" },
-]
+
 
 export default function StudentDetailPage({ params }: PageProps) {
     const { "student-id": id } = use(params)
@@ -44,6 +40,26 @@ export default function StudentDetailPage({ params }: PageProps) {
         },
         enabled: !!id,
     })
+
+    const { data: applicationsData, isLoading: appsLoading } = useQuery({
+        queryKey: ["applications", "student", id],
+        queryFn: async () => {
+            const res = await fetch(`/api/application?student_id=${id}`)
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error ?? "Failed to fetch applications")
+            return json.data as {
+                id: string
+                application_no: string | null
+                status: string
+                created_at: string
+                program: { id: string; name: string | null } | null
+                agent: { id: string; name: string | null } | null
+            }[]
+        },
+        enabled: !!id,
+    })
+
+    const studentApplications = Array.isArray(applicationsData) ? applicationsData : []
 
     if (isLoading) return <PageLoader label="Loading profile..." />
     if (isError || !student) return (
@@ -188,33 +204,51 @@ export default function StudentDetailPage({ params }: PageProps) {
                                 </TableRow>
                             </TableHeader>
                             <TableBody className="divide-y divide-white/10">
-                                {mockApplications.length === 0 ? (
+                                {appsLoading ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="px-8 py-10 text-center text-sm text-gray-500">
-                                            No applications found.
-                                        </TableCell>
-                                    </TableRow>
-                                ) : mockApplications.map((app, i) => (
-                                    <TableRow key={i} className="hover:bg-white/10 transition-colors border-b border-white/10">
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
-                                            <Typography font="sub-text" as="span" className="font-light">{app.id}</Typography>
-                                        </TableCell>
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
-                                            <div className="flex flex-col">
-                                                <Typography as="span" font="sub-text" className="font-medium">{app.program}</Typography>
-                                                <Typography as="span" font="small" className="font-light mt-0.5">{app.intake}</Typography>
+                                        <TableCell colSpan={5} className="px-8 py-10 text-center">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <div className="size-4 border-2 border-gray-300 border-t-[#9B51E0] rounded-full animate-spin" />
+                                                <Typography as="span" className="text-sm text-gray-400">Loading applications...</Typography>
                                             </div>
                                         </TableCell>
-
+                                    </TableRow>
+                                ) : studentApplications.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="px-8 py-10 text-center">
+                                            <Typography as="p" className="text-sm text-gray-500">No applications found for this student.</Typography>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : studentApplications.map((app) => (
+                                    <TableRow key={app.id} className="hover:bg-white/10 transition-colors border-b border-white/10">
+                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                            <Typography font="sub-text" as="span" className="font-light">
+                                                {app.application_no ?? app.id.slice(0, 8).toUpperCase()}
+                                            </Typography>
+                                        </TableCell>
+                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                            <Typography as="span" font="sub-text" className="font-medium">
+                                                {app.program?.name ?? "—"}
+                                            </Typography>
+                                        </TableCell>
                                         <TableCell className="px-8 py-6 whitespace-nowrap">
                                             <StatusBadge status={app.status} />
                                         </TableCell>
                                         <TableCell className="px-8 py-6 whitespace-nowrap">
-                                            <Typography as="span" className="text-[13px] font-medium text-gray-600">{app.date}</Typography>
+                                            <Typography as="span" className="text-[13px] font-medium text-gray-600">
+                                                {new Date(app.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                            </Typography>
                                         </TableCell>
                                         <TableCell className="px-8 py-6 whitespace-nowrap">
-                                            <Button variant="outline" className="h-9 px-6 bg-white/20 border-white/40 text-[#1e3a8a] hover:bg-white/40 hover:text-[#1e3a8a] rounded-lg font-bold text-[12px] transition-all shadow-sm">
-                                                View
+                                            <Button
+                                                variant="outline"
+                                                className="h-9 px-6 bg-white/20 border-white/40 text-[#1e3a8a] hover:bg-white/40 hover:text-[#1e3a8a] rounded-lg font-bold text-[12px] transition-all shadow-sm"
+                                                asChild
+                                                disabled={!app.program?.id}
+                                            >
+                                                <Link href={app.program?.id ? `/dashboard/program/${app.program.id}` : "#"}>
+                                                    View
+                                                </Link>
                                             </Button>
                                         </TableCell>
                                     </TableRow>
@@ -225,9 +259,9 @@ export default function StudentDetailPage({ params }: PageProps) {
 
                     <div className="flex items-center justify-between px-8 py-5 border-t border-white/20 bg-white/5">
                         <div className="flex items-center text-[12px] font-medium text-gray-500 space-x-1">
-                            <span>Showing</span>
-                            <span className="font-bold text-[#1e3a8a]">{mockApplications.length}</span>
-                            <span>entries</span>
+                            <Typography as="span" className="text-[12px] font-medium text-gray-500">Showing</Typography>
+                            <Typography as="span" className="text-[12px] font-bold text-[#1e3a8a] mx-1">{studentApplications.length}</Typography>
+                            <Typography as="span" className="text-[12px] font-medium text-gray-500">entries</Typography>
                         </div>
                         <div className="flex items-center gap-2">
                             <button className="size-8 rounded-lg bg-white/40 hover:bg-white/60 flex items-center justify-center border border-white/40 transition-all text-gray-600 shadow-sm">

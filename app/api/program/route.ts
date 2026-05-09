@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
                 name,
                 location,
                 university:profile_id (
+                    id,
                     name,
                     avatar_url
                 )
@@ -96,6 +97,7 @@ export async function GET(req: NextRequest) {
             deadline: item.application_deadline,
             campus_name: item.campus?.name,
             location: item.campus?.location,
+            university_id: item.campus?.university?.id,
             university_name: item.campus?.university?.name || "FHM University",
             university_logo: item.campus?.university?.avatar_url || null
         }))

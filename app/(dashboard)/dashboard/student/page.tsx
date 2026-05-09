@@ -14,7 +14,7 @@ import { PageLoader } from "@/components/shared/page-loader"
 import { BluryCard } from "@/components/shared/blury-card"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 
 export default function Page() {
     const { me } = useAuth()
@@ -42,6 +42,23 @@ export default function Page() {
             return json.data
         },
     })
+
+    const statsQuery = useQuery({
+        queryKey: ["dashboard-stats"],
+        queryFn: async () => {
+            const res = await fetch("/api/dashboard/stats")
+            if (!res.ok) throw new Error("Failed to fetch stats")
+            const json = await res.json()
+            return json.data as { total_students: number; active_applications: number; pending_actions: number }
+        },
+    })
+
+    const totalStudents = useMemo(() => {
+        if (Array.isArray(studentsQuery.data)) return studentsQuery.data.length
+        return statsQuery.data?.total_students ?? 0
+    }, [studentsQuery.data, statsQuery.data])
+
+    const activeApplications = statsQuery.data?.active_applications ?? 0
 
     const deleteStudent = useMutation({
         mutationFn: async (id: string) => {
@@ -104,8 +121,11 @@ export default function Page() {
                             <Typography as="span" className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
                                 Total Students
                             </Typography>
-                            <Typography as="span" className="text-[34px] font-extrabold text-gray-900 leading-none mt-1">
-                                1,284
+                            <Typography
+                                as="span"
+                                className={`text-[34px] font-extrabold text-gray-900 leading-none mt-1 ${studentsQuery.isLoading ? 'animate-pulse text-gray-300' : ''}`}
+                            >
+                                {studentsQuery.isLoading ? '—' : totalStudents.toLocaleString()}
                             </Typography>
                         </div>
                     </div>
@@ -118,8 +138,11 @@ export default function Page() {
                             <Typography as="span" className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
                                 Active Applications
                             </Typography>
-                            <Typography as="span" className="text-[34px] font-extrabold text-gray-900 leading-none mt-1">
-                                422
+                            <Typography
+                                as="span"
+                                className={`text-[34px] font-extrabold text-gray-900 leading-none mt-1 ${statsQuery.isLoading ? 'animate-pulse text-gray-300' : ''}`}
+                            >
+                                {statsQuery.isLoading ? '—' : activeApplications.toLocaleString()}
                             </Typography>
                         </div>
                     </div>

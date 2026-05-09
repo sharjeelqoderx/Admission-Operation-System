@@ -169,7 +169,7 @@ export function StudentTable({
                         </TableHeader>
 
                         <TableBody>
-                            {students.length === 0 ? (
+                            {!Array.isArray(students) || students.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="px-6 py-8 text-center text-gray-500 text-sm">
                                         No students found.

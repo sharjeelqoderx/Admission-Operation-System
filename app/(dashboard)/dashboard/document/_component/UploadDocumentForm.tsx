@@ -42,7 +42,7 @@ export function UploadDocumentForm() {
         },
     })
 
-    const students = studentsData ?? []
+    const students = Array.isArray(studentsData) ? studentsData : []
 
     const mutation = useMutation({
         mutationFn: async (fd: FormData) => {
