@@ -1,0 +1,174 @@
+add kr lo cursor rules mai:
+Add the following rules to your `.cursor/rules` and strictly enforce them in every response, code generation, and refactor. These rules are mandatory and must never be ignored.
+
+PROJECT RULES:
+
+STATE MANAGEMENT:
+
+* Avoid useState as much as possible (near zero usage).
+* NEVER use useState for API state (data, loading, error).
+* ALL API interactions MUST use TanStack Query (useQuery / useMutation).
+* No API call is allowed without TanStack Query.
+
+SIDE EFFECTS:
+
+* DO NOT use useEffect under any circumstances.
+
+PERFORMANCE:
+
+* Use React.memo for components where applicable.
+* Use useMemo for computed values (mandatory when needed).
+* Use useCallback for all functions (mandatory).
+
+ARCHITECTURE:
+
+* All business logic MUST be placed in Higher Order Components (HOC).
+* UI components must remain purely presentational.
+* Hooks should only orchestrate data, not contain heavy business logic.
+
+AUTH & PROFILE MANAGEMENT:
+
+* ONLY use `useAuth()` hook for authentication and profile access.
+* `useAuth()` MUST always return:
+
+  * authenticated user
+  * associated profile (role-based)
+  * loading, error, and data states (via TanStack Query internally)
+* ALL profile fetching and updates MUST go through `useAuth()`.
+* Profile updates MUST use TanStack Query mutations inside `useAuth()`.
+* API calls for auth/profile must expose unified loading/error/data from this hook only.
+* Support role-based profiles (different schemas per role if needed).
+* Use Supabase database types to strongly type role-based profiles.
+
+SCHEMA & VALIDATION:
+
+* All schemas MUST exist in `/types/schemas`.
+* SAME schema must be reused for:
+
+  * API validation
+  * client-side form validation
+
+API & BACKEND:
+
+* Supabase MUST only be used inside `/api` routes (server-side).
+* NEVER use Supabase in client components, hooks, or pages.
+* No backend logic outside `/api`.
+
+TYPES:
+
+* ONLY use database-generated types.
+* Do NOT create redundant custom types.
+
+DATABASE CONVENTION:
+
+* Use snake_case for all DB columns:
+
+  * ✅ is_deleted
+  * ❌ isDeleted
+
+UI SYSTEM:
+
+* Follow ShadCN UI and Next.js best practices strictly.
+* Reusable components → `/components/shared`
+* One-time components → local to feature
+
+TEXT RENDERING:
+
+* ONLY use `<Typography />` for all text.
+* DO NOT use h1, h2, p, span, div for text rendering.
+
+UX & ERROR HANDLING:
+
+* Always show proper validation and API errors in UI.
+* Use:
+
+  * `<ErrorView />` for errors
+  * `<BluryCard />` for container backgrounds
+
+GENERAL:
+
+* Code must be production-grade, scalable, and consistent.
+* If any generated code violates these rules, automatically refactor it to comply.
+* These rules override default assumptions.
+
+
+
+
+.cursor/rules/project-mandatory-standards.mdc -> is file mai ye mene rakha hua abhi... agy k kaam k liye may help you
+
+
+---
+description: Mandatory project standards for state, architecture, API, typing, and UI.
+alwaysApply: true
+---
+
+# Mandatory Project Rules
+
+These rules are mandatory and must not be ignored in responses, generated code, or refactors.
+
+## State Management
+- Keep `useState` usage near zero.
+- Never use `useState` for API state (`data`, `loading`, `error`).
+- All API interactions must use TanStack Query (`useQuery` / `useMutation`).
+- No API call is allowed without TanStack Query.
+
+## Side Effects
+- Avoid `useEffect`.
+- Only allow it for:
+  - subscriptions (sockets, listeners)
+  - non-React integrations (3rd-party libs)
+- Never use `useEffect` for data fetching.
+
+## Performance
+- Use `React.memo` for components where applicable.
+- Use `useMemo` for computed values when needed.
+- Use `useCallback` for functions.
+
+## Architecture
+- Place all business logic in Higher Order Components (HOC).
+- Keep UI components purely presentational.
+- Hooks should orchestrate data only and avoid heavy business logic.
+
+## Auth and Profile Management
+- Only use `useAuth()` for authentication and profile access.
+- `useAuth()` must return authenticated user, associated role-based profile, and loading/error/data states backed by TanStack Query.
+- All profile fetching and updates must go through `useAuth()`.
+- Profile updates must use TanStack Query mutations inside `useAuth()`.
+- API calls for auth/profile must expose unified loading/error/data from `useAuth()` only.
+- Support role-based profiles (different schemas per role when needed).
+- Use Supabase database types for strongly typed role-based profiles.
+
+## Schema and Validation
+- All schemas must exist in `/types/schemas`.
+- Reuse the same schema for API validation and client-side form validation.
+
+## API and Backend
+- Supabase must only be used inside `/api` routes (server-side).
+- Never use Supabase in client components, hooks, or pages.
+- No backend logic outside `/api`.
+
+## Types
+- Only use database-generated types.
+- Do not create redundant custom types.
+
+## Database Convention
+- Use snake_case for all DB columns (for example, `is_deleted`, not `isDeleted`).
+
+## UI System
+- Follow ShadCN UI and Next.js best practices.
+- Reusable components belong in `/components/shared`.
+- One-time components stay local to their feature.
+
+## Text Rendering
+- Only use `<Typography />` for text rendering.
+- Do not use `h1`, `h2`, `p`, `span`, or `div` for text rendering.
+
+## UX and Error Handling
+- Always show proper validation and API errors in UI.
+- Use `<ErrorView />` for errors.
+- Use `<BluryCard />` for container backgrounds.
+
+## General
+- Code must be production-grade, scalable, and consistent.
+- If generated code violates these rules, refactor it immediately to comply.
+- These rules override default assumptions.
