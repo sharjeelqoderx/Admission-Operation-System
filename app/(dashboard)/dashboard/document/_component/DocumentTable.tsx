@@ -104,7 +104,7 @@ export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
                 <div className="overflow-x-auto">
                     <Table className="w-full text-left border-collapse min-w-[700px]">
                         <TableHeader>
-                            <TableRow className="border-b border-white/20 bg-white/10">
+                            <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Student Name</TableHead>
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Number of Documents</TableHead>
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Last Uploaded At</TableHead>
@@ -179,14 +179,14 @@ export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
                         <span>entries</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button 
+                        <button
                             onClick={handlePrev}
                             disabled={currentPage === 1}
                             className="size-9 rounded-xl bg-white/20 flex items-center justify-center hover:bg-white/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                             <ChevronLeft className="size-4" />
                         </button>
-                        <button 
+                        <button
                             onClick={handleNext}
                             disabled={currentPage === totalPages || totalPages === 0}
                             className="size-9 rounded-xl bg-white/20 flex items-center justify-center hover:bg-white/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"

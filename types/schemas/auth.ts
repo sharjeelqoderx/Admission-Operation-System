@@ -203,7 +203,7 @@ export const profileStep1Schema = z.object({
         .min(1, "Nationality is Required")
         .min(4, "Nationality is Too Short")
         .max(200, "Maximum 200 character allowed"),
-    passport: z
+    passport_file_url: z
         .any()
         .refine((file) => file instanceof File, "File required")
         .refine((file) => !(file instanceof File) || file.size <= 5 * 1024 * 1024, "Max 5MB")

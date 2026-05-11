@@ -87,8 +87,8 @@ export function ImageUploadCard({
                 if (file) handleFile(file)
             }}
             className={cn(
-                "relative group flex flex-col items-center justify-center w-full min-h-[120px]",
-                "rounded-xl transition-all duration-200 cursor-pointer",
+                "relative group flex flex-col items-center justify-center w-full min-h-[120px] max-h-[200px]",
+                "rounded-xl transition-all duration-200 cursor-pointer overflow-hidden",
                 "bg-[#EDEDED] border-none hover:bg-gray-200",
                 className
             )}

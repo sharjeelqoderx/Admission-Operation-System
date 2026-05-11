@@ -3,15 +3,15 @@
 import { useForm } from "@tanstack/react-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Typography } from "@/components/shared/Typography"
 import { degreeStep2Schema } from "@/types/schemas/auth"
-import { F, DEGREES, ENGLISH_TESTS, CAMPUSES } from "./_shared"
+import { F } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
+import { PageLoader } from "@/components/shared/page-loader"
 
 type Defaults = { highestDegree: string; instituteName: string; gpa: string; desiredProgram: string; campus: string; englishTest: string; about: string }
 
-function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: Defaults; onBack: () => void; onNext: () => void; onSkip: () => void }) {
+function Step2Form({ defaultValues, onBack, onNext }: { defaultValues: Defaults; onBack: () => void; onNext: () => void; onSkip: () => void }) {
     const { me, academic: saveAcademic } = useAuth()
     const { data: meData } = me
 
@@ -20,7 +20,16 @@ function Step2Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: D
         validators: { onSubmit: degreeStep2Schema },
         onSubmit: async ({ value }) => {
             if (!meData?.id) return
-            await saveAcademic.mutateAsync({ userId: meData.id, qualification: value.highestDegree, instituteName: value.instituteName, gpa: Number(value.gpa), desiredProgram: value.desiredProgram, campus: value.campus, englishTest: value.englishTest, about: value.about })
+            await saveAcademic.mutateAsync({ 
+                userId: meData.id, 
+                qualification: value.highestDegree, 
+                instituteName: value.instituteName, 
+                gpa: Number(value.gpa), 
+                desiredProgram: value.desiredProgram, 
+                campus: value.campus, 
+                englishTest: value.englishTest, 
+                about: value.about 
+            })
             onNext()
         },
     })
@@ -160,15 +169,15 @@ export function Step2Academic({ onBack, onNext, onSkip }: { onBack: () => void; 
     const { me } = useAuth()
     const { data: meData, isLoading } = me
 
-    if (isLoading) return <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
+    if (isLoading) return <PageLoader label="Loading academic details..." />
 
     const defaults: Defaults = {
         highestDegree: meData?.academic?.highestDegree ?? "",
         instituteName: meData?.academic?.instituteName ?? "",
         gpa: meData?.academic?.gpa ?? "",
-        desiredProgram: "Invoked", // me?.academic?.desiredProgram ??
-        campus: "Invoked", // me?.academic?.campus ?? 
-        englishTest: "Invoked", // me?.academic?.englishTest ?? 
+        desiredProgram: "Invoked",
+        campus: "Invoked", 
+        englishTest: "Invoked", 
         about: meData?.academic?.about ?? "",
     }
 

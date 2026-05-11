@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Typography } from "@/components/shared/Typography"
 import { StatusBadge } from "@/components/shared/StatusBadge"
+import { PageLoader } from "@/components/shared/page-loader"
 import { Loader2 } from "lucide-react"
 
 export type ApplicationRow = {
@@ -42,7 +43,7 @@ export const ApplicationTable = React.memo(function ApplicationTable({ applicati
             <div className="overflow-x-auto">
                 <Table className="w-full text-left border-collapse min-w-[900px]">
                     <TableHeader>
-                        <TableRow className="border-b border-white/20 bg-white/10">
+                        <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
                             <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">Student Name</TableHead>
                             <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">Program</TableHead>
                             <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">Agent Name</TableHead>
@@ -56,10 +57,7 @@ export const ApplicationTable = React.memo(function ApplicationTable({ applicati
                         {isLoading ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="px-8 py-12 text-center">
-                                    <div className="flex items-center justify-center gap-2">
-                                        <Loader2 className="size-5 text-[#9B51E0] animate-spin" />
-                                        <Typography as="span" className="text-sm text-gray-400">Loading...</Typography>
-                                    </div>
+                                    <PageLoader label="Loading applications..." className="min-h-[200px]" />
                                 </TableCell>
                             </TableRow>
                         ) : applications.length === 0 ? (

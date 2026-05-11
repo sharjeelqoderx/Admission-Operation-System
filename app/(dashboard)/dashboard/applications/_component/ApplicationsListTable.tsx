@@ -100,7 +100,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
             <div className="overflow-x-auto">
                 <Table className="w-full text-left border-collapse min-w-[900px]">
                     <TableHeader>
-                        <TableRow className="border-b border-white/20 bg-white/10">
+                        <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
                             <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
                                 Student Name
                             </TableHead>

@@ -9,6 +9,7 @@ import { Typography } from "@/components/shared/Typography"
 import { F, DatePicker } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
+import { PageLoader } from "@/components/shared/page-loader"
 
 const schema = z.object({
     academicGap: z.string().trim().regex(/^\d*$/, "Must be a number").refine(v => v === "" || (Number(v) >= 0 && Number(v) <= 50), "Must be between 0 and 50"),
@@ -292,7 +293,7 @@ export function Step3Work({ onBack }: { onBack: () => void }) {
     const { me } = useAuth()
     const { data: meData, isLoading } = me
 
-    if (isLoading) return <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
+    if (isLoading) return <PageLoader label="Finalizing setup..." />
 
     const defaults: Defaults = {
         academicGap: "",

@@ -91,8 +91,8 @@ export default function StudentDetailPage({ params }: PageProps) {
             <div className="flex justify-between flex-wrap items-center gap-6">
                 <div className="space-y-6">
                     <div className="space-y-2">
-                        <Typography as="h1" font="sub-text" className="text-gray-500 font-bold">
-                            {"ID: 1234"}
+                        <Typography as="h1" font="sub-text" className="text-gray-500 font-bold uppercase">
+                            {`ID: ${s?.student_code || 'N/A'}`}
                         </Typography>
 
                         <Typography as="h1" font="text-xl">
@@ -188,14 +188,13 @@ export default function StudentDetailPage({ params }: PageProps) {
                 <BluryCard
                     isCentered={false}
                     blurAmount="backdrop-blur-lg"
-                    // blendColorClass="bg-white/10"
                     childClass='p-0!'
                     className='rounded-lg p-0'
                 >
                     <div className="overflow-x-auto">
                         <Table className="w-full min-w-[900px]">
                             <TableHeader>
-                                <TableRow className="border-b border-white/20 bg-white/20">
+                                <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
                                     <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Application</TableHead>
                                     <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Program</TableHead>
                                     <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Status</TableHead>
@@ -274,6 +273,39 @@ export default function StudentDetailPage({ params }: PageProps) {
                     </div>
                 </BluryCard>
             </div>
+
+            {/* ── Documents Section ── */}
+            {s?.passport_file_url && (
+                <div className="space-y-6">
+                    <Typography as="h3" className="text-xl font-bold text-gray-900">Documents</Typography>
+                    <BluryCard
+                        isCentered={false}
+                        blurAmount="backdrop-blur-lg"
+                        childClass="p-6"
+                        className='rounded-lg w-full max-w-2xl'
+                    >
+                        <div className="space-y-4">
+                            <Typography as="p" className="text-sm font-bold text-gray-700 uppercase tracking-wider">Passport Copy</Typography>
+                            <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden border border-white/20 shadow-2xl">
+                                <Image
+                                    src={s.passport_file_url}
+                                    alt="Passport"
+                                    fill
+                                    className="object-contain bg-black/5"
+                                    unoptimized
+                                />
+                            </div>
+                            <div className="flex justify-end">
+                                <Button variant="outline" className="text-xs h-9" asChild>
+                                    <a href={s.passport_file_url} target="_blank" rel="noopener noreferrer">
+                                        View Original
+                                    </a>
+                                </Button>
+                            </div>
+                        </div>
+                    </BluryCard>
+                </div>
+            )}
         </div >
     )
 }

@@ -40,7 +40,7 @@ export default function ApplicationsPage() {
                     </Typography>
                 </div>
                 <Link href="/dashboard/applications/new">
-                    <Button className="bg-[#9B51E0] hover:bg-[#8a42cf] text-white px-8 h-12 rounded-xl font-bold shadow-lg shadow-purple-500/20 transition-all shrink-0">
+                    <Button className="px-8">
                         + New Application
                     </Button>
                 </Link>

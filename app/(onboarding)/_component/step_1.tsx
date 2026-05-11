@@ -312,6 +312,7 @@ import { Typography } from "@/components/shared/Typography"
 import { F, DatePicker, GENDERS } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
 import { ImageUploadCard } from "@/components/shared/image-upload-card"
+import { PageLoader } from "@/components/shared/page-loader"
 
 /* ---------------- SCHEMA ---------------- */
 const step1Schema = z.object({
@@ -321,7 +322,7 @@ const step1Schema = z.object({
     nationality: z.string().min(2, "Nationality is required"),
     guardianEmail: z.string().email("Invalid email"),
     guardianPhone: z.string().min(5, "Phone is required"),
-    passport: z.instanceof(File).nullable(),
+    passport_file_url: z.instanceof(File).nullable(),
 })
 
 /* ---------------- FORM ---------------- */
@@ -344,7 +345,7 @@ function Step1Form({
             nationality: defaultValues.nationality,
             guardianEmail: defaultValues.guardianEmail,
             guardianPhone: defaultValues.guardianPhone,
-            passport: null as File | null,
+            passport_file_url: null as File | null,
         },
         validators: { onSubmit: step1Schema },
 
@@ -363,7 +364,7 @@ function Step1Form({
                 fd.append("nationality", value.nationality)
                 fd.append("guardian_email", value.guardianEmail)
                 fd.append("guardian_phone", value.guardianPhone)
-                if (value.passport) fd.append("avatar", value.passport)
+                if (value.passport_file_url) fd.append("passport_file_url", value.passport_file_url)
 
                 await updateProfile.mutateAsync(fd)
 
@@ -384,7 +385,7 @@ function Step1Form({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
                 {/* ✅ IMAGE COMPONENT */}
-                <form.Field name="passport">
+                <form.Field name="passport_file_url">
                     {(field) => (
                         <div className="sm:col-span-2">
                             <ImageUploadCard
@@ -538,11 +539,7 @@ export function Step1Basic({ onNext }: { onNext: () => void }) {
     const { data: meData, isLoading } = me
 
     if (isLoading) {
-        return (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-                Loading...
-            </div>
-        )
+        return <PageLoader label="Preparing your profile..." />
     }
 
     const defaults = {

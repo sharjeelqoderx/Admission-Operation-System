@@ -73,7 +73,7 @@ export default function StudentDocumentsPage({ params }: PageProps) {
             >
                 <Table className="w-full">
                     <TableHeader>
-                        <TableRow className="border-b border-white/20 bg-white/10">
+                        <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
                             <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Document Name</TableHead>
                             <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Number of document</TableHead>
                             <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Upload Date</TableHead>

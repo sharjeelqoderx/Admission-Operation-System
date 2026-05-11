@@ -18,6 +18,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import ImageUploadCard from "./shared/image-upload-card"
+import { DatePicker } from "@/components/shared/date-picker"
 import { Building, ChevronDown, School, FileUp } from "lucide-react"
 
 function F({ field, label, children }: { field: any; label: string; children: React.ReactNode }) {
@@ -46,6 +47,7 @@ type StudentData = {
         nationality?: string | null
         guardian_email?: string | null
         guardian_phone?: string | null
+        passport_file_url?: string | null
     } | null
     education?: Array<{
         id?: string | null
@@ -107,6 +109,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
             guardian_email: defaultData?.student?.guardian_email ?? "",
             guardian_phone: defaultData?.student?.guardian_phone ?? "",
             avatar_url: undefined as File | undefined,
+            passport_file_url: undefined as File | undefined,
             academic_background: eduList?.length
                 ? eduList.map(e => ({
                     id: (e as any).id ?? undefined,
@@ -125,7 +128,9 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                 if (key === "academic_background") {
                     fd.set(key, JSON.stringify(val))
                 } else if (key === "avatar_url" && val instanceof File) {
-                    fd.set("avatar", val)
+                    fd.set("avatar_url", val)
+                } else if (key === "passport_file_url" && val instanceof File) {
+                    fd.set("passport_file_url", val)
                 } else if (val !== undefined && val !== null) {
                     fd.set(key, val as string)
                 }
@@ -149,8 +154,8 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
     }, [form])
 
     return (
-        <div className="space-y-8">
-            <div className="bg-white/5 p-8 relative overflow-hidden">
+        <div className="space-y-8 w-full max-w-full overflow-hidden">
+            <div className="bg-white/5 p-4 sm:p-8 relative overflow-hidden rounded-xl border border-white/10">
                 <form id="student-form" onSubmit={(e) => { e.preventDefault(); form.handleSubmit() }} className="space-y-12 relative z-10">
                     <FieldGroup className="space-y-10">
 
@@ -161,34 +166,40 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 <Typography as="h3" className="text-[24px] font-extrabold text-gray-900 tracking-tight">Enter Student Details</Typography>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
-                                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
-                                    <form.Field name="full_name">
-                                        {(field) => (
-                                            <F field={field} label="Full Name">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter full name" />
-                                            </F>
-                                        )}
-                                    </form.Field>
+                            <div className="flex flex-col md:flex-row flex-wrap gap-6">
+                                <div className="flex-1 flex flex-wrap gap-6">
+                                    <div className="flex-1 min-w-[200px]">
+                                        <form.Field name="full_name">
+                                            {(field) => (
+                                                <F field={field} label="Full Name">
+                                                    <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter full name" />
+                                                </F>
+                                            )}
+                                        </form.Field>
+                                    </div>
 
-                                    <form.Field name="email">
-                                        {(field) => (
-                                            <F field={field} label="Email">
-                                                <Input id={field.name} type="email" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your email" />
-                                            </F>
-                                        )}
-                                    </form.Field>
+                                    <div className="flex-1 min-w-[200px]">
+                                        <form.Field name="email">
+                                            {(field) => (
+                                                <F field={field} label="Email">
+                                                    <Input id={field.name} type="email" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your email" />
+                                                </F>
+                                            )}
+                                        </form.Field>
+                                    </div>
 
-                                    <form.Field name="phone">
-                                        {(field) => (
-                                            <F field={field} label="Phone">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter phone number" />
-                                            </F>
-                                        )}
-                                    </form.Field>
+                                    <div className="w-full">
+                                        <form.Field name="phone">
+                                            {(field) => (
+                                                <F field={field} label="Phone">
+                                                    <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter phone number" />
+                                                </F>
+                                            )}
+                                        </form.Field>
+                                    </div>
                                 </div>
 
-                                <div className="md:col-span-1">
+                                <div className="w-full lg:w-auto max-w-full shrink-0">
                                     <form.Field name="avatar_url">
                                         {(field) => (
                                             <div className="space-y-2 h-full flex flex-col">
@@ -197,7 +208,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                     value={field.state.value ?? (defaultData?.avatar_url ?? null)}
                                                     onChange={(file) => field.handleChange(file as unknown as File)}
                                                     message="Passport size picture"
-                                                    className="flex-1 min-h-[144px]"
+                                                    className="w-full max-h-[200px]"
                                                 />
                                             </div>
                                         )}
@@ -214,7 +225,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 <ChevronDown className="size-5 text-gray-500" />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <form.Field name="guardian_phone">
                                     {(field) => (
                                         <F field={field} label="Parent/Guardian Phone">
@@ -226,7 +237,11 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 <form.Field name="dob">
                                     {(field) => (
                                         <F field={field} label="Date Of Birth">
-                                            <Input id={field.name} type="date" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} />
+                                            <DatePicker
+                                                value={field.state.value}
+                                                onChange={v => field.handleChange(v)}
+                                                placeholder="Select date of birth"
+                                            />
                                         </F>
                                     )}
                                 </form.Field>
@@ -261,7 +276,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                     )}
                                 </form.Field>
 
-                                <div className="md:col-span-2">
+                                <div className="col-span-1 sm:col-span-1 lg:col-span-2">
                                     <form.Field name="nationality">
                                         {(field) => (
                                             <F field={field} label="Nationality">
@@ -271,11 +286,20 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                     </form.Field>
                                 </div>
 
-                                <div className="md:col-span-1">
-                                    <div className="space-y-2">
-                                        <FieldLabel className="text-[13px] font-bold text-gray-900">Upload Passport</FieldLabel>
-                                        <ImageUploadCard message="Passport picture" className="min-h-[100px]" />
-                                    </div>
+                                <div className="col-span-1 sm:col-span-2 lg:col-span-1">
+                                    <form.Field name="passport_file_url">
+                                        {(field) => (
+                                            <div className="space-y-2">
+                                                <FieldLabel className="text-[13px] font-bold text-gray-900">Upload Passport</FieldLabel>
+                                                <ImageUploadCard
+                                                    value={field.state.value ?? (defaultData?.student?.passport_file_url ?? null)}
+                                                    onChange={(file) => field.handleChange(file as unknown as File)}
+                                                    message="Passport picture"
+                                                    className="w-full max-h-[200px]"
+                                                />
+                                            </div>
+                                        )}
+                                    </form.Field>
                                 </div>
                             </div>
                         </div>
@@ -296,10 +320,10 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                     <div className="space-y-6">
 
                                         {field.state.value.map((_, index: number) => (
-                                            <div key={index} className="grid md:grid-cols-3 gap-4">
+                                            <div key={index} className="flex flex-col md:flex-row flex-wrap gap-4">
 
                                                 {/* ── Qualification ── */}
-                                                <div className="space-y-1">
+                                                <div className="flex-1 min-w-[200px]">
                                                     <Typography as="span" className="text-sm font-medium text-gray-900">
                                                         Qualification
                                                     </Typography>
@@ -318,7 +342,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                 </div>
 
                                                 {/* ── Institution ── */}
-                                                <div className="space-y-1">
+                                                <div className="flex-1 min-w-[200px]">
                                                     <Typography as="span" className="text-sm font-medium text-gray-900">
                                                         Institution Name
                                                     </Typography>
@@ -336,20 +360,24 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                     />
                                                 </div>
 
-                                                <div className="space-y-1">
+                                                <div className="flex-1 min-w-[200px]">
                                                     <Typography as="span" className="text-sm font-medium text-gray-900">
                                                         GPA
                                                     </Typography>
 
                                                     <div className="flex gap-2 items-stretch">
                                                         <Input
-                                                            placeholder="Enter GPA"
+                                                            placeholder="0.00"
                                                             value={field.state.value[index].gpa}
+                                                            className="flex-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                             onChange={(e) => {
+                                                                const val = e.target.value.replace(/[^0-9.]/g, "")
+                                                                if (val.split(".").length > 2) return // Only allow one dot
+
                                                                 const updated = [...field.state.value]
                                                                 updated[index] = {
                                                                     ...updated[index],
-                                                                    gpa: e.target.value,
+                                                                    gpa: val,
                                                                 }
                                                                 field.handleChange(updated)
                                                             }}
@@ -376,7 +404,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 <Button
                                     type="button"
                                     size="lg"
-                                    className="font-light"
+                                    className="font-light text-sm"
                                     onClick={addRow}
                                 >
                                     + Add More
@@ -386,12 +414,19 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                     </FieldGroup>
                 </form>
 
-                <div className="pt-10">
-                    <ErrorView message={apiError} />
-                </div>
-                <div className="mt-12 border-t border-gray-200/40 flex flex-row items-center justify-between gap-4 w-full">
+                {apiError && (
 
-                    <Button variant="outline" disabled className="flex-1 h-12 border border-brand-byzantine text-brand-byzantine hover:text-brand-byzantine hover:bg-brand-byzantine/5 rounded-sm font-bold">
+                    <div className="pt-10">
+                        <ErrorView message={apiError} />
+                    </div>
+                )
+                }
+                <div className="mt-12 border-t border-gray-200/40 pt-8 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 w-full">
+                    <Button
+                        variant="outline"
+                        disabled
+                        className="w-full sm:flex-1 h-12 border border-brand-byzantine text-brand-byzantine hover:text-brand-byzantine hover:bg-brand-byzantine/5 rounded-sm font-bold"
+                    >
                         Save Student Info
                     </Button>
 
@@ -400,7 +435,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                             <Button
                                 type="submit"
                                 form="student-form"
-                                className="flex-1 h-12 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white rounded-sm text-sm transition-all"
+                                className="w-full sm:flex-1 h-12 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white rounded-sm text-sm font-bold transition-all"
                                 disabled={isSubmitting || mutation.isPending || !isValid}
                             >
                                 {mutation.isPending ? "Processing..." : mode === "edit" ? "Update Student" : "Register"}

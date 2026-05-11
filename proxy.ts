@@ -21,12 +21,22 @@ export async function proxy(req: NextRequest) {
         }
     }
 
-    // Not logged in → redirect away from protected pages
+    // Not logged in → handle redirects or API 401s
     if (!user && (
         path.startsWith("/dashboard") ||
         path.startsWith("/onboarding") ||
-        path.startsWith("/profile")
+        path.startsWith("/profile") ||
+        path.startsWith("/api/student") ||
+        path.startsWith("/api/application") ||
+        path.startsWith("/api/profile") ||
+        path.startsWith("/api/me")
     )) {
+        if (path.startsWith("/api/")) {
+            return NextResponse.json(
+                { success: false, error: "Unauthorized" },
+                { status: 401 }
+            )
+        }
         return NextResponse.redirect(new URL("/login", req.url))
     }
 
@@ -34,5 +44,16 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/", "/dashboard/:path*", "/onboarding/:path*", "/onboarding", "/profile/:path*", "/profile", "/login", "/forget-password", "/signup", "/signup/:path*"],
+    matcher: [
+        "/", 
+        "/dashboard/:path*", 
+        "/onboarding/:path*", 
+        "/profile/:path*", 
+        "/login", 
+        "/signup",
+        "/api/student/:path*",
+        "/api/application/:path*",
+        "/api/profile/:path*",
+        "/api/me"
+    ],
 }

@@ -78,34 +78,63 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Profile not found" }, { status: 403 });
         }
 
-        // Use admin client to bypass RLS for insertion
-        const adminSupabase = await createSupabaseAdminClient();
-
-        // Insert into application table
-        const { data: application, error } = await adminSupabase
+        // Insert into application table using the regular supabase client (authenticated as the user)
+        const { data: application, error: insertError } = await supabase
             .from("application")
             .insert({
                 profile_id: validatedData.profile_id,
                 program_id: validatedData.program_id,
                 university_id: validatedData.university_id,
                 status: "PENDING",
-                submitted_by_profile_id: user.id
+                submitted_by_profile_id: user.id,
             })
             .select()
             .single();
 
-        if (error) {
-            console.error("Failed to create application:", error);
-            return NextResponse.json({ error: "Failed to create application", details: error }, { status: 400 });
+        if (insertError) {
+            console.error("Database Insert Error:", insertError);
+            return NextResponse.json({ 
+                error: "Failed to create application", 
+                message: insertError.message,
+                details: insertError 
+            }, { status: 400 });
         }
 
-        return NextResponse.json({ data: application, message: "Application created successfully" }, { status: 201 });
+        // 2. Link the selected documents to this application
+        if (validatedData.document_ids && validatedData.document_ids.length > 0) {
+            const documentLinks = validatedData.document_ids.map(docId => ({
+                application_id: application.id,
+                document_id: docId
+            }));
+
+            const { error: docLinkError } = await supabase
+                .from("application_document")
+                .insert(documentLinks);
+
+            if (docLinkError) {
+                console.error("Document Linking Error:", docLinkError);
+                // We don't fail the whole request but we log it
+            }
+        }
+
+        return NextResponse.json({ 
+            data: application, 
+            message: "Application created successfully" 
+        }, { status: 201 });
 
     } catch (e: any) {
+        console.error("CRITICAL: POST /api/application error:", e);
+        
         if (e?.name === "ZodError") {
-            return NextResponse.json({ error: "Validation failed", details: e.errors }, { status: 400 });
+            return NextResponse.json({ 
+                error: "Validation failed", 
+                details: e.errors 
+            }, { status: 400 });
         }
-        console.error("POST /api/application error:", e);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        
+        return NextResponse.json({ 
+            error: "Internal Server Error",
+            message: e.message || "Unknown error occurred"
+        }, { status: 500 });
     }
 }
