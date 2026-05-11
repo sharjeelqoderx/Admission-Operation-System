@@ -1,7 +1,8 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
+import { useEffect } from "react"
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
 import { DocumentFormSchema, type DocumentInput } from "@/types/schemas/document"
 import { ErrorView } from "@/components/shared/error-view"
@@ -30,6 +31,8 @@ function F({ field, label, children }: { field: any; label: string; children: Re
 
 export function UploadDocumentForm() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const studentIdParam = searchParams.get("student_id")
     const queryClient = useQueryClient()
 
     const { data: studentsData } = useQuery({
@@ -38,11 +41,11 @@ export function UploadDocumentForm() {
             const res = await fetch("/api/student")
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error ?? "Failed")
-            return json.data as { profile_id: string; profile: { name: string } }[]
+            return json.data as { profile_id: string; student_code: string; profile: { name: string } }[]
         },
     })
 
-    const students = studentsData ?? []
+    const students = Array.isArray(studentsData) ? studentsData : []
 
     const mutation = useMutation({
         mutationFn: async (fd: FormData) => {
@@ -62,7 +65,7 @@ export function UploadDocumentForm() {
 
     const form = useForm({
         defaultValues: {
-            student_id: "",
+            student_id: studentIdParam || "",
             name: "",
             files: [] as File[],
             comment: "",
@@ -83,6 +86,12 @@ export function UploadDocumentForm() {
             await mutation.mutateAsync(fd)
         },
     })
+
+    useEffect(() => {
+        if (studentIdParam) {
+            form.setFieldValue("student_id", studentIdParam)
+        }
+    }, [studentIdParam])
 
     const handleFileChange = (index: number, file: File | null) => {
         const currentFiles = [...(form.state.values.files || [])]
@@ -112,10 +121,15 @@ export function UploadDocumentForm() {
                                     <SelectTrigger className="h-12">
                                         <SelectValue placeholder="Select a student" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="max-h-[100px] overflow-y-auto">
                                         {students.map((s) => (
                                             <SelectItem className="capitalize" key={s.profile_id} value={s.profile_id}>
-                                                {s.profile?.name}
+                                                        {s.student_code}
+                                                {/* <div className="flex items-center justify-between w-full gap-4">
+                                                    <span>{s.profile?.name}</span>
+                                                    <span className="text-[10px] font-extrabold text-brand-byzantine bg-brand-byzantine/5 px-2 py-0.5 rounded uppercase">
+                                                    </span>
+                                                </div> */}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

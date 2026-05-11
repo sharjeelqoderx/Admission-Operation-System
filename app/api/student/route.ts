@@ -23,22 +23,76 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Agent profile not found" }, { status: 400 })
         }
 
+        const { searchParams } = new URL(req.url)
+        const q = searchParams.get("q")
+        const status = searchParams.get("status")
+        const page = parseInt(searchParams.get("page") || "1")
+        const limit = parseInt(searchParams.get("limit") || "10")
+
         // Fetch students created by this agent with their profile
-        const { data: students, error } = await supabase
+        let query = supabase
             .from("student")
             .select(`
                 *,
                 profile:profile_id (*)
             `)
             .eq("created_by_agent_id", agentRow.id)
-            .order("created_at", { ascending: false })
+
+        if (status && status !== "all") {
+            // We'll filter status in-memory below to avoid DB errors if column is missing
+        }
+
+        let { data: students, error } = await query.order("created_at", { ascending: false })
+
+        let pagination = {
+            total: 0,
+            page,
+            limit,
+            totalPages: 0
+        }
+
+        if (students) {
+            // In-memory filtering for both search (q) and status
+            const searchTerm = q?.toLowerCase() || ""
+            const statusFilter = status?.toLowerCase() || "all"
+
+            students = students.filter(s => {
+                // 1. Status Filter
+                const studentStatus = (s.status || "CREATED").toLowerCase()
+                if (statusFilter !== "all" && studentStatus !== statusFilter) {
+                    return false
+                }
+
+                // 2. Search Filter
+                if (searchTerm) {
+                    const studentCode = s.student_code?.toLowerCase() || ""
+                    const country = s.country?.toLowerCase() || ""
+                    const profileName = s.profile?.name?.toLowerCase() || ""
+                    const profileEmail = s.profile?.email?.toLowerCase() || ""
+
+                    return studentCode.includes(searchTerm) ||
+                        country.includes(searchTerm) ||
+                        profileName.includes(searchTerm) ||
+                        profileEmail.includes(searchTerm)
+                }
+
+                return true
+            })
+
+            pagination.total = students.length
+            pagination.totalPages = Math.ceil(students.length / limit)
+
+            // Apply pagination
+            const start = (page - 1) * limit
+            students = students.slice(start, start + limit)
+        }
 
         if (error) {
             console.error("Supabase Error:", error)
             return NextResponse.json({ error: "Failed to fetch students" }, { status: 500 })
         }
 
-        return NextResponse.json({ data: students }, { status: 200 })
+        return NextResponse.json({ data: students, pagination }, { status: 200 })
     } catch (e) {
         console.error("Error in GET /api/student:", e)
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
@@ -83,7 +137,8 @@ export async function POST(req: NextRequest) {
             nationality: getString("nationality"),
             guardian_email: getString("guardian_email"),
             guardian_phone: getString("guardian_phone"),
-            avatar_url: getFile("avatar"),
+            avatar_url: getFile("avatar_url"),
+            passport_file_url: getFile("passport_file_url"),
             academic_background,
         })
 
@@ -160,6 +215,15 @@ export async function POST(req: NextRequest) {
             })
             : null
 
+        const passportUpload = validatedData.passport_file_url
+            ? await uploadPublicImage({
+                supabase,
+                bucket,
+                userId: `${newUserId}/passport`,
+                file: validatedData.passport_file_url,
+            })
+            : null
+
         /* ---------------- PROFILE CREATE ---------------- */
         const { data: profile, error: profileError } = await supabase
             .from("profile")
@@ -193,14 +257,40 @@ export async function POST(req: NextRequest) {
         }
 
         /* ---------------- STUDENT CREATE ---------------- */
+        const generateStudentCode = () => {
+            const randomDigits = Math.floor(1000 + Math.random() * 9000).toString()
+            return `FDM-${randomDigits}`
+        }
+
+        let studentCode = generateStudentCode()
+
+        let isUnique = false
+        let attempts = 0
+        while (!isUnique && attempts < 5) {
+            const { data: existing } = await supabase
+                .from("student")
+                .select("id")
+                .eq("student_code", studentCode)
+                .maybeSingle()
+
+            if (!existing) {
+                isUnique = true
+            } else {
+                studentCode = generateStudentCode()
+                attempts++
+            }
+        }
+
         const { error: studentError } = await supabase.from("student").upsert(
             {
                 profile_id: newUserId,
                 created_by_agent_id: agentRow.id,
+                student_code: studentCode,
                 country: validatedData.country || null,
                 nationality: validatedData.nationality || null,
                 guardian_email: validatedData.guardian_email || null,
                 guardian_phone: validatedData.guardian_phone || null,
+                passport_file_url: passportUpload?.publicUrl ?? null,
             },
             { onConflict: "profile_id" }
         )

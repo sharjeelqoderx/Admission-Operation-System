@@ -20,6 +20,7 @@ export const StudentFormSchema = z.object({
     ).min(1),
 
     avatar_url: z.instanceof(File).optional(),
+    passport_file_url: z.instanceof(File).optional(),
 })
 
 export type StudentInput = z.infer<typeof StudentFormSchema>

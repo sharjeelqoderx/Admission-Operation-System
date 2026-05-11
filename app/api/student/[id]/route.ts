@@ -89,13 +89,19 @@ export async function PATCH(
             nationality: getString("nationality"),
             guardian_email: getString("guardian_email"),
             guardian_phone: getString("guardian_phone"),
-            avatar: getFile("avatar"),
+            avatar_url: getFile("avatar_url"),
+            passport_file_url: getFile("passport_file_url"),
             academic,
         }
 
+
         // 1. Update profile
-        const avatarUpload = data.avatar
-            ? await (await import("@/lib/supabase/upload-public-image")).uploadPublicImage({ supabase, bucket: "student-admission", userId: id, file: data.avatar })
+        const avatarUpload = data.avatar_url
+            ? await (await import("@/lib/supabase/upload-public-image")).uploadPublicImage({ supabase, bucket: "student-admission", userId: id, file: data.avatar_url })
+            : null
+
+        const passportUpload = data.passport_file_url
+            ? await (await import("@/lib/supabase/upload-public-image")).uploadPublicImage({ supabase, bucket: "student-admission", userId: `${id}/passport`, file: data.passport_file_url })
             : null
 
         const { error: profileError } = await supabase
@@ -127,6 +133,7 @@ export async function PATCH(
                     nationality: data.nationality,
                     guardian_email: data.guardian_email,
                     guardian_phone: data.guardian_phone,
+                    ...(passportUpload ? { passport_file_url: passportUpload.publicUrl } : {}),
                 },
                 { onConflict: "profile_id" }
             )

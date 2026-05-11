@@ -5,7 +5,7 @@ import { StudentForm } from "@/components/StudentForm"
 export default function AddStudentPage() {
     return (
         <main className="min-h-screen">
-            <div className="relative z-10 max-w-7xl mx-auto space-y-10 border-x border-white/40 rounded-l-lg rounded-r-lg">
+            <div className="relative z-10 mx-auto space-y-10 border-x border-white/40 rounded-l-lg rounded-r-lg">
                 <div className="flex flex-col gap-2 p-8 m-0 pb-4 border-b-2 border-gray-300">
                     <Typography as="h2" className="text-[24px] font-extrabold text-gray-900 tracking-tight">
                         Add New Student

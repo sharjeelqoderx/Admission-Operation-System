@@ -9,6 +9,8 @@ import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { useAuth } from "@/hooks/useAuth"
 
+import { PageLoader } from "@/components/shared/page-loader"
+
 import { Step1Basic } from "./step_1"
 import { Step2Academic } from "./step_2"
 import { Step3Work } from "./step_3"
@@ -92,11 +94,7 @@ function OnboardingControllerInner() {
     }
 
     if (isLoading) {
-        return (
-            <div className="size-full min-h-screen flex items-center justify-center">
-                <div className="text-sm text-muted-foreground">Loading...</div>
-            </div>
-        )
+        return <PageLoader fullScreen label="Setting up your onboarding..." />
     }
 
     if (step === "welcome") {

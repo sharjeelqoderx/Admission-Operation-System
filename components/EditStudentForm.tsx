@@ -17,6 +17,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import ImageUploadCard from "./shared/image-upload-card"
+import { DatePicker } from "@/components/shared/date-picker"
 import { Building, FileText, ChevronDown, GraduationCap, Loader2 } from "lucide-react"
 
 function F({ field, label, children }: { field: any; label: string; children: React.ReactNode }) {
@@ -57,7 +58,7 @@ export function EditStudentForm() {
 function EditFormContent({ studentData, id }: { studentData: any; id: string }) {
     const router = useRouter()
     const { editStudent } = useStudents()
-    
+
     // API structure: studentData is the profile + { student: {...}, education: {...} }
     const profile = studentData
     const student = studentData.student
@@ -67,21 +68,21 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
 
     const form = useForm({
         defaultValues: {
-            full_name:        profile?.name || "",
-            email:            profile?.email || "",
-            phone:            profile?.phone || "",
-            password:         "",
-            dob:              profile?.date_of_birth || "",
-            gender:           (profile?.gender?.toUpperCase() || "") as "MALE" | "FEMALE",
-            country:          student?.country || "",
-            nationality:      student?.nationality || "",
-            guardian_email:   student?.guardian_email || "",
-            guardian_phone:   student?.guardian_phone || "",
-            qualification:    edu?.qualification || "",
+            full_name: profile?.name || "",
+            email: profile?.email || "",
+            phone: profile?.phone || "",
+            password: "",
+            dob: profile?.date_of_birth || "",
+            gender: (profile?.gender?.toUpperCase() || "") as "MALE" | "FEMALE",
+            country: student?.country || "",
+            nationality: student?.nationality || "",
+            guardian_email: student?.guardian_email || "",
+            guardian_phone: student?.guardian_phone || "",
+            qualification: edu?.qualification || "",
             institution_name: edu?.institution_name || edu?.institute_name || "",
-            gpa:              edu?.cumulative_gpa?.toString() || edu?.gpa?.toString() || "",
-            avatar_url:       undefined as unknown as File,
-            passport_url:     undefined as unknown as File,
+            gpa: edu?.cumulative_gpa?.toString() || edu?.gpa?.toString() || "",
+            avatar_url: undefined as unknown as File,
+            passport_file_url: undefined as unknown as File,
         },
         onSubmit: async ({ value }) => {
             const fd = new FormData()
@@ -98,7 +99,8 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
             fd.set("qualification", value.qualification)
             fd.set("institution_name", value.institution_name)
             fd.set("gpa", value.gpa)
-            if (value.avatar_url) fd.set("avatar", value.avatar_url)
+            if (value.avatar_url) fd.set("avatar_url", value.avatar_url)
+            if (value.passport_file_url) fd.set("passport_file_url", value.passport_file_url)
 
             await editStudent.mutateAsync({ id, data: fd as any })
             router.push(`/dashboard/student/${id}`)
@@ -192,7 +194,11 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                 <form.Field name="dob">
                                     {(field) => (
                                         <F field={field} label="Date Of Birth">
-                                            <Input id={field.name} type="date" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                            <DatePicker
+                                                value={field.state.value}
+                                                onChange={v => field.handleChange(v)}
+                                                placeholder="Select date of birth"
+                                            />
                                         </F>
                                     )}
                                 </form.Field>
@@ -246,12 +252,12 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                 </div>
 
                                 <div className="md:col-span-1">
-                                    <form.Field name="passport_url">
+                                    <form.Field name="passport_file_url">
                                         {(field) => (
                                             <div className="space-y-2">
                                                 <FieldLabel className="text-[13px] font-bold text-gray-900">Upload Passport</FieldLabel>
                                                 <ImageUploadCard
-                                                    value={field.state.value ?? (student?.website ? { preview: student.website } : null)}
+                                                    value={field.state.value ?? (student?.passport_file_url ?? null)}
                                                     onChange={(file) => field.handleChange(file as unknown as File)}
                                                     message="Passport picture"
                                                     className="min-h-[100px]"
@@ -290,7 +296,17 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                 <form.Field name="gpa">
                                     {(field) => (
                                         <F field={field} label="Cumulative GPA">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your GPA" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                            <Input
+                                                id={field.name}
+                                                value={field.state.value}
+                                                className="h-12 bg-white border-none rounded-sm shadow-sm text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                placeholder="0.00"
+                                                onChange={e => {
+                                                    const val = e.target.value.replace(/[^0-9.]/g, "")
+                                                    if (val.split(".").length > 2) return
+                                                    field.handleChange(val)
+                                                }}
+                                            />
                                         </F>
                                     )}
                                 </form.Field>
@@ -315,10 +331,10 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
 
                         <form.Subscribe selector={s => ({ isSubmitting: s.isSubmitting, isValid: s.isValid })}>
                             {({ isSubmitting, isValid }) => (
-                                <Button 
-                                    type="submit" 
-                                    form="edit-student-form" 
-                                    className="flex-1 h-12 bg-[#9B51E0] hover:bg-[#8a42cf] text-white rounded-sm font-extrabold text-sm shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2" 
+                                <Button
+                                    type="submit"
+                                    form="edit-student-form"
+                                    className="flex-1 h-12 bg-[#9B51E0] hover:bg-[#8a42cf] text-white rounded-sm font-extrabold text-sm shadow-lg shadow-purple-500/20 transition-all flex items-center justify-center gap-2"
                                     disabled={isSubmitting || editStudent.isPending || !isValid}
                                 >
                                     {(isSubmitting || editStudent.isPending) && <Loader2 className="size-4 animate-spin" />}

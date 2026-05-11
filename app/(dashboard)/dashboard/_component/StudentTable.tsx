@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/table"
 import { BluryCard } from "@/components/shared/blury-card"
 import { StatusBadge } from "@/components/shared/StatusBadge"
+import { PageLoader } from "@/components/shared/page-loader"
 
 type Student = any
 
@@ -38,38 +39,32 @@ type Props = {
     students: Student[]
     isLoading: boolean
     isError: boolean
+    errorMessage?: string
     deletingId: string | null
+    pagination?: {
+        total: number
+        page: number
+        limit: number
+        totalPages: number
+    }
     onDelete: (id: string, name: string) => void
     onRetry: () => void
+    onPageChange: (page: number) => void
 }
 
 export function StudentTable({
     students,
     isLoading,
     isError,
+    errorMessage,
     deletingId,
+    pagination,
     onDelete,
     onRetry,
+    onPageChange,
 }: Props) {
     if (isLoading) {
-        return (
-            <div className="space-y-4 pt-4">
-                <div className="h-7 w-36 bg-gray-200 rounded-lg animate-pulse" />
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="h-11 flex-1 bg-gray-200 rounded-lg animate-pulse" />
-                    <div className="h-11 w-full sm:w-64 bg-gray-200 rounded-lg animate-pulse" />
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                    <div className="h-7 w-24 bg-gray-200 rounded-full animate-pulse" />
-                    <div className="h-7 w-20 bg-gray-200 rounded-full animate-pulse" />
-                    <div className="h-7 w-20 bg-gray-200 rounded-full animate-pulse" />
-                </div>
-
-                <div className="bg-white/40 backdrop-blur-xl border border-white/60 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)] rounded-2xl overflow-hidden" />
-            </div>
-        )
+        return <PageLoader label="Fetching students..." />
     }
 
     if (isError) {
@@ -79,20 +74,20 @@ export function StudentTable({
                     <AlertCircle className="size-8 text-red-400" />
                 </div>
 
-                <div className="text-center">
+                <div className="text-center px-4">
                     <Typography as="p" className="text-sm font-bold text-gray-700">
-                        Failed to load students
+                        {errorMessage || "Failed to load students"}
                     </Typography>
                     <Typography as="p" className="text-xs text-gray-500 mt-1">
-                        Check your connection and try again.
+                        Try refreshing the page or contact support if the issue persists.
                     </Typography>
                 </div>
 
                 <button
                     onClick={onRetry}
-                    className="px-5 py-2 rounded-xl text-sm font-semibold bg-brand-byzantine text-white hover:bg-brand-byzantine transition-colors"
+                    className="px-8 py-2.5 rounded-xl text-sm font-semibold bg-brand-byzantine text-white hover:bg-brand-byzantine/90 transition-all shadow-lg shadow-brand-byzantine/20"
                 >
-                    Retry
+                    Retry Now
                 </button>
             </div>
         )
@@ -100,48 +95,7 @@ export function StudentTable({
 
     return (
         <div className="space-y-4 pt-4">
-            <Typography as="h3" className="text-xl font-bold text-brand-secondary">
-                Students list
-            </Typography>
-
-            {/* Search + Filters */}
-            <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1 ps-1">
-                    <Search className="absolute left-3 top-1/2 z-10 -translate-y-1/2 size-4 text-gray-400" />
-                    <Input
-                        type="text"
-                        placeholder="Enter to search"
-                        className="w-full backdrop-blur-md ps-8"
-                    />
-                </div>
-
-                <div className="relative w-full sm:w-64">
-                    <Select>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="created">Created</SelectItem>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex items-center gap-2 pt-2">
-                <button className="px-5 py-1.5 rounded-full bg-brand-secondary text-white text-xs font-medium shadow-sm">
-                    All Students
-                </button>
-                <button className="px-5 py-1.5 rounded-full bg-[#8ba4d5] text-white text-xs font-medium hover:bg-brand-secondary">
-                    Program
-                </button>
-                <button className="px-5 py-1.5 rounded-full bg-[#8ba4d5] text-white text-xs font-medium hover:bg-brand-secondary">
-                    Country
-                </button>
-            </div>
+            {/* Table */}
 
             {/* Table */}
             <BluryCard
@@ -154,13 +108,13 @@ export function StudentTable({
                 <div className="overflow-x-auto">
                     <Table className="w-full text-left border-collapse min-w-[900px]">
                         <TableHeader>
-                            <TableRow className="border-b border-white/20 bg-white/10">
+                            <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">Student Name</TableHead>
-                                {/* <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">Program</TableHead> */}
+                                <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">Student ID</TableHead>
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">Country</TableHead>
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">Status</TableHead>
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">
-                                    Application<br />Creation Date
+                                    Student<br />Creation Date
                                 </TableHead>
                                 <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase">
                                     Action
@@ -169,10 +123,18 @@ export function StudentTable({
                         </TableHeader>
 
                         <TableBody>
-                            {students.length === 0 ? (
+                            {!Array.isArray(students) || students.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="px-6 py-8 text-center text-gray-500 text-sm">
-                                        No students found.
+                                    <TableCell colSpan={7} className="px-6 py-20 text-center">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <Search className="size-8 text-gray-300" />
+                                            <Typography as="p" className="text-sm font-medium text-gray-500">
+                                                No students found matching your search criteria.
+                                            </Typography>
+                                            <Typography as="p" className="text-xs text-gray-400">
+                                                Try adjusting your filters or search term.
+                                            </Typography>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -182,8 +144,14 @@ export function StudentTable({
                                         className={`hover:bg-white/10 transition-colors ${deletingId === student.id ? "opacity-50" : ""}`}
                                     >
                                         <TableCell className="px-6 py-6">
-                                            <Typography as="span" className="text-sm font-bold text-gray-900">
+                                            <Typography as="span" className="capitalize text-sm font-bold text-gray-900">
                                                 {student.profile?.name}
+                                            </Typography>
+                                        </TableCell>
+
+                                        <TableCell className="px-6 py-6">
+                                            <Typography as="span" className="text-sm font-bold text-brand-byzantine uppercase">
+                                                {student.student_code || 'N/A'}
                                             </Typography>
                                         </TableCell>
 
@@ -194,12 +162,12 @@ export function StudentTable({
                                         </TableCell> */}
 
                                         <TableCell className="px-6 py-6">
-                                            <Typography as="span" className="text-sm font-bold text-gray-700">
+                                            <Typography as="span" className="capitalize text-sm font-bold text-gray-700">
                                                 {student.country}
                                             </Typography>
                                         </TableCell>
 
-                                        <TableCell className="px-6 py-6">
+                                        <TableCell className="px-6 py-6 uppercase">
                                             <StatusBadge status={student.status || 'Created'} />
                                         </TableCell>
 
@@ -237,14 +205,28 @@ export function StudentTable({
                 {/* Pagination */}
                 <div className="flex items-center justify-between px-6 py-5 border-t border-gray-200/20 bg-white/5">
                     <div className="text-xs font-bold text-gray-500">
-                        Showing {students.length} entries
+                        {pagination ? (
+                            <>
+                                Showing {Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total)} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} entries
+                            </>
+                        ) : (
+                            `Showing ${students.length} entries`
+                        )}
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <button className="size-9 rounded-xl bg-white/20 flex items-center justify-center">
+                        <button
+                            onClick={() => pagination && onPageChange(pagination.page - 1)}
+                            disabled={!pagination || pagination.page <= 1}
+                            className="size-9 rounded-xl bg-white/20 flex items-center justify-center hover:bg-white/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
                             <ChevronLeft className="size-4" />
                         </button>
-                        <button className="size-9 rounded-xl bg-white/20 flex items-center justify-center">
+                        <button
+                            onClick={() => pagination && onPageChange(pagination.page + 1)}
+                            disabled={!pagination || pagination.page >= pagination.totalPages}
+                            className="size-9 rounded-xl bg-white/20 flex items-center justify-center hover:bg-white/40 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
                             <ChevronRight className="size-4" />
                         </button>
                     </div>
