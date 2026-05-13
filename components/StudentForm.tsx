@@ -154,7 +154,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
     }, [form])
 
     return (
-        <div className="space-y-8 w-full mt-4">
+        <div className="space-y-8 w-full p-6">
             <form id="student-form" onSubmit={(e) => { e.preventDefault(); form.handleSubmit() }} className="space-y-12 relative z-10">
                 <FieldGroup className="space-y-10">
 
