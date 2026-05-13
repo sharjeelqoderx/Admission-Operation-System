@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
+import { FilePreview } from "@/components/shared/FilePreview";
+
 import {
     Select,
     SelectContent,
@@ -66,7 +68,11 @@ type Document = {
     id: string;
     name: string;
     created_at: string;
+    document_files?: {
+        file_url: string;
+    }[];
 };
+
 
 function F({ field, label, children }: { field: any; label: string; children: React.ReactNode }) {
     const isSubmitted = field.form.state.isSubmitted;
@@ -311,12 +317,14 @@ export function CreateApplicationForm() {
                     <Step3
                         form={form}
                         studentDetails={studentDetails}
+                        allDocuments={documents}
                         programs={programs}
                         onBack={() => setStep(2)}
                         isSubmitting={createApplication.isPending}
                         error={createApplication.error?.message}
                     />
                 )}
+
 
             </form>
         </div>
@@ -414,9 +422,19 @@ function Step1({ form, students, studentDetails, documents, onNext }: { form: an
                                                         <Square className="size-4 text-brand-secondary/20 group-hover:text-brand-secondary/40" />
                                                     )}
                                                 </div>
-                                                <div className="aspect-square bg-white rounded-lg flex items-center justify-center p-4 overflow-hidden border border-gray-100 shadow-inner">
-                                                    <FileText className={cn("size-10 transition-colors", isChecked ? "text-green-500" : "text-gray-300")} />
+                                                <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                                    {doc.document_files?.[0]?.file_url ? (
+                                                        <FilePreview
+                                                            url={doc.document_files[0].file_url}
+                                                            name={doc.name}
+                                                            showActions={false}
+                                                            className="border-none shadow-none size-full"
+                                                        />
+                                                    ) : (
+                                                        <FileText className={cn("size-10 transition-colors", isChecked ? "text-green-500" : "text-gray-300")} />
+                                                    )}
                                                 </div>
+
                                                 <div>
                                                     <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{doc.name}</Typography>
                                                     <Typography as="p" className="text-[8px] font-bold tracking-widest text-gray-500 uppercase mt-1">
@@ -437,14 +455,14 @@ function Step1({ form, students, studentDetails, documents, onNext }: { form: an
                                             </Typography>
                                             <Typography as="p" className="text-xs text-gray-500">
                                                 {form.getFieldValue("profile_id")
-                                                    ? "This student hasn't uploaded any supporting documents yet."
+                                                    ? "Document has not uploaded for this student"
                                                     : "Please select a student above to view their available documents."}
                                             </Typography>
                                         </div>
                                         {form.getFieldValue("profile_id") && (
                                             <Link href={`/dashboard/document/new?student_id=${form.getFieldValue("profile_id")}&from=application`}>
 
-                                                <Button type="button" variant="outline" className="h-9 px-6 rounded-xl border-gray-300 text-brand-secondary font-bold text-xs hover:bg-white transition-all shadow-sm">
+                                                <Button type="button" variant="outline" className="h-9 px-6 border rounded-xl border-gray-300 text-brand-secondary font-bold text-xs hover:bg-white transition-all shadow-sm">
                                                     Upload New Document
                                                 </Button>
                                             </Link>
@@ -652,11 +670,16 @@ function Step2({ form, programs, studentDetails, onNext, onBack }: { form: any; 
     );
 }
 
-function Step3({ form, studentDetails, programs, onBack, isSubmitting, error }: { form: any; studentDetails?: Student; programs: Program[]; onBack: () => void; isSubmitting: boolean; error?: string }) {
+function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitting, error }: { form: any; studentDetails?: Student; allDocuments: Document[]; programs: Program[]; onBack: () => void; isSubmitting: boolean; error?: string }) {
+
 
     const selectedProgramId = useStore(form.store, (s: any) => s.values.program_id);
+    const selectedDocIds = useStore(form.store, (s: any) => s.values.document_ids) || [];
     const declarations = useStore(form.store, (s: any) => s.values.declarations);
     const selectedProgram = programs.find((p) => p.program_id === selectedProgramId);
+
+    const selectedDocs = allDocuments.filter(doc => selectedDocIds.includes(doc.id));
+
 
     const isAllChecked = Array.isArray(declarations) && declarations.every(Boolean);
 
@@ -729,6 +752,42 @@ function Step3({ form, studentDetails, programs, onBack, isSubmitting, error }: 
                     </div>
                 </div>
             </div>
+
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-6">
+                    <FileText className="size-5 text-brand-secondary" />
+                    <Typography as="h3" className="text-[16px] font-extrabold text-brand-secondary">Attached Documents ({selectedDocs.length})</Typography>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {selectedDocs.map((doc) => (
+                        <div key={doc.id} className="space-y-2">
+                            <div className="aspect-square bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm">
+                                {doc.document_files?.[0]?.file_url ? (
+                                    <FilePreview
+                                        url={doc.document_files[0].file_url}
+                                        name={doc.name}
+                                        showActions={false}
+                                        className="border-none shadow-none size-full"
+                                    />
+                                ) : (
+                                    <div className="size-full flex items-center justify-center bg-gray-50">
+                                        <FileText className="size-8 text-gray-300" />
+                                    </div>
+                                )}
+                            </div>
+                            <Typography as="p" className="text-[10px] font-bold text-gray-700 truncate px-1">
+                                {doc.name}
+                            </Typography>
+                        </div>
+                    ))}
+                    {selectedDocs.length === 0 && (
+                        <div className="col-span-full py-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                            <Typography className="text-sm text-gray-400 italic">No documents attached</Typography>
+                        </div>
+                    )}
+                </div>
+            </div>
+
 
             <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-6 shadow-sm">
                 <div className="flex items-center gap-2 mb-6">

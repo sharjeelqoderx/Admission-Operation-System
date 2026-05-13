@@ -131,7 +131,7 @@ export function UploadDocumentForm() {
                                     <SelectContent className="max-h-[100px] overflow-y-auto">
                                         {students.map((s) => (
                                             <SelectItem className="capitalize" key={s.profile_id} value={s.profile_id}>
-                                                        {s.student_code}
+                                                {s.student_code}
                                                 {/* <div className="flex items-center justify-between w-full gap-4">
                                                     <span>{s.profile?.name}</span>
                                                     <span className="text-[10px] font-extrabold text-brand-byzantine bg-brand-byzantine/5 px-2 py-0.5 rounded uppercase">
@@ -165,12 +165,12 @@ export function UploadDocumentForm() {
                                 const isSubmitted = field.form.state.isSubmitted
                                 const firstFile = field.state.value?.[0]
                                 const isInvalid = isSubmitted && (!firstFile)
-                                
+
                                 return (
                                     <>
                                         <div className="space-y-3">
                                             <Typography as="p" className="text-[12px] font-bold tracking-widest text-gray-400 uppercase">
-                                                Front Side <span className="text-red-500">*</span>
+                                                Front Side
                                             </Typography>
                                             <ImageUploadCard
                                                 value={firstFile ?? null}
@@ -178,7 +178,7 @@ export function UploadDocumentForm() {
                                                 message="Front File"
                                                 accept="image/*,application/pdf,.doc,.docx"
                                                 className={cn(
-                                                    "min-h-[160px] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 hover:border-brand-byzantine/30 transition-all",
+                                                    "min-h-[160px] border-2 border-transparent hover:border-brand-byzantine bg-gray-50/50 hover:bg-gray-100/50 transition-all",
                                                     isInvalid && "border-red-300 bg-red-50/30"
                                                 )}
                                                 emptyIcon={<Plus size={32} className="text-gray-300" />}

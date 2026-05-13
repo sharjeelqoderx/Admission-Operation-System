@@ -18,12 +18,8 @@ type Props = {
     documentName: string
 }
 
-function getFileInfo(url: string) {
-    const ext = url.split('.').pop()?.split('?')[0]?.toLowerCase() || 'file'
-    if (ext === 'pdf') return { label: 'PDF', icon: FileText, color: 'text-red-500', bg: 'bg-red-50' }
-    if (['xlsx', 'xls', 'csv'].includes(ext)) return { label: ext.toUpperCase(), icon: FileSpreadsheet, color: 'text-green-600', bg: 'bg-green-50' }
-    return { label: ext.toUpperCase(), icon: File, color: 'text-blue-500', bg: 'bg-blue-50' }
-}
+
+
 
 export function DocumentViewer({ files, documentName }: Props) {
     const [currentIndex, setCurrentIndex] = useState(0)
@@ -76,41 +72,60 @@ export function DocumentViewer({ files, documentName }: Props) {
                     style={{ transform: `translateX(-${currentIndex * 100}%)` }}
                 >
                     {sortedFiles.map((file, i) => {
-                        const fileIsImage = file.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) || file.file_url.includes("image")
-                        const fileInfo = getFileInfo(file.file_url)
-                        const FileIcon = fileInfo.icon
+                        const extension = file.file_url.split('?')[0].split('.').pop()?.toLowerCase() || "";
+
+                        const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension);
+                        const isPdf = extension === "pdf";
+                        const isExcel = ["xls", "xlsx", "csv"].includes(extension);
+                        const isWord = ["doc", "docx"].includes(extension);
 
                         return (
                             <div key={file.id} className="min-w-full h-full flex items-center justify-center p-4 lg:p-8">
-                                {fileIsImage ? (
+                                {isImage ? (
                                     <img
                                         src={file.file_url}
                                         alt={`${documentName} - ${file.type}`}
                                         className="max-w-full max-h-full object-contain drop-shadow-2xl rounded-lg"
                                     />
                                 ) : (
-                                    <div
-                                        className="flex flex-col items-center justify-center gap-6"
-                                    >
-                                        <div className={cn("size-16 rounded-3xl flex items-center justify-center shadow-sm", fileInfo.bg)}>
-                                            <FileIcon size={30} className={fileInfo.color} strokeWidth={1.5} />
+                                    <div className="flex flex-col items-center justify-center gap-6">
+                                        <div className={cn(
+                                            "size-24 rounded-3xl flex items-center justify-center shadow-md bg-white",
+                                            isPdf && "border-red-100",
+                                            isExcel && "border-green-100",
+                                            isWord && "border-blue-100"
+                                        )}>
+                                            {isPdf && <FileText className="size-12 text-red-500" />}
+                                            {isExcel && <FileSpreadsheet className="size-12 text-green-600" />}
+                                            {isWord && <FileText className="size-12 text-blue-600" />}
+                                            {!isPdf && !isExcel && !isWord && <File className="size-12 text-gray-400" />}
                                         </div>
                                         <div className="text-center space-y-2">
-                                            <Typography as="p" font="text-lg" className="font-bold">
-                                                {fileInfo.label} Document
+                                            <Typography as="p" font="text-xl" className="font-extrabold text-gray-900">
+                                                {isPdf ? "PDF Document" : isExcel ? "Excel Spreadsheet" : isWord ? "Word Document" : "Document File"}
                                             </Typography>
-                                            <Typography as="p" className="text-sm text-gray-500">
-                                                Preview not available for {fileInfo.label} files
+                                            <Typography as="p" className="text-sm text-gray-500 max-w-[300px]">
+                                                {isPdf ? "Preview this PDF by opening it in a new tab." : "This file type can be downloaded for viewing."}
                                             </Typography>
                                         </div>
-                                        <Button asChild variant="outline" className="rounded-xl border border-brand-byzantine text-brand-byzantine hover:text-brand-byzantine hover:bg-brand-byzantine/5 px-8 h-12">
-                                            <a href={file.file_url} target="_blank" rel="noreferrer">Open Original {fileInfo.label}</a>
-                                        </Button>
+                                        <div className="flex gap-4">
+                                            <Button asChild variant="outline" className="rounded-xl px-8 h-12 font-bold border-gray-200">
+                                                <a href={file.file_url} target="_blank" rel="noreferrer">
+                                                    Open in New Tab
+                                                </a>
+                                            </Button>
+                                            <Button asChild className="bg-brand-secondary hover:bg-brand-secondary/90 rounded-xl px-8 h-12 font-bold">
+                                                <a href={file.file_url} download={documentName}>
+                                                    Download
+                                                </a>
+                                            </Button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
                         )
                     })}
+
                 </div>
 
                 {isMulti && (
