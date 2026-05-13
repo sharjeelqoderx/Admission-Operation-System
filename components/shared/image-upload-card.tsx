@@ -114,12 +114,13 @@ export function ImageUploadCard({
             />
 
             {hasFile ? (
-                <div className="relative w-full h-full p-2 flex flex-col items-center justify-center gap-2">
+                <div className="relative w-full h-full flex items-center justify-center">
                     {preview ? (
-                        <img src={preview} alt="Preview" className="max-h-24 rounded-lg object-contain" />
+                        <img src={preview} alt="Preview" className="size-full object-contain" />
                     ) : (
+
                         selectedFile && (
-                            <>
+                            <div className="flex flex-col items-center justify-center gap-2 p-4">
                                 {getFileIcon(selectedFile)}
                                 <p className="text-[11px] font-medium text-gray-600 text-center max-w-[90%] truncate">
                                     {selectedFile.name}
@@ -127,20 +128,26 @@ export function ImageUploadCard({
                                 <p className="text-[10px] text-gray-400">
                                     {(selectedFile.size / 1024).toFixed(1)} KB
                                 </p>
-                            </>
+                            </div>
                         )
                     )}
                     {!disabled && (
                         <button
                             type="button"
                             onClick={handleClear}
-                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-sm hover:scale-110 transition-transform"
+                            className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full shadow-lg backdrop-blur-md hover:bg-red-500 transition-all z-20"
                         >
-                            <X size={12} />
+                            <X size={14} />
                         </button>
+                    )}
+                    {preview && (
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                            <ImageIcon className="text-white size-8 opacity-50" />
+                        </div>
                     )}
                 </div>
             ) : (
+
                 <div className="flex flex-col items-center gap-2 p-4">
                     <div className="text-gray-400 group-hover:scale-110 transition-transform">
                         {emptyIcon ?? <ImageIcon size={32} strokeWidth={1.5} />}
