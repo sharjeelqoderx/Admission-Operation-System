@@ -46,9 +46,8 @@ const StatsDashboard = memo(({ stats, statsLoading }: { stats: any, statsLoading
                     </Typography>
                 </div>
                 <Link href="/dashboard/student/new">
-                    <Button className="bg-brand-byzantine hover:bg-brand-byzantine/80 text-white px-6 h-11 rounded-md shrink-0 shadow-md">
-                        <Plus className="size-4 mr-2" />
-                        <Typography as="span" className="text-inherit font-medium">Add Student</Typography>
+                    <Button className="px-6 gap-2 font-normal">
+                        <Plus size={24} className="text-white" /> New Student
                     </Button>
                 </Link>
             </div>
@@ -260,11 +259,11 @@ export default function Page() {
 
     return (
         <main className="relative overflow-x-hidden">
-            <StatsDashboard 
-                stats={statsQuery.data} 
-                statsLoading={statsQuery.isLoading} 
+            <StatsDashboard
+                stats={statsQuery.data}
+                statsLoading={statsQuery.isLoading}
             />
-            
+
             <StudentListSection />
         </main>
     )

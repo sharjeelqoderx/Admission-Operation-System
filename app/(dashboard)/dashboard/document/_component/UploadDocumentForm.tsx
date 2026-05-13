@@ -56,9 +56,16 @@ export function UploadDocumentForm() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["documents"] })
-            router.push("/dashboard/document")
+            const from = searchParams.get("from")
+            const studentId = form.state.values.student_id
+            if (from === "application") {
+                router.push(`/dashboard/application/new?student_id=${studentId}`)
+            } else {
+                router.push("/dashboard/document")
+            }
             router.refresh()
         },
+
     })
 
     const apiError = mutation.error instanceof Error ? mutation.error.message : ""

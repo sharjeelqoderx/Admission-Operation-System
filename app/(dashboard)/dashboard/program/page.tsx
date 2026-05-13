@@ -92,9 +92,9 @@ export default function ProgramDashboard() {
     const allPrograms = data?.pages?.flatMap((page) => page?.data || []) || []
 
     return (
-        <div className="space-y-8 pb-20 px-6 lg:px-12 pt-4">
+        <div className="space-y-8">
             {/* ── Header ── */}
-            <div className="space-y-3 max-w-2xl">
+            <div className="space-y-3">
                 <Typography as="h1" className="text-[32px] font-extrabold text-gray-900 tracking-tight">
                     Explore Programs
                 </Typography>

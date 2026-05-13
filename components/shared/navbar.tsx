@@ -38,6 +38,7 @@ const getTitleFromPathname = (pathname: string): string => {
 
     if (pathname === '/dashboard/document/new') return 'Upload File';
     if (pathname.includes('/dashboard/program/') && segments.length >= 3) return 'Program Details';
+    if (pathname.includes('/dashboard/offer/') && segments.length >= 3) return 'Offer Details';
 
     const lastSegment = segments[segments.length - 1];
 
@@ -136,16 +137,16 @@ export function Navbar({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56 mt-2">
-                            <DropdownMenuItem className="flex flex-col items-start gap-1 cursor-pointer">
+                            <DropdownMenuItem className="flex flex-col items-start gap-1 cursor-pointer p-2">
                                 <span className="font-bold text-gray-800">{userName}</span>
                                 <span className="text-xs text-brand-byzantine font-medium">{userRole}</span>
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="cursor-pointer">Agent Profile</DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
+                            {/* <DropdownMenuSeparator /> */}
+                            {/* <DropdownMenuItem className="cursor-pointer">Agent Profile</DropdownMenuItem> */}
+                            {/* <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem> */}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                                className="text-red-600 cursor-pointer"
+                                className="text-red-600 cursor-pointer p-2"
                                 disabled={logout.isPending}
                                 onClick={handleLogout}
                             >

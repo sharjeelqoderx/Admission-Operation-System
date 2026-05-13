@@ -101,9 +101,12 @@ export function ProgramCard({ program }: { program: ProgramData }) {
                     </div>
                 </div>
 
-                <Button className="w-full hover:bg-brand-byzantine/80 text-white h-12 px-10 text-[14px] font-bold transition-all active:scale-95">
-                    Apply Now
-                </Button>
+                <Link href={`/dashboard/application/new?program_id=${program.program_id}`} className="w-full">
+                    <Button className="w-full hover:bg-brand-byzantine/80 text-white h-12 px-10 text-[14px] font-bold transition-all active:scale-95">
+                        Apply Now
+                    </Button>
+                </Link>
+
             </div>
         </BluryCard>
     )

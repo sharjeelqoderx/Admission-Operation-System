@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
 import { Typography } from "@/components/shared/Typography";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,11 +25,14 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+
 import { DatePicker } from "@/components/shared/date-picker";
 import { useForm, useStore } from "@tanstack/react-form";
 import { CreateApplicationSchema, type CreateApplicationInput } from "@/types/schemas/application";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { ErrorView } from "@/components/shared/error-view";
+
 
 type Student = {
     profile: {
@@ -82,6 +86,11 @@ function F({ field, label, children }: { field: any; label: string; children: Re
 export function CreateApplicationForm() {
     const [step, setStep] = useState(1);
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const studentIdParam = searchParams.get("student_id");
+    const programIdParam = searchParams.get("program_id");
+
+
 
     const { data: studentsResponse } = useQuery({
         queryKey: ["students"],
@@ -108,7 +117,7 @@ export function CreateApplicationForm() {
         },
         onSuccess: () => {
             toast.success("Application created successfully");
-            router.push("/dashboard/applications");
+            router.push("/dashboard/application");
         },
         onError: (err: Error) => {
             toast.error(err.message);
@@ -117,9 +126,10 @@ export function CreateApplicationForm() {
 
     const form = useForm({
         defaultValues: {
-            profile_id: "",
-            program_id: "",
+            profile_id: studentIdParam || "",
+            program_id: programIdParam || "",
             university_id: "",
+
             document_ids: [] as string[],
             intake_date: "",
             declarations: [false, false, false]
@@ -131,6 +141,14 @@ export function CreateApplicationForm() {
             await createApplication.mutateAsync(value);
         }
     });
+
+    useEffect(() => {
+        if (studentIdParam) {
+            form.setFieldValue("profile_id", studentIdParam);
+        }
+    }, [studentIdParam, form]);
+
+
 
     // Sub-queries for details
     const selectedStudentId = useStore(form.store, (s: any) => s.values.profile_id);
@@ -168,6 +186,19 @@ export function CreateApplicationForm() {
         }
     });
     const programs: Program[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
+
+    useEffect(() => {
+        if (programIdParam && programsResponse?.data) {
+            const programs: Program[] = programsResponse.data;
+            const program = programs.find(p => p.program_id === programIdParam);
+            if (program) {
+                form.setFieldValue("program_id", program.program_id);
+                form.setFieldValue("university_id", program.university_id);
+                form.setFieldValue("intake_date", program.intake_date || "N/A");
+            }
+        }
+    }, [programIdParam, programsResponse, form]);
+
 
     const handleNextStep = async () => {
         if (step === 1) {
@@ -212,7 +243,7 @@ export function CreateApplicationForm() {
                 {/* Connecting Lines */}
                 <div className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 -z-10" />
                 <div
-                    className="absolute top-8 left-0 h-0.5 bg-[#0a1e42] -z-10 transition-all duration-300"
+                    className="absolute top-8 left-0 h-0.5 bg-brand-secondary -z-10 transition-all duration-300"
                     style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}
                 />
 
@@ -220,18 +251,18 @@ export function CreateApplicationForm() {
                 <div className="flex flex-col items-center gap-3">
                     <div className={cn(
                         "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
-                        step >= 1 ? "bg-[#0a1e42] text-white" : "bg-[#e2e8f0] text-gray-500"
+                        step >= 1 ? "bg-brand-secondary text-white" : "bg-[#e2e8f0] text-gray-500"
                     )}>
                         1
                     </div>
-                    <span className="text-[10px] font-bold tracking-widest text-[#0a1e42] uppercase">Student Profile</span>
+                    <span className="text-[10px] font-bold tracking-widest text-brand-secondary uppercase">Student Profile</span>
                 </div>
 
                 {/* Step 2 */}
                 <div className="flex flex-col items-center gap-3">
                     <div className={cn(
                         "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
-                        step >= 2 ? "bg-[#0a1e42] text-white" : "bg-[#e2e8f0] text-gray-500"
+                        step >= 2 ? "bg-brand-secondary text-white" : "bg-[#e2e8f0] text-gray-500"
                     )}>
                         2
                     </div>
@@ -242,7 +273,7 @@ export function CreateApplicationForm() {
                 <div className="flex flex-col items-center gap-3">
                     <div className={cn(
                         "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
-                        step >= 3 ? "bg-[#0a1e42] text-white" : "bg-[#e2e8f0] text-gray-500"
+                        step >= 3 ? "bg-brand-secondary text-white" : "bg-[#e2e8f0] text-gray-500"
                     )}>
                         3
                     </div>
@@ -283,8 +314,10 @@ export function CreateApplicationForm() {
                         programs={programs}
                         onBack={() => setStep(2)}
                         isSubmitting={createApplication.isPending}
+                        error={createApplication.error?.message}
                     />
                 )}
+
             </form>
         </div>
     );
@@ -315,7 +348,7 @@ function Step1({ form, students, studentDetails, documents, onNext }: { form: an
             </div>
 
             <div className="space-y-4">
-                <Typography as="h3" className="text-[16px] font-extrabold text-[#0a1e42]">Personal Information</Typography>
+                <Typography as="h3" className="text-[16px] font-extrabold text-brand-secondary">Personal Information</Typography>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Full Name</label>
@@ -348,7 +381,7 @@ function Step1({ form, students, studentDetails, documents, onNext }: { form: an
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <FileText className="size-5 text-blue-600" />
-                        <Typography as="h3" className="text-[16px] font-extrabold text-[#0a1e42]">Supporting Documents</Typography>
+                        <Typography as="h3" className="text-[16px] font-extrabold text-brand-secondary">Supporting Documents</Typography>
                     </div>
                 </div>
 
@@ -378,7 +411,7 @@ function Step1({ form, students, studentDetails, documents, onNext }: { form: an
                                                     {isChecked ? (
                                                         <CheckSquare className="size-4 text-green-500 fill-green-50" />
                                                     ) : (
-                                                        <Square className="size-4 text-[#0a1e42]/20 group-hover:text-[#0a1e42]/40" />
+                                                        <Square className="size-4 text-brand-secondary/20 group-hover:text-brand-secondary/40" />
                                                     )}
                                                 </div>
                                                 <div className="aspect-square bg-white rounded-lg flex items-center justify-center p-4 overflow-hidden border border-gray-100 shadow-inner">
@@ -409,8 +442,9 @@ function Step1({ form, students, studentDetails, documents, onNext }: { form: an
                                             </Typography>
                                         </div>
                                         {form.getFieldValue("profile_id") && (
-                                            <Link href={`/dashboard/document/new?student_id=${form.getFieldValue("profile_id")}`}>
-                                                <Button type="button" variant="outline" className="h-9 px-6 rounded-xl border-gray-300 text-[#0a1e42] font-bold text-xs hover:bg-white transition-all shadow-sm">
+                                            <Link href={`/dashboard/document/new?student_id=${form.getFieldValue("profile_id")}&from=application`}>
+
+                                                <Button type="button" variant="outline" className="h-9 px-6 rounded-xl border-gray-300 text-brand-secondary font-bold text-xs hover:bg-white transition-all shadow-sm">
                                                     Upload New Document
                                                 </Button>
                                             </Link>
@@ -427,7 +461,7 @@ function Step1({ form, students, studentDetails, documents, onNext }: { form: an
             </div>
 
             <div className="flex justify-end pt-6 border-t border-gray-200/50">
-                <Button type="button" onClick={onNext} className="h-12 px-8 bg-[#0a1e42] hover:bg-[#0a1e42]/90 text-white font-bold rounded-xl shadow-lg">Next Step: Program Selection</Button>
+                <Button type="button" onClick={onNext} className="h-12 px-8 bg-brand-secondary hover:bg-brand-secondary/90 text-white font-bold rounded-xl shadow-lg">Next Step: Program Selection</Button>
             </div>
         </div>
     );
@@ -520,14 +554,14 @@ function Step2({ form, programs, studentDetails, onNext, onBack }: { form: any; 
                         <div className="flex-1 space-y-2">
                             <div className="grid grid-cols-2 gap-1 text-[10px]">
                                 <span className="text-gray-500">Nationality</span>
-                                <span className="font-bold text-[#0a1e42]">{studentDetails?.student?.nationality || "-"}</span>
+                                <span className="font-bold text-brand-secondary">{studentDetails?.student?.nationality || "-"}</span>
                                 <span className="text-gray-500 mt-1">Gender</span>
-                                <span className="font-bold text-[#0a1e42] mt-1 leading-tight">{studentDetails?.gender || "-"}</span>
+                                <span className="font-bold text-brand-secondary mt-1 leading-tight">{studentDetails?.gender || "-"}</span>
                             </div>
                         </div>
                     </div>
                     <div className="mt-4">
-                        <Typography as="h4" className="text-[16px] font-bold text-[#0a1e42]">{studentDetails?.name}</Typography>
+                        <Typography as="h4" className="text-[16px] font-bold text-brand-secondary">{studentDetails?.name}</Typography>
                         <Typography as="p" className="text-[11px] text-gray-500 font-bold mt-0.5">ID: {studentDetails?.id?.slice(0, 8)}</Typography>
                     </div>
                 </div>
@@ -583,7 +617,7 @@ function Step2({ form, programs, studentDetails, onNext, onBack }: { form: any; 
                                                         }}
                                                         className={cn(
                                                             "h-8 px-5 rounded-lg font-bold text-[11px] transition-all shadow-sm",
-                                                            isSelected ? "bg-[#0a1e42] text-white" : "bg-white/40 border-white/60 text-[#0a1e42] hover:bg-white/60"
+                                                            isSelected ? "bg-brand-secondary hover:bg-brand-secondary text-white hover:text-white" : "bg-white/40 border-white/60 text-brand-secondary hover:bg-white/60"
                                                         )}
                                                     >
                                                         {isSelected ? "Selected" : "Select"}
@@ -611,14 +645,15 @@ function Step2({ form, programs, studentDetails, onNext, onBack }: { form: any; 
             </div>
 
             <div className="flex justify-between pt-4">
-                <Button type="button" variant="outline" onClick={onBack} className="h-12 px-8 border-gray-300 text-[#0a1e42] font-bold rounded-xl">Back</Button>
-                <Button type="button" onClick={onNext} className="h-12 px-10 bg-[#0a1e42] hover:bg-[#0a1e42]/90 text-white font-bold rounded-xl shadow-lg">Next step: Finalize</Button>
+                <Button type="button" variant="outline" onClick={onBack} className="h-12 px-8 border-gray-300 text-brand-secondary font-bold rounded-xl">Back</Button>
+                <Button type="button" onClick={onNext} className="h-12 px-10 bg-brand-secondary hover:bg-brand-secondary/90 text-white font-bold rounded-xl shadow-lg">Next step: Finalize</Button>
             </div>
         </div>
     );
 }
 
-function Step3({ form, studentDetails, programs, onBack, isSubmitting }: { form: any; studentDetails?: Student; programs: Program[]; onBack: () => void; isSubmitting: boolean }) {
+function Step3({ form, studentDetails, programs, onBack, isSubmitting, error }: { form: any; studentDetails?: Student; programs: Program[]; onBack: () => void; isSubmitting: boolean; error?: string }) {
+
     const selectedProgramId = useStore(form.store, (s: any) => s.values.program_id);
     const declarations = useStore(form.store, (s: any) => s.values.declarations);
     const selectedProgram = programs.find((p) => p.program_id === selectedProgramId);
@@ -636,8 +671,8 @@ function Step3({ form, studentDetails, programs, onBack, isSubmitting }: { form:
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                     <div className="flex items-center gap-2 mb-6">
-                        <GraduationCap className="size-5 text-[#0a1e42]" />
-                        <Typography as="h3" className="text-[16px] font-extrabold text-[#0a1e42]">Selected Program Details</Typography>
+                        <GraduationCap className="size-5 text-brand-secondary" />
+                        <Typography as="h3" className="text-[16px] font-extrabold text-brand-secondary">Selected Program Details</Typography>
                     </div>
                     <div className="flex flex-col sm:flex-row justify-between gap-6">
                         <div className="space-y-1">
@@ -673,10 +708,10 @@ function Step3({ form, studentDetails, programs, onBack, isSubmitting }: { form:
 
                 <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-6 shadow-sm">
                     <div className="flex items-center gap-2 mb-5">
-                        <div className="size-6 rounded-md bg-[#0a1e42]/5 flex items-center justify-center">
-                            <svg className="size-3.5 text-[#0a1e42]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        <div className="size-6 rounded-md bg-brand-secondary/5 flex items-center justify-center">
+                            <svg className="size-3.5 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                         </div>
-                        <Typography as="h3" className="text-[15px] font-extrabold text-[#0a1e42]">Student Info</Typography>
+                        <Typography as="h3" className="text-[15px] font-extrabold text-brand-secondary">Student Info</Typography>
                     </div>
                     <div className="space-y-4">
                         <div className="overflow-hidden">
@@ -700,7 +735,7 @@ function Step3({ form, studentDetails, programs, onBack, isSubmitting }: { form:
                     <div className="size-6 rounded-full bg-blue-500/10 flex items-center justify-center">
                         <CheckSquare className="size-3.5 text-blue-600" />
                     </div>
-                    <Typography as="h3" className="text-[16px] font-extrabold text-[#0a1e42]">Final Declarations</Typography>
+                    <Typography as="h3" className="text-[16px] font-extrabold text-brand-secondary">Final Declarations</Typography>
                 </div>
 
                 <form.Field name="declarations">
@@ -746,12 +781,19 @@ function Step3({ form, studentDetails, programs, onBack, isSubmitting }: { form:
                 </form.Field>
             </div>
 
+            {error && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <ErrorView message={error} />
+                </div>
+            )}
+
             <div className="flex flex-col-reverse sm:flex-row justify-between gap-4 pt-4">
+
                 <Button
                     type="button"
                     variant="outline"
                     onClick={onBack}
-                    className="h-12 px-8 border-gray-300 text-[#0a1e42] font-bold rounded-xl w-full sm:w-auto"
+                    className="h-12 px-8 border-gray-300 text-brand-secondary font-bold rounded-xl w-full sm:w-auto"
                     disabled={isSubmitting}
                 >
                     Back to Selection

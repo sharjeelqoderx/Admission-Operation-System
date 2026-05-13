@@ -66,7 +66,7 @@ const sidebarRoutes = [
 
   {
     label: 'All Applications',
-    href: '/dashboard/applications',
+    href: '/dashboard/application',
     icon: FileText,
     allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
   },
@@ -100,28 +100,28 @@ const sidebarRoutes = [
 
   {
     label: 'Offers',
-    href: '/dashboard/offers',
+    href: '/dashboard/offer',
     icon: Award,
     allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
   },
 
   {
     label: 'Payments',
-    href: '/dashboard/payments',
+    href: '/dashboard/payment',
     icon: Wallet,
     allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
   },
 
   {
     label: 'Commissions',
-    href: '/dashboard/commissions',
+    href: '/dashboard/commission',
     icon: BarChart3,
     allowFor: [Role.AGENT],
   },
 
   {
     label: 'Messages',
-    href: '/dashboard/messages',
+    href: '/dashboard/chat',
     icon: MessageSquare,
     allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
   },
@@ -244,6 +244,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <Navbar
           userName={currentUser?.fullName ?? 'John Doe'}
           userRole={currentUser?.role ?? 'STUDENT'}
+          userImage={currentUser?.avatarUrl ?? undefined}
+
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
           isSidebarOpen={sidebarOpen}
         />
@@ -262,7 +264,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* Page Content */}
-          <div className="relative z-10 p-4 sm:p-6">
+          <div className="relative z-10 p-4 sm:p-6 max-w-[1400px] mx-auto w-full">
             {children}
           </div>
         </main>

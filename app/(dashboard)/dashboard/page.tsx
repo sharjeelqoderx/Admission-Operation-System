@@ -116,7 +116,7 @@ export default function DashboardPage() {
                         Recent Applications
                     </Typography>
                     <Button variant="link" className="text-brand-byzantine font-bold flex items-center gap-2 hover:gap-3 transition-all" asChild>
-                        <Link href="/dashboard/applications">
+                        <Link href="/dashboard/application">
                             View All Applications <ArrowRight className="w-4 h-4" />
                         </Link>
                     </Button>

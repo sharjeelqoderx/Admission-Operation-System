@@ -8,7 +8,7 @@ import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FileUp, Search } from "lucide-react"
+import { FileUp, Plus, Search } from "lucide-react"
 import Link from "next/link"
 import { DocumentTable } from "./_component/DocumentTable"
 import { PageLoader } from "@/components/shared/page-loader"
@@ -80,9 +80,8 @@ export default function DocumentPage() {
                     </Typography>
                 </div>
                 <Link href="/dashboard/document/new">
-                    <Button size={'sm'} className="bg-brand-byzantine hover:bg-brand-byzantine/80 text-white px-6 h-11 rounded-md shrink-0">
-                        <FileUp className="size-4" />
-                        Upload Document
+                    <Button className="px-6 gap-2 font-normal">
+                        <Plus size={24} className="text-white" /> New Document
                     </Button>
                 </Link>
             </BluryCard>

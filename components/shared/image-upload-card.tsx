@@ -11,6 +11,7 @@ type Props = {
     className?: string
     accept?: string
     emptyIcon?: React.ReactNode
+    disabled?: boolean
 }
 
 function getFileIcon(file: File) {
@@ -34,6 +35,7 @@ export function ImageUploadCard({
     className,
     accept = "image/*",
     emptyIcon,
+    disabled = false,
 }: Props) {
     const inputRef = useRef<HTMLInputElement>(null)
     const [preview, setPreview] = useState<string | null>(null)
@@ -79,9 +81,14 @@ export function ImageUploadCard({
 
     return (
         <div
-            onClick={(e) => { e.stopPropagation(); inputRef.current?.click() }}
-            onDragOver={(e) => e.preventDefault()}
+            onClick={(e) => { 
+                if (disabled) return;
+                e.stopPropagation(); 
+                inputRef.current?.click();
+            }}
+            onDragOver={(e) => { if (!disabled) e.preventDefault() }}
             onDrop={(e) => {
+                if (disabled) return;
                 e.preventDefault()
                 const file = e.dataTransfer.files?.[0]
                 if (file) handleFile(file)
@@ -90,6 +97,7 @@ export function ImageUploadCard({
                 "relative group flex flex-col items-center justify-center w-full min-h-[120px] max-h-[200px]",
                 "rounded-xl transition-all duration-200 cursor-pointer overflow-hidden",
                 "bg-[#EDEDED] border-none hover:bg-gray-200",
+                disabled && "cursor-not-allowed hover:bg-[#EDEDED] opacity-60",
                 className
             )}
         >
@@ -122,13 +130,15 @@ export function ImageUploadCard({
                             </>
                         )
                     )}
-                    <button
-                        type="button"
-                        onClick={handleClear}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-sm hover:scale-110 transition-transform"
-                    >
-                        <X size={12} />
-                    </button>
+                    {!disabled && (
+                        <button
+                            type="button"
+                            onClick={handleClear}
+                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-sm hover:scale-110 transition-transform"
+                        >
+                            <X size={12} />
+                        </button>
+                    )}
                 </div>
             ) : (
                 <div className="flex flex-col items-center gap-2 p-4">

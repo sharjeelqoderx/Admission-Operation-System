@@ -45,10 +45,10 @@ export default function ProgramsPage() {
     ];
 
     return (
-        <div className="max-w-[1200px] mx-auto space-y-8 pb-20 px-6 lg:px-12 pt-4">
-            
+        <div className="space-y-8">
+
             {/* ── Header ── */}
-            <div className="space-y-3 max-w-2xl">
+            <div className="space-y-3">
                 <Typography as="h1" className="text-[32px] font-extrabold text-gray-900 tracking-tight">
                     All Programs
                 </Typography>
@@ -60,9 +60,9 @@ export default function ProgramsPage() {
             {/* ── Search Bar ── */}
             <div className="relative bg-white rounded-xl shadow-sm">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
-                <Input 
-                    placeholder="Search program" 
-                    className="border-0 bg-transparent h-14 pl-12 text-[15px] focus-visible:ring-0" 
+                <Input
+                    placeholder="Search program"
+                    className="border-0 bg-transparent h-14 pl-12 text-[15px] focus-visible:ring-0"
                 />
             </div>
 
@@ -125,8 +125,8 @@ export default function ProgramsPage() {
                                     {prog.commission} Commission
                                 </div>
                             </div>
-                            
-                            <Link href="/dashboard/applications/new">
+
+                            <Link href="/dashboard/application/new">
                                 <Button className="w-full sm:w-auto bg-[#a855f7] hover:bg-[#9333ea] text-white h-12 px-10 text-[14px] font-bold rounded-xl shadow-lg shadow-purple-500/20">
                                     Apply Now
                                 </Button>
@@ -149,7 +149,7 @@ export default function ProgramsPage() {
                     </Button>
                 </Link>
             </div>
-            
+
         </div>
     )
 }

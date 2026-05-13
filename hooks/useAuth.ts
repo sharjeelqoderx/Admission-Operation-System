@@ -48,9 +48,9 @@ type AuthUserResponse = {
     email: string
     fullName: string
     role: RoleEnum
+    avatarUrl: NonNullable<ProfileRow["avatar_url"]> | ""
     role_profile: RoleBasedProfile
     profile: {
-        avatarUrl: NonNullable<ProfileRow["avatar_url"]> | ""
         dateOfBirth: NonNullable<ProfileRow["date_of_birth"]> | ""
         gender: NonNullable<ProfileRow["gender"]> | ""
         country: NonNullable<StudentRow["country"]> | ""
@@ -58,6 +58,7 @@ type AuthUserResponse = {
         guardianEmail: NonNullable<StudentRow["guardian_email"]> | ""
         guardianPhone: NonNullable<StudentRow["guardian_phone"]> | ""
     }
+
     academic: {
         highestDegree: string
         instituteName: string

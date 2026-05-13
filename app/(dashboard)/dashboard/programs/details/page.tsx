@@ -6,7 +6,7 @@ import Link from "next/link";
 export default function ProgramDetailsPage() {
     return (
         <div className="max-w-[1200px] mx-auto space-y-12 pb-20 px-6 lg:px-12 pt-8">
-            
+
             {/* Header */}
             <div className="space-y-2">
                 <Typography as="h1" className="text-[32px] font-extrabold text-[#0a1e42] tracking-tight leading-tight">
@@ -34,7 +34,7 @@ export default function ProgramDetailsPage() {
                         *The degree programme is currently undergoing accreditation.
                     </Typography>
                     <div>
-                        <Link href="/dashboard/applications/new">
+                        <Link href="/dashboard/application/new">
                             <Button className="bg-[#0a1e42] hover:bg-[#0a1e42]/90 text-white h-12 px-12 text-[14px] font-bold rounded-xl shadow-lg">
                                 Apply now
                             </Button>
@@ -134,7 +134,7 @@ export default function ProgramDetailsPage() {
             <div className="space-y-4 pt-4">
                 <Typography as="h3" className="text-[18px] font-extrabold text-gray-900">AI & Data Science Management (M.Sc.)* Full-Time Study</Typography>
                 <Typography as="h4" className="text-[16px] font-bold text-gray-900">All The Facts About Your Studies</Typography>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                     <div className="bg-[#1e1e2d]/10 backdrop-blur-md rounded-xl py-4 px-6 text-center border border-gray-200/50">
                         <Typography as="span" className="text-[13px] font-bold text-gray-900">Creditpoints: 120 ECTS</Typography>

@@ -14,11 +14,32 @@ export async function GET() {
             .eq("id", user.id)
             .maybeSingle()
 
-        const { data: student } = await supabase
-            .from("student")
-            .select("*")
-            .eq("profile_id", user.id)
-            .maybeSingle()
+        const role = profile?.role ?? "STUDENT"
+
+        let extraData: any = {}
+
+        if (role === "STUDENT") {
+            const { data: student } = await supabase
+                .from("student")
+                .select("*")
+                .eq("profile_id", user.id)
+                .maybeSingle()
+            extraData = student ?? {}
+        } else if (role === "AGENT") {
+            const { data: agent } = await supabase
+                .from("agent")
+                .select("*")
+                .eq("profile_id", user.id)
+                .maybeSingle()
+            extraData = agent ?? {}
+        } else if (role === "UNIVERSITY") {
+            const { data: university } = await supabase
+                .from("university")
+                .select("*")
+                .eq("profile_id", user.id)
+                .maybeSingle()
+            extraData = university ?? {}
+        }
 
         const { data: academic } = await supabase
             .from("education")
@@ -36,14 +57,13 @@ export async function GET() {
             id: user.id,
             email: profile?.email ?? user.email ?? "",
             fullName: profile?.name ?? user.user_metadata?.full_name ?? "User",
-            role: profile?.role ?? "STUDENT",
+            phone: profile?.phone ?? "",
+            avatarUrl: profile?.avatar_url ?? "",
+            role,
             profile: {
                 dateOfBirth: profile?.date_of_birth ?? "",
                 gender: profile?.gender ?? "",
-                country: student?.country ?? "",
-                nationality: student?.nationality ?? "",
-                guardianEmail: student?.guardian_email ?? "",
-                guardianPhone: student?.guardian_phone ?? "",
+                ...extraData
             },
             academic: academic ? {
                 highestDegree: academic.qualification ?? "",

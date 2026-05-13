@@ -10,24 +10,14 @@ export async function POST(req: NextRequest) {
         if (userError || !user) return err("Unauthorized", 401)
 
         const contentType = req.headers.get("content-type") ?? ""
-        let date_of_birth: string | undefined
-        let gender: string | undefined
-        let country: string | undefined
-        let nationality: string | undefined
-        let guardian_email: string | undefined
-        let guardian_phone: string | undefined
+        let data: any = {}
         let avatar_url: string | undefined
 
         if (contentType.includes("multipart/form-data")) {
             const form = await req.formData()
-            const get = (k: string) => { const v = String(form.get(k) ?? "").trim(); return v || undefined }
-            date_of_birth = get("date_of_birth")
-            gender = get("gender")
-            country = get("country")
-            nationality = get("nationality")
-            guardian_email = get("guardian_email")
-            guardian_phone = get("guardian_phone")
-
+            form.forEach((val, key) => {
+                if (key !== "avatar") data[key] = String(val).trim() || undefined
+            })
             const file = form.get("avatar")
             if (file instanceof File && file.size > 0) {
                 const uploaded = await uploadPublicImage({
@@ -36,27 +26,73 @@ export async function POST(req: NextRequest) {
                 avatar_url = uploaded.publicUrl
             }
         } else {
-            const body = await req.json()
-            date_of_birth = body.date_of_birth
-            gender = body.gender
-            country = body.country
-            nationality = body.nationality
-            guardian_email = body.guardian_email
-            guardian_phone = body.guardian_phone
+            data = await req.json()
         }
 
+        const { data: profile } = await supabase
+            .from("profile")
+            .select("role")
+            .eq("id", user.id)
+            .maybeSingle()
+        const role = profile?.role ?? "STUDENT"
+
+        // Update common profile
         const { error: profileError } = await supabase
             .from("profile")
-            .update({ ...(avatar_url && { avatar_url }), date_of_birth, gender })
+            .update({
+                ...(avatar_url && { avatar_url }),
+                name: data.fullName,
+                phone: data.phone,
+                date_of_birth: data.date_of_birth,
+                gender: data.gender,
+            })
             .eq("id", user.id)
 
         if (profileError) return err(profileError.message, 500)
 
-        const { error: studentError } = await supabase
-            .from("student")
-            .upsert({ profile_id: user.id, country, nationality, guardian_email, guardian_phone }, { onConflict: "profile_id" })
-
-        if (studentError) return err(studentError.message, 500)
+        // Update role-specific table
+        if (role === "STUDENT") {
+            const { error } = await supabase
+                .from("student")
+                .upsert({
+                    profile_id: user.id,
+                    country: data.country,
+                    nationality: data.nationality,
+                    city: data.city,
+                    address: data.address,
+                    zip_code: data.zip_code,
+                    guardian_email: data.guardian_email,
+                    guardian_phone: data.guardian_phone,
+                }, { onConflict: "profile_id" })
+            if (error) return err(error.message, 500)
+        } else if (role === "AGENT") {
+            const { error } = await supabase
+                .from("agent")
+                .upsert({
+                    profile_id: user.id,
+                    contact_person_name: data.contact_person_name,
+                    nationality: data.nationality,
+                    country: data.country,
+                    city: data.city,
+                    address: data.address,
+                    other_contact_number: data.other_contact_number,
+                    website: data.website,
+                    experience_years: data.experience_years ? Number(data.experience_years) : undefined,
+                }, { onConflict: "profile_id" })
+            if (error) return err(error.message, 500)
+        } else if (role === "UNIVERSITY") {
+            const { error } = await supabase
+                .from("university")
+                .upsert({
+                    profile_id: user.id,
+                    website: data.website,
+                    country: data.country,
+                    city: data.city,
+                    address: data.address,
+                    description: data.description,
+                }, { onConflict: "profile_id" })
+            if (error) return err(error.message, 500)
+        }
 
         return ok({ message: "Profile updated" })
     } catch (e: any) {

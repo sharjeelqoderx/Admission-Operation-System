@@ -43,7 +43,7 @@ export default function DynamicProgramDetailsPage() {
 
     return (
         <div className="max-w-[1200px] mx-auto space-y-12 pb-20 px-6 lg:px-12 pt-8">
-            
+
             {/* Header */}
             <div className="space-y-2">
                 <Typography as="h1" className="text-[32px] font-extrabold text-[#0a1e42] tracking-tight leading-tight">
@@ -76,7 +76,7 @@ export default function DynamicProgramDetailsPage() {
                         </Typography>
                     )}
                     <div>
-                        <Link href="/dashboard/applications/new">
+                        <Link href="/dashboard/application/new">
                             <Button className="bg-brand-secondary hover:bg-brand-secondary/90 text-white h-12 px-12 text-[14px] font-bold rounded-xl shadow-lg">
                                 Apply now
                             </Button>
@@ -84,10 +84,10 @@ export default function DynamicProgramDetailsPage() {
                     </div>
                 </div>
                 <div className="w-full md:w-72 aspect-square rounded-2xl overflow-hidden shrink-0 border-4 border-white shadow-md bg-gray-100">
-                    <img 
-                        src={junction?.campus?.university?.avatar_url || "https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&q=80&w=400"} 
-                        alt="Program" 
-                        className="w-full h-full object-cover" 
+                    <img
+                        src={junction?.campus?.university?.avatar_url || "https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&q=80&w=400"}
+                        alt="Program"
+                        className="w-full h-full object-cover"
                     />
                 </div>
             </BluryCard>
@@ -184,7 +184,7 @@ export default function DynamicProgramDetailsPage() {
             <div className="space-y-4 pt-4">
                 <Typography as="h3" className="text-[18px] font-extrabold text-gray-900">{program?.name || "AI & Data Science Management (M.Sc.)"} {junction?.study_type?.replace('_', ' ') || "Full-Time Study"}</Typography>
                 <Typography as="h4" className="text-[16px] font-bold text-gray-900">All The Facts About Your Studies</Typography>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                     <div className="bg-[#1e1e2d]/10 backdrop-blur-md rounded-xl py-4 px-6 text-center border border-gray-200/50">
                         <Typography as="span" className="text-[13px] font-bold text-gray-900">Creditpoints: 120 ECTS</Typography>

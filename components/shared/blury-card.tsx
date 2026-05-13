@@ -17,7 +17,7 @@ export const BluryCard = ({
     children,
     backgroundImage,
     childClass = "",
-    blurAmount = "blur-md",
+    blurAmount = "backdrop-blur-md",
     sharpCorners = [],
     isCentered = true,
     className,
@@ -37,7 +37,6 @@ export const BluryCard = ({
         <Card
             className={cn(
                 "relative overflow-hidden bg-transparent ring-0 border-x border-white/40 rounded-l-lg rounded-r-lg",
-                "rounded-[2rem]",
                 sharpClasses,
                 (!backgroundImage ? blurAmount : ''),
                 className
