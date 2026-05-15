@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { OnboardingLayoutInner } from "./_component/OnboardingLayoutInner"
+import { OnboardingLayoutInner } from "./onboarding/_component/OnboardingLayoutInner"
 
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
     return (

@@ -233,7 +233,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               key={route.href}
               href={route.href}
               icon={<Icon className="w-5 h-5" />}
-              label={route.label}
+              label={route.label === 'Agent Profile' && role === Role.STUDENT ? 'Student Profile' : route.label}
               isActive={isRouteActive(pathname, route.href)}
             />
           );
