@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Typography } from "@/components/shared/Typography";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, CheckSquare, Square, FileText, GraduationCap } from "lucide-react";
+import { Search, CheckSquare, Square, FileText, GraduationCap, User2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -56,6 +56,7 @@ type Student = {
 type Program = {
     program_id: string;
     university_id: string;
+    university_name?: string;
     name: string;
     tuition_fee: string;
     currency?: string;
@@ -74,8 +75,8 @@ type Document = {
 };
 
 
-function F({ field, label, children }: { field: any; label: string; children: React.ReactNode }) {
-    const isSubmitted = field.form.state.isSubmitted;
+function F({ field, label, isStepAttempted, children }: { field: any; label: string; isStepAttempted?: boolean; children: React.ReactNode }) {
+    const isSubmitted = field.form.state.isSubmitted || isStepAttempted;
     const isInvalid = isSubmitted && !field.state.meta.isValid;
     const error = field.state.meta.errors?.[0];
     const errorMessage = typeof error === "string" ? error : (error as any)?.message;
@@ -91,12 +92,26 @@ function F({ field, label, children }: { field: any; label: string; children: Re
 
 export function CreateApplicationForm() {
     const [step, setStep] = useState(1);
+    const [isStep1Attempted, setIsStep1Attempted] = useState(false);
+    const [isStep2Attempted, setIsStep2Attempted] = useState(false);
+    const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+    const [duplicateError, setDuplicateError] = useState<string | null>(null);
     const router = useRouter();
     const searchParams = useSearchParams();
     const studentIdParam = searchParams.get("student_id");
     const programIdParam = searchParams.get("program_id");
 
 
+
+    const { data: user } = useQuery({
+        queryKey: ["me"],
+        queryFn: async () => {
+            const res = await fetch("/api/me");
+            if (!res.ok) throw new Error("Failed to fetch profile");
+            const json = await res.json();
+            return json.data;
+        },
+    });
 
     const { data: studentsResponse } = useQuery({
         queryKey: ["students"],
@@ -149,10 +164,12 @@ export function CreateApplicationForm() {
     });
 
     useEffect(() => {
-        if (studentIdParam) {
+        if (user?.role === "STUDENT") {
+            form.setFieldValue("profile_id", user.id);
+        } else if (studentIdParam) {
             form.setFieldValue("profile_id", studentIdParam);
         }
-    }, [studentIdParam, form]);
+    }, [user, studentIdParam, form]);
 
 
 
@@ -208,24 +225,46 @@ export function CreateApplicationForm() {
 
     const handleNextStep = async () => {
         if (step === 1) {
+            setIsStep1Attempted(true);
             const studentId = form.getFieldValue("profile_id");
             const documentIds = form.getFieldValue("document_ids");
 
-            if (!studentId) {
-                toast.error("Please select a student first.");
-                return;
-            }
-            if (!documentIds || documentIds.length === 0) {
-                toast.error("Please attach at least one document.");
+            if (!studentId || !documentIds || documentIds.length === 0) {
                 return;
             }
             setStep(2);
         } else if (step === 2) {
+            setIsStep2Attempted(true);
             const programId = form.getFieldValue("program_id");
+            const studentId = form.getFieldValue("profile_id");
             if (!programId) {
                 toast.error("Please select a program first.");
                 return;
             }
+
+            // Check for existing application
+            try {
+                setIsCheckingDuplicate(true);
+                setDuplicateError(null);
+                const res = await fetch(`/api/application?student_id=${studentId}`);
+                if (res.ok) {
+                    const json = await res.json();
+                    const existing = (json.data || []).find((app: any) => 
+                        app.program?.id === programId && app.status !== "REJECTED"
+                    );
+                    if (existing) {
+                        setDuplicateError("Application is already created for this program");
+                        toast.error("Application is already created for this program");
+                        setIsCheckingDuplicate(false);
+                        return;
+                    }
+                }
+                setIsCheckingDuplicate(false);
+            } catch (err) {
+                console.error("Failed to check existing applications", err);
+                setIsCheckingDuplicate(false);
+            }
+
             setStep(3);
         }
     };
@@ -234,27 +273,23 @@ export function CreateApplicationForm() {
         <div className="space-y-8 pb-20">
             {/* Header */}
             <div className="space-y-2">
-                <Typography as="h1" font="sub-heading" className="text-brand-secondary tracking-tight">
+                <Typography as="h2" font="sub-heading" className="text-2xl sm:text-3xl font-bold tracking-tight">
                     {step === 1 ? "Create Application" : "Choose Your Path"}
                 </Typography>
-                <Typography as="p" font="small" className="text-gray-500 leading-relaxed max-w-2xl">
+                <Typography as="p" font="sub-text" className="text-gray-500 font-medium leading-relaxed">
                     {step === 1
                         ? "Initiate a new student application and link them to global academic programs.\nEnsure all mandatory fields are verified before submission."
                         : "Select the academic program that aligns with your professional aspirations. Browse\nour curated selection of undergraduate and graduate degrees."}
                 </Typography>
             </div>
 
-
-            {/* Stepper */}
             <div className="flex items-center justify-between relative pt-4 pb-8">
-                {/* Connecting Lines */}
                 <div className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 -z-10" />
                 <div
                     className="absolute top-8 left-0 h-0.5 bg-brand-secondary -z-10 transition-all duration-300"
                     style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}
                 />
 
-                {/* Step 1 */}
                 <div className="flex flex-col items-center gap-3">
                     <div className={cn(
                         "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
@@ -265,7 +300,6 @@ export function CreateApplicationForm() {
                     <span className="text-[10px] font-bold tracking-widest text-brand-secondary uppercase">Student Profile</span>
                 </div>
 
-                {/* Step 2 */}
                 <div className="flex flex-col items-center gap-3">
                     <div className={cn(
                         "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
@@ -276,7 +310,6 @@ export function CreateApplicationForm() {
                     <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Program Selection</span>
                 </div>
 
-                {/* Step 3 */}
                 <div className="flex flex-col items-center gap-3">
                     <div className={cn(
                         "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
@@ -288,7 +321,6 @@ export function CreateApplicationForm() {
                 </div>
             </div>
 
-            {/* Content Area */}
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
@@ -302,6 +334,9 @@ export function CreateApplicationForm() {
                         students={students}
                         studentDetails={studentDetails}
                         documents={documents}
+                        isDocumentsLoading={!documentsResponse}
+                        role={user?.role}
+                        isStepAttempted={isStep1Attempted}
                         onNext={handleNextStep}
                     />
                 )}
@@ -312,6 +347,9 @@ export function CreateApplicationForm() {
                         studentDetails={studentDetails}
                         onNext={handleNextStep}
                         onBack={() => setStep(1)}
+                        isChecking={isCheckingDuplicate}
+                        isStepAttempted={isStep2Attempted}
+                        error={duplicateError}
                     />
                 )}
                 {step === 3 && (
@@ -332,28 +370,30 @@ export function CreateApplicationForm() {
     );
 }
 
-function Step1({ form, students, studentDetails, documents, onNext }: { form: any; students: Student[]; studentDetails?: Student; documents: Document[]; onNext: () => void }) {
+function Step1({ form, students, studentDetails, documents, role, isDocumentsLoading, isStepAttempted, onNext }: { form: any; students: Student[]; studentDetails?: Student; documents: Document[]; role?: string; isDocumentsLoading?: boolean; isStepAttempted?: boolean; onNext: () => void }) {
     return (
         <div className="space-y-8">
             <div className="space-y-2">
-                <form.Field name="profile_id">
-                    {(field: any) => (
-                        <F field={field} label="Select Student">
-                            <Select value={field.state.value} onValueChange={field.handleChange}>
-                                <SelectTrigger className="w-full h-12 bg-white/40 backdrop-blur-md rounded-xl border border-white/60 shadow-sm focus:ring-brand-byzantine/20">
-                                    <SelectValue placeholder="Select a student..." />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white/90 backdrop-blur-xl border-white/60 rounded-xl shadow-2xl">
-                                    {students.map((s) => (
-                                        <SelectItem key={s.profile.id} value={s.profile.id} className="focus:bg-brand-byzantine/10 focus:text-brand-byzantine cursor-pointer py-3">
-                                            {s.student_code}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </F>
-                    )}
-                </form.Field>
+                {role !== "STUDENT" && (
+                    <form.Field name="profile_id">
+                        {(field: any) => (
+                            <F field={field} label="Select Student" isStepAttempted={isStepAttempted}>
+                                <Select value={field.state.value} onValueChange={field.handleChange}>
+                                    <SelectTrigger className="w-full h-12 bg-white/40 backdrop-blur-md rounded-xl border border-white/60 shadow-sm focus:ring-brand-byzantine/20">
+                                        <SelectValue placeholder="Select a student..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-white/90 backdrop-blur-xl border-white/60 rounded-xl shadow-2xl">
+                                        {students.map((s) => (
+                                            <SelectItem key={s.profile.id} value={s.profile.id} className="focus:bg-brand-byzantine/10 focus:text-brand-byzantine cursor-pointer py-3">
+                                                {s.student_code}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </F>
+                        )}
+                    </form.Field>
+                )}
             </div>
 
             <div className="space-y-4">
@@ -399,9 +439,16 @@ function Step1({ form, students, studentDetails, documents, onNext }: { form: an
                 <form.Field name="document_ids">
                     {(field: any) => (
                         <div className="space-y-2">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {documents.length > 0 ? (
-                                    documents.map((doc) => {
+                            {isDocumentsLoading ? (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {[1, 2, 3, 4].map(i => (
+                                        <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {documents.length > 0 ? (
+                                        documents.map((doc) => {
                                         const isChecked = field.state.value?.includes(doc.id);
                                         return (
                                             <div
@@ -473,9 +520,10 @@ function Step1({ form, students, studentDetails, documents, onNext }: { form: an
                                     </div>
                                 )}
                             </div>
-                            {field.state.meta.errors?.[0] && (
-                                <p className="text-[10px] text-red-500 font-medium">Please select at least one document</p>
-                            )}
+                        )}
+                        {(field.form.state.isSubmitted || isStepAttempted) && field.state.meta.errors?.[0] && (
+                            <p className="text-[10px] text-red-500 font-medium mt-2">Please select at least one document</p>
+                        )}
                         </div>
                     )}
                 </form.Field>
@@ -488,7 +536,7 @@ function Step1({ form, students, studentDetails, documents, onNext }: { form: an
     );
 }
 
-function Step2({ form, programs, studentDetails, onNext, onBack }: { form: any; programs: Program[]; studentDetails?: Student; onNext: () => void; onBack: () => void }) {
+function Step2({ form, programs, studentDetails, isChecking, error, isStepAttempted, onNext, onBack }: { form: any; programs: Program[]; studentDetails?: Student; isChecking?: boolean; error?: string | null; isStepAttempted?: boolean; onNext: () => void; onBack: () => void }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [maxFees, setMaxFees] = useState("");
@@ -504,6 +552,13 @@ function Step2({ form, programs, studentDetails, onNext, onBack }: { form: any; 
 
     return (
         <div className="space-y-6">
+            {error && (
+                <div className="mb-6">
+                    <ErrorView
+                        message={error}
+                    />
+                </div>
+            )}
             <div className="flex flex-col lg:flex-row gap-6">
                 <div className="flex-1 bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-6 space-y-4 shadow-sm">
                     <div className="flex flex-col gap-4">
@@ -635,6 +690,8 @@ function Step2({ form, programs, studentDetails, onNext, onBack }: { form: any; 
                                                             field.handleChange(p.program_id);
                                                             form.setFieldValue("university_id", p.university_id);
                                                             form.setFieldValue("intake_date", p.intake_date || "N/A");
+                                                            form.setFieldValue("tuition_fee", p.tuition_fee);
+                                                            form.setFieldValue("currency", p.currency || "€");
                                                         }}
                                                         className={cn(
                                                             "h-8 px-5 rounded-lg font-bold text-[11px] transition-all shadow-sm",
@@ -663,11 +720,28 @@ function Step2({ form, programs, studentDetails, onNext, onBack }: { form: any; 
                         </Table>
                     )}
                 </form.Field>
+                {isStepAttempted && !form.getFieldValue("program_id") && (
+                    <p className="text-[10px] text-red-500 font-bold mt-2 text-right uppercase tracking-widest">Please select a program to continue</p>
+                )}
             </div>
 
-            <div className="flex justify-between pt-4">
-                <Button type="button" variant="outline" onClick={onBack} className="h-12 px-8 border-gray-300 text-brand-secondary font-bold rounded-xl">Back</Button>
-                <Button type="button" onClick={onNext} className="h-12 px-10 bg-brand-secondary hover:bg-brand-secondary/90 text-white font-bold rounded-xl shadow-lg">Next step: Finalize</Button>
+            <div className="flex justify-between items-center pt-8 border-t border-gray-200/50">
+                <Button type="button" variant="outline" onClick={onBack} className="h-12 px-8 border-gray-300 text-brand-secondary font-bold rounded-xl">Back to Profile</Button>
+                <Button
+                    type="button"
+                    onClick={onNext}
+                    disabled={isChecking}
+                    className="h-12 px-8 bg-brand-secondary hover:bg-brand-secondary/90 text-white font-bold rounded-xl shadow-lg flex items-center gap-2"
+                >
+                    {isChecking ? (
+                        <>
+                            <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Checking...
+                        </>
+                    ) : (
+                        "Next Step: Review & Submit"
+                    )}
+                </Button>
             </div>
         </div>
     );
@@ -698,13 +772,13 @@ function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitt
                 <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                     <div className="flex items-center gap-2 mb-6">
                         <GraduationCap className="size-5 text-brand-secondary" />
-                        <Typography as="h3" font="title" className="text-brand-secondary">Selected Program Details</Typography>
+                        <Typography as="h3" font="title" className="text-brand-secondary font-bold">Selected Program Details</Typography>
                     </div>
 
                     <div className="flex flex-col sm:flex-row justify-between gap-6">
                         <div className="space-y-1">
                             <Typography as="h4" font="text-lg" className="font-extrabold text-gray-900 leading-tight">{selectedProgram?.name}</Typography>
-                            {/* <Typography as="p" font="small" className="text-gray-500">{selectedProgram?.university_name}</Typography> */}
+                            <Typography as="p" font="small" className="text-gray-500">{selectedProgram?.university_name}</Typography>
                         </div>
                         <div className="space-y-1.5 w-full sm:w-64">
                             <form.Field name="intake_date">
@@ -735,11 +809,9 @@ function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitt
                 </div>
 
                 <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-6 shadow-sm">
-                    <div className="flex items-center gap-2 mb-5">
-                        <div className="size-6 rounded-md bg-brand-secondary/5 flex items-center justify-center">
-                            <svg className="size-3.5 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                        </div>
-                        <Typography as="h3" font="title" className="text-brand-secondary">Student Info</Typography>
+                    <div className="text-brand-secondary flex items-center gap-2 mb-5">
+                        <User size={24} />
+                        <Typography as="h3" font="title" className="font-bold">Student Info</Typography>
                     </div>
 
                     <div className="space-y-4">
@@ -762,9 +834,9 @@ function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitt
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-2 mb-6">
-                    <FileText className="size-5 text-brand-secondary" />
-                    <Typography as="h3" font="title" className="text-brand-secondary">Attached Documents ({selectedDocs.length})</Typography>
+                <div className="flex items-center gap-2 mb-6 text-brand-secondary">
+                    <FileText className="size-5" />
+                    <Typography as="h3" font="title" className="font-bold">Attached Documents ({selectedDocs.length})</Typography>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">

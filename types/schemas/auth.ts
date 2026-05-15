@@ -155,22 +155,26 @@ export const workExperienceSchema = z.object({
         .refine(v => v === "" || (Number(v) >= 0 && Number(v) <= 50), "Must be between 0 and 50")
         .default(""),
     hasExperience: z.enum(["yes", "no"], { message: "Please select an option" }),
-    jobTitle: z.string(),
-    organization: z.string(),
-    industry: z.string(),
-    country: z.string(),
-    startDate: z.string(),
-    endDate: z.string(),
-    responsibilities: z.string(),
+    experiences: z.array(z.object({
+        jobTitle: z.string(),
+        organization: z.string(),
+        industry: z.string(),
+        country: z.string(),
+        startDate: z.string(),
+        endDate: z.string(),
+        responsibilities: z.string(),
+    })).optional()
 }).superRefine((data, ctx) => {
-    if (data.hasExperience === "yes") {
-        if (!data.jobTitle?.trim()) ctx.addIssue({ path: ["jobTitle"], code: "custom", message: "Job title is required" })
-        if (!data.organization?.trim()) ctx.addIssue({ path: ["organization"], code: "custom", message: "Organization is required" })
-        if (!data.industry?.trim()) ctx.addIssue({ path: ["industry"], code: "custom", message: "Industry is required" })
-        if (!data.country?.trim()) ctx.addIssue({ path: ["country"], code: "custom", message: "Country is required" })
-        if (!data.startDate?.trim()) ctx.addIssue({ path: ["startDate"], code: "custom", message: "Start date is required" })
-        if (!data.endDate?.trim()) ctx.addIssue({ path: ["endDate"], code: "custom", message: "End date is required" })
-        if (!data.responsibilities?.trim()) ctx.addIssue({ path: ["responsibilities"], code: "custom", message: "Responsibilities are required" })
+    if (data.hasExperience === "yes" && data.experiences) {
+        data.experiences.forEach((exp, i) => {
+            if (!exp.jobTitle?.trim()) ctx.addIssue({ path: ["experiences", i, "jobTitle"], code: "custom", message: "Job title is required" })
+            if (!exp.organization?.trim()) ctx.addIssue({ path: ["experiences", i, "organization"], code: "custom", message: "Organization is required" })
+            if (!exp.industry?.trim()) ctx.addIssue({ path: ["experiences", i, "industry"], code: "custom", message: "Industry is required" })
+            if (!exp.country?.trim()) ctx.addIssue({ path: ["experiences", i, "country"], code: "custom", message: "Country is required" })
+            if (!exp.startDate?.trim()) ctx.addIssue({ path: ["experiences", i, "startDate"], code: "custom", message: "Start date is required" })
+            if (!exp.endDate?.trim()) ctx.addIssue({ path: ["experiences", i, "endDate"], code: "custom", message: "End date is required" })
+            if (!exp.responsibilities?.trim()) ctx.addIssue({ path: ["experiences", i, "responsibilities"], code: "custom", message: "Responsibilities are required" })
+        })
     }
 })
 
@@ -179,7 +183,7 @@ export const workExperienceSchema = z.object({
 export const profileStep1Schema = z.object({
     dob: z
         .string()
-        .min(1, "DOB required")
+        .min(1, "Date of birth is required")
         .refine((val) => !isNaN(Date.parse(val)), "Invalid date")
         .refine((val) => {
             const age =
@@ -188,28 +192,26 @@ export const profileStep1Schema = z.object({
             return age >= 10 && age <= 100;
         }, "Invalid age"),
 
-    gender: z.enum(Gender, {
+    gender: z.nativeEnum(Gender, {
         message: "Select gender",
     }),
     country: z
         .string()
-        .min(1, "Country is Required")
-        .min(2, "Country is Too Short")
-        .max(200, "Maximum 200 character allowed"),
-    guardianEmail: email,
-    guardianPhone: phone,
+        .min(1, "Country is required")
+        .min(2, "Country name is too short"),
     nationality: z
         .string()
-        .min(1, "Nationality is Required")
-        .min(4, "Nationality is Too Short")
-        .max(200, "Maximum 200 character allowed"),
-    passport_file_url: z
+        .min(1, "Nationality is required")
+        .min(2, "Nationality is too short"),
+    guardianEmail: email,
+    guardianPhone: phone,
+    avatar_url: z
         .any()
-        .refine((file) => file instanceof File, "File required")
-        .refine((file) => !(file instanceof File) || file.size <= 5 * 1024 * 1024, "Max 5MB")
+        .refine((val) => val instanceof File || (typeof val === 'string' && val.length > 0), "Profile picture is required")
+        .refine((val) => !(val instanceof File) || val.size <= 5 * 1024 * 1024, "Max file size is 5MB")
         .refine(
-            (file) => !(file instanceof File) || ["application/pdf", "image/jpeg", "image/png"].includes(file.type),
-            "Invalid file type"
+            (val) => typeof val === 'string' || (val instanceof File && ["image/jpeg", "image/png", "image/webp"].includes(val.type)),
+            "Only JPEG, PNG or WEBP images are allowed"
         ),
 });
 
@@ -243,37 +245,39 @@ export const agentProfileSchema = z.object({
 ========================= */
 
 export const degreeStep2Schema = z.object({
-    highestDegree: z.string().min(1, "Select degree"),
+    academics: z.array(z.object({
+        highestDegree: z.string().min(1, "Select degree"),
 
-    instituteName: z
-        .string()
-        .trim()
-        .min(1, "Institute Name is Required")
-        .min(2, "Institute Name is Too Short")
-        .max(200, "Maximum 200 character allowed"),
+        instituteName: z
+            .string()
+            .trim()
+            .min(1, "Institute Name is Required")
+            .min(2, "Institute Name is Too Short")
+            .max(200, "Maximum 200 character allowed"),
 
-    gpa: z
-        .string()
-        .trim()
-        .regex(/^\d+(\.\d{1,2})?$/, "Invalid GPA")
-        .refine((val) => {
-            const num = parseFloat(val);
-            return num >= 0 && num <= 4;
-        }, "GPA must be between 0 and 4"),
+        gpa: z
+            .string()
+            .trim()
+            .regex(/^\d+(\.\d{1,2})?$/, "Invalid GPA")
+            .refine((val) => {
+                const num = parseFloat(val);
+                return num >= 0 && num <= 4;
+            }, "GPA must be between 0 and 4"),
 
-    desiredProgram: z
-        .string()
-        .trim()
-        .min(1, "Desired Program is required")
-        .min(2, "Desired Program is Too Short")
-        .max(200, "Maximum 200 character allowed"),
+        desiredProgram: z
+            .string()
+            .trim()
+            .min(1, "Desired Program is required")
+            .min(2, "Desired Program is Too Short")
+            .max(200, "Maximum 200 character allowed"),
 
-    campus: z.string().min(1, "Select campus"),
-    englishTest: z.string().min(1, "Select test"),
-    about: z
-        .string()
-        .trim()
-        .min(1, "Plan is required")
-        .min(10, "Too short")
-        .max(500, "Too long"),
+        campus: z.string().min(1, "Select campus"),
+        englishTest: z.string().min(1, "Select test"),
+        about: z
+            .string()
+            .trim()
+            .min(1, "Plan is required")
+            .min(10, "Too short")
+            .max(500, "Too long"),
+    })).min(1, "At least one academic record is required")
 });

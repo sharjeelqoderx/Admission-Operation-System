@@ -41,17 +41,15 @@ export async function GET() {
             extraData = university ?? {}
         }
 
-        const { data: academic } = await supabase
+        const { data: academics } = await supabase
             .from("education")
             .select("*")
             .eq("profile_id", user.id)
-            .maybeSingle()
 
-        const { data: experience } = await supabase
+        const { data: experiences } = await supabase
             .from("work_experience")
             .select("*")
             .eq("profile_id", user.id)
-            .maybeSingle()
 
         return ok({
             id: user.id,
@@ -63,27 +61,32 @@ export async function GET() {
             profile: {
                 dateOfBirth: profile?.date_of_birth ?? "",
                 gender: profile?.gender ?? "",
+                country: extraData.country ?? "",
+                nationality: extraData.nationality ?? "",
+                guardianEmail: extraData.guardian_email ?? "",
+                guardianPhone: extraData.guardian_phone ?? "",
                 ...extraData
             },
-            academic: academic ? {
+            academic: academics && academics.length > 0 ? academics.map(academic => ({
                 highestDegree: academic.qualification ?? "",
                 instituteName: academic.institution_name ?? "",
                 gpa: academic.cumulative_gpa ? String(academic.cumulative_gpa) : "",
-                desiredProgram: "",
-                campus: "",
-                englishTest: "",
+                startDate: academic.start_date ?? "",
+                endDate: academic.end_date ?? "",
                 about: academic.honors ?? "",
-            } : null,
-            experience: experience ? {
-                academicGap: experience.timeline_gap_years ? String(experience.timeline_gap_years) : "",
+            })) : null,
+            experience: experiences && experiences.length > 0 ? {
+                academicGap: experiences[0].timeline_gap_years ? String(experiences[0].timeline_gap_years) : "",
                 hasExperience: "yes" as const,
-                jobTitle: experience.title ?? "",
-                organization: experience.organization_name ?? "",
-                industry: experience.industry_sector ?? "",
-                country: experience.country ?? "",
-                startDate: experience.start_date ?? "",
-                endDate: experience.end_date ?? "",
-                responsibilities: experience.key_responsibilities ?? "",
+                entries: experiences.map(experience => ({
+                    jobTitle: experience.title ?? "",
+                    organization: experience.organization_name ?? "",
+                    industry: experience.industry_sector ?? "",
+                    country: experience.country ?? "",
+                    startDate: experience.start_date ?? "",
+                    endDate: experience.end_date ?? "",
+                    responsibilities: experience.key_responsibilities ?? "",
+                }))
             } : null,
         })
     } catch (e) {

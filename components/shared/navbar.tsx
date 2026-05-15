@@ -38,6 +38,7 @@ const getTitleFromPathname = (pathname: string): string => {
 
     if (pathname === '/dashboard/document/new') return 'Upload File';
     if (pathname.includes('/dashboard/program/') && segments.length >= 3) return 'Program Details';
+    if (pathname.includes('/dashboard/application/') && segments.length >= 3) return 'Application Details';
     if (pathname.includes('/dashboard/offer/') && segments.length >= 3) return 'Offer Details';
 
     const lastSegment = segments[segments.length - 1];

@@ -35,6 +35,16 @@ export function UploadDocumentForm() {
     const studentIdParam = searchParams.get("student_id")
     const queryClient = useQueryClient()
 
+    const { data: user } = useQuery({
+        queryKey: ["me"],
+        queryFn: async () => {
+            const res = await fetch("/api/me");
+            const json = await res.json();
+            if (!res.ok) throw new Error(json?.error ?? "Failed");
+            return json.data;
+        },
+    });
+
     const { data: studentsData } = useQuery({
         queryKey: ["students"],
         queryFn: async () => {
@@ -95,10 +105,12 @@ export function UploadDocumentForm() {
     })
 
     useEffect(() => {
-        if (studentIdParam) {
-            form.setFieldValue("student_id", studentIdParam)
+        if (user?.role === "STUDENT") {
+            form.setFieldValue("student_id", user.id);
+        } else if (studentIdParam) {
+            form.setFieldValue("student_id", studentIdParam);
         }
-    }, [studentIdParam])
+    }, [user, studentIdParam])
 
     const handleFileChange = (index: number, file: File | null) => {
         const currentFiles = [...(form.state.values.files || [])]
@@ -118,32 +130,29 @@ export function UploadDocumentForm() {
                 className="space-y-12 relative z-10"
             >
                 <FieldGroup className="p-1">
-                    <form.Field name="student_id">
-                        {(field) => (
-                            <F field={field} label="Select Student">
-                                <Select
-                                    value={field.state.value}
-                                    onValueChange={(v) => field.handleChange(v)}
-                                >
-                                    <SelectTrigger className="h-12">
-                                        <SelectValue placeholder="Select a student" />
-                                    </SelectTrigger>
-                                    <SelectContent className="max-h-[100px] overflow-y-auto">
-                                        {students.map((s) => (
-                                            <SelectItem className="capitalize" key={s.profile_id} value={s.profile_id}>
-                                                {s.student_code}
-                                                {/* <div className="flex items-center justify-between w-full gap-4">
-                                                    <span>{s.profile?.name}</span>
-                                                    <span className="text-[10px] font-extrabold text-brand-byzantine bg-brand-byzantine/5 px-2 py-0.5 rounded uppercase">
-                                                    </span>
-                                                </div> */}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </F>
-                        )}
-                    </form.Field>
+                    {user?.role !== "STUDENT" && (
+                        <form.Field name="student_id">
+                            {(field) => (
+                                <F field={field} label="Select Student">
+                                    <Select
+                                        value={field.state.value}
+                                        onValueChange={(v) => field.handleChange(v)}
+                                    >
+                                        <SelectTrigger className="h-12">
+                                            <SelectValue placeholder="Select a student" />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-[100px] overflow-y-auto">
+                                            {students.map((s) => (
+                                                <SelectItem className="capitalize" key={s.profile_id} value={s.profile_id}>
+                                                    {s.student_code}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </F>
+                            )}
+                        </form.Field>
+                    )}
 
                     <form.Field name="name">
                         {(field) => (

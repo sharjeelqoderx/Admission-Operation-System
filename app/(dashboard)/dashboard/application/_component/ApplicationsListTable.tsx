@@ -27,6 +27,7 @@ export type ApplicationRow = {
 
 type Props = {
     applications: ApplicationRow[]
+    role?: "AGENT" | "STUDENT" | "UNIVERSITY"
     isLoading: boolean
     isError: boolean
     onRetry: () => void
@@ -34,6 +35,7 @@ type Props = {
 
 export const ApplicationsListTable = React.memo(function ApplicationsListTable({
     applications,
+    role = "AGENT",
     isLoading,
     isError,
     onRetry,
@@ -101,15 +103,24 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                 <Table className="w-full text-left border-collapse min-w-[900px]">
                     <TableHeader>
                         <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
-                                Student Name
-                            </TableHead>
+                            {role !== "STUDENT" && (
+                                <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
+                                    Student Name
+                                </TableHead>
+                            )}
                             <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
                                 Program
                             </TableHead>
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
-                                Agent Name
-                            </TableHead>
+                            {role !== "AGENT" && (
+                                <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
+                                    Agent Name
+                                </TableHead>
+                            )}
+                            {role === "AGENT" && (
+                                <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
+                                    Agent Name
+                                </TableHead>
+                            )}
                             <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
                                 Status
                             </TableHead>
@@ -144,47 +155,65 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                 return (
                                     <TableRow key={app.id} className="hover:bg-white/10 transition-colors group">
                                         {/* Student Name */}
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
-                                            <div className="flex items-center gap-4">
-                                                <Avatar className="size-10 rounded-xl border-2 border-white/50">
-                                                    <AvatarImage
-                                                        src={
-                                                            app.student?.avatar_url ??
-                                                            `https://ui-avatars.com/api/?name=${encodeURIComponent(studentName)}&background=random`
-                                                        }
-                                                        alt={studentName}
-                                                        className="rounded-xl"
-                                                    />
-                                                    <AvatarFallback className="rounded-xl text-[12px] font-bold">
-                                                        {initials}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex flex-col">
-                                                    <Typography as="span" className="text-sm font-bold text-gray-900">
-                                                        {studentName}
-                                                    </Typography>
-                                                    {app.application_no && (
-                                                        <Typography as="span" className="text-[11px] text-gray-500 font-light">
-                                                            {app.application_no}
+                                        {role !== "STUDENT" && (
+                                            <TableCell className="px-8 py-6 whitespace-nowrap">
+                                                <div className="flex items-center gap-4">
+                                                    <Avatar className="size-10 rounded-xl border-2 border-white/50">
+                                                        <AvatarImage
+                                                            src={
+                                                                app.student?.avatar_url ??
+                                                                `https://ui-avatars.com/api/?name=${encodeURIComponent(studentName)}&background=random`
+                                                            }
+                                                            alt={studentName}
+                                                            className="rounded-xl"
+                                                        />
+                                                        <AvatarFallback className="rounded-xl text-[12px] font-bold">
+                                                            {initials}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex flex-col">
+                                                        <Typography as="span" className="text-sm font-bold text-gray-900">
+                                                            {studentName}
                                                         </Typography>
-                                                    )}
+                                                        {app.application_no && (
+                                                            <Typography as="span" className="text-[11px] text-gray-500 font-light">
+                                                                {app.application_no}
+                                                            </Typography>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </TableCell>
+                                            </TableCell>
+                                        )}
 
                                         {/* Program */}
                                         <TableCell className="px-8 py-6 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-bold text-gray-700">
-                                                {app.program?.name ?? "—"}
-                                            </Typography>
+                                            <div className="flex flex-col">
+                                                <Typography as="span" className="text-sm font-bold text-gray-700">
+                                                    {app.program?.name ?? "—"}
+                                                </Typography>
+                                                {role === "STUDENT" && app.application_no && (
+                                                    <Typography as="span" className="text-[11px] text-gray-500 font-light">
+                                                        {app.application_no}
+                                                    </Typography>
+                                                )}
+                                            </div>
                                         </TableCell>
 
                                         {/* Agent Name */}
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-light text-gray-600">
-                                                {app.agent?.name ?? "—"}
-                                            </Typography>
-                                        </TableCell>
+                                        {role !== "AGENT" && (
+                                            <TableCell className="px-8 py-6 whitespace-nowrap">
+                                                <Typography as="span" className="text-sm font-light text-gray-600">
+                                                    {app.agent?.name ?? "—"}
+                                                </Typography>
+                                            </TableCell>
+                                        )}
+                                        {role === "AGENT" && (
+                                            <TableCell className="px-8 py-6 whitespace-nowrap">
+                                                <Typography as="span" className="text-sm font-light text-gray-600">
+                                                    {app.agent?.name ?? "—"}
+                                                </Typography>
+                                            </TableCell>
+                                        )}
 
                                         {/* Status */}
                                         <TableCell className="px-8 py-6 whitespace-nowrap">
@@ -208,9 +237,8 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                                 variant="outline"
                                                 className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
                                                 asChild
-                                                disabled={!app.program?.id}
                                             >
-                                                <Link href={app.program?.id ? `/dashboard/program/${app.program.id}` : "#"}>
+                                                <Link href={`/dashboard/application/${app.id}`}>
                                                     View
                                                 </Link>
                                             </Button>

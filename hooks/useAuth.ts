@@ -59,7 +59,7 @@ type AuthUserResponse = {
         guardianPhone: NonNullable<StudentRow["guardian_phone"]> | ""
     }
 
-    academic: {
+    academic: Array<{
         highestDegree: string
         instituteName: string
         gpa: string
@@ -67,17 +67,19 @@ type AuthUserResponse = {
         campus: string
         englishTest: string
         about: string
-    } | null
+    }> | null
     experience: {
         academicGap: string
         hasExperience: "yes"
-        jobTitle: string
-        organization: string
-        industry: string
-        country: string
-        startDate: string
-        endDate: string
-        responsibilities: string
+        entries: Array<{
+            jobTitle: string
+            organization: string
+            industry: string
+            country: string
+            startDate: string
+            endDate: string
+            responsibilities: string
+        }>
     } | null
     message?: string
 }
@@ -95,26 +97,30 @@ type ProfilePayload = {
 
 type AcademicPayload = {
     userId: ProfileRow["id"]
-    qualification: string
-    instituteName: string
-    gpa: number
-    desiredProgram: string
-    campus: string
-    englishTest: string
-    about: string
+    academics: Array<{
+        qualification: string
+        instituteName: string
+        gpa: number
+        desiredProgram: string
+        campus: string
+        englishTest: string
+        about: string
+    }>
 }
 
 type ExperiencePayload = {
     userId: ProfileRow["id"]
     academicGap?: number
     hasExperience: "yes" | "no"
-    name?: string
-    organization?: string
-    industry?: string
-    country?: string
-    startDate?: string
-    endDate?: string
-    responsibility?: string
+    experiences: Array<{
+        name?: string
+        organization?: string
+        industry?: string
+        country?: string
+        startDate?: string
+        endDate?: string
+        responsibility?: string
+    }>
 }
 type ProfileFormDataPayload = FormData
 type AgentProfileFormDataPayload = FormData
