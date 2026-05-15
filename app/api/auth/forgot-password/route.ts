@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const { email } = parsed.data
     const supabase = await createSupabaseServerClient()
 
-    const baseUrl = process.env.APP_URL || "http://localhost:3000"
+    const baseUrl = process.env.APP_URL || "https://fhm-admission-op-system.vercel.app"
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${baseUrl}/api/auth/callback/reset`,

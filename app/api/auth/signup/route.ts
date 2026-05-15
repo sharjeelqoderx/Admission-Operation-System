@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
         if (profileCheckError) return err(profileCheckError.message, 500)
         if (existingProfile) return err("An account with this email already exists", 409)
 
-        const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+        const origin = req.headers.get("origin") ?? process.env.APP_URL ?? "https://fhm-admission-op-system.vercel.app"
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email: normalizedEmail,
             password,
