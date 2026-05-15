@@ -36,10 +36,10 @@ export default function CommissionsPage() {
             >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between flex-wrap gap-4">
                     <div className="space-y-1 max-w-2xl">
-                        <Typography font='text-xl' as={'h2'}>
-                            Commission History
+                        <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
+                            Commission
                         </Typography>
-                        <Typography as="p" font="text" className="text-gray-600">
+                        <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
                             Track and manage your earned commissions from student enrollments. All projections are subject to final university verification.
                         </Typography>
                     </div>

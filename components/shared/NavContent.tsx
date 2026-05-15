@@ -108,16 +108,17 @@ export function NavContent() {
                                 {hasSubItems ? (
                                     <Link href={item.href || "#"} className="flex items-center gap-4 w-full">
                                         <item.icon className="size-5 shrink-0" />
-                                        <Typography as="span" className="text-inherit">
+                                        <Typography as="span" font="sub-text" className="text-inherit">
                                             {item.label}
                                         </Typography>
                                     </Link>
                                 ) : (
                                     <Link href={item.href || "#"} className="flex items-center gap-4 w-full">
                                         <item.icon className="size-5 shrink-0" />
-                                        <Typography as="span" className="text-inherit">
+                                        <Typography as="span" font="sub-text" className="text-inherit">
                                             {item.label}
                                         </Typography>
+
                                     </Link>
                                 )}
                             </button>
@@ -136,9 +137,10 @@ export function NavContent() {
                                                         }`}
                                                 >
                                                     <subItem.icon className="size-[18px] shrink-0" />
-                                                    <Typography as="span" className="text-inherit">
+                                                    <Typography as="span" font="sub-text" className="text-inherit">
                                                         {subItem.label}
                                                     </Typography>
+
                                                 </div>
                                             </Link>
                                         )

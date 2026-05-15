@@ -70,15 +70,15 @@ export default function DocumentPage() {
                 className="rounded-xl py-0"
                 childClass="py-0 flex! justify-between items-center flex-wrap gap-4"
             >
-                <div className="space-y-0">
-                    <Typography font='text-xl' as={'h2'} className="capitalize">
+                <div className="space-y-1 max-w-2xl">
+                    <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
                         All documents
                     </Typography>
-
-                    <Typography font='text' as={'p'} className='max-w-[660] text-gray-600 size-full'>
-                        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s
+                    <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
+                        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s
                     </Typography>
                 </div>
+
                 <Link href="/dashboard/document/new">
                     <Button className="px-6 gap-2 font-normal">
                         <Plus size={24} className="text-white" /> New Document
@@ -104,9 +104,10 @@ export default function DocumentPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <Typography as="span" className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    <Typography as="span" font="small" className="text-gray-400 uppercase tracking-widest">
                         Status Filter
                     </Typography>
+
                     <Select value={status} onValueChange={updateStatus}>
                         <SelectTrigger className="w-[180px] h-11 rounded-xl border-none bg-gray-50 focus:ring-brand-byzantine/20">
                             <SelectValue placeholder="All Status" />

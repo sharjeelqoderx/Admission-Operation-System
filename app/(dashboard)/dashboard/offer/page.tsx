@@ -19,12 +19,13 @@ export default function OfferPage() {
                 blendColorClass="bg-white/10"
                 childClass="space-y-4"
             >
-                <div className="space-y-2">
-                    <Typography as="h1" font="sub-heading" className="font-extrabold text-gray-900 tracking-tight">
+                <div className="space-y-1 max-w-2xl">
+                    <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
                         All offers
                     </Typography>
-                    <Typography as="p" font="sub-text" className="font-medium text-gray-600 max-w-2xl">
-                        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s                    </Typography>
+                    <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
+                        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s
+                    </Typography>
                 </div>
             </BluryCard>
 
@@ -44,6 +45,6 @@ export default function OfferPage() {
 
             {/* ── Table ── */}
             <OfferTable />
-        </main>
+        </main >
     )
 }

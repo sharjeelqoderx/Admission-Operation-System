@@ -41,15 +41,17 @@ export function EditStudentForm() {
     if (isLoading) return (
         <div className="py-20 flex flex-col items-center gap-3 text-center">
             <Loader2 className="size-8 text-[#9B51E0] animate-spin" />
-            <Typography as="p" className="text-sm font-medium text-gray-500">Loading student details...</Typography>
+            <Typography as="p" font="sub-text" className="text-gray-500 font-medium">Loading student details...</Typography>
         </div>
+
     )
 
     if (isError || !student) return (
         <div className="py-20 flex flex-col items-center gap-3 text-center">
-            <Typography as="p" className="text-sm font-bold text-gray-700">Student not found</Typography>
-            <Typography as="p" className="text-xs text-gray-500">The student record could not be loaded. Please check the ID or try again.</Typography>
+            <Typography as="p" font="text" className="font-bold text-gray-700">Student not found</Typography>
+            <Typography as="p" font="small" className="text-gray-500">The student record could not be loaded. Please check the ID or try again.</Typography>
         </div>
+
     )
 
     return <EditFormContent studentData={student} id={id} />
@@ -114,12 +116,12 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                 <form id="edit-student-form" onSubmit={(e) => { e.preventDefault(); form.handleSubmit() }} className="space-y-12 relative z-10">
                     <FieldGroup className="space-y-10">
 
-                        {/* ── Section: Student Details ── */}
                         <div className="space-y-6">
                             <div className="flex items-center gap-2">
                                 <Building className="size-5 text-gray-700" strokeWidth={2.5} />
-                                <Typography as="h3" className="text-[17px] font-extrabold text-gray-900 tracking-tight">Student Details</Typography>
+                                <Typography as="h3" font="title" className="text-gray-900 tracking-tight">Student Details</Typography>
                             </div>
+
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
                                 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
@@ -160,7 +162,7 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                     <form.Field name="avatar_url">
                                         {(field) => (
                                             <div className="space-y-2 h-full flex flex-col">
-                                                <FieldLabel className="text-[13px] font-bold text-gray-900">Upload Profile Picture</FieldLabel>
+                                                <Typography font="small" className="text-gray-900 font-bold">Upload Profile Picture</Typography>
                                                 <ImageUploadCard
                                                     value={field.state.value ?? (student?.picture ? { preview: student.picture } : null)}
                                                     onChange={(file) => field.handleChange(file as unknown as File)}
@@ -178,9 +180,10 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                         <div className="space-y-6">
                             <div className="flex items-center gap-2 border-b border-gray-200/40 pb-2">
                                 <FileText className="size-5 text-gray-700" strokeWidth={2.5} />
-                                <Typography as="h3" className="text-[17px] font-extrabold text-gray-900 tracking-tight flex-1">Basic Info</Typography>
+                                <Typography as="h3" font="title" className="text-gray-900 tracking-tight flex-1">Basic Info</Typography>
                                 <ChevronDown className="size-5 text-gray-500" />
                             </div>
+
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
                                 <form.Field name="guardian_phone">
@@ -255,7 +258,7 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                     <form.Field name="passport_file_url">
                                         {(field) => (
                                             <div className="space-y-2">
-                                                <FieldLabel className="text-[13px] font-bold text-gray-900">Upload Passport</FieldLabel>
+                                                <Typography font="small" className="text-gray-900 font-bold">Upload Passport</Typography>
                                                 <ImageUploadCard
                                                     value={field.state.value ?? (student?.passport_file_url ?? null)}
                                                     onChange={(file) => field.handleChange(file as unknown as File)}
@@ -273,8 +276,9 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                         <div className="space-y-6">
                             <div className="flex items-center gap-2">
                                 <GraduationCap className="size-5 text-gray-700" strokeWidth={2.5} />
-                                <Typography as="h3" className="text-[17px] font-extrabold text-gray-900 tracking-tight">Academic Background</Typography>
+                                <Typography as="h3" font="title" className="text-gray-900 tracking-tight">Academic Background</Typography>
                             </div>
+
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
                                 <form.Field name="qualification">

@@ -29,11 +29,13 @@ export function PageLoader({
             {label && (
                 <Typography
                     as="span"
-                    className="text-[12px] font-bold text-gray-500 tracking-widest uppercase animate-pulse"
+                    font="small"
+                    className="text-gray-500 tracking-widest uppercase animate-pulse"
                 >
                     {label}
                 </Typography>
             )}
+
         </div>
     )
 }

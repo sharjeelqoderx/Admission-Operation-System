@@ -64,8 +64,9 @@ export default function StudentDetailPage({ params }: PageProps) {
     if (isLoading) return <PageLoader label="Loading profile..." />
     if (isError || !student) return (
         <div className="py-20 text-center">
-            <Typography as="p" className="text-sm font-bold text-gray-500">Student not found.</Typography>
+            <Typography as="p" font="sub-text" className="font-bold text-gray-500">Student not found.</Typography>
         </div>
+
     )
 
     const s = student.student
@@ -99,20 +100,21 @@ export default function StudentDetailPage({ params }: PageProps) {
                             {student.name}
                         </Typography>
                     </div>
-                    <div className="flex flex-wrap items-center gap-4 text-[14px] font-medium text-gray-500">
+                    <div className="flex flex-wrap items-center gap-4">
                         {student.email && (
                             <div className="flex items-center gap-2">
                                 <Mail className="size-4 opacity-60" />
-                                <span>{student.email}</span>
+                                <Typography font="sub-text" className="text-gray-500">{student.email}</Typography>
                             </div>
                         )}
                         {s?.country && (
                             <div className="flex items-center gap-2">
                                 <MapPin className="size-4 opacity-60" />
-                                <span>{s.city ? `${s.city}, ${s.country}` : s.country}</span>
+                                <Typography font="sub-text" className="text-gray-500">{s.city ? `${s.city}, ${s.country}` : s.country}</Typography>
                             </div>
                         )}
                     </div>
+
                 </div>
                 <Link href={`/dashboard/student/${id}/edit`}>
                     <Button value={'default'} className="px-4">
@@ -142,24 +144,28 @@ export default function StudentDetailPage({ params }: PageProps) {
                     </div>
 
                     <div className="flex-1 space-y-6">
-                        <Typography as="h3" className="text-xl font-bold text-gray-900">Academic Record</Typography>
+                        <Typography as="h3" font="text-xl" className="text-gray-900">Academic Record</Typography>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                             <div className="space-y-1">
-                                <Typography as="p" className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Highest Degree</Typography>
-                                <Typography as="p" className="text-[15px] font-bold text-gray-900">{edu?.qualification ?? "—"}</Typography>
-                                <Typography as="p" className="text-[12px] font-medium text-gray-500">{edu?.institution_name ?? "—"}</Typography>
+                                <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Highest Degree</Typography>
+                                <Typography as="p" font="title" className="text-gray-900">{edu?.qualification ?? "—"}</Typography>
+                                <Typography as="p" font="small" className="text-gray-500">{edu?.institution_name ?? "—"}</Typography>
                             </div>
+
                             <div className="space-y-1">
-                                <Typography as="p" className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Final GPA</Typography>
-                                <Typography as="p" className="text-[15px] font-bold text-gray-900">{edu?.cumulative_gpa ?? "—"}</Typography>
+                                <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Final GPA</Typography>
+                                <Typography as="p" font="title" className="text-gray-900">{edu?.cumulative_gpa ?? "—"}</Typography>
                             </div>
+
                             {eduList.length > 1 && (
                                 <div className="space-y-1">
-                                    <Typography as="p" className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Qualifications</Typography>
+                                    <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Qualifications</Typography>
                                     {eduList.slice(1).map((e, i) => (
-                                        <Typography key={i} as="p" className="text-[13px] font-medium text-gray-700">{e.qualification} — {e.institution_name}</Typography>
+                                        <Typography key={i} as="p" font="sub-text" className="text-gray-700">{e.qualification} — {e.institution_name}</Typography>
                                     ))}
                                 </div>
+
                             )}
                         </div>
                     </div>
@@ -168,22 +174,25 @@ export default function StudentDetailPage({ params }: PageProps) {
 
                 {/* ── Basic Info ── */}
                 <div className="space-y-6">
-                    <Typography as="h3" className="text-xl font-bold text-gray-900">Basic Info</Typography>
+                    <Typography as="h3" font="text-xl" className="text-gray-900">Basic Info</Typography>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-5">
                         {basicInfo.map(({ label, value }) => (
                             <div key={label} className="space-y-1 border-b border-gray-200/40 pb-3">
-                                <Typography as="p" className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">{label}</Typography>
-                                <Typography as="p" className="text-[14px] font-semibold text-gray-800">{value ?? "—"}</Typography>
+                                <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">{label}</Typography>
+                                <Typography as="p" font="sub-text" className="font-semibold text-gray-800">{value ?? "—"}</Typography>
                             </div>
                         ))}
                     </div>
+
                 </div>
             </BluryCard>
 
 
             {/* ── Applications Table ── */}
             <div className="space-y-6">
-                <Typography as="h3" className="text-xl font-bold text-gray-900">Applications Applied For</Typography>
+                <Typography as="h3" font="text-xl" className="text-gray-900">Applications Applied For</Typography>
+
 
                 <BluryCard
                     isCentered={false}
@@ -195,12 +204,13 @@ export default function StudentDetailPage({ params }: PageProps) {
                         <Table className="w-full min-w-[900px]">
                             <TableHeader>
                                 <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
-                                    <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Application</TableHead>
-                                    <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Program</TableHead>
-                                    <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Status</TableHead>
-                                    <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase leading-tight">Submission<br />Date</TableHead>
-                                    <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">Action</TableHead>
+                                    <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-500 uppercase tracking-widest">Application</Typography></TableHead>
+                                    <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-500 uppercase tracking-widest">Program</Typography></TableHead>
+                                    <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-500 uppercase tracking-widest">Status</Typography></TableHead>
+                                    <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-500 uppercase tracking-widest leading-tight">Submission Date</Typography></TableHead>
+                                    <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-500 uppercase tracking-widest">Action</Typography></TableHead>
                                 </TableRow>
+
                             </TableHeader>
                             <TableBody className="divide-y divide-white/10">
                                 {appsLoading ? (
@@ -234,10 +244,11 @@ export default function StudentDetailPage({ params }: PageProps) {
                                             <StatusBadge status={app.status} />
                                         </TableCell>
                                         <TableCell className="px-8 py-6 whitespace-nowrap">
-                                            <Typography as="span" className="text-[13px] font-medium text-gray-600">
+                                            <Typography font="small" className="text-gray-600">
                                                 {new Date(app.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                                             </Typography>
                                         </TableCell>
+
                                         <TableCell className="px-8 py-6 whitespace-nowrap">
                                             <Button
                                                 variant="outline"
@@ -257,11 +268,12 @@ export default function StudentDetailPage({ params }: PageProps) {
                     </div>
 
                     <div className="flex items-center justify-between px-8 py-5 border-t border-white/20 bg-white/5">
-                        <div className="flex items-center text-[12px] font-medium text-gray-500 space-x-1">
-                            <Typography as="span" className="text-[12px] font-medium text-gray-500">Showing</Typography>
-                            <Typography as="span" className="text-[12px] font-bold text-[#1e3a8a] mx-1">{studentApplications.length}</Typography>
-                            <Typography as="span" className="text-[12px] font-medium text-gray-500">entries</Typography>
+                        <div className="flex items-center space-x-1">
+                            <Typography font="small" className="text-gray-500">Showing</Typography>
+                            <Typography font="small" className="font-bold text-[#1e3a8a] mx-1">{studentApplications.length}</Typography>
+                            <Typography font="small" className="text-gray-500">entries</Typography>
                         </div>
+
                         <div className="flex items-center gap-2">
                             <button className="size-8 rounded-lg bg-white/40 hover:bg-white/60 flex items-center justify-center border border-white/40 transition-all text-gray-600 shadow-sm">
                                 <ChevronLeft className="size-4" />
@@ -277,7 +289,8 @@ export default function StudentDetailPage({ params }: PageProps) {
             {/* ── Documents Section ── */}
             {s?.passport_file_url && (
                 <div className="space-y-6">
-                    <Typography as="h3" className="text-xl font-bold text-gray-900">Documents</Typography>
+                    <Typography as="h3" font="text-xl" className="text-gray-900">Documents</Typography>
+
                     <BluryCard
                         isCentered={false}
                         blurAmount="backdrop-blur-lg"
@@ -285,7 +298,8 @@ export default function StudentDetailPage({ params }: PageProps) {
                         className='rounded-lg w-full max-w-2xl'
                     >
                         <div className="space-y-4">
-                            <Typography as="p" className="text-sm font-bold text-gray-700 uppercase tracking-wider">Passport Copy</Typography>
+                            <Typography as="p" font="small" className="text-gray-700 uppercase tracking-widest">Passport Copy</Typography>
+
                             <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden border border-white/20 shadow-2xl">
                                 <Image
                                     src={s.passport_file_url}

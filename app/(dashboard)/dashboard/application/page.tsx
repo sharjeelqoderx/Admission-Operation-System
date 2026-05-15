@@ -32,11 +32,11 @@ export default function ApplicationsPage() {
 
             {/* ── Header ── */}
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                <div className="space-y-3">
-                    <Typography as="h1" className="text-[32px] font-extrabold text-gray-900 tracking-tight">
+                <div className="space-y-1 max-w-2xl">
+                    <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
                         All Applications
                     </Typography>
-                    <Typography as="p" className="text-[14px] font-medium text-gray-500 leading-relaxed">
+                    <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
                         Track and manage all student applications submitted through your agency.
                     </Typography>
                 </div>

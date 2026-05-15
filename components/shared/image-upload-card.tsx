@@ -3,6 +3,8 @@
 import { useRef, useState, useEffect } from "react"
 import { X, ImageIcon, FileText, FileSpreadsheet, File } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Typography } from "./Typography"
+
 
 type Props = {
     value?: File | string | null
@@ -122,13 +124,14 @@ export function ImageUploadCard({
                         selectedFile && (
                             <div className="flex flex-col items-center justify-center gap-2 p-4">
                                 {getFileIcon(selectedFile)}
-                                <p className="text-[11px] font-medium text-gray-600 text-center max-w-[90%] truncate">
+                                <Typography font="small" className="text-gray-600 text-center max-w-[90%] truncate">
                                     {selectedFile.name}
-                                </p>
-                                <p className="text-[10px] text-gray-400">
+                                </Typography>
+                                <Typography font="small" className="text-gray-400">
                                     {(selectedFile.size / 1024).toFixed(1)} KB
-                                </p>
+                                </Typography>
                             </div>
+
                         )
                     )}
                     {!disabled && (
@@ -152,10 +155,11 @@ export function ImageUploadCard({
                     <div className="text-gray-400 group-hover:scale-110 transition-transform">
                         {emptyIcon ?? <ImageIcon size={32} strokeWidth={1.5} />}
                     </div>
-                    <p className="text-[11px] font-medium text-gray-500 text-center">
+                    <Typography font="small" className="text-gray-500 text-center">
                         <span className="text-[#4285f4] font-bold">Click here</span> to upload {message.toLowerCase()}
-                    </p>
+                    </Typography>
                 </div>
+
             )}
         </div>
     )

@@ -71,12 +71,11 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
-            <div className="space-y-2">
-                <Typography font='text-xl' as={'h2'}>
+            <div className="space-y-1 max-w-2xl">
+                <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
                     Agent Dashboard
                 </Typography>
-
-                <Typography font='text' as={'p'} className='max-w-[660] text-gray-600 size-full'>
+                <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
                     Here is a summary of your global student recruitment performance and pending administrative tasks.
                 </Typography>
             </div>
@@ -98,12 +97,13 @@ export default function DashboardPage() {
                                     {stat.title}
                                 </Typography>
                                 <Typography
-                                    font='sub-heading'
+                                    font='title'
                                     as={'p'}
                                     className={cn('font-bold', isLoading && 'animate-pulse text-gray-400')}
                                 >
                                     {stat.value}
                                 </Typography>
+
                             </div>
                         </div>
                     </BluryCard>

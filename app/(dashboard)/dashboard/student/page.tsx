@@ -38,10 +38,10 @@ const StatsDashboard = memo(({ stats, statsLoading }: { stats: any, statsLoading
         >
             <div className="flex flex-col sm:flex-row sm:items-start justify-between flex-wrap gap-4">
                 <div className="space-y-1 max-w-2xl">
-                    <Typography font='text-xl' as={'h2'}>
+                    <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
                         All students
                     </Typography>
-                    <Typography as="p" font="text" className="text-gray-600">
+                    <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
                         Initiate a new student profile and link them to global academic programs. Ensure all mandatory fields are verified before submission.
                     </Typography>
                 </div>
@@ -179,9 +179,10 @@ function StudentListSection() {
 
     return (
         <div className="space-y-4 pt-8">
-            <Typography as="h3" className="text-xl font-bold text-brand-secondary">
+            <Typography as="h3" font="text-xl" className="text-brand-secondary">
                 Students list
             </Typography>
+
 
             {/* Search + Filters */}
             <div className="flex flex-col sm:flex-row gap-4">

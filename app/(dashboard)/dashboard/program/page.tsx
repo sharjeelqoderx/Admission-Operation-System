@@ -93,23 +93,21 @@ export default function ProgramDashboard() {
 
     return (
         <div className="space-y-8">
-            {/* ── Header ── */}
-            <div className="space-y-3">
-                <Typography as="h1" className="text-[32px] font-extrabold text-gray-900 tracking-tight">
+            <div className="space-y-1 max-w-2xl">
+                <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
                     Explore Programs
                 </Typography>
-                <Typography as="p" className="text-[14px] font-medium text-gray-500 leading-relaxed">
+                <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
                     Browse through our extensive academic catalog. Find the right program that fits your career goals across multiple campuses and universities.
                 </Typography>
             </div>
 
-            {/* ── Search & Filter Bar ── */}
             <div className="flex flex-col md:flex-row gap-4 sticky top-4 z-10">
                 <div className="relative flex-1 bg-white rounded-xl shadow-sm border border-gray-100">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
                     <Input
                         placeholder="Search program, university or location..."
-                        className="border-0 bg-transparent h-14 pl-12 text-[15px] focus-visible:ring-0"
+                        className="border-0 bg-transparent h-14 pl-12 focus-visible:ring-0"
                         value={localSearch}
                         onChange={(e) => setLocalSearch(e.target.value)}
                     />
@@ -118,7 +116,7 @@ export default function ProgramDashboard() {
                 <div className="flex items-center gap-2 bg-white px-4 rounded-xl shadow-sm border border-gray-100 min-w-[240px]">
                     <SlidersHorizontal size={18} className="text-gray-400 shrink-0" />
                     <Select value={category} onValueChange={updateCategory}>
-                        <SelectTrigger className="border-0 focus:ring-0 h-14 text-[14px] font-bold text-gray-700 bg-transparent">
+                        <SelectTrigger className="border-0 focus:ring-0 h-14 font-bold text-gray-700 bg-transparent">
                             <SelectValue placeholder="All Categories" />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl border-gray-100">
@@ -138,7 +136,8 @@ export default function ProgramDashboard() {
                     <div className="size-16 rounded-2xl bg-red-50 flex items-center justify-center">
                         <AlertCircle className="size-8 text-red-400" />
                     </div>
-                    <Typography font="text-lg" className="text-gray-700 font-bold">Failed to load programs</Typography>
+                    <Typography font="title" className="text-gray-700">Failed to load programs</Typography>
+
                     <Button onClick={() => refetch()} variant="outline" className="rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50">Try Again</Button>
                 </div>
             ) : (
@@ -153,10 +152,11 @@ export default function ProgramDashboard() {
 
                     {!hasNextPage && allPrograms.length > 0 && (
                         <div className="text-center py-10">
-                            <Typography as="span" className="text-xs font-bold text-gray-800 uppercase tracking-widest">
+                            <Typography font="small" className="text-gray-800 uppercase tracking-widest">
                                 You've reached the end of the catalog
                             </Typography>
                         </div>
+
                     )}
 
                     {allPrograms.length === 0 && !isFetching && (
@@ -164,8 +164,9 @@ export default function ProgramDashboard() {
                             <div className="size-16 rounded-2xl bg-gray-50 flex items-center justify-center">
                                 <Search className="size-8 text-gray-300" />
                             </div>
-                            <Typography className="text-gray-500 font-medium">No programs found matching your criteria</Typography>
+                            <Typography font="sub-text" className="text-gray-500">No programs found matching your criteria</Typography>
                         </div>
+
                     )}
                 </div>
             )}

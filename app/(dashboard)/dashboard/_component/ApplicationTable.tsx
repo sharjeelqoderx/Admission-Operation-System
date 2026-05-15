@@ -44,14 +44,15 @@ export const ApplicationTable = React.memo(function ApplicationTable({ applicati
                 <Table className="w-full text-left border-collapse min-w-[900px]">
                     <TableHeader>
                         <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">Student Name</TableHead>
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">Program</TableHead>
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">Agent Name</TableHead>
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">Status</TableHead>
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">Date</TableHead>
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">Action</TableHead>
+                            <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">Student Name</Typography></TableHead>
+                            <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">Program</Typography></TableHead>
+                            <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">Agent Name</Typography></TableHead>
+                            <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">Status</Typography></TableHead>
+                            <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">Date</Typography></TableHead>
+                            <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">Action</Typography></TableHead>
                         </TableRow>
                     </TableHeader>
+
 
                     <TableBody className="divide-y divide-white/10">
                         {isLoading ? (
@@ -63,8 +64,9 @@ export const ApplicationTable = React.memo(function ApplicationTable({ applicati
                         ) : applications.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="px-8 py-12 text-center">
-                                    <Typography as="p" className="text-sm text-gray-500">No recent applications found.</Typography>
+                                    <Typography as="p" font="sub-text" className="text-gray-500">No recent applications found.</Typography>
                                 </TableCell>
+
                             </TableRow>
                         ) : (
                             applications.map((app, index) => {
@@ -150,12 +152,13 @@ export const ApplicationTable = React.memo(function ApplicationTable({ applicati
             </div>
 
             <div className="flex items-center justify-between px-8 py-5 border-t border-white/20 bg-white/5">
-                <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1">
-                    <Typography as="span" className="text-[12px] font-light text-gray-500">Showing</Typography>
-                    <Typography as="span" className="text-[12px] font-medium text-brand-secondary mx-1">{applications.length}</Typography>
-                    <Typography as="span" className="text-[12px] font-light text-gray-500">recent entries</Typography>
+                <div className="flex items-center space-x-1">
+                    <Typography font="small" className="text-gray-500">Showing</Typography>
+                    <Typography font="small" className="text-brand-secondary mx-1">{applications.length}</Typography>
+                    <Typography font="small" className="text-gray-500">recent entries</Typography>
                 </div>
             </div>
+
         </BluryCard>
     )
 })

@@ -12,11 +12,13 @@ import { BluryCard } from "@/components/shared/blury-card"
 import { Typography } from "@/components/shared/Typography"
 // import { Checkbox } from "@/components/ui/checkbox"
 import { useAuth } from "@/hooks/useAuth"
+import { Eye, EyeOff } from "lucide-react"
 
 export function LoginForm() {
     const router = useRouter()
     const { login } = useAuth()
     const [apiError, setApiError] = useState("")
+    const [showPassword, setShowPassword] = useState(false)
 
     const form = useForm({
         defaultValues: { email: "", password: "" },
@@ -84,12 +86,23 @@ export function LoginForm() {
                                                     Forgot your password?
                                                 </Link>
                                             </div>
-                                            <Input
-                                                type="password" id={field.name} value={field.state.value}
-                                                onBlur={field.handleBlur}
-                                                onChange={(e) => { field.handleChange(e.target.value); setApiError("") }}
-                                                placeholder="••••••••" aria-invalid={isInvalid}
-                                            />
+                                            <div className="relative">
+                                                <Input
+                                                    type={showPassword ? "text" : "password"}
+                                                    id={field.name} value={field.state.value}
+                                                    onBlur={field.handleBlur}
+                                                    onChange={(e) => { field.handleChange(e.target.value); setApiError("") }}
+                                                    placeholder="••••••••" aria-invalid={isInvalid}
+                                                    className="pr-10"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword((prev) => !prev)}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                                >
+                                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                </button>
+                                            </div>
                                             {isInvalid && error && <FieldError errors={[error]} />}
                                         </Field>
                                     )

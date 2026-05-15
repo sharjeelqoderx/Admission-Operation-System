@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
-import { Lock } from "lucide-react"
+import { Lock, Eye, EyeOff } from "lucide-react"
 import { useMutation } from "@tanstack/react-query"
 
 import { Button } from "@/components/ui/button"
@@ -30,6 +30,7 @@ function ResetPasswordForm() {
     const email = searchParams.get("email") ?? ""
     const [apiError, setApiError] = useState("")
     const [success, setSuccess] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
 
     const resetMutation = useMutation({
         mutationFn: (password: string) =>
@@ -83,12 +84,23 @@ function ResetPasswordForm() {
                             return (
                                 <Field data-invalid={isInvalid}>
                                     <FieldLabel htmlFor={field.name}>New Password</FieldLabel>
-                                    <Input
-                                        type="password" id={field.name} value={field.state.value}
-                                        onBlur={field.handleBlur}
-                                        onChange={e => { field.handleChange(e.target.value); setApiError("") }}
-                                        placeholder="••••••••"
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            type={showPassword ? "text" : "password"}
+                                            id={field.name} value={field.state.value}
+                                            onBlur={field.handleBlur}
+                                            onChange={e => { field.handleChange(e.target.value); setApiError("") }}
+                                            placeholder="••••••••"
+                                            className="pr-10"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(prev => !prev)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                        >
+                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
                                     {isInvalid && error && <FieldError errors={[error]} />}
                                 </Field>
                             )
@@ -100,12 +112,23 @@ function ResetPasswordForm() {
                             return (
                                 <Field data-invalid={isInvalid}>
                                     <FieldLabel htmlFor={field.name}>Confirm Password</FieldLabel>
-                                    <Input
-                                        type="password" id={field.name} value={field.state.value}
-                                        onBlur={field.handleBlur}
-                                        onChange={e => { field.handleChange(e.target.value); setApiError("") }}
-                                        placeholder="••••••••"
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            type={showPassword ? "text" : "password"}
+                                            id={field.name} value={field.state.value}
+                                            onBlur={field.handleBlur}
+                                            onChange={e => { field.handleChange(e.target.value); setApiError("") }}
+                                            placeholder="••••••••"
+                                            className="pr-10"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(prev => !prev)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                        >
+                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
                                     {isInvalid && error && <FieldError errors={[error]} />}
                                 </Field>
                             )

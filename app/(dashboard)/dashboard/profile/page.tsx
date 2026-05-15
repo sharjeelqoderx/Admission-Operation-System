@@ -123,9 +123,11 @@ export default function ProfilePage() {
     return (
         <main className="mx-auto space-y-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-2">
-                    <Typography font="heading" as="h1">My Profile</Typography>
-                    <Typography font="text" className="text-gray-500">
+                <div className="space-y-1 max-w-2xl">
+                    <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
+                        My Profile
+                    </Typography>
+                    <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
                         Manage your personal information and preferences.
                     </Typography>
                 </div>

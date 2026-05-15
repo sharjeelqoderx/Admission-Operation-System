@@ -36,10 +36,10 @@ export default function PaymentsPage() {
             >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between flex-wrap gap-4">
                     <div className="space-y-1 max-w-2xl">
-                        <Typography font='text-xl' as={'h2'}>
+                        <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
                             Payments & Invoices
                         </Typography>
-                        <Typography as="p" font="text" className="text-gray-600">
+                        <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
                             View and manage your student payment history and invoices. Ensure all financial records are up to date for smooth application processing.
                         </Typography>
                     </div>

@@ -104,10 +104,11 @@ export function DocumentViewer({ files, documentName }: Props) {
                                             <Typography as="p" font="text-xl" className="font-extrabold text-gray-900">
                                                 {isPdf ? "PDF Document" : isExcel ? "Excel Spreadsheet" : isWord ? "Word Document" : "Document File"}
                                             </Typography>
-                                            <Typography as="p" className="text-sm text-gray-500 max-w-[300px]">
+                                            <Typography as="p" font="sub-text" className="text-gray-500 max-w-[300px]">
                                                 {isPdf ? "Preview this PDF by opening it in a new tab." : "This file type can be downloaded for viewing."}
                                             </Typography>
                                         </div>
+
                                         <div className="flex gap-4">
                                             <Button asChild variant="outline" className="rounded-xl px-8 h-12 font-bold border-gray-200">
                                                 <a href={file.file_url} target="_blank" rel="noreferrer">
@@ -212,9 +213,10 @@ export function DocumentViewer({ files, documentName }: Props) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <Typography as="span" className="text-xs font-bold text-gray-400 mr-2">
+                    <Typography as="span" font="small" className="text-gray-400 mr-2">
                         {currentIndex + 1} / {sortedFiles.length}
                     </Typography>
+
                     <Button asChild variant="outline" size="sm" className="h-10 rounded-xl gap-2 border-gray-200 border">
                         <a href={currentFile.file_url} target="_blank" rel="noreferrer">
                             <ExternalLink size={16} />

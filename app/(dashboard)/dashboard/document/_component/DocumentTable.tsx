@@ -50,9 +50,10 @@ export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
                     <AlertCircle className="size-8 text-red-400" />
                 </div>
                 <div className="text-center">
-                    <Typography as="p" className="text-sm font-bold text-gray-700">Failed to load documents</Typography>
-                    <Typography as="p" className="text-xs text-gray-500 mt-1">Check your connection and try again.</Typography>
+                    <Typography as="p" font="sub-text" className="font-bold text-gray-700">Failed to load documents</Typography>
+                    <Typography as="p" font="small" className="text-gray-500 mt-1">Check your connection and try again.</Typography>
                 </div>
+
                 <button
                     onClick={onRetry}
                     className="px-5 py-2 rounded-xl text-sm font-semibold bg-brand-byzantine text-white hover:bg-brand-byzantine/90 transition-colors"
@@ -70,9 +71,10 @@ export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
                     <FileText className="size-8 text-gray-400" />
                 </div>
                 <div className="text-center">
-                    <Typography as="p" className="text-sm font-bold text-gray-700">No documents yet</Typography>
-                    <Typography as="p" className="text-xs text-gray-500 mt-1">Upload a document to see it here.</Typography>
+                    <Typography as="p" font="sub-text" className="font-bold text-gray-700">No documents yet</Typography>
+                    <Typography as="p" font="small" className="text-gray-500 mt-1">Upload a document to see it here.</Typography>
                 </div>
+
             </div>
         )
     }
@@ -105,13 +107,14 @@ export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
                     <Table className="w-full text-left border-collapse min-w-[700px]">
                         <TableHeader>
                             <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
-                                <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Student Name</TableHead>
-                                <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Number of Documents</TableHead>
-                                <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Last Uploaded At</TableHead>
-                                <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Status</TableHead>
-                                <TableHead className="px-6 py-5 text-[10px] font-extrabold uppercase tracking-widest text-gray-600">Action</TableHead>
+                                <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Student Name</Typography></TableHead>
+                                <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Number of Documents</Typography></TableHead>
+                                <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Last Uploaded At</Typography></TableHead>
+                                <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Status</Typography></TableHead>
+                                <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Action</Typography></TableHead>
                             </TableRow>
                         </TableHeader>
+
 
                         <TableBody>
                             {currentRows.map((row) => (
@@ -124,36 +127,40 @@ export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
                                                     {row.student_name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                                                 </AvatarFallback>
                                             </Avatar>
-                                            <Typography as="span" className="text-sm font-bold text-gray-900">
+                                            <Typography as="span" font="sub-text" className="font-bold text-gray-900">
                                                 {row.student_name}
                                             </Typography>
+
                                         </div>
                                     </TableCell>
 
                                     <TableCell className="px-6 py-5">
                                         <div className="flex items-center gap-2">
-                                            <Typography as="span" className="text-sm font-bold text-gray-800">
+                                            <Typography as="span" font="sub-text" className="font-bold text-gray-800">
                                                 {row.document_count}
                                             </Typography>
+
                                         </div>
                                     </TableCell>
 
                                     <TableCell className="px-6 py-5">
-                                        <Typography as="span" className="text-sm font-medium text-gray-600">
+                                        <Typography as="span" font="sub-text" className="text-gray-600">
                                             {row.last_uploaded_at
                                                 ? new Date(row.last_uploaded_at).toLocaleDateString("en-GB", {
                                                     day: "2-digit", month: "short", year: "numeric",
                                                 })
                                                 : "—"}
                                         </Typography>
+
                                     </TableCell>
 
                                     <TableCell className="px-6 py-5">
                                         {row.last_doc_status
                                             ? <StatusBadge status={row.last_doc_status} />
-                                            : <Typography as="span" className="text-sm text-gray-400">—</Typography>
+                                            : <Typography as="span" font="sub-text" className="text-gray-400">—</Typography>
                                         }
                                     </TableCell>
+
 
                                     <TableCell className="px-6 py-5">
                                         <Link href={`/dashboard/document/student/${row.student_id}`}>
@@ -169,15 +176,16 @@ export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
                 </div>
 
                 <div className="flex items-center justify-between px-6 py-5 border-t border-white/20 bg-white/5">
-                    <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1.5">
-                        <span>Showing</span>
-                        <span className="text-gray-900 font-bold">{totalEntries === 0 ? 0 : startIndex + 1}</span>
-                        <span>to</span>
-                        <span className="text-gray-900 font-bold">{endIndex}</span>
-                        <span>of</span>
-                        <span className="text-gray-900 font-bold">{totalEntries}</span>
-                        <span>entries</span>
+                    <div className="flex items-center space-x-1.5">
+                        <Typography font="small" className="text-gray-500">Showing</Typography>
+                        <Typography font="small" className="text-gray-900 font-bold">{totalEntries === 0 ? 0 : startIndex + 1}</Typography>
+                        <Typography font="small" className="text-gray-500">to</Typography>
+                        <Typography font="small" className="text-gray-900 font-bold">{endIndex}</Typography>
+                        <Typography font="small" className="text-gray-500">of</Typography>
+                        <Typography font="small" className="text-gray-900 font-bold">{totalEntries}</Typography>
+                        <Typography font="small" className="text-gray-500">entries</Typography>
                     </div>
+
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handlePrev}

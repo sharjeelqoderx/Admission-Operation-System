@@ -72,11 +72,12 @@ export const FilePreview = ({
                                 {getFileTypeLabel()}
                             </Typography>
                             {name && (
-                                <Typography className="text-xs font-bold text-gray-700 line-clamp-1 max-w-[150px]">
+                                <Typography font="small" className="text-gray-700 line-clamp-1 max-w-[150px]">
                                     {name}
                                 </Typography>
                             )}
                         </div>
+
                     </div>
                 )}
 
@@ -105,11 +106,12 @@ export const FilePreview = ({
             {/* Info Footer (Optional) */}
             {name && !isImage && (
                 <div className="p-3 border-t border-gray-50 bg-white">
-                    <Typography className="text-[11px] font-bold text-gray-600 truncate">
+                    <Typography font="small" className="text-gray-600 truncate">
                         {name}
                     </Typography>
                 </div>
             )}
+
         </div>
     );
 };

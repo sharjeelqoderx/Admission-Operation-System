@@ -169,9 +169,10 @@ export function UploadDocumentForm() {
                                 return (
                                     <>
                                         <div className="space-y-3">
-                                            <Typography as="p" className="text-[12px] font-bold tracking-widest text-gray-400 uppercase">
+                                            <Typography font="small" className="text-gray-400 uppercase tracking-widest">
                                                 Front Side
                                             </Typography>
+
                                             <ImageUploadCard
                                                 value={firstFile ?? null}
                                                 onChange={(file) => handleFileChange(0, file as unknown as File)}
@@ -184,14 +185,16 @@ export function UploadDocumentForm() {
                                                 emptyIcon={<Plus size={32} className="text-gray-300" />}
                                             />
                                             {isInvalid && (
-                                                <p className="text-[11px] font-medium text-red-500 mt-1">Front side file is required</p>
+                                                <Typography font="small" className="text-red-500 mt-1">Front side file is required</Typography>
                                             )}
+
                                         </div>
 
                                         <div className={cn("space-y-3 transition-opacity", !firstFile && "opacity-50")}>
-                                            <Typography as="p" className="text-[12px] font-bold tracking-widest text-gray-400 uppercase">
+                                            <Typography font="small" className="text-gray-400 uppercase tracking-widest">
                                                 Back Side (Optional)
                                             </Typography>
+
                                             <ImageUploadCard
                                                 value={field.state.value?.[1] ?? null}
                                                 onChange={(file) => firstFile && handleFileChange(1, file as unknown as File)}
@@ -204,8 +207,9 @@ export function UploadDocumentForm() {
                                                 emptyIcon={<Plus size={32} className="text-gray-300" />}
                                             />
                                             {!firstFile && (
-                                                <p className="text-[10px] text-gray-400">Please upload front side first</p>
+                                                <Typography font="small" className="text-gray-400">Please upload front side first</Typography>
                                             )}
+
                                         </div>
                                     </>
                                 )

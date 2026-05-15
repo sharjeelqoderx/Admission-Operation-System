@@ -234,15 +234,16 @@ export function CreateApplicationForm() {
         <div className="space-y-8 pb-20">
             {/* Header */}
             <div className="space-y-2">
-                <Typography as="h1" className="text-[32px] font-extrabold text-brand-secondary tracking-tight">
+                <Typography as="h1" font="sub-heading" className="text-brand-secondary tracking-tight">
                     {step === 1 ? "Create Application" : "Choose Your Path"}
                 </Typography>
-                <Typography as="p" className="text-[13px] font-medium text-gray-500 leading-relaxed max-w-2xl">
+                <Typography as="p" font="small" className="text-gray-500 leading-relaxed max-w-2xl">
                     {step === 1
                         ? "Initiate a new student application and link them to global academic programs.\nEnsure all mandatory fields are verified before submission."
                         : "Select the academic program that aligns with your professional aspirations. Browse\nour curated selection of undergraduate and graduate degrees."}
                 </Typography>
             </div>
+
 
             {/* Stepper */}
             <div className="flex items-center justify-between relative pt-4 pb-8">
@@ -356,7 +357,8 @@ function Step1({ form, students, studentDetails, documents, onNext }: { form: an
             </div>
 
             <div className="space-y-4">
-                <Typography as="h3" className="text-[16px] font-extrabold text-brand-secondary">Personal Information</Typography>
+                <Typography as="h3" font="title" className="text-brand-secondary">Personal Information</Typography>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Full Name</label>
@@ -389,8 +391,9 @@ function Step1({ form, students, studentDetails, documents, onNext }: { form: an
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <FileText className="size-5 text-blue-600" />
-                        <Typography as="h3" className="text-[16px] font-extrabold text-brand-secondary">Supporting Documents</Typography>
+                        <Typography as="h3" font="title" className="text-brand-secondary">Supporting Documents</Typography>
                     </div>
+
                 </div>
 
                 <form.Field name="document_ids">
@@ -695,23 +698,25 @@ function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitt
                 <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                     <div className="flex items-center gap-2 mb-6">
                         <GraduationCap className="size-5 text-brand-secondary" />
-                        <Typography as="h3" className="text-[16px] font-extrabold text-brand-secondary">Selected Program Details</Typography>
+                        <Typography as="h3" font="title" className="text-brand-secondary">Selected Program Details</Typography>
                     </div>
+
                     <div className="flex flex-col sm:flex-row justify-between gap-6">
                         <div className="space-y-1">
-                            <Typography as="h4" className="text-[18px] font-extrabold text-gray-900 leading-tight">{selectedProgram?.name}</Typography>
+                            <Typography as="h4" font="text-lg" className="font-extrabold text-gray-900 leading-tight">{selectedProgram?.name}</Typography>
+                            {/* <Typography as="p" font="small" className="text-gray-500">{selectedProgram?.university_name}</Typography> */}
                         </div>
                         <div className="space-y-1.5 w-full sm:w-64">
                             <form.Field name="intake_date">
                                 {(field: any) => (
                                     <F field={field} label="Academic Session">
                                         <Select value={field.state.value} onValueChange={field.handleChange}>
-                                            <SelectTrigger className="h-11 bg-[#f8f9fc] border-gray-200 rounded-xl text-xs font-bold">
+                                            <SelectTrigger className="h-11 bg-[#f8f9fc] border-gray-200 rounded-xl font-bold">
                                                 <SelectValue placeholder="Select Session" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {uniqueIntakes.map((date) => (
-                                                    <SelectItem key={date} value={date} className="text-xs font-medium">
+                                                    <SelectItem key={date} value={date} className="font-medium">
                                                         {new Date(date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                                                     </SelectItem>
                                                 ))}
@@ -734,21 +739,24 @@ function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitt
                         <div className="size-6 rounded-md bg-brand-secondary/5 flex items-center justify-center">
                             <svg className="size-3.5 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                         </div>
-                        <Typography as="h3" className="text-[15px] font-extrabold text-brand-secondary">Student Info</Typography>
+                        <Typography as="h3" font="title" className="text-brand-secondary">Student Info</Typography>
                     </div>
+
                     <div className="space-y-4">
                         <div className="overflow-hidden">
-                            <Typography as="p" className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Full Name</Typography>
-                            <Typography as="p" className="text-[13px] font-bold text-gray-900 mt-0.5 truncate">{studentDetails?.name}</Typography>
+                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Full Name</Typography>
+                            <Typography as="p" font="title" className="text-gray-900 mt-0.5 truncate">{studentDetails?.name}</Typography>
                         </div>
                         <div className="overflow-hidden">
-                            <Typography as="p" className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Email Address</Typography>
-                            <Typography as="p" className="text-[13px] font-bold text-gray-900 mt-0.5 truncate">{studentDetails?.email}</Typography>
+                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Email Address</Typography>
+                            <Typography as="p" font="title" className="text-gray-900 mt-0.5 truncate">{studentDetails?.email}</Typography>
                         </div>
+
                         <div>
-                            <Typography as="p" className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Nationality</Typography>
-                            <Typography as="p" className="text-[13px] font-bold text-gray-900 mt-0.5">{studentDetails?.student?.nationality || "-"}</Typography>
+                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Nationality</Typography>
+                            <Typography as="p" font="title" className="text-gray-900 mt-0.5">{studentDetails?.student?.nationality || "-"}</Typography>
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -756,8 +764,9 @@ function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitt
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                 <div className="flex items-center gap-2 mb-6">
                     <FileText className="size-5 text-brand-secondary" />
-                    <Typography as="h3" className="text-[16px] font-extrabold text-brand-secondary">Attached Documents ({selectedDocs.length})</Typography>
+                    <Typography as="h3" font="title" className="text-brand-secondary">Attached Documents ({selectedDocs.length})</Typography>
                 </div>
+
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                     {selectedDocs.map((doc) => (
                         <div key={doc.id} className="space-y-2">
@@ -794,8 +803,9 @@ function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitt
                     <div className="size-6 rounded-full bg-blue-500/10 flex items-center justify-center">
                         <CheckSquare className="size-3.5 text-blue-600" />
                     </div>
-                    <Typography as="h3" className="text-[16px] font-extrabold text-brand-secondary">Final Declarations</Typography>
+                    <Typography as="h3" font="title" className="text-brand-secondary">Final Declarations</Typography>
                 </div>
+
 
                 <form.Field name="declarations">
                     {(field: any) => (

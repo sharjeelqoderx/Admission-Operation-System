@@ -26,27 +26,26 @@ export default function Page({ params }: PageProps) {
     })
 
     return (
-        <main className="min-h-screen">
 
-            <BluryCard
-                isCentered={false}
-                sharpCorners={[]}
-                blurAmount="backdrop-blur-2xl"
-                className="w-full space-y-4"
-            >
-                <div className="flex flex-col gap-2 pb-4 border-b-2 border-gray-300">
-                    <Typography as="h2" font="text-xl" className="text-gray-900">
-                        Edit Student Profile
-                    </Typography>
-                    <Typography as="p" font="text" className="text-gray-600 max-w-3xl leading-relaxed">
-                        Initiate a new student profile and link them to global academic programs. Ensure all mandatory fields are verified before submission.
-                    </Typography>
-                </div>
+        <BluryCard
+            isCentered={false}
+            blurAmount="backdrop-blur-xl"
+            blendColorClass="bg-white/20"
+            className=""
+            childClass="p-0!"
+        >
+            <div className="space-y-1 max-w-2xl p-6 border-b-2 border-gray-300">
+                <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
+                    Edit Student Profile
+                </Typography>
+                <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
+                    Initiate a new student profile and link them to global academic programs. Ensure all mandatory fields are verified before submission.
+                </Typography>
+            </div>
 
-                {isLoading && <PageLoader label="Loading student..." />}
-                {isError && <div className="p-8 text-sm font-medium text-gray-500">Student not found.</div>}
-                {data && <StudentForm mode="edit" studentId={studentId} defaultData={data} />}
-            </BluryCard>
-        </main>
+            {isLoading && <PageLoader label="Loading student..." />}
+            {isError && <div className="p-8 text-sm font-medium text-gray-500">Student not found.</div>}
+            {data && <StudentForm mode="edit" studentId={studentId} defaultData={data} />}
+        </BluryCard>
     )
 }
