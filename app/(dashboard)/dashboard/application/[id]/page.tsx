@@ -53,6 +53,7 @@ export default function ApplicationDetailsPage() {
     const program = application.program
     const university = application.university
     const documents = application.documents || []
+    const junction = program?.campus_program_junction?.[0]
 
     return (
         <div className="space-y-6 sm:space-y-8">
@@ -162,12 +163,12 @@ export default function ApplicationDetailsPage() {
                                     <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Intake</Typography>
                                     <div className="flex items-center gap-2">
                                         <Clock className="size-4 text-gray-400" />
-                                        <Typography className="font-bold text-brand-secondary">{application.intake_date || "N/A"}</Typography>
+                                        <Typography className="font-bold text-brand-secondary">{junction?.intake_date || "N/A"}</Typography>
                                     </div>
                                 </div>
                                 <div className="space-y-1">
                                     <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tuition Fee</Typography>
-                                    <Typography className="font-bold text-brand-secondary">{application.currency || "€"}{application.tuition_fee || "0"}</Typography>
+                                    <Typography className="font-bold text-brand-secondary">{junction?.currency || "€"}{junction?.tuition_fee || "0"}</Typography>
                                 </div>
                             </div>
                         </div>

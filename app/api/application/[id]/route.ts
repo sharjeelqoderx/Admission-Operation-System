@@ -28,7 +28,7 @@ export async function GET(
             .select(`
                 *,
                 student:profile_id ( id, name, avatar_url, email, date_of_birth, gender ),
-                program:program_id ( * ),
+                program:program_id ( *, campus_program_junction ( * ) ),
                 university:university_id ( * ),
                 agent:submitted_by_profile_id ( id, name ),
                 documents:application_document (

@@ -107,9 +107,6 @@ export async function POST(req: NextRequest) {
                 profile_id: validatedData.profile_id,
                 program_id: validatedData.program_id,
                 university_id: validatedData.university_id,
-                intake_date: validatedData.intake_date,
-                tuition_fee: validatedData.tuition_fee,
-                currency: validatedData.currency,
                 status: "PENDING",
                 submitted_by_profile_id: user.id,
             })
