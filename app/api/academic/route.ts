@@ -9,10 +9,9 @@ const schema = z.object({
         qualification: z.string().min(1, "Qualification required"),
         instituteName: z.string().min(2, "Institute name required"),
         gpa: z.number().min(0).max(4),
-        desiredProgram: z.string().min(1),
-        campus: z.string().min(1),
-        englishTest: z.string().min(1),
-        about: z.string().min(10).max(500),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        about: z.string().optional(),
     }))
 })
 
@@ -38,6 +37,8 @@ export async function POST(req: NextRequest) {
             institution_name: data.instituteName,
             cumulative_gpa: String(data.gpa),
             honors: data.about,
+            start_date: data.startDate || null,
+            end_date: data.endDate || null,
         }))
 
         const { error } = await supabase.from("education").insert(payload)

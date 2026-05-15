@@ -15,7 +15,10 @@ import {
     Globe,
     Building,
     Briefcase,
-    Edit2
+    Edit2,
+    Plus,
+    Trash2,
+    GraduationCap
 } from "lucide-react"
 import {
     Select,
@@ -100,17 +103,100 @@ export default function ProfilePage() {
             experience_years: user?.profile?.experience_years ?? "0",
             description: user?.profile?.description ?? "",
             avatar: null as File | null,
+
+            // New fields for Student
+            academics: user?.academic?.map((a: any) => ({
+                qualification: a.highestDegree || "",
+                instituteName: a.instituteName || "",
+                gpa: a.gpa || "",
+                startDate: a.startDate || "",
+                endDate: a.endDate || "",
+                about: a.about || ""
+            })) || [],
+            academicGap: user?.experience?.academicGap || "0",
+            hasExperience: user?.experience?.hasExperience || "no",
+            experiences: user?.experience?.entries?.map((e: any) => ({
+                name: e.jobTitle || "",
+                organization: e.organization || "",
+                industry: e.industry || "",
+                country: e.country || "",
+                startDate: e.startDate || "",
+                endDate: e.endDate || "",
+                responsibility: e.responsibilities || ""
+            })) || []
         },
         onSubmit: async ({ value }) => {
+            // 1. Update Profile
             const fd = new FormData()
             Object.entries(value).forEach(([key, val]) => {
-                if (key === "avatar" && val instanceof File) {
-                    fd.append("avatar", val)
-                } else if (val !== null && val !== undefined && val !== "") {
-                    fd.append(key, String(val))
+                let finalKey = key
+                if (role === "STUDENT") {
+                    if (key === "date_of_birth") finalKey = "dob"
+                    if (key === "guardian_email") finalKey = "guardianEmail"
+                    if (key === "guardian_phone") finalKey = "guardianPhone"
+                    if (key === "avatar") {
+                        finalKey = "avatar_url"
+                        // If no new file, send the current URL to satisfy the schema
+                        if (!val && user?.avatarUrl) {
+                            fd.append(finalKey, user.avatarUrl)
+                            return
+                        }
+                    }
+                    if (key === "gender") {
+                        val = String(val).toLowerCase()
+                    }
+                } else {
+                    if (key === "avatar") finalKey = "avatar"
+                }
+
+                if (finalKey === "avatar_url" || finalKey === "avatar") {
+                    if (val instanceof File) fd.append(finalKey, val)
+                } else if (
+                    val !== null &&
+                    val !== undefined &&
+                    val !== "" &&
+                    key !== "academics" &&
+                    key !== "experiences" &&
+                    key !== "academicGap" &&
+                    key !== "hasExperience"
+                ) {
+                    fd.append(finalKey, String(val))
                 }
             })
             await mutation.mutateAsync(fd)
+
+            // 2. Update Student Specifics (Academics & Experience)
+            if (role === "STUDENT") {
+                try {
+                    // Update Academic
+                    await fetch("/api/academic", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            userId: user.id,
+                            academics: value.academics.map((a: any) => ({
+                                ...a,
+                                gpa: parseFloat(a.gpa) || 0
+                            }))
+                        })
+                    })
+
+                    // Update Experience
+                    await fetch("/api/experience", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            userId: user.id,
+                            academicGap: parseInt(value.academicGap) || 0,
+                            hasExperience: value.hasExperience,
+                            experiences: value.experiences
+                        })
+                    })
+                } catch (err) {
+                    console.error("Failed to update extra student info", err)
+                }
+            }
+
             setIsEditing(false)
         },
     })
@@ -122,21 +208,21 @@ export default function ProfilePage() {
 
     return (
         <main className="mx-auto space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1 max-w-2xl">
-                    <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-white/10 p-6 rounded-2xl border border-white/20 backdrop-blur-sm">
+                <div className="space-y-2">
+                    <Typography as="h2" font="sub-heading" className="text-2xl sm:text-3xl font-bold tracking-tight">
                         My Profile
                     </Typography>
-                    <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
-                        Manage your personal information and preferences.
+                    <Typography as="p" font="sub-text" className="text-gray-500 font-medium leading-relaxed">
+                        Manage your personal information and academic background.
                     </Typography>
                 </div>
                 {!isEditing && (
                     <Button
                         onClick={() => setIsEditing(true)}
-                        className="bg-brand-byzantine hover:bg-brand-byzantine/90 text-white"
+                        className="bg-brand-byzantine hover:bg-brand-byzantine/90 text-white gap-2 h-12 px-6 rounded-xl w-full sm:w-auto shadow-lg shadow-brand-byzantine/20"
                     >
-                        <Edit2 size={24} />{" "}
+                        <Edit2 size={18} />
                         Edit Profile
                     </Button>
                 )}
@@ -150,27 +236,32 @@ export default function ProfilePage() {
                         <Typography font="title">Basic Information</Typography>
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-8">
-                        <div className="shrink-0 flex flex-col items-center gap-4">
+                    <div className="flex flex-col lg:flex-row gap-8 items-center lg:items-start text-center lg:text-left">
+                        <div className="shrink-0 w-full lg:w-auto flex justify-center lg:block">
                             <form.Field name="avatar">
                                 {(field) => (
-                                    <div className="space-y-2">
+                                    <div className="relative group">
                                         <ImageUploadCard
                                             value={field.state.value ?? (user?.avatarUrl || null)}
                                             onChange={(file) => field.handleChange(file as File)}
                                             message="Upload Photo"
                                             disabled={!isEditing}
                                             className={cn(
-                                                "size-40 overflow-hidden border-4 border-white/40 shadow-lg",
-                                                !isEditing && "opacity-80 pointer-events-none"
+                                                "size-40 sm:size-48 overflow-hidden border-4 border-white/40 shadow-xl rounded-2xl transition-all duration-300",
+                                                isEditing ? "group-hover:border-brand-byzantine/50 group-hover:shadow-brand-byzantine/20" : "opacity-90 pointer-events-none"
                                             )}
                                         />
+                                        {isEditing && (
+                                            <div className="absolute -bottom-2 -right-2 bg-brand-byzantine text-white p-2 rounded-lg shadow-lg">
+                                                <Edit2 size={16} />
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </form.Field>
                         </div>
-
-                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6">
+ 
+                        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 lg:gap-y-6">
                             <form.Field name="fullName">
                                 {(field) => (
                                     <F field={field} label="Full Name">
@@ -180,23 +271,24 @@ export default function ProfilePage() {
                                                 onBlur={field.handleBlur}
                                                 onChange={(e) => field.handleChange(e.target.value)}
                                                 placeholder="Enter your full name"
+                                                className="h-12 bg-white/50 border-white/20 focus:bg-white"
                                             />
                                         ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                            <div className="p-3 bg-white/20 rounded-xl border border-white/20 min-h-12 flex items-center shadow-sm">
+                                                <Typography className="text-gray-800 font-semibold">{field.state.value || "N/A"}</Typography>
                                             </div>
                                         )}
                                     </F>
                                 )}
                             </form.Field>
-
-                            <div className="space-y-2">
+ 
+                            <div className="space-y-2 text-left">
                                 <FieldLabel>Email Address</FieldLabel>
-                                <div className="p-3 bg-gray-100/30 rounded-lg border border-white/5 min-h-12 flex items-center cursor-not-allowed">
+                                <div className="p-3 bg-gray-100/50 rounded-xl border border-dashed border-gray-300 min-h-12 flex items-center cursor-not-allowed">
                                     <Typography className="text-gray-500 font-medium">{user?.email}</Typography>
                                 </div>
                             </div>
-
+ 
                             <form.Field name="phone">
                                 {(field) => (
                                     <F field={field} label="Phone Number">
@@ -206,16 +298,17 @@ export default function ProfilePage() {
                                                 onBlur={field.handleBlur}
                                                 onChange={(e) => field.handleChange(e.target.value)}
                                                 placeholder="Enter your phone number"
+                                                className="h-12 bg-white/50 border-white/20 focus:bg-white"
                                             />
                                         ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                            <div className="p-3 bg-white/20 rounded-xl border border-white/20 min-h-12 flex items-center shadow-sm">
+                                                <Typography className="text-gray-800 font-semibold">{field.state.value || "N/A"}</Typography>
                                             </div>
                                         )}
                                     </F>
                                 )}
                             </form.Field>
-
+ 
                             <form.Field name="date_of_birth">
                                 {(field) => (
                                     <F field={field} label="Date of Birth">
@@ -226,14 +319,14 @@ export default function ProfilePage() {
                                                 placeholder="Select DOB"
                                             />
                                         ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                            <div className="p-3 bg-white/20 rounded-xl border border-white/20 min-h-12 flex items-center shadow-sm">
+                                                <Typography className="text-gray-800 font-semibold">{field.state.value || "N/A"}</Typography>
                                             </div>
                                         )}
                                     </F>
                                 )}
                             </form.Field>
-
+ 
                             <form.Field name="gender">
                                 {(field) => (
                                     <F field={field} label="Gender">
@@ -242,15 +335,16 @@ export default function ProfilePage() {
                                                 value={field.state.value?.toUpperCase()}
                                                 onValueChange={(v) => field.handleChange(v)}
                                             >
-                                                <SelectTrigger><SelectValue placeholder="Select Gender" /></SelectTrigger>
+                                                <SelectTrigger className="h-12 bg-white/50 border-white/20"><SelectValue placeholder="Select Gender" /></SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="MALE">Male</SelectItem>
                                                     <SelectItem value="FEMALE">Female</SelectItem>
+                                                    <SelectItem value="OTHER">Other</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium uppercase">{field.state.value || "N/A"}</Typography>
+                                            <div className="p-3 bg-white/20 rounded-xl border border-white/20 min-h-12 flex items-center shadow-sm">
+                                                <Typography className="text-gray-800 font-semibold uppercase">{field.state.value || "N/A"}</Typography>
                                             </div>
                                         )}
                                     </F>
@@ -369,6 +463,391 @@ export default function ProfilePage() {
                                 )}
                             </form.Field>
                         </div>
+                    </BluryCard>
+                )}
+
+                {role === "STUDENT" && (
+                    <BluryCard isCentered={false} childClass="space-y-8" className="rounded-2xl">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/20 pb-4">
+                            <div className="flex items-center gap-3">
+                                <GraduationCap className="size-5 text-gray-700" />
+                                <Typography font="title">Academic Qualifications</Typography>
+                            </div>
+                            {isEditing && (
+                                <form.Field name="academics">
+                                    {(field) => (
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            className="w-full sm:w-auto gap-2 border border-brand-byzantine text-brand-byzantine hover:bg-brand-byzantine/5"
+                                            onClick={() => {
+                                                const current = field.state.value || []
+                                                field.handleChange([...current, {
+                                                    qualification: "",
+                                                    instituteName: "",
+                                                    gpa: "",
+                                                    startDate: "",
+                                                    endDate: "",
+                                                    about: ""
+                                                }])
+                                            }}
+                                        >
+                                            <Plus size={16} /> Add Qualification
+                                        </Button>
+                                    )}
+                                </form.Field>
+                            )}
+                        </div>
+
+                        <form.Field name="academics">
+                            {(field) => (
+                                <div className="space-y-6">
+                                    {(field.state.value || []).map((item: any, index: number) => (
+                                        <div key={index} className="relative p-6 bg-white/20 rounded-xl border border-white/30 space-y-4">
+                                            {isEditing && (
+                                                <Button
+                                                    type="button"
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="absolute top-4 right-4 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                    onClick={() => {
+                                                        const current = [...field.state.value]
+                                                        current.splice(index, 1)
+                                                        field.handleChange(current)
+                                                    }}
+                                                >
+                                                    <Trash2 size={18} />
+                                                </Button>
+                                            )}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                <div className="space-y-2">
+                                                    <FieldLabel>Qualification / Degree</FieldLabel>
+                                                    {isEditing ? (
+                                                        <Input
+                                                            value={item.qualification}
+                                                            onChange={(e) => {
+                                                                const current = [...field.state.value]
+                                                                current[index].qualification = e.target.value
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="Bachelor's in CS"
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.qualification || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <FieldLabel>Institute Name</FieldLabel>
+                                                    {isEditing ? (
+                                                        <Input
+                                                            value={item.instituteName}
+                                                            onChange={(e) => {
+                                                                const current = [...field.state.value]
+                                                                current[index].instituteName = e.target.value
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="University of..."
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.instituteName || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <FieldLabel>GPA</FieldLabel>
+                                                    {isEditing ? (
+                                                        <Input
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={item.gpa}
+                                                            onChange={(e) => {
+                                                                const current = [...field.state.value]
+                                                                current[index].gpa = e.target.value
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="3.8"
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.gpa || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <FieldLabel>Start Date</FieldLabel>
+                                                    {isEditing ? (
+                                                        <DatePicker
+                                                            value={item.startDate}
+                                                            onChange={(v) => {
+                                                                const current = [...field.state.value]
+                                                                current[index].startDate = v
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="Select Start Date"
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.startDate || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <FieldLabel>End Date</FieldLabel>
+                                                    {isEditing ? (
+                                                        <DatePicker
+                                                            value={item.endDate}
+                                                            onChange={(v) => {
+                                                                const current = [...field.state.value]
+                                                                if (current[index].startDate && v < current[index].startDate) {
+                                                                    // Validation: End Date cannot be before Start Date
+                                                                    return
+                                                                }
+                                                                current[index].endDate = v
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="Select End Date"
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.endDate || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                                <div className="col-span-1 sm:col-span-2 lg:col-span-1 space-y-2 opacity-0 pointer-events-none hidden lg:block">
+                                                    {/* Spacer */}
+                                                </div>
+                                                <div className="col-span-1 sm:col-span-2 lg:col-span-3 space-y-2">
+                                                    <FieldLabel>Honors / Achievements</FieldLabel>
+                                                    {isEditing ? (
+                                                        <textarea
+                                                            className="w-full min-h-[80px] p-3 rounded-lg bg-white/50 border border-border focus:ring-1 focus:ring-purple-400 outline-none transition-all"
+                                                            value={item.about}
+                                                            onChange={(e) => {
+                                                                const current = [...field.state.value]
+                                                                current[index].about = e.target.value
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="Dean's list, Scholarships, etc."
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium whitespace-pre-wrap">{item.about || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {(field.state.value || []).length === 0 && (
+                                        <div className="text-center py-12 bg-white/10 rounded-xl border border-dashed border-white/30">
+                                            <Typography className="text-gray-500">No qualifications added yet.</Typography>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </form.Field>
+                    </BluryCard>
+                )}
+
+                {role === "STUDENT" && (
+                    <BluryCard isCentered={false} childClass="space-y-8" className="rounded-2xl">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/20 pb-4">
+                            <div className="flex items-center gap-3">
+                                <Briefcase className="size-5 text-gray-700" />
+                                <Typography font="title">Work Experience</Typography>
+                            </div>
+                            {isEditing && (
+                                <form.Field name="experiences">
+                                    {(field) => (
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            className="w-full sm:w-auto gap-2 border border-brand-byzantine text-brand-byzantine hover:bg-brand-byzantine/5"
+                                            onClick={() => {
+                                                const current = field.state.value || []
+                                                field.handleChange([...current, {
+                                                    name: "",
+                                                    organization: "",
+                                                    industry: "",
+                                                    country: "",
+                                                    startDate: "",
+                                                    endDate: "",
+                                                    responsibility: ""
+                                                }])
+                                                form.setFieldValue("hasExperience", "yes")
+                                            }}
+                                        >
+                                            <Plus size={16} /> Add Experience
+                                        </Button>
+                                    )}
+                                </form.Field>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <form.Field name="academicGap">
+                                {(field) => (
+                                    <F field={field} label="Academic Gap (Years)">
+                                        {isEditing ? (
+                                            <Input
+                                                type="number"
+                                                value={field.state.value}
+                                                onChange={(e) => field.handleChange(e.target.value)}
+                                                placeholder="0"
+                                            />
+                                        ) : (
+                                            <div className="p-3 bg-white/10 rounded-lg font-medium">{field.state.value || "0"}</div>
+                                        )}
+                                    </F>
+                                )}
+                            </form.Field>
+                        </div>
+
+                        <form.Field name="experiences">
+                            {(field) => (
+                                <div className="space-y-6">
+                                    {(field.state.value || []).map((item: any, index: number) => (
+                                        <div key={index} className="relative p-6 bg-white/20 rounded-xl border border-white/30 space-y-4">
+                                            {isEditing && (
+                                                <Button
+                                                    type="button"
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="absolute top-4 right-4 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                    onClick={() => {
+                                                        const current = [...field.state.value]
+                                                        current.splice(index, 1)
+                                                        field.handleChange(current)
+                                                        if (current.length === 0) {
+                                                            form.setFieldValue("hasExperience", "no")
+                                                        }
+                                                    }}
+                                                >
+                                                    <Trash2 size={18} />
+                                                </Button>
+                                            )}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                <div className="space-y-2">
+                                                    <FieldLabel>Job Title</FieldLabel>
+                                                    {isEditing ? (
+                                                        <Input
+                                                            value={item.name}
+                                                            onChange={(e) => {
+                                                                const current = [...field.state.value]
+                                                                current[index].name = e.target.value
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="Software Engineer"
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.name || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <FieldLabel>Organization</FieldLabel>
+                                                    {isEditing ? (
+                                                        <Input
+                                                            value={item.organization}
+                                                            onChange={(e) => {
+                                                                const current = [...field.state.value]
+                                                                current[index].organization = e.target.value
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="Google"
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.organization || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <FieldLabel>Industry</FieldLabel>
+                                                    {isEditing ? (
+                                                        <Input
+                                                            value={item.industry}
+                                                            onChange={(e) => {
+                                                                const current = [...field.state.value]
+                                                                current[index].industry = e.target.value
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="Technology"
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.industry || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <FieldLabel>Country</FieldLabel>
+                                                    {isEditing ? (
+                                                        <Input
+                                                            value={item.country}
+                                                            onChange={(e) => {
+                                                                const current = [...field.state.value]
+                                                                current[index].country = e.target.value
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="USA"
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.country || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <FieldLabel>Start Date</FieldLabel>
+                                                    {isEditing ? (
+                                                        <DatePicker
+                                                            value={item.startDate}
+                                                            onChange={(v) => {
+                                                                const current = [...field.state.value]
+                                                                current[index].startDate = v
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="Select Start Date"
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.startDate || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <FieldLabel>End Date</FieldLabel>
+                                                    {isEditing ? (
+                                                        <DatePicker
+                                                            value={item.endDate}
+                                                            onChange={(v) => {
+                                                                const current = [...field.state.value]
+                                                                if (current[index].startDate && v < current[index].startDate) {
+                                                                    // Validation: End Date cannot be before Start Date
+                                                                    return
+                                                                }
+                                                                current[index].endDate = v
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="Select End Date"
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.endDate || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                                <div className="col-span-1 sm:col-span-2 lg:col-span-3 space-y-2">
+                                                    <FieldLabel>Responsibilities</FieldLabel>
+                                                    {isEditing ? (
+                                                        <textarea
+                                                            className="w-full min-h-[80px] p-3 rounded-lg bg-white/50 border border-border focus:ring-1 focus:ring-purple-400 outline-none transition-all"
+                                                            value={item.responsibility}
+                                                            onChange={(e) => {
+                                                                const current = [...field.state.value]
+                                                                current[index].responsibility = e.target.value
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="Built scalable systems..."
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium whitespace-pre-wrap">{item.responsibility || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {(field.state.value || []).length === 0 && (
+                                        <div className="text-center py-12 bg-white/10 rounded-xl border border-dashed border-white/30">
+                                            <Typography className="text-gray-500">No work experience added yet.</Typography>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </form.Field>
                     </BluryCard>
                 )}
 
@@ -583,13 +1062,13 @@ export default function ProfilePage() {
                         </div>
                     </BluryCard>
                 )}
-
-                <div className="flex justify-end gap-4 pt-4">
+ 
+                <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4 pb-12">
                     {isEditing && (
                         <Button
                             type="button"
                             variant="outline"
-                            className="px-8 py-6 rounded-xl border font-bold border-brand-byzantine text-brand-byzantine hover:bg-brand-byzantine/5 hover:text-brand-byzantine"
+                            className="w-full sm:w-auto sm:px-8 py-6 rounded-xl border font-bold border-brand-byzantine text-brand-byzantine hover:bg-brand-byzantine/5 hover:text-brand-byzantine"
                             onClick={() => {
                                 form.reset()
                                 setIsEditing(false)
@@ -598,13 +1077,13 @@ export default function ProfilePage() {
                             Cancel
                         </Button>
                     )}
-
+ 
                     {isEditing && (
                         <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting, s.isDirty]}>
                             {([canSubmit, isSubmitting, isDirty]) => (
                                 <Button
                                     type="submit"
-                                    className="px-12 py-6 bg-brand-byzantine hover:bg-brand-byzantine/80"
+                                    className="w-full sm:w-auto sm:px-12 py-6 bg-brand-byzantine hover:bg-brand-byzantine/80"
                                     disabled={!canSubmit || isSubmitting || mutation.isPending || !isDirty}
                                 >
                                     {isSubmitting || mutation.isPending ? "Updating..." : "Save Changes"}

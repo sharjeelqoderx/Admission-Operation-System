@@ -192,7 +192,7 @@ export const profileStep1Schema = z.object({
             return age >= 10 && age <= 100;
         }, "Invalid age"),
 
-    gender: z.enum(Gender, {
+    gender: z.nativeEnum(Gender, {
         message: "Select gender",
     }),
     country: z

@@ -71,9 +71,8 @@ export async function GET() {
                 highestDegree: academic.qualification ?? "",
                 instituteName: academic.institution_name ?? "",
                 gpa: academic.cumulative_gpa ? String(academic.cumulative_gpa) : "",
-                desiredProgram: "",
-                campus: "",
-                englishTest: "",
+                startDate: academic.start_date ?? "",
+                endDate: academic.end_date ?? "",
                 about: academic.honors ?? "",
             })) : null,
             experience: experiences && experiences.length > 0 ? {

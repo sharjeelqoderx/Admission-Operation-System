@@ -49,6 +49,8 @@ export async function POST(req: NextRequest) {
                     .from("profile")
                     .update({
                         ...(avatar_url && { avatar_url }),
+                        name: data.fullName,
+                        phone: data.phone,
                         date_of_birth: validData.dob,
                         gender: validData.gender.toUpperCase(),
                     })
