@@ -37,7 +37,7 @@ export default function DocumentPage() {
         router.push(`${pathname}?${params.toString()}`)
     }, [debouncedSearch])
 
-    const { data: documents, isLoading, isError, refetch } = useQuery({
+    const { data: documentsResponse, isLoading, isError, refetch } = useQuery({
         queryKey: ["documents", urlSearch, status],
         queryFn: async () => {
             const params = new URLSearchParams()
@@ -47,7 +47,7 @@ export default function DocumentPage() {
             const res = await fetch(`/api/document?${params.toString()}`)
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error ?? "Failed to fetch")
-            return json.data
+            return json
         }
     })
 
@@ -62,7 +62,7 @@ export default function DocumentPage() {
     }
 
     return (
-        <main className="space-y-8">
+        <div className="space-y-6">
             <BluryCard
                 isCentered={false}
                 blurAmount="backdrop-blur-lg"
@@ -75,7 +75,8 @@ export default function DocumentPage() {
                         All documents
                     </Typography>
                     <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
-                        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s
+                        View and manage all uploaded documents. 
+                        {documentsResponse?.role === "STUDENT" ? " Here you can see your own documents and their review status." : " Agents can see documents for all their students."}
                     </Typography>
                 </div>
 
@@ -90,30 +91,26 @@ export default function DocumentPage() {
                 isCentered={false}
                 blurAmount="backdrop-blur-lg"
                 blendColorClass="bg-white/10"
-                className="rounded-xl p-4!"
-                childClass="p-0! flex! justify-between items-center flex-wrap gap-4"
+                className="rounded-xl py-6"
+                childClass="flex flex-wrap gap-4 items-center justify-between"
             >
-                <div className="relative w-full max-w-[350px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                    <Input
-                        placeholder="Search student name..."
-                        className="pl-10 h-11 rounded-lg border-none focus-visible:ring-brand-byzantine"
-                        value={localSearch}
-                        onChange={(e) => setLocalSearch(e.target.value)}
-                    />
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <Typography as="span" font="small" className="text-gray-400 uppercase tracking-widest">
-                        Status Filter
-                    </Typography>
+                <div className="flex flex-wrap gap-4 items-center flex-1">
+                    <div className="relative flex-1 min-w-[200px] max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+                        <Input
+                            placeholder="Search documents..."
+                            className="pl-10 h-11 bg-white/50 border-white/20 focus:bg-white"
+                            value={localSearch}
+                            onChange={(e) => setLocalSearch(e.target.value)}
+                        />
+                    </div>
 
                     <Select value={status} onValueChange={updateStatus}>
-                        <SelectTrigger className="w-[180px] h-11 rounded-xl border-none bg-gray-50 focus:ring-brand-byzantine/20">
-                            <SelectValue placeholder="All Status" />
+                        <SelectTrigger className="w-[180px] h-11 bg-white/50 border-white/20 focus:bg-white">
+                            <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="ALL">All Documents</SelectItem>
+                            <SelectItem value="ALL">All Status</SelectItem>
                             <SelectItem value="PENDING">Pending</SelectItem>
                             <SelectItem value="APPROVED">Approved</SelectItem>
                             <SelectItem value="REJECTED">Rejected</SelectItem>
@@ -122,16 +119,13 @@ export default function DocumentPage() {
                 </div>
             </BluryCard>
 
-            {isLoading ? (
-                <PageLoader label="Searching documents..." />
-            ) : (
-                <DocumentTable
-                    rows={documents ?? []}
-                    isLoading={isLoading}
-                    isError={isError}
-                    onRetry={refetch}
-                />
-            )}
-        </main>
+            <DocumentTable
+                rows={documentsResponse?.data || []}
+                role={documentsResponse?.role}
+                isLoading={isLoading}
+                isError={isError}
+                onRetry={refetch}
+            />
+        </div>
     )
 }

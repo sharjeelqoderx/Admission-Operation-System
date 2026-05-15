@@ -10,19 +10,19 @@ import { ApplicationsListTable, type ApplicationRow } from "./_component/Applica
 import { BluryCard } from "@/components/shared/blury-card"
 
 export default function ApplicationsPage() {
-    const { data, isLoading, isError, refetch } = useQuery({
+    const { data: response, isLoading, isError, refetch } = useQuery({
         queryKey: ["applications"],
         queryFn: async () => {
             const res = await fetch("/api/application")
             if (!res.ok) throw new Error("Failed to fetch applications")
             const json = await res.json()
-            return json.data as ApplicationRow[]
+            return json
         },
     })
 
     const applications = useMemo(
-        () => (Array.isArray(data) ? data : []),
-        [data]
+        () => (Array.isArray(response?.data) ? response.data : []),
+        [response]
     )
 
     const handleRetry = useCallback(() => { refetch() }, [refetch])
@@ -34,17 +34,21 @@ export default function ApplicationsPage() {
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div className="space-y-1 max-w-2xl">
                     <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
-                        All Applications
+                        {response?.role === "STUDENT" ? "My Applications" : "All Applications"}
                     </Typography>
                     <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
-                        Track and manage all student applications submitted through your agency.
+                        {response?.role === "STUDENT" 
+                            ? "Track your submitted applications and their current status."
+                            : "Track and manage all student applications submitted through your agency."}
                     </Typography>
                 </div>
-                <Link href="/dashboard/application/new">
-                    <Button className="px-6 gap-2 font-normal">
-                        <Plus size={24} className="text-white" /> New Application
-                    </Button>
-                </Link>
+                {response?.role !== "STUDENT" && (
+                    <Link href="/dashboard/application/new">
+                        <Button className="px-6 gap-2 font-normal">
+                            <Plus size={24} className="text-white" /> New Application
+                        </Button>
+                    </Link>
+                )}
             </div>
 
 
@@ -84,7 +88,7 @@ export default function ApplicationsPage() {
                             Pending
                         </Typography>
                         <Typography as="p" className="text-[28px] font-extrabold text-gray-900 leading-none">
-                            {isLoading ? "—" : applications.filter((a) => a.status === "PENDING").length}
+                            {isLoading ? "—" : applications.filter((a: any) => a.status === "PENDING").length}
                         </Typography>
                     </div>
                 </div>
@@ -92,6 +96,7 @@ export default function ApplicationsPage() {
 
             <ApplicationsListTable
                 applications={applications}
+                role={response?.role}
                 isLoading={isLoading}
                 isError={isError}
                 onRetry={handleRetry}

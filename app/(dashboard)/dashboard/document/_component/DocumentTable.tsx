@@ -23,13 +23,14 @@ type Row = {
 }
 
 type Props = {
-    rows: Row[]
+    rows: any[]
+    role?: "AGENT" | "STUDENT"
     isLoading: boolean
     isError: boolean
     onRetry: () => void
 }
 
-export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
+export function DocumentTable({ rows, role = "AGENT", isLoading, isError, onRetry }: Props) {
     const [currentPage, setCurrentPage] = useState(1)
     const pageSize = 10
 
@@ -107,9 +108,19 @@ export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
                     <Table className="w-full text-left border-collapse min-w-[700px]">
                         <TableHeader>
                             <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
-                                <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Student Name</Typography></TableHead>
-                                <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Number of Documents</Typography></TableHead>
-                                <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Last Uploaded At</Typography></TableHead>
+                                {role === "AGENT" ? (
+                                    <>
+                                        <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Student Name</Typography></TableHead>
+                                        <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Number of Documents</Typography></TableHead>
+                                        <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Last Uploaded At</Typography></TableHead>
+                                    </>
+                                ) : (
+                                    <>
+                                        <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Document Name</Typography></TableHead>
+                                        <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Number of Files</Typography></TableHead>
+                                        <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Upload Date</Typography></TableHead>
+                                    </>
+                                )}
                                 <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Status</Typography></TableHead>
                                 <TableHead className="px-6 py-5"><Typography font="small" className="uppercase tracking-widest text-gray-600">Action</Typography></TableHead>
                             </TableRow>
@@ -118,52 +129,55 @@ export function DocumentTable({ rows, isLoading, isError, onRetry }: Props) {
 
                         <TableBody>
                             {currentRows.map((row) => (
-                                <TableRow key={row.student_id} className="hover:bg-white/10 transition-colors">
+                                <TableRow key={row.id || row.student_id} className="hover:bg-white/10 transition-colors">
                                     <TableCell className="px-6 py-5">
                                         <div className="flex items-center gap-3">
-                                            <Avatar className="size-9 rounded-xl border-2 border-white/50">
-                                                <AvatarImage src={row.avatar_url ?? undefined} alt={row.student_name} className="rounded-xl" />
-                                                <AvatarFallback className="rounded-xl text-[11px] font-bold bg-brand-byzantine/10 text-brand-byzantine">
-                                                    {row.student_name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <Typography as="span" font="sub-text" className="font-bold text-gray-900">
-                                                {row.student_name}
-                                            </Typography>
-
+                                            {role === "AGENT" ? (
+                                                <>
+                                                    <Avatar className="size-9 rounded-xl border-2 border-white/50">
+                                                        <AvatarImage src={row.avatar_url ?? undefined} alt={row.student_name} className="rounded-xl" />
+                                                        <AvatarFallback className="rounded-xl text-[11px] font-bold bg-brand-byzantine/10 text-brand-byzantine">
+                                                            {row.student_name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <Typography as="span" font="sub-text" className="font-bold text-gray-900">
+                                                        {row.student_name}
+                                                    </Typography>
+                                                </>
+                                            ) : (
+                                                <Typography as="span" font="sub-text" className="font-bold text-gray-900">
+                                                    {row.name}
+                                                </Typography>
+                                            )}
                                         </div>
                                     </TableCell>
 
                                     <TableCell className="px-6 py-5">
                                         <div className="flex items-center gap-2">
                                             <Typography as="span" font="sub-text" className="font-bold text-gray-800">
-                                                {row.document_count}
+                                                {role === "AGENT" ? row.document_count : row.files_count}
                                             </Typography>
-
                                         </div>
                                     </TableCell>
 
                                     <TableCell className="px-6 py-5">
                                         <Typography as="span" font="sub-text" className="text-gray-600">
-                                            {row.last_uploaded_at
-                                                ? new Date(row.last_uploaded_at).toLocaleDateString("en-GB", {
-                                                    day: "2-digit", month: "short", year: "numeric",
-                                                })
-                                                : "—"}
+                                            {role === "AGENT" 
+                                                ? (row.last_uploaded_at ? new Date(row.last_uploaded_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—")
+                                                : (row.created_at ? new Date(row.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—")
+                                            }
                                         </Typography>
-
                                     </TableCell>
 
                                     <TableCell className="px-6 py-5">
-                                        {row.last_doc_status
-                                            ? <StatusBadge status={row.last_doc_status} />
+                                        {(role === "AGENT" ? row.last_doc_status : row.status)
+                                            ? <StatusBadge status={role === "AGENT" ? row.last_doc_status : row.status} />
                                             : <Typography as="span" font="sub-text" className="text-gray-400">—</Typography>
                                         }
                                     </TableCell>
 
-
                                     <TableCell className="px-6 py-5">
-                                        <Link href={`/dashboard/document/student/${row.student_id}`}>
+                                        <Link href={role === "AGENT" ? `/dashboard/document/student/${row.student_id}` : `/dashboard/document/student/${row.profile_id}/${row.id}`}>
                                             <Button variant="outline" className="h-9 px-5 gap-2">
                                                 View
                                             </Button>

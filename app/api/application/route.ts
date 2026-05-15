@@ -29,11 +29,20 @@ export async function GET(req: NextRequest) {
             `)
             .order("created_at", { ascending: false });
 
+        const { data: profile } = await supabase
+            .from("profile")
+            .select("role")
+            .eq("id", user.id)
+            .single();
+
         if (studentId) {
             // Filter by specific student (used on student detail page)
             query = query.eq("profile_id", studentId);
+        } else if (profile?.role === "STUDENT") {
+            // Students see their own applications
+            query = query.eq("profile_id", user.id);
         } else {
-            // Default: all applications submitted by this agent
+            // Agents see applications they submitted
             query = query.eq("submitted_by_profile_id", user.id);
         }
 
@@ -48,7 +57,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Failed to fetch applications" }, { status: 500 });
         }
 
-        return NextResponse.json({ data: applications ?? [] }, { status: 200 });
+        return NextResponse.json({ data: applications ?? [], role: profile?.role }, { status: 200 });
     } catch (e) {
         console.error("GET /api/application error:", e);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -77,6 +86,19 @@ export async function POST(req: NextRequest) {
         if (!profile) {
             return NextResponse.json({ error: "Profile not found" }, { status: 403 });
         }
+ 
+        // Check for existing application for this student and program
+        const { data: existingApp } = await supabase
+            .from("application")
+            .select("id")
+            .eq("profile_id", validatedData.profile_id)
+            .eq("program_id", validatedData.program_id)
+            .neq("status", "REJECTED") // Allow re-application if previous was rejected
+            .maybeSingle();
+ 
+        if (existingApp) {
+            return NextResponse.json({ error: "Application is already created for this program" }, { status: 400 });
+        }
 
         // Insert into application table using the regular supabase client (authenticated as the user)
         const { data: application, error: insertError } = await supabase
@@ -85,6 +107,9 @@ export async function POST(req: NextRequest) {
                 profile_id: validatedData.profile_id,
                 program_id: validatedData.program_id,
                 university_id: validatedData.university_id,
+                intake_date: validatedData.intake_date,
+                tuition_fee: validatedData.tuition_fee,
+                currency: validatedData.currency,
                 status: "PENDING",
                 submitted_by_profile_id: user.id,
             })

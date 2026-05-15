@@ -42,7 +42,7 @@ export default function DynamicProgramDetailsPage() {
     const junction = program?.campus_program_junction?.[0]
 
     return (
-        <div className="max-w-[1200px] mx-auto space-y-12 pb-20 px-6 lg:px-12 pt-8">
+        <div className="space-y-12">
 
             {/* Header */}
             <div className="space-y-2">
