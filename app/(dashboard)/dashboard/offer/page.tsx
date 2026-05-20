@@ -1,7 +1,8 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useMemo } from "react"
 import { Search } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Input } from "@/components/ui/input"
@@ -9,6 +10,21 @@ import { OfferTable } from "./_component/OfferTable"
 
 export default function OfferPage() {
     const [searchQuery, setSearchQuery] = useState("")
+
+    const { data: response, isLoading, isError } = useQuery({
+        queryKey: ["offers"],
+        queryFn: async () => {
+            const res = await fetch("/api/offer")
+            if (!res.ok) throw new Error("Failed to fetch offers")
+            const json = await res.json()
+            return json
+        },
+    })
+
+    const offers = useMemo(
+        () => (Array.isArray(response?.data) ? response.data : []),
+        [response]
+    )
 
     return (
         <main className="relative space-y-6">
@@ -44,7 +60,12 @@ export default function OfferPage() {
             </div>
 
             {/* ── Table ── */}
-            <OfferTable />
+            <OfferTable 
+                offers={offers}
+                isLoading={isLoading}
+                isError={isError}
+                searchQuery={searchQuery}
+            />
         </main >
     )
 }

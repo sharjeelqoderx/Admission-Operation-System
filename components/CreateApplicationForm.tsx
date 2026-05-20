@@ -173,7 +173,6 @@ export function CreateApplicationForm() {
 
 
 
-    // Sub-queries for details
     const selectedStudentId = useStore(form.store, (s: any) => s.values.profile_id);
 
     const { data: studentDetailsResponse } = useQuery({

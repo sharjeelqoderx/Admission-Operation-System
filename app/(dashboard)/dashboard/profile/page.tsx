@@ -38,6 +38,86 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 
+type StudentTab = "student-details" | "academic" | "experience"
+type EditSection = "basic" | StudentTab
+
+const STUDENT_TABS: { id: StudentTab; label: string; icon: React.ComponentType<{ className?: string; size?: number }> }[] = [
+    { id: "student-details", label: "Student Details", icon: Globe },
+    { id: "academic", label: "Academic Qualifications", icon: GraduationCap },
+    { id: "experience", label: "Work Experience", icon: Briefcase },
+]
+
+function buildStudentProfileFormData(
+    value: Record<string, unknown>,
+    user: { avatarUrl?: string | null },
+    extra?: { city?: string; address?: string; zip_code?: string }
+) {
+    const fd = new FormData()
+    fd.append("fullName", String(value.fullName ?? ""))
+    fd.append("phone", String(value.phone ?? ""))
+    fd.append("dob", String(value.date_of_birth ?? ""))
+    fd.append("gender", String(value.gender ?? "").toLowerCase())
+    fd.append("country", String(value.country ?? ""))
+    fd.append("nationality", String(value.nationality ?? ""))
+    fd.append("guardianEmail", String(value.guardian_email ?? ""))
+    fd.append("guardianPhone", String(value.guardian_phone ?? ""))
+    if (extra?.city !== undefined) fd.append("city", extra.city)
+    if (extra?.address !== undefined) fd.append("address", extra.address)
+    if (extra?.zip_code !== undefined) fd.append("zip_code", extra.zip_code)
+    const avatar = value.avatar
+    if (avatar instanceof File) {
+        fd.append("avatar_url", avatar)
+    } else if (user?.avatarUrl) {
+        fd.append("avatar_url", user.avatarUrl)
+    }
+    return fd
+}
+
+const EDIT_PROFILE_BUTTON_CLASS =
+    "bg-brand-byzantine hover:bg-brand-byzantine/90 text-white gap-2 h-12 px-6 rounded-xl w-full sm:w-auto shadow-lg shadow-brand-byzantine/20"
+
+function ProfileEditButton({ onClick }: { onClick: () => void }) {
+    return (
+        <Button type="button" onClick={onClick} className={EDIT_PROFILE_BUTTON_CLASS}>
+            <Edit2 size={18} />
+            Edit Profile
+        </Button>
+    )
+}
+
+function SectionSaveActions({
+    onCancel,
+    onSave,
+    isSaving,
+    isDirty,
+}: {
+    onCancel: () => void
+    onSave: () => void
+    isSaving: boolean
+    isDirty: boolean
+}) {
+    return (
+        <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-white/20">
+            <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto sm:px-8 py-6 rounded-xl border font-bold border-brand-byzantine text-brand-byzantine hover:bg-brand-byzantine/5 hover:text-brand-byzantine"
+                onClick={onCancel}
+            >
+                Cancel
+            </Button>
+            <Button
+                type="button"
+                className="w-full sm:w-auto sm:px-12 py-6 bg-brand-byzantine hover:bg-brand-byzantine/80"
+                disabled={isSaving || !isDirty}
+                onClick={onSave}
+            >
+                {isSaving ? "Updating..." : "Save Changes"}
+            </Button>
+        </div>
+    )
+}
+
 function F({ field, label, children }: { field: any; label: string; children: React.ReactNode }) {
     const isSubmitted = field.form.state.isSubmitted
     const isInvalid = isSubmitted && !field.state.meta.isValid
@@ -83,7 +163,52 @@ export default function ProfilePage() {
         },
     })
 
+    const academicMutation = useMutation({
+        mutationFn: async (payload: { userId: string; academics: unknown[] }) => {
+            const res = await fetch("/api/academic", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            })
+            if (!res.ok) {
+                const json = await res.json()
+                throw new Error(json?.error ?? "Failed to update academics")
+            }
+            return res.json()
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["me"] })
+            setShowSuccess(true)
+        },
+    })
+
+    const experienceMutation = useMutation({
+        mutationFn: async (payload: {
+            userId: string
+            academicGap: number
+            hasExperience: string
+            experiences: unknown[]
+        }) => {
+            const res = await fetch("/api/experience", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            })
+            if (!res.ok) {
+                const json = await res.json()
+                throw new Error(json?.error ?? "Failed to update experience")
+            }
+            return res.json()
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["me"] })
+            setShowSuccess(true)
+        },
+    })
+
     const [isEditing, setIsEditing] = useState(false)
+    const [activeTab, setActiveTab] = useState<StudentTab>("student-details")
+    const [editingSection, setEditingSection] = useState<EditSection | null>(null)
     const form = useForm({
         defaultValues: {
             fullName: user?.fullName ?? "",
@@ -126,30 +251,12 @@ export default function ProfilePage() {
             })) || []
         },
         onSubmit: async ({ value }) => {
-            // 1. Update Profile
             const fd = new FormData()
             Object.entries(value).forEach(([key, val]) => {
                 let finalKey = key
-                if (role === "STUDENT") {
-                    if (key === "date_of_birth") finalKey = "dob"
-                    if (key === "guardian_email") finalKey = "guardianEmail"
-                    if (key === "guardian_phone") finalKey = "guardianPhone"
-                    if (key === "avatar") {
-                        finalKey = "avatar_url"
-                        // If no new file, send the current URL to satisfy the schema
-                        if (!val && user?.avatarUrl) {
-                            fd.append(finalKey, user.avatarUrl)
-                            return
-                        }
-                    }
-                    if (key === "gender") {
-                        val = String(val).toLowerCase()
-                    }
-                } else {
-                    if (key === "avatar") finalKey = "avatar"
-                }
+                if (key === "avatar") finalKey = "avatar"
 
-                if (finalKey === "avatar_url" || finalKey === "avatar") {
+                if (finalKey === "avatar") {
                     if (val instanceof File) fd.append(finalKey, val)
                 } else if (
                     val !== null &&
@@ -158,53 +265,81 @@ export default function ProfilePage() {
                     key !== "academics" &&
                     key !== "experiences" &&
                     key !== "academicGap" &&
-                    key !== "hasExperience"
+                    key !== "hasExperience" &&
+                    key !== "avatar"
                 ) {
                     fd.append(finalKey, String(val))
                 }
             })
             await mutation.mutateAsync(fd)
-
-            // 2. Update Student Specifics (Academics & Experience)
-            if (role === "STUDENT") {
-                try {
-                    // Update Academic
-                    await fetch("/api/academic", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            userId: user.id,
-                            academics: value.academics.map((a: any) => ({
-                                ...a,
-                                gpa: parseFloat(a.gpa) || 0
-                            }))
-                        })
-                    })
-
-                    // Update Experience
-                    await fetch("/api/experience", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            userId: user.id,
-                            academicGap: parseInt(value.academicGap) || 0,
-                            hasExperience: value.hasExperience,
-                            experiences: value.experiences
-                        })
-                    })
-                } catch (err) {
-                    console.error("Failed to update extra student info", err)
-                }
-            }
-
             setIsEditing(false)
         },
     })
+
+    const cancelEditing = () => {
+        form.reset()
+        setEditingSection(null)
+        setIsEditing(false)
+    }
+
+    const saveBasicInfo = async () => {
+        const value = form.state.values
+        const fd = buildStudentProfileFormData(value, user)
+        await mutation.mutateAsync(fd)
+        setEditingSection(null)
+    }
+
+    const saveStudentDetails = async () => {
+        const value = form.state.values
+        const fd = buildStudentProfileFormData(value, user, {
+            city: value.city,
+            address: value.address,
+            zip_code: value.zip_code,
+        })
+        await mutation.mutateAsync(fd)
+        setEditingSection(null)
+    }
+
+    const saveAcademics = async () => {
+        const value = form.state.values
+        await academicMutation.mutateAsync({
+            userId: user.id,
+            academics: value.academics.map((a: { gpa: string }) => ({
+                ...a,
+                gpa: parseFloat(a.gpa) || 0,
+            })),
+        })
+        setEditingSection(null)
+    }
+
+    const saveExperience = async () => {
+        const value = form.state.values
+        await experienceMutation.mutateAsync({
+            userId: user.id,
+            academicGap: parseInt(value.academicGap) || 0,
+            hasExperience: value.hasExperience,
+            experiences: value.experiences,
+        })
+        setEditingSection(null)
+    }
 
     if (isLoading) return <PageLoader label="Loading your profile..." />
     if (isError) return <ErrorView message="Failed to load profile. Please try again." />
 
     const role = user?.role
+    const isStudent = role === "STUDENT"
+    const isEditingBasic = isStudent ? editingSection === "basic" : isEditing
+    const isEditingStudentDetails = editingSection === "student-details"
+    const isEditingAcademic = editingSection === "academic"
+    const isEditingExperience = editingSection === "experience"
+
+    const handleTabChange = (tab: StudentTab) => {
+        if (editingSection) {
+            form.reset()
+            setEditingSection(null)
+        }
+        setActiveTab(tab)
+    }
 
     return (
         <main className="mx-auto space-y-8">
@@ -217,23 +352,22 @@ export default function ProfilePage() {
                         Manage your personal information and academic background.
                     </Typography>
                 </div>
-                {!isEditing && (
-                    <Button
-                        onClick={() => setIsEditing(true)}
-                        className="bg-brand-byzantine hover:bg-brand-byzantine/90 text-white gap-2 h-12 px-6 rounded-xl w-full sm:w-auto shadow-lg shadow-brand-byzantine/20"
-                    >
-                        <Edit2 size={18} />
-                        Edit Profile
-                    </Button>
+                {!isStudent && !isEditing && (
+                    <ProfileEditButton onClick={() => setIsEditing(true)} />
                 )}
             </div>
 
             <form onSubmit={(e) => { e.preventDefault(); form.handleSubmit() }} className="space-y-8">
                 {/* ── Basic Profile Section ── */}
                 <BluryCard isCentered={false} childClass="space-y-8" className="rounded-2xl">
-                    <div className="flex items-center gap-3 border-b border-white/20 pb-4">
-                        <User className="size-5 text-gray-700" />
-                        <Typography font="title">Basic Information</Typography>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/20 pb-4">
+                        <div className="flex items-center gap-3">
+                            <User className="size-5 text-gray-700" />
+                            <Typography font="title">Basic Information</Typography>
+                        </div>
+                        {isStudent && editingSection === null && (
+                            <ProfileEditButton onClick={() => setEditingSection("basic")} />
+                        )}
                     </div>
 
                     <div className="flex flex-col lg:flex-row gap-8 items-center lg:items-start text-center lg:text-left">
@@ -245,13 +379,13 @@ export default function ProfilePage() {
                                             value={field.state.value ?? (user?.avatarUrl || null)}
                                             onChange={(file) => field.handleChange(file as File)}
                                             message="Upload Photo"
-                                            disabled={!isEditing}
+                                            disabled={!isEditingBasic}
                                             className={cn(
                                                 "size-40 sm:size-48 overflow-hidden border-4 border-white/40 shadow-xl rounded-2xl transition-all duration-300",
-                                                isEditing ? "group-hover:border-brand-byzantine/50 group-hover:shadow-brand-byzantine/20" : "opacity-90 pointer-events-none"
+                                                isEditingBasic ? "group-hover:border-brand-byzantine/50 group-hover:shadow-brand-byzantine/20" : "opacity-90 pointer-events-none"
                                             )}
                                         />
-                                        {isEditing && (
+                                        {isEditingBasic && (
                                             <div className="absolute -bottom-2 -right-2 bg-brand-byzantine text-white p-2 rounded-lg shadow-lg">
                                                 <Edit2 size={16} />
                                             </div>
@@ -265,7 +399,7 @@ export default function ProfilePage() {
                             <form.Field name="fullName">
                                 {(field) => (
                                     <F field={field} label="Full Name">
-                                        {isEditing ? (
+                                        {isEditingBasic ? (
                                             <Input
                                                 value={field.state.value}
                                                 onBlur={field.handleBlur}
@@ -292,7 +426,7 @@ export default function ProfilePage() {
                             <form.Field name="phone">
                                 {(field) => (
                                     <F field={field} label="Phone Number">
-                                        {isEditing ? (
+                                        {isEditingBasic ? (
                                             <Input
                                                 value={field.state.value}
                                                 onBlur={field.handleBlur}
@@ -312,7 +446,7 @@ export default function ProfilePage() {
                             <form.Field name="date_of_birth">
                                 {(field) => (
                                     <F field={field} label="Date of Birth">
-                                        {isEditing ? (
+                                        {isEditingBasic ? (
                                             <DatePicker
                                                 value={field.state.value}
                                                 onChange={(v) => field.handleChange(v)}
@@ -330,7 +464,7 @@ export default function ProfilePage() {
                             <form.Field name="gender">
                                 {(field) => (
                                     <F field={field} label="Gender">
-                                        {isEditing ? (
+                                        {isEditingBasic ? (
                                             <Select
                                                 value={field.state.value?.toUpperCase()}
                                                 onValueChange={(v) => field.handleChange(v)}
@@ -352,16 +486,70 @@ export default function ProfilePage() {
                             </form.Field>
                         </div>
                     </div>
+
+                    {isStudent && isEditingBasic && (
+                        <form.Subscribe selector={(s) => [s.isDirty, s.isSubmitting]}>
+                            {([isDirty, isSubmitting]) => (
+                                <SectionSaveActions
+                                    onCancel={cancelEditing}
+                                    onSave={() => void saveBasicInfo()}
+                                    isSaving={isSubmitting || mutation.isPending}
+                                    isDirty={isDirty}
+                                />
+                            )}
+                        </form.Subscribe>
+                    )}
                 </BluryCard>
 
                 {/* ── Role Specific Sections ── */}
 
                 {role === "STUDENT" && (
                     <BluryCard isCentered={false} childClass="space-y-8" className="rounded-2xl">
-                        <div className="flex items-center gap-3 border-b border-white/20 pb-4">
-                            <Globe className="size-5 text-gray-700" />
-                            <Typography font="title">Student Details</Typography>
+                        <div className="flex flex-wrap gap-2 border-b border-white/20 pb-4">
+                            {STUDENT_TABS.map((tab) => {
+                                const Icon = tab.icon
+                                const isActive = activeTab === tab.id
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        onClick={() => handleTabChange(tab.id)}
+                                        className={cn(
+                                            "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                                            isActive
+                                                ? "bg-brand-byzantine text-white shadow-sm"
+                                                : "bg-white/30 text-gray-700 hover:bg-white/50"
+                                        )}
+                                    >
+                                        <Icon size={16} />
+                                        <Typography as="span" className="text-inherit font-medium">
+                                            {tab.label}
+                                        </Typography>
+                                    </button>
+                                )
+                            })}
                         </div>
+
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                            <div className="flex items-center gap-3">
+                                {(() => {
+                                    const current = STUDENT_TABS.find((t) => t.id === activeTab)!
+                                    const Icon = current.icon
+                                    return (
+                                        <>
+                                            <Icon className="size-5 text-gray-700" />
+                                            <Typography font="title">{current.label}</Typography>
+                                        </>
+                                    )
+                                })()}
+                            </div>
+                            {editingSection === null && (
+                                <ProfileEditButton onClick={() => setEditingSection(activeTab)} />
+                            )}
+                        </div>
+
+                        {activeTab === "student-details" && (
+                        <div className="space-y-8">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             <div className="space-y-2">
                                 <FieldLabel>Student ID / Code</FieldLabel>
@@ -372,7 +560,7 @@ export default function ProfilePage() {
                             <form.Field name="nationality">
                                 {(field) => (
                                     <F field={field} label="Nationality">
-                                        {isEditing ? (
+                                        {isEditingStudentDetails ? (
                                             <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Nationality" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
@@ -385,7 +573,7 @@ export default function ProfilePage() {
                             <form.Field name="country">
                                 {(field) => (
                                     <F field={field} label="Country">
-                                        {isEditing ? (
+                                        {isEditingStudentDetails ? (
                                             <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Country" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
@@ -398,7 +586,7 @@ export default function ProfilePage() {
                             <form.Field name="city">
                                 {(field) => (
                                     <F field={field} label="City">
-                                        {isEditing ? (
+                                        {isEditingStudentDetails ? (
                                             <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your City" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
@@ -412,7 +600,7 @@ export default function ProfilePage() {
                                 <form.Field name="address">
                                     {(field) => (
                                         <F field={field} label="Full Address">
-                                            {isEditing ? (
+                                            {isEditingStudentDetails ? (
                                                 <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Full Address" />
                                             ) : (
                                                 <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
@@ -426,7 +614,7 @@ export default function ProfilePage() {
                             <form.Field name="zip_code">
                                 {(field) => (
                                     <F field={field} label="Zip Code">
-                                        {isEditing ? (
+                                        {isEditingStudentDetails ? (
                                             <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Zip Code" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
@@ -439,7 +627,7 @@ export default function ProfilePage() {
                             <form.Field name="guardian_email">
                                 {(field) => (
                                     <F field={field} label="Guardian Email">
-                                        {isEditing ? (
+                                        {isEditingStudentDetails ? (
                                             <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Guardian Email" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
@@ -452,7 +640,7 @@ export default function ProfilePage() {
                             <form.Field name="guardian_phone">
                                 {(field) => (
                                     <F field={field} label="Guardian Phone">
-                                        {isEditing ? (
+                                        {isEditingStudentDetails ? (
                                             <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Guardian Phone" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
@@ -463,17 +651,25 @@ export default function ProfilePage() {
                                 )}
                             </form.Field>
                         </div>
-                    </BluryCard>
-                )}
+                        {isEditingStudentDetails && (
+                            <form.Subscribe selector={(s) => [s.isDirty, s.isSubmitting]}>
+                                {([isDirty, isSubmitting]) => (
+                                    <SectionSaveActions
+                                        onCancel={cancelEditing}
+                                        onSave={() => void saveStudentDetails()}
+                                        isSaving={isSubmitting || mutation.isPending}
+                                        isDirty={isDirty}
+                                    />
+                                )}
+                            </form.Subscribe>
+                        )}
+                        </div>
+                        )}
 
-                {role === "STUDENT" && (
-                    <BluryCard isCentered={false} childClass="space-y-8" className="rounded-2xl">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/20 pb-4">
-                            <div className="flex items-center gap-3">
-                                <GraduationCap className="size-5 text-gray-700" />
-                                <Typography font="title">Academic Qualifications</Typography>
-                            </div>
-                            {isEditing && (
+                        {activeTab === "academic" && (
+                        <div className="space-y-6">
+                            {isEditingAcademic && (
+                                <div className="flex justify-end">
                                 <form.Field name="academics">
                                     {(field) => (
                                         <Button
@@ -497,15 +693,15 @@ export default function ProfilePage() {
                                         </Button>
                                     )}
                                 </form.Field>
+                                </div>
                             )}
-                        </div>
 
                         <form.Field name="academics">
                             {(field) => (
                                 <div className="space-y-6">
                                     {(field.state.value || []).map((item: any, index: number) => (
                                         <div key={index} className="relative p-6 bg-white/20 rounded-xl border border-white/30 space-y-4">
-                                            {isEditing && (
+                                            {isEditingAcademic && (
                                                 <Button
                                                     type="button"
                                                     size="icon"
@@ -523,7 +719,7 @@ export default function ProfilePage() {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                                 <div className="space-y-2">
                                                     <FieldLabel>Qualification / Degree</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingAcademic ? (
                                                         <Input
                                                             value={item.qualification}
                                                             onChange={(e) => {
@@ -539,7 +735,7 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <FieldLabel>Institute Name</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingAcademic ? (
                                                         <Input
                                                             value={item.instituteName}
                                                             onChange={(e) => {
@@ -555,7 +751,7 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <FieldLabel>GPA</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingAcademic ? (
                                                         <Input
                                                             type="number"
                                                             step="0.01"
@@ -573,7 +769,7 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <FieldLabel>Start Date</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingAcademic ? (
                                                         <DatePicker
                                                             value={item.startDate}
                                                             onChange={(v) => {
@@ -589,13 +785,12 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <FieldLabel>End Date</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingAcademic ? (
                                                         <DatePicker
                                                             value={item.endDate}
                                                             onChange={(v) => {
                                                                 const current = [...field.state.value]
                                                                 if (current[index].startDate && v < current[index].startDate) {
-                                                                    // Validation: End Date cannot be before Start Date
                                                                     return
                                                                 }
                                                                 current[index].endDate = v
@@ -612,7 +807,7 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div className="col-span-1 sm:col-span-2 lg:col-span-3 space-y-2">
                                                     <FieldLabel>Honors / Achievements</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingAcademic ? (
                                                         <textarea
                                                             className="w-full min-h-[80px] p-3 rounded-lg bg-white/50 border border-border focus:ring-1 focus:ring-purple-400 outline-none transition-all"
                                                             value={item.about}
@@ -638,17 +833,25 @@ export default function ProfilePage() {
                                 </div>
                             )}
                         </form.Field>
-                    </BluryCard>
-                )}
+                        {isEditingAcademic && (
+                            <form.Subscribe selector={(s) => [s.isDirty, s.isSubmitting]}>
+                                {([isDirty, isSubmitting]) => (
+                                    <SectionSaveActions
+                                        onCancel={cancelEditing}
+                                        onSave={() => void saveAcademics()}
+                                        isSaving={isSubmitting || academicMutation.isPending}
+                                        isDirty={isDirty}
+                                    />
+                                )}
+                            </form.Subscribe>
+                        )}
+                        </div>
+                        )}
 
-                {role === "STUDENT" && (
-                    <BluryCard isCentered={false} childClass="space-y-8" className="rounded-2xl">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/20 pb-4">
-                            <div className="flex items-center gap-3">
-                                <Briefcase className="size-5 text-gray-700" />
-                                <Typography font="title">Work Experience</Typography>
-                            </div>
-                            {isEditing && (
+                        {activeTab === "experience" && (
+                        <div className="space-y-6">
+                            {isEditingExperience && (
+                                <div className="flex justify-end">
                                 <form.Field name="experiences">
                                     {(field) => (
                                         <Button
@@ -674,14 +877,14 @@ export default function ProfilePage() {
                                         </Button>
                                     )}
                                 </form.Field>
+                                </div>
                             )}
-                        </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <form.Field name="academicGap">
                                 {(field) => (
                                     <F field={field} label="Academic Gap (Years)">
-                                        {isEditing ? (
+                                        {isEditingExperience ? (
                                             <Input
                                                 type="number"
                                                 value={field.state.value}
@@ -701,7 +904,7 @@ export default function ProfilePage() {
                                 <div className="space-y-6">
                                     {(field.state.value || []).map((item: any, index: number) => (
                                         <div key={index} className="relative p-6 bg-white/20 rounded-xl border border-white/30 space-y-4">
-                                            {isEditing && (
+                                            {isEditingExperience && (
                                                 <Button
                                                     type="button"
                                                     size="icon"
@@ -722,7 +925,7 @@ export default function ProfilePage() {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                                 <div className="space-y-2">
                                                     <FieldLabel>Job Title</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingExperience ? (
                                                         <Input
                                                             value={item.name}
                                                             onChange={(e) => {
@@ -738,7 +941,7 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <FieldLabel>Organization</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingExperience ? (
                                                         <Input
                                                             value={item.organization}
                                                             onChange={(e) => {
@@ -754,7 +957,7 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <FieldLabel>Industry</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingExperience ? (
                                                         <Input
                                                             value={item.industry}
                                                             onChange={(e) => {
@@ -770,7 +973,7 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <FieldLabel>Country</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingExperience ? (
                                                         <Input
                                                             value={item.country}
                                                             onChange={(e) => {
@@ -786,7 +989,7 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <FieldLabel>Start Date</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingExperience ? (
                                                         <DatePicker
                                                             value={item.startDate}
                                                             onChange={(v) => {
@@ -802,13 +1005,12 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <FieldLabel>End Date</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingExperience ? (
                                                         <DatePicker
                                                             value={item.endDate}
                                                             onChange={(v) => {
                                                                 const current = [...field.state.value]
                                                                 if (current[index].startDate && v < current[index].startDate) {
-                                                                    // Validation: End Date cannot be before Start Date
                                                                     return
                                                                 }
                                                                 current[index].endDate = v
@@ -822,7 +1024,7 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div className="col-span-1 sm:col-span-2 lg:col-span-3 space-y-2">
                                                     <FieldLabel>Responsibilities</FieldLabel>
-                                                    {isEditing ? (
+                                                    {isEditingExperience ? (
                                                         <textarea
                                                             className="w-full min-h-[80px] p-3 rounded-lg bg-white/50 border border-border focus:ring-1 focus:ring-purple-400 outline-none transition-all"
                                                             value={item.responsibility}
@@ -848,6 +1050,20 @@ export default function ProfilePage() {
                                 </div>
                             )}
                         </form.Field>
+                        {isEditingExperience && (
+                            <form.Subscribe selector={(s) => [s.isDirty, s.isSubmitting]}>
+                                {([isDirty, isSubmitting]) => (
+                                    <SectionSaveActions
+                                        onCancel={cancelEditing}
+                                        onSave={() => void saveExperience()}
+                                        isSaving={isSubmitting || experienceMutation.isPending}
+                                        isDirty={isDirty}
+                                    />
+                                )}
+                            </form.Subscribe>
+                        )}
+                        </div>
+                        )}
                     </BluryCard>
                 )}
 
@@ -1063,16 +1279,14 @@ export default function ProfilePage() {
                     </BluryCard>
                 )}
  
+                {!isStudent && (
                 <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4 pb-12">
                     {isEditing && (
                         <Button
                             type="button"
                             variant="outline"
                             className="w-full sm:w-auto sm:px-8 py-6 rounded-xl border font-bold border-brand-byzantine text-brand-byzantine hover:bg-brand-byzantine/5 hover:text-brand-byzantine"
-                            onClick={() => {
-                                form.reset()
-                                setIsEditing(false)
-                            }}
+                            onClick={cancelEditing}
                         >
                             Cancel
                         </Button>
@@ -1092,6 +1306,7 @@ export default function ProfilePage() {
                         </form.Subscribe>
                     )}
                 </div>
+                )}
             </form>
 
             <Dialog open={showSuccess} onOpenChange={setShowSuccess}>

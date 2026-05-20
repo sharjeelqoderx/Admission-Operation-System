@@ -77,6 +77,9 @@ export async function POST(req: NextRequest) {
                         nationality: validData.nationality,
                         guardian_email: validData.guardianEmail,
                         guardian_phone: validData.guardianPhone,
+                        city: typeof data.city === "string" ? data.city : null,
+                        address: typeof data.address === "string" ? data.address : null,
+                        zip_code: typeof data.zip_code === "string" ? data.zip_code : null,
                     }, { onConflict: "profile_id" })
                 
                 if (error) return err(error.message, 500)
