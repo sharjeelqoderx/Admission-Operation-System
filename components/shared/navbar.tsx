@@ -74,7 +74,7 @@ export function Navbar({
     return (
         <nav
             className={cn(
-                'h-20 bg-background/10 backdrop-blur-md border-b border-border/50',
+                'h-20 bg-background/20 backdrop-blur-md border-b border-border/50',
                 'flex items-center justify-between px-4 sm:px-8',
                 'sticky top-0 z-40'
             )}

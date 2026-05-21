@@ -187,7 +187,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const routes = filterByRole(sidebarRoutes, role);
 
   return (
-    <div className="flex h-screen bg-transparent">
+    <div className="flex h-screen bg-transparent app-bg">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -252,15 +252,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           isSidebarOpen={sidebarOpen}
         />
 
-        <main className="flex-1 overflow-y-auto relative bg-[#f0f4ff]">
+        <main className="flex-1 overflow-y-auto relative">
           {/* Fixed Background Layer */}
           <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
             <div
-              className="absolute inset-0 opacity-[0.85]"
+              className="absolute inset-0"
               style={{
-                backgroundImage: 'url("/bg-pattern.png")',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
+                backgroundColor: "#e1e8fc",
+                // backgroundImage: 'url("/bg-pattern.png")',
+                // backgroundSize: 'cover',
+                // backgroundPosition: 'center',
               }}
             />
           </div>
