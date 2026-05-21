@@ -63,9 +63,11 @@
 :root {
   /* --brand: oklch(0.22 0.05 250); */
   --brand: #0A1E43;
-  --brand-primary: #040D1D;;
+  --brand-primary: #040D1D;
+  ;
   --brand-secondary: #0F306E;
-  --brand-blue-text: #00265B;;
+  --brand-blue-text: #00265B;
+  ;
   --brand-byzantine: #9933FF;
   --brand-bright: #CACACA;
   --brand-input: #F4F4F4;
@@ -112,9 +114,11 @@
 .dark {
   /* --brand: oklch(0.22 0.05 250); */
   --brand: #0A1E43;
-  --brand-primary: #040D1D;;
+  --brand-primary: #040D1D;
+  ;
   --brand-secondary: #0F306E;
-  --brand-blue-text: #00265B;;
+  --brand-blue-text: #00265B;
+  ;
   --brand-byzantine: #9933FF;
   --brand-bright: #CACACA;
   --brand-input: #F4F4F4;
@@ -191,9 +195,11 @@
     opacity: 0.70;
     transform: scale(1.5);
   }
+
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;

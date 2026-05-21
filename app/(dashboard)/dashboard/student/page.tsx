@@ -5,7 +5,8 @@ import {
     FileText,
     GraduationCap,
     Plus,
-    Search
+    Search,
+    UserCheck
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
@@ -25,9 +26,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/hooks/useAuth"
 import { useState, useRef, memo } from "react"
 
-const StatsDashboard = memo(({ stats, statsLoading }: { stats: any, statsLoading: boolean }) => {
+const StatsDashboard = memo(({ stats, statsLoading, userRole }: { stats: any, statsLoading: boolean, userRole?: string }) => {
     const totalStudents = stats?.total_students ?? 0
     const activeApplications = stats?.active_applications ?? 0
+    const totalEnrolled = stats?.total_enrolled ?? 0
 
     return (
         <BluryCard
@@ -45,11 +47,13 @@ const StatsDashboard = memo(({ stats, statsLoading }: { stats: any, statsLoading
                         Initiate a new student profile and link them to global academic programs. Ensure all mandatory fields are verified before submission.
                     </Typography>
                 </div>
-                <Link href="/dashboard/student/new">
-                    <Button className="px-6 gap-2 font-normal">
-                        <Plus size={24} className="text-white" /> New Student
-                    </Button>
-                </Link>
+                {userRole !== 'UNIVERSITY' && (
+                    <Link href="/dashboard/student/new">
+                        <Button className="px-6 gap-2 font-normal">
+                            <Plus size={24} className="text-white" /> New Student
+                        </Button>
+                    </Link>
+                )}
             </div>
 
             <div className="flex flex-col md:flex-row items-center gap-16">
@@ -83,6 +87,23 @@ const StatsDashboard = memo(({ stats, statsLoading }: { stats: any, statsLoading
                             className={`text-[34px] font-extrabold text-gray-900 leading-none mt-1 ${statsLoading ? 'animate-pulse text-gray-300' : ''}`}
                         >
                             {statsLoading ? '—' : activeApplications.toLocaleString()}
+                        </Typography>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-6">
+                    <div className="size-14 border-x border-white/40 rounded-l-lg rounded-r-lg bg-white/20 flex items-center justify-center">
+                        <UserCheck className="size-7 text-gray-800" />
+                    </div>
+                    <div className="flex flex-col">
+                        <Typography as="span" className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
+                            Total Enrolled
+                        </Typography>
+                        <Typography
+                            as="span"
+                            className={`text-[34px] font-extrabold text-gray-900 leading-none mt-1 ${statsLoading ? 'animate-pulse text-gray-300' : ''}`}
+                        >
+                            {statsLoading ? '—' : totalEnrolled.toLocaleString()}
                         </Typography>
                     </div>
                 </div>

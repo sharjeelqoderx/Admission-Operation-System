@@ -59,7 +59,7 @@ const sidebarRoutes = [
         label: 'View Student',
         href: '/dashboard/student',
         icon: Eye,
-        allowFor: [Role.AGENT],
+        allowFor: [Role.AGENT, Role.UNIVERSITY],
       },
     ],
   },
@@ -143,6 +143,9 @@ function filterByRole(routes: any[], role: Role) {
         const children = route.children.filter((c: any) =>
           c.allowFor.includes(role)
         );
+
+        // If a group has no allowed children, do not show the group at all.
+        if (children.length === 0) return null;
 
         return { ...route, children };
       }
@@ -230,7 +233,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           // 🔹 SINGLE ITEM
           return (
             <SidebarItem
-              key={route.href}
+              key={route.href || route.label}
               href={route.href}
               icon={<Icon className="w-5 h-5" />}
               label={route.label === 'Agent Profile' && role === Role.STUDENT ? 'Student Profile' : route.label}

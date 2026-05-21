@@ -12,16 +12,12 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        // Get agent row for logged-in user
-        const { data: agentRow } = await supabase
-            .from("agent")
-            .select("id")
-            .eq("profile_id", user.id)
-            .maybeSingle()
-
-        if (!agentRow) {
-            return NextResponse.json({ error: "Agent profile not found" }, { status: 400 })
-        }
+        // Get user profile to determine role
+        const { data: profile } = await supabase
+            .from("profile")
+            .select("role")
+            .eq("id", user.id)
+            .single()
 
         const { searchParams } = new URL(req.url)
         const q = searchParams.get("q")
@@ -29,17 +25,31 @@ export async function GET(req: NextRequest) {
         const page = parseInt(searchParams.get("page") || "1")
         const limit = parseInt(searchParams.get("limit") || "10")
 
-        // Fetch students created by this agent with their profile
+        // Build query based on role
         let query = supabase
             .from("student")
             .select(`
                 *,
                 profile:profile_id (*)
             `)
-            .eq("created_by_agent_id", agentRow.id)
 
-        if (status && status !== "all") {
-            // We'll filter status in-memory below to avoid DB errors if column is missing
+        const userRole = profile?.role?.toUpperCase()
+
+        if (userRole === 'UNIVERSITY' || userRole === 'ADMIN') {
+            // University and Admin see ALL students (RLS policy grants access)
+            // No additional filter needed
+        } else {
+            // Agent sees only students they created
+            const { data: agentRow } = await supabase
+                .from("agent")
+                .select("id")
+                .eq("profile_id", user.id)
+                .maybeSingle()
+
+            if (!agentRow) {
+                return NextResponse.json({ error: "Agent profile not found" }, { status: 400 })
+            }
+            query = query.eq("created_by_agent_id", agentRow.id)
         }
 
         let { data: students, error } = await query.order("created_at", { ascending: false })

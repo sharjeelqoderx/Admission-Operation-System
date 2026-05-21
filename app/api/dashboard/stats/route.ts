@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { AppStatus, OfferStatus, Role } from "@/types/constants"
 
 export async function GET(req: NextRequest) {
     try {
@@ -10,44 +11,69 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        // Get agent row
-        const { data: agentRow } = await supabase
-            .from("agent")
-            .select("id")
-            .eq("profile_id", user.id)
-            .maybeSingle()
+        // Get user profile to determine role
+        const { data: profile } = await supabase
+            .from("profile")
+            .select("role")
+            .eq("id", user.id)
+            .single()
 
-        if (!agentRow) {
-            return NextResponse.json({ error: "Agent profile not found" }, { status: 400 })
+        if (!profile) {
+            return NextResponse.json({ error: "Profile not found" }, { status: 400 })
         }
 
-        // Run all counts in parallel
-        const [studentsResult, applicationsResult, pendingResult] = await Promise.all([
-            // Total students created by this agent
-            supabase
-                .from("student")
-                .select("id", { count: "exact", head: true })
-                .eq("created_by_agent_id", agentRow.id),
+        let studentsCount = 0
+        let applicationsCount = 0
+        let pendingCount = 0
+        let enrolledCount = 0
 
-            // Active applications (all submitted by this agent)
-            supabase
-                .from("application")
-                .select("id", { count: "exact", head: true })
-                .eq("submitted_by_profile_id", user.id),
+        const userRole = profile?.role?.toUpperCase()
 
-            // Pending actions — applications with status PENDING
-            supabase
-                .from("application")
-                .select("id", { count: "exact", head: true })
-                .eq("submitted_by_profile_id", user.id)
-                .eq("status", "PENDING"),
-        ])
+        if (userRole === Role.AGENT) {
+            // ── AGENT: scoped to students they created ──
+            const { data: agentRow } = await supabase
+                .from("agent")
+                .select("id")
+                .eq("profile_id", user.id)
+                .maybeSingle()
+
+            if (agentRow) {
+                const [studentsRes, applicationsRes, pendingRes, enrolledRes] = await Promise.all([
+                    supabase.from("student").select("id", { count: "exact", head: true }).eq("created_by_agent_id", agentRow.id),
+                    supabase.from("application").select("id", { count: "exact", head: true }).eq("profile_id", user.id),
+                    supabase.from("application").select("id", { count: "exact", head: true }).eq("profile_id", user.id).eq("status", AppStatus.PENDING),
+                    supabase.from("offer_letter").select("id, application!inner(profile_id)", { count: "exact", head: true })
+                        .eq("application.profile_id", user.id)
+                        .eq("status", OfferStatus.ACCEPTED),
+                ])
+                studentsCount = studentsRes.count ?? 0
+                applicationsCount = applicationsRes.count ?? 0
+                pendingCount = pendingRes.count ?? 0
+                enrolledCount = enrolledRes.count ?? 0
+            }
+        } else if (userRole === Role.UNIVERSITY || userRole === Role.ADMIN) {
+            const [studentsRes, applicationsRes, pendingRes, enrolledRes] = await Promise.all([
+                supabase.from("student").select("id", { count: "exact", head: true }),
+                supabase.from("application").select("id", { count: "exact", head: true }).eq("university_id", user.id),
+                supabase.from("application").select("id", { count: "exact", head: true }).eq("university_id", user.id).eq("status", AppStatus.PENDING),
+                supabase.from("offer_letter").select("id, application!inner(university_id)", { count: "exact", head: true })
+                    .eq("application.university_id", user.id)
+                    .eq("status", OfferStatus.ACCEPTED)
+            ])
+            console.log("Enrolled Res Error:", user.id, enrolledRes.error)
+            console.log("Enrolled Res Count:", enrolledRes.count)
+            studentsCount = studentsRes.count ?? 0
+            applicationsCount = applicationsRes.count ?? 0
+            pendingCount = pendingRes.count ?? 0
+            enrolledCount = enrolledRes.count ?? 0
+        }
 
         return NextResponse.json({
             data: {
-                total_students: studentsResult.count ?? 0,
-                active_applications: applicationsResult.count ?? 0,
-                pending_actions: pendingResult.count ?? 0,
+                total_students: studentsCount,
+                active_applications: applicationsCount,
+                pending_actions: pendingCount,
+                total_enrolled: enrolledCount,
             },
         }, { status: 200 })
     } catch (e) {
