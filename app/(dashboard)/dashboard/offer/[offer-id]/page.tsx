@@ -1,12 +1,15 @@
 "use client"
 
-import React from "react"
+import React, { useCallback } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { PageLoader } from "@/components/shared/page-loader"
 import {
     Download,
     Eye,
@@ -15,203 +18,1008 @@ import {
     User,
     GraduationCap,
     Calendar,
-    ArrowLeft,
-    FileText
+    ChevronLeft,
+    Building2,
+    Clock,
+    MessageSquare,
+    FileCheck,
+    AlertCircle,
+    CheckCircle2,
+    X,
+    CreditCard,
+    ArrowRight
 } from "lucide-react"
 import Image from "next/image"
+import { toast } from "sonner"
+
+function SectionHeader({
+    icon: Icon,
+    title,
+    trailing,
+}: {
+    icon: React.ComponentType<{ className?: string }>
+    title: string
+    trailing?: React.ReactNode
+}) {
+    return (
+        <div className="flex items-center justify-between gap-3 border-b border-white/25 pb-4">
+            <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-byzantine/10">
+                    <Icon className="size-4.5 text-brand-byzantine" />
+                </div>
+                <Typography font="title" className="text-base font-bold truncate">
+                    {title}
+                </Typography>
+            </div>
+            {trailing}
+        </div>
+    )
+}
+
+function DetailRow({
+    label,
+    value,
+    icon,
+}: {
+    label: string
+    value: React.ReactNode
+    icon?: React.ReactNode
+}) {
+    return (
+        <div className="grid grid-cols-1 gap-1 py-3.5 border-b border-white/15 last:border-0 sm:grid-cols-[minmax(0,140px)_1fr] sm:gap-4 sm:items-center">
+            <Typography className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                {label}
+            </Typography>
+            <div className="flex items-center gap-2 min-w-0">
+                {icon}
+                {typeof value === "string" || value == null ? (
+                    <Typography className="text-sm font-semibold text-gray-800 break-words">
+                        {value || "—"}
+                    </Typography>
+                ) : (
+                    value
+                )}
+            </div>
+        </div>
+    )
+}
+
+function SummaryMetric({
+    label,
+    value,
+    icon,
+}: {
+    label: string
+    value: React.ReactNode
+    icon?: React.ReactNode
+}) {
+    return (
+        <div className="flex flex-col gap-2 rounded-xl bg-white/30 border border-white/40 p-4 min-w-0">
+            <div className="flex items-center gap-2 text-gray-500">
+                {icon}
+                <Typography className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                    {label}
+                </Typography>
+            </div>
+            <div className="min-w-0">{value}</div>
+        </div>
+    )
+}
 
 export default function OfferDetailsPage() {
     const params = useParams()
+    const router = useRouter()
     const offerId = params?.["offer-id"] as string
 
-    // Static Data
-    const offer = {
-        id: offerId || "OFFER-2024-001",
-        status: "SIGNED",
-        issueDate: "May 10, 2024",
-        expiryDate: "June 10, 2024",
-        student: {
-            name: "John Doe",
-            code: "STU-12345",
-            email: "john.doe@example.com",
-            phone: "+1 (555) 0123",
-            nationality: "United States",
-            gender: "Male"
-        },
-        program: {
-            name: "Bachelor of Computer Science",
-            university: "Global University of Excellence",
-            degree: "Bachelor's",
-            campus: "Main Campus",
-            duration: "4 Years",
-            intake: "September 2024"
+    const [isSignModalOpen, setIsSignModalOpen] = React.useState(false)
+    const [isDrawing, setIsDrawing] = React.useState(false)
+    const [hasSigned, setHasSigned] = React.useState(false)
+    const [isSubmitting, setIsSubmitting] = React.useState(false)
+    const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
+
+    const fetchOffer = useCallback(async () => {
+        const res = await fetch(`/api/offer/${offerId}`)
+        if (!res.ok) throw new Error("Failed to fetch offer")
+        const json = await res.json()
+        return json.data
+    }, [offerId])
+
+    const { data: offer, isLoading, isError, refetch } = useQuery({
+        queryKey: ["offer", offerId],
+        queryFn: fetchOffer,
+        enabled: !!offerId,
+    })
+
+    React.useEffect(() => {
+        if (isSignModalOpen) {
+            setTimeout(() => {
+                const canvas = canvasRef.current
+                if (canvas) {
+                    const rect = canvas.getBoundingClientRect()
+                    canvas.width = rect.width
+                    canvas.height = rect.height
+                    
+                    const ctx = canvas.getContext("2d")
+                    if (ctx) {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height)
+                    }
+                }
+            }, 100)
+        }
+    }, [isSignModalOpen])
+
+    const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return
+
+        ctx.strokeStyle = "#000000"
+        ctx.lineWidth = 2.5
+        ctx.lineCap = "round"
+        ctx.lineJoin = "round"
+
+        const rect = canvas.getBoundingClientRect()
+        let clientX, clientY
+        if ("touches" in e) {
+            clientX = e.touches[0].clientX
+            clientY = e.touches[0].clientY
+        } else {
+            clientX = e.clientX
+            clientY = e.clientY
+        }
+
+        const x = clientX - rect.left
+        const y = clientY - rect.top
+
+        ctx.beginPath()
+        ctx.moveTo(x, y)
+        setIsDrawing(true)
+    }
+
+    const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+        if (!isDrawing) return
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return
+
+        const rect = canvas.getBoundingClientRect()
+        let clientX, clientY
+        if ("touches" in e) {
+            clientX = e.touches[0].clientX
+            clientY = e.touches[0].clientY
+        } else {
+            clientX = e.clientX
+            clientY = e.clientY
+        }
+
+        const x = clientX - rect.left
+        const y = clientY - rect.top
+
+        ctx.lineTo(x, y)
+        ctx.stroke()
+        setHasSigned(true)
+    }
+
+    const stopDrawing = () => {
+        setIsDrawing(false)
+    }
+
+    const clearCanvas = () => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        setHasSigned(false)
+    }
+
+    const handleSaveSignature = async () => {
+        const canvas = canvasRef.current
+        if (!canvas || !hasSigned) {
+            toast.error("Please draw your signature first.")
+            return
+        }
+
+        setIsSubmitting(true)
+        try {
+            const signatureDataUrl = canvas.toDataURL("image/png")
+            const response = await fetch(`/api/offer/${offerId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ signatureDataUrl })
+            })
+
+            if (!response.ok) {
+                const errData = await response.json()
+                throw new Error(errData.error || "Failed to save signature")
+            }
+
+            toast.success("Offer letter accepted and signed successfully!")
+            setIsSignModalOpen(false)
+            refetch()
+        } catch (error: any) {
+            console.error(error)
+            toast.error(error.message || "An error occurred while saving signature.")
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    if (isLoading) return <PageLoader label="Loading offer details..." />
+
+    if (isError || !offer) {
+        return (
+            <div className="flex flex-col items-center justify-center py-40 gap-4">
+                <Typography className="font-bold text-gray-700">Offer not found</Typography>
+                <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
+            </div>
+        )
+    }
+
+    const app = offer.application
+    const student = app?.student
+    const program = app?.program
+    const university = app?.university
+    const agent = app?.agent
+    const junction = program?.campus_program_junction?.[0]
+    const reviews: any[] = app?.application_review ?? []
+    const latestReview = reviews[reviews.length - 1]
+
+    const issuedAt = offer.created_at
+        ? new Date(offer.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+        : "—"
+    const appCreatedAt = app?.created_at
+        ? new Date(app.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+        : "—"
+
+    const acceptedAt = (offer as any).accepted_at
+        ? new Date((offer as any).accepted_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+        : null
+
+    const applicationRef = app?.application_no || `APP-${app?.id?.slice(0, 8).toUpperCase()}`
+    const intakeDateFormatted = junction?.intake_date
+        ? new Date(junction.intake_date).toLocaleDateString("en-US", { dateStyle: "long" })
+        : "—"
+    const tuitionFormatted =
+        junction?.tuition_fee != null
+            ? `${junction.currency || "€"} ${junction.tuition_fee}`
+            : "—"
+
+    const offerStatus = String(offer.status ?? "PENDING").toUpperCase()
+    const isOfferSigned = offerStatus === "ACCEPTED" && Boolean(offer.file_url)
+    const canAcceptAndSign = !isOfferSigned && offerStatus !== "REJECTED"
+
+    const openSignModal = () => {
+        setHasSigned(false)
+        setIsSignModalOpen(true)
+    }
+
+    const handleViewLetter = () => {
+        const signatureHtml = offer.status === "ACCEPTED" && offer.file_url
+            ? `<div style="margin-top:auto;border-top:1px dashed #e5e7eb;padding-top:24px;display:flex;flex-direction:column;align-items:flex-end;">
+                 <img src="${offer.file_url}" alt="Signature" style="width:140px;height:48px;object-fit:contain;background:transparent;mix-blend-mode:multiply;" />
+                 <div style="font-size:10px;color:#9ca3af;margin-top:4px;text-align:right;">
+                   <div style="font-weight:700;color:#374151;">${student?.name || ""}</div>
+                   <div>Accepted &amp; Signed on ${acceptedAt || new Date().toLocaleDateString("en-US", { dateStyle: "medium" })}</div>
+                 </div>
+               </div>`
+            : `<div style="margin-top:auto;border-top:1px dashed #f3f4f6;padding-top:24px;display:flex;flex-direction:column;align-items:flex-end;">
+                 <div style="font-size:10px;color:#d1d5db;font-style:italic;">Signature Required</div>
+                 <div style="font-size:10px;color:#9ca3af;margin-top:4px;">Pending Student Signature</div>
+               </div>`
+
+        const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><title>Offer Letter – ${student?.name || "Applicant"}</title>
+        <style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#f3f4f6;display:flex;justify-content:center;padding:40px 16px;font-family:Georgia,serif;}@media print{body{background:white;padding:0;}.page{box-shadow:none!important;}}</style>
+        </head><body>
+        <div class="page" style="background:white;max-width:720px;width:100%;min-height:1000px;padding:60px;box-shadow:0 4px 32px rgba(0,0,0,0.12);border-radius:8px;display:flex;flex-direction:column;gap:32px;position:relative;">
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.03;pointer-events:none;transform:rotate(-35deg);"><span style="font-size:120px;font-weight:900;letter-spacing:8px;color:black;">OFFICIAL</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <div style="font-size:22px;font-weight:900;color:#1a1a2e;letter-spacing:-0.5px;">${university?.name || "University"}</div>
+              <div style="font-size:12px;color:#6b7280;margin-top:4px;">Official Offer of Admission</div>
+            </div>
+            <div style="text-align:right;font-size:11px;color:#9ca3af;">
+              <div>Date Issued</div>
+              <div style="font-weight:700;color:#374151;">${issuedAt}</div>
+              <div style="margin-top:4px;">Ref: ${app?.application_no || ("APP-" + app?.id?.slice(0, 8).toUpperCase())}</div>
+            </div>
+          </div>
+          <hr style="border:none;border-top:2px solid #f3f4f6;"/>
+          <div style="font-size:15px;color:#374151;">Dear <strong>${student?.name || "Applicant"}</strong>,</div>
+          <div style="font-size:14px;color:#4b5563;line-height:1.8;">
+            We are pleased to offer you admission to the <strong>${program?.name || "program"}</strong> at <strong>${university?.name || "our university"}</strong>.
+          </div>
+          <div style="font-size:14px;color:#4b5563;line-height:1.8;">
+            Your academic achievement and potential make you an excellent candidate for our program. This offer is subject to the terms and conditions outlined in the full admission package.
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;">
+            <thead><tr style="background:#f9fafb;"><th colspan="2" style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Admission Details</th></tr></thead>
+            <tbody>
+              ${[
+                ["Program", program?.name],
+                ["Category", program?.category],
+                ["Duration", program?.program_length],
+                ["Study Type", junction?.study_type],
+                ["Intake Date", junction?.intake_date ? new Date(junction.intake_date).toLocaleDateString("en-US",{dateStyle:"long"}) : null],
+                ["Tuition Fee", junction?.tuition_fee ? `${junction.currency || ""} ${junction.tuition_fee}` : null],
+              ].filter(r => r[1]).map(([label, value]) =>
+                `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
+              ).join("")}
+            </tbody>
+          </table>
+          ${signatureHtml}
+          <div style="font-size:10px;color:#d1d5db;text-align:center;margin-top:16px;">This is an official offer letter generated by the Admission Operation System.</div>
+        </div>
+        </body></html>`
+
+        const win = window.open("", "_blank")
+        if (win) {
+            win.document.write(html)
+            win.document.close()
+        }
+    }
+
+    const handleDownloadPDF = async () => {
+        const toastId = toast.loading("Generating PDF...")
+
+        try {
+            const { default: jsPDF } = await import("jspdf")
+            const { default: html2canvas } = await import("html2canvas")
+
+            // 1. Fetch and convert signature to base64 if accepted and has file_url
+            let signatureBase64 = ""
+            if (offer.status === "ACCEPTED" && offer.file_url) {
+                try {
+                    const response = await fetch(offer.file_url)
+                    const blob = await response.blob()
+                    signatureBase64 = await new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader()
+                        reader.onload = () => resolve(reader.result as string)
+                        reader.onerror = reject
+                        reader.readAsDataURL(blob)
+                    })
+                } catch (e) {
+                    console.error("Failed to fetch signature image:", e)
+                }
+            }
+
+            // 2. Build the HTML content for the PDF container
+            const signatureHtml = signatureBase64
+                ? `<div style="margin-top:auto;border-top:1px dashed #e5e7eb;padding-top:24px;display:flex;flex-direction:column;align-items:flex-end;">
+                     <img src="${signatureBase64}" alt="Signature" style="width:140px;height:48px;object-fit:contain;background:transparent;mix-blend-mode:multiply;" />
+                     <div style="font-size:10px;color:#9ca3af;margin-top:4px;text-align:right;">
+                       <div style="font-weight:700;color:#374151;">${student?.name || ""}</div>
+                       <div>Accepted &amp; Signed on ${acceptedAt || new Date().toLocaleDateString("en-US", { dateStyle: "medium" })}</div>
+                     </div>
+                   </div>`
+                : `<div style="margin-top:auto;border-top:1px dashed #f3f4f6;padding-top:24px;display:flex;flex-direction:column;align-items:flex-end;">
+                     <div style="font-size:10px;color:#d1d5db;font-style:italic;">Signature Required</div>
+                     <div style="font-size:10px;color:#9ca3af;margin-top:4px;">Pending Student Signature</div>
+                   </div>`
+
+            // Create off-screen iframe to isolate CSS environment from parent stylesheets
+            const iframe = document.createElement("iframe")
+            iframe.style.position = "fixed"
+            iframe.style.left = "-9999px"
+            iframe.style.top = "-9999px"
+            iframe.style.width = "794px"
+            iframe.style.height = "1123px"
+            iframe.style.border = "none"
+            document.body.appendChild(iframe)
+
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
+            if (!iframeDoc) throw new Error("Could not access iframe document")
+
+            iframeDoc.open()
+            iframeDoc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8" />
+              <style>
+                * {
+                  box-sizing: border-box;
+                  margin: 0;
+                  padding: 0;
+                }
+                html, body {
+                  margin: 0;
+                  padding: 0;
+                  width: 794px;
+                  height: 1123px;
+                  overflow: hidden;
+                  font-family: Georgia, serif;
+                  background-color: #ffffff;
+                }
+              </style>
+            </head>
+            <body>
+              <div style="width:100%;height:100%;padding:60px;display:flex;flex-direction:column;gap:32px;position:relative;box-sizing:border-box;background:#ffffff;justify-content:space-between;">
+                <div style="display:flex;flex-direction:column;gap:32px;width:100%;">
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.03;pointer-events:none;transform:rotate(-35deg);"><span style="font-size:120px;font-weight:900;letter-spacing:8px;color:black;user-select:none;">OFFICIAL</span></div>
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;">
+                    <div>
+                      <div style="font-size:22px;font-weight:900;color:#1a1a2e;letter-spacing:-0.5px;">${university?.name || "University"}</div>
+                      <div style="font-size:12px;color:#6b7280;margin-top:4px;">Official Offer of Admission</div>
+                    </div>
+                    <div style="text-align:right;font-size:11px;color:#9ca3af;">
+                      <div>Date Issued</div>
+                      <div style="font-weight:700;color:#374151;">${issuedAt}</div>
+                      <div style="margin-top:4px;">Ref: ${app?.application_no || ("APP-" + app?.id?.slice(0, 8).toUpperCase())}</div>
+                    </div>
+                  </div>
+                  <hr style="border:none;border-top:2px solid #f3f4f6;width:100%;"/>
+                  <div style="font-size:15px;color:#374151;width:100%;">Dear <strong>${student?.name || "Applicant"}</strong>,</div>
+                  <div style="font-size:14px;color:#4b5563;line-height:1.8;width:100%;">
+                    We are pleased to offer you admission to the <strong>${program?.name || "program"}</strong> at <strong>${university?.name || "our university"}</strong>.
+                  </div>
+                  <div style="font-size:14px;color:#4b5563;line-height:1.8;width:100%;">
+                    Your academic achievement and potential make you an excellent candidate for our program. This offer is subject to the terms and conditions outlined in the full admission package.
+                  </div>
+                  <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;">
+                    <thead><tr style="background:#f9fafb;"><th colspan="2" style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Admission Details</th></tr></thead>
+                    <tbody>
+                      ${[
+                        ["Program", program?.name],
+                        ["Category", program?.category],
+                        ["Duration", program?.program_length],
+                        ["Study Type", junction?.study_type],
+                        ["Intake Date", junction?.intake_date ? new Date(junction.intake_date).toLocaleDateString("en-US",{dateStyle:"long"}) : null],
+                        ["Tuition Fee", junction?.tuition_fee ? `${junction.currency || ""} ${junction.tuition_fee}` : null],
+                      ].filter(r => r[1]).map(([label, value]) =>
+                        `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
+                      ).join("")}
+                    </tbody>
+                  </table>
+                </div>
+                <div style="width:100%;display:flex;flex-direction:column;gap:16px;">
+                  ${signatureHtml}
+                  <div style="font-size:10px;color:#d1d5db;text-align:center;width:100%;">This is an official offer letter generated by the Admission Operation System.</div>
+                </div>
+              </div>
+            </body>
+            </html>
+            `)
+            iframeDoc.close()
+
+            // Wait for images to load inside the iframe (if signature exists)
+            const images = iframeDoc.getElementsByTagName("img")
+            if (images.length > 0) {
+                await Promise.all(
+                    Array.from(images).map(img => {
+                        if (img.complete) return Promise.resolve()
+                        return new Promise<void>((resolve) => {
+                            img.onload = () => resolve()
+                            img.onerror = () => resolve()
+                        })
+                    })
+                )
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 100))
+            }
+
+            // Render to canvas
+            const canvas = await html2canvas(iframeDoc.body, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                logging: false,
+                width: 794,
+                height: 1123,
+                windowWidth: 794,
+                windowHeight: 1123,
+            })
+
+            // Remove iframe from DOM
+            document.body.removeChild(iframe)
+
+            const imgData = canvas.toDataURL("image/png")
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4",
+            })
+
+            pdf.addImage(imgData, "PNG", 0, 0, 210, 297)
+            pdf.save(`offer-${app?.application_no || offerId}.pdf`)
+
+            toast.dismiss(toastId)
+            toast.success("PDF downloaded successfully!")
+        } catch (error) {
+            console.error("Error generating PDF:", error)
+            toast.dismiss(toastId)
+            toast.error("Failed to generate PDF. Please try again.")
         }
     }
 
     return (
-        <main className="space-y-8">
-            {/* ── Top Header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Link href="/dashboard/offer">
-                        <Button variant="ghost" size="icon" className="rounded-full">
-                            <ArrowLeft className="size-5" />
+        <main className="mx-auto max-w-7xl space-y-6 pb-10">
+            {/* Page header */}
+            <div className="flex flex-col gap-4 mt-12">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            asChild
+                            className="rounded-xl shrink-0 size-10 border-white/40 bg-white/20"
+                        >
+                            <Link href="/dashboard/offer">
+                                <ChevronLeft className="size-5" />
+                            </Link>
                         </Button>
-                    </Link>
-                    <div className="space-y-1">
-                        <Typography font="small" className="text-gray-500 uppercase tracking-widest">
-                            Offer Details
-                        </Typography>
-                        <div className="flex items-center gap-3">
-                            <Typography font="text-xl" as="h1">
-                                {offer.id}
+                        <div className="min-w-0 flex-1 space-y-1">
+                            <Typography className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
+                                Admission Offer
                             </Typography>
-                            <StatusBadge status={offer.status} />
+                            <div className="flex flex-wrap items-center gap-2.5">
+                                <Typography as="h1" font="title" className="text-xl sm:text-2xl font-bold truncate">
+                                    {applicationRef}
+                                </Typography>
+                                <StatusBadge status={offer.status} />
+                            </div>
+                            <Typography font="sub-text" className="text-gray-500 text-sm">
+                                {student?.name || "Student"} · {program?.name || "Program"}
+                            </Typography>
                         </div>
                     </div>
+
+                    {canAcceptAndSign && (
+                        <Button
+                            type="button"
+                            className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white rounded-xl h-11 px-6 font-bold shadow-lg shadow-brand-byzantine/20"
+                            onClick={openSignModal}
+                        >
+                            <FileCheck className="size-4" />
+                            Accept & Sign
+                        </Button>
+                    )}
                 </div>
-                <div className="flex items-center gap-3">
-                    <Button variant="outline" className="gap-2">
-                        <Eye className="size-4" />
-                        <Typography font="small" as="span">View Letter</Typography>
-                    </Button>
-                    <Button className="gap-2 bg-brand-byzantine hover:bg-brand-byzantine/80">
-                        <Download className="size-4" />
-                        <Typography font="small" as="span">Download PDF</Typography>
-                    </Button>
-                </div>
+
+             
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* ── Left Column: Details ── */}
-                <div className="lg:col-span-2 space-y-8">
-                    {/* Student Info */}
-                    <BluryCard isCentered={false} blurAmount="backdrop-blur-2xl" childClass="space-y-6" className="rounded-2xl">
-                        <div className="flex items-center gap-3 border-b border-white/20 pb-4">
-                            <User className="size-5 text-gray-700" />
-                            <Typography font="title">Student Information</Typography>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            {[
-                                { label: "Full Name", value: offer.student.name, icon: User },
-                                { label: "Student ID", value: offer.student.code, icon: FileText },
-                                { label: "Email Address", value: offer.student.email, icon: Mail },
-                                { label: "Phone Number", value: offer.student.phone, icon: Phone },
-                                { label: "Nationality", value: offer.student.nationality, icon: FileText },
-                                { label: "Gender", value: offer.student.gender, icon: User },
-                            ].map((item, idx) => (
-                                <div key={idx} className="space-y-1">
-                                    <Typography font="small" className="text-gray-400 uppercase tracking-wider">
-                                        {item.label}
-                                    </Typography>
-                                    <div className="flex items-center gap-2">
-                                        <Typography font="text" className="font-semibold text-gray-800">
-                                            {item.value}
-                                        </Typography>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </BluryCard>
+            {/* At-a-glance summary */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mt-6">
+                <SummaryMetric
+                    label="University"
+                    icon={<Building2 className="size-3.5" />}
+                    value={
+                        <Typography className="text-sm font-bold text-gray-900 line-clamp-2">
+                            {university?.name || "—"}
+                        </Typography>
+                    }
+                />
+                <SummaryMetric
+                    label="Program"
+                    icon={<GraduationCap className="size-3.5" />}
+                    value={
+                        <Typography className="text-sm font-bold text-gray-900 line-clamp-2">
+                            {program?.name || "—"}
+                        </Typography>
+                    }
+                />
+                <SummaryMetric
+                    label="Intake"
+                    icon={<Calendar className="size-3.5" />}
+                    value={
+                        <Typography className="text-sm font-bold text-gray-900">{intakeDateFormatted}</Typography>
+                    }
+                />
+                <SummaryMetric
+                    label="Tuition"
+                    icon={<CreditCard className="size-3.5" />}
+                    value={
+                        <Typography className="text-sm font-bold text-gray-900">{tuitionFormatted}</Typography>
+                    }
+                />
+            </div>
 
-                    {/* Program Info */}
-                    <BluryCard isCentered={false} childClass="space-y-6" className="rounded-2xl">
-                        <div className="flex items-center gap-3 border-b border-white/20 pb-4">
-                            <GraduationCap className="size-5 text-gray-700" />
-                            <Typography font="title">Program Information</Typography>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            {[
-                                { label: "Program Name", value: offer.program.name },
-                                { label: "University", value: offer.program.university },
-                                { label: "Degree Level", value: offer.program.degree },
-                                { label: "Campus", value: offer.program.campus },
-                                { label: "Duration", value: offer.program.duration },
-                                { label: "Intake", value: offer.program.intake },
-                            ].map((item, idx) => (
-                                <div key={idx} className="space-y-1">
-                                    <Typography font="small" className="text-gray-400 uppercase tracking-wider">
-                                        {item.label}
-                                    </Typography>
-                                    <Typography font="text" className="font-semibold text-gray-800">
-                                        {item.value}
-                                    </Typography>
-                                </div>
-                            ))}
-                        </div>
-                    </BluryCard>
-                </div>
-
-                {/* ── Right Column: Offer & Letter Preview ── */}
-                <div className="space-y-8">
-                    {/* Offer Summary */}
-                    <BluryCard isCentered={false} childClass="space-y-6" className="rounded-2xl bg-white/30 border-white/40">
-                        <div className="flex items-center gap-3 border-b border-white/20 pb-4">
-                            <Calendar className="size-5 text-gray-700" />
-                            <Typography font="title">Offer Timeline</Typography>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center p-3 rounded-xl bg-white/40 border border-white/60">
-                                <Typography font="sub-text" className="text-gray-500">Issue Date</Typography>
-                                <Typography font="small">{offer.issueDate}</Typography>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+                {/* Main content */}
+                <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+                    <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6">
+                        <SectionHeader icon={User} title="Student Information" />
+                        <div className="mt-2 flex flex-col gap-6 sm:flex-row sm:items-start">
+                            <div className="mx-auto sm:mx-0 size-24 rounded-2xl overflow-hidden border-2 border-white/60 shadow-md shrink-0 bg-white/50">
+                                <Avatar className="size-full rounded-none">
+                                    <AvatarImage src={student?.avatar_url} />
+                                    <AvatarFallback className="text-2xl font-bold rounded-none bg-brand-byzantine/10 text-brand-byzantine">
+                                        {student?.name?.[0] ?? "?"}
+                                    </AvatarFallback>
+                                </Avatar>
                             </div>
-                            <div className="flex justify-between items-center p-3 rounded-xl bg-red-50/30 border border-red-100/50">
-                                <Typography font="sub-text" className="text-gray-500">Expiry Date</Typography>
-                                <Typography font="small" className="text-red-600">{offer.expiryDate}</Typography>
+                            <div className="flex-1 min-w-0 divide-y divide-white/15">
+                                <DetailRow label="Full Name" value={student?.name} />
+                                <DetailRow
+                                    label="Email"
+                                    value={student?.email}
+                                    icon={<Mail className="size-3.5 text-gray-400 shrink-0" />}
+                                />
+                                <DetailRow
+                                    label="Phone"
+                                    value={student?.phone}
+                                    icon={<Phone className="size-3.5 text-gray-400 shrink-0" />}
+                                />
+                                <DetailRow label="Gender" value={student?.gender} />
+                                <DetailRow
+                                    label="Date of Birth"
+                                    value={
+                                        student?.date_of_birth
+                                            ? new Date(student.date_of_birth).toLocaleDateString("en-US", {
+                                                  dateStyle: "long",
+                                              })
+                                            : "—"
+                                    }
+                                    icon={<Calendar className="size-3.5 text-gray-400 shrink-0" />}
+                                />
                             </div>
                         </div>
                     </BluryCard>
 
-                    {/* Letter Preview Mock */}
-                    <div className="space-y-4">
-                        <Typography font="title" className="px-1">Offer Letter Preview</Typography>
-                        <BluryCard isCentered={false} childClass="p-0!" className="rounded-2xl overflow-hidden shadow-2xl border-white/40">
-                            <div className="bg-white p-8 aspect-[1/1.4] flex flex-col space-y-6 text-gray-800 shadow-inner overflow-hidden relative">
-                                {/* Watermark or Logo */}
-                                <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none rotate-[-35deg]">
-                                    <Typography font="heading" className="text-black scale-[3]">OFFICIAL</Typography>
-                                </div>
+                    <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6">
+                        <SectionHeader icon={GraduationCap} title="Program Details" />
+                        <div className="mt-2">
+                            <DetailRow
+                                label="University"
+                                value={university?.name}
+                                icon={<Building2 className="size-3.5 text-gray-400 shrink-0" />}
+                            />
+                            <DetailRow label="Program" value={program?.name} />
+                            <DetailRow label="Category" value={program?.category} />
+                            <DetailRow label="Duration" value={program?.program_length} />
+                            {junction && (
+                                <>
+                                    <DetailRow
+                                        label="Intake Date"
+                                        value={intakeDateFormatted}
+                                        icon={<Clock className="size-3.5 text-gray-400 shrink-0" />}
+                                    />
+                                    <DetailRow label="Study Type" value={junction.study_type} />
+                                    <DetailRow label="Tuition Fee" value={tuitionFormatted} />
+                                </>
+                            )}
+                        </div>
+                    </BluryCard>
 
-                                <Image src={"/logo-dark.png"} width={120} height={80} alt="logo" />
-                                {/* <div className="border-b-2 border-gray-100 pb-4 flex justify-between items-start">
-                                    <div className="space-y-1">
-                                        <Typography font="small" className="text-[#9B51E0]">OFFER OF ADMISSION</Typography>
-                                        <Typography font="sub-text" className="font-bold">{offer.program.university}</Typography>
+                    {reviews.length > 0 && (
+                        <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6">
+                            <SectionHeader
+                                icon={MessageSquare}
+                                title="Application Reviews"
+                                trailing={
+                                    <span className="bg-white/50 text-gray-600 px-2.5 py-1 rounded-full text-[10px] font-bold border border-white/50">
+                                        {reviews.length}
+                                    </span>
+                                }
+                            />
+                            <div className="mt-4 space-y-3">
+                                {reviews.map((review: any, idx: number) => (
+                                    <div
+                                        key={review.id || idx}
+                                        className="rounded-xl border border-white/50 bg-white/35 p-4 space-y-3"
+                                    >
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <Typography className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                                                Review {idx + 1} ·{" "}
+                                                {new Date(review.created_at).toLocaleDateString("en-US", {
+                                                    dateStyle: "medium",
+                                                })}
+                                            </Typography>
+                                            <StatusBadge status={review.status} />
+                                        </div>
+                                        {review.feedback && (
+                                            <Typography className="text-sm text-gray-700 leading-relaxed">
+                                                {review.feedback}
+                                            </Typography>
+                                        )}
                                     </div>
-                                    <Typography font="small" className="text-gray-400">{offer.issueDate}</Typography>
-                                </div> */}
-
-                                <div className="space-y-4">
-                                    <Typography font="sub-text">Dear <span className="font-bold">{offer.student.name}</span>,</Typography>
-                                    <Typography font="small" className="leading-relaxed text-gray-600 font-light">
-                                        We are pleased to offer you admission to the <span className="font-bold">{offer.program.name}</span> at our <span className="font-bold">{offer.program.campus}</span> for the <span className="font-bold">{offer.program.intake}</span> intake.
-                                    </Typography>
-                                    <Typography font="small" className="leading-relaxed text-gray-600 font-light">
-                                        Your academic achievement and potential make you an excellent candidate for our program. This offer is subject to the terms and conditions outlined in the full admission package.
-                                    </Typography>
-                                </div>
-
-                                {/* <div className="mt-auto space-y-4 pt-6 border-t border-gray-100">
-                                    <div className="flex justify-between text-[10px] text-gray-400">
-                                        <span>Reference: {offer.id}</span>
-                                        <span>Page 1 of 3</span>
-                                    </div>
-                                </div> */}
-                            </div>
-
-                            {/* Overlay Controls */}
-                            <div className="absolute inset-0 bg-black/5 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                                <Button variant="secondary" className="rounded-full shadow-lg">
-                                    <Eye className="size-4 mr-2" /> View
-                                </Button>
-                                <Button variant="secondary" className="rounded-full shadow-lg">
-                                    <Download className="size-4 mr-2" /> PDF
-                                </Button>
+                                ))}
                             </div>
                         </BluryCard>
-                    </div>
+                    )}
+                </div>
+
+                {/* Sidebar */}
+                <div className="lg:col-span-5 xl:col-span-4 space-y-6 lg:sticky lg:top-6 lg:self-start">
+                    <BluryCard
+                        isCentered={false}
+                        className="rounded-2xl"
+                        childClass="p-5 sm:p-6 space-y-5"
+                    >
+                        <SectionHeader icon={FileCheck} title="Offer & Application" />
+                        <div className="space-y-0">
+                            <DetailRow
+                                label="Offer Status"
+                                value={<StatusBadge status={offer.status} />}
+                            />
+                            <DetailRow label="Offer Issued" value={issuedAt} />
+                            <DetailRow
+                                label="Application"
+                                value={<StatusBadge status={app?.status} />}
+                            />
+                            <DetailRow label="Applied On" value={appCreatedAt} />
+                            {offer.status === "ACCEPTED" && (
+                                <DetailRow
+                                    label="Signature"
+                                    value={
+                                        <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2.5 py-1 rounded-full uppercase tracking-wide">
+                                            Signed
+                                        </span>
+                                    }
+                                />
+                            )}
+                            {acceptedAt && (
+                                <DetailRow label="Accepted On" value={acceptedAt} />
+                            )}
+                        </div>
+                        {offer.feedback && (
+                            <div className="rounded-xl border border-amber-200/50 bg-amber-50/30 p-4 space-y-1">
+                                <Typography className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                                    University feedback
+                                </Typography>
+                                <Typography font="small" className="text-gray-700 leading-relaxed">
+                                    {offer.feedback}
+                                </Typography>
+                            </div>
+                        )}
+                    </BluryCard>
+
+                    {(agent || latestReview) && (
+                        <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6 space-y-4">
+                            {agent && (
+                                <div className="space-y-3 pb-4 border-b border-white/20">
+                                    <Typography className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                                        Submitted by agent
+                                    </Typography>
+                                    <Typography className="font-bold text-gray-800">{agent.name || "—"}</Typography>
+                                    {agent.email && (
+                                        <div className="flex items-center gap-2 text-gray-600">
+                                            <Mail className="size-3.5 shrink-0" />
+                                            <Typography className="text-sm break-all">{agent.email}</Typography>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {latestReview && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        {latestReview.status === "OFFERED" || latestReview.status === "APPROVED" ? (
+                                            <CheckCircle2 className="size-4 text-green-600 shrink-0" />
+                                        ) : (
+                                            <AlertCircle className="size-4 text-amber-600 shrink-0" />
+                                        )}
+                                        <Typography className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                                            Latest review
+                                        </Typography>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <StatusBadge status={latestReview.status} />
+                                        <Typography className="text-[11px] text-gray-400">
+                                            {new Date(latestReview.created_at).toLocaleDateString("en-US", {
+                                                dateStyle: "medium",
+                                            })}
+                                        </Typography>
+                                    </div>
+                                    {latestReview.feedback && (
+                                        <Typography className="text-sm text-gray-600 leading-relaxed">
+                                            {latestReview.feedback}
+                                        </Typography>
+                                    )}
+                                </div>
+                            )}
+                        </BluryCard>
+                    )}
+
+                    <BluryCard isCentered={false} className="rounded-2xl w-full" childClass="p-0 w-full">
+                        <div className="px-5 pt-5 pb-3 border-b border-white/20">
+                            <SectionHeader icon={FileCheck} title="Offer Letter" />
+                        </div>
+                        <div className="w-full bg-white border-y border-gray-100">
+                            <div className="w-full p-5 sm:p-6 flex flex-col gap-4 text-gray-800 relative">
+                                <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none select-none -rotate-25">
+                                    <Typography font="heading" className="text-black text-5xl sm:text-6xl font-black">
+                                        OFFICIAL
+                                    </Typography>
+                                </div>
+                                <div className="relative z-10 w-full flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between border-b border-gray-100 pb-4">
+                                    <div className="min-w-0 flex-1 space-y-1">
+                                        <Typography className="text-base sm:text-lg font-bold text-gray-900 leading-snug wrap-break-word">
+                                            {university?.name || "University"}
+                                        </Typography>
+                                        <Typography className="text-xs text-gray-500">
+                                            Official Offer of Admission
+                                        </Typography>
+                                    </div>
+                                    <div className="w-full sm:w-auto sm:shrink-0 sm:text-right text-xs text-gray-500 space-y-0.5">
+                                        <Typography className="text-gray-400">Date Issued</Typography>
+                                        <Typography className="font-semibold text-gray-700">{issuedAt}</Typography>
+                                        <Typography className="text-gray-400 pt-1 wrap-break-word">Ref: {applicationRef}</Typography>
+                                    </div>
+                                </div>
+                                <Image
+                                    src="/logo-dark.png"
+                                    width={96}
+                                    height={48}
+                                    alt="University logo"
+                                    className="relative z-10 h-9 w-auto max-w-full object-contain object-left"
+                                />
+                                <div className="relative z-10 w-full space-y-3">
+                                    <Typography font="small" className="w-full text-gray-700 leading-relaxed wrap-break-word">
+                                        Dear <span className="font-semibold text-gray-900">{student?.name || "Applicant"}</span>,
+                                    </Typography>
+                                    <Typography font="small" className="w-full text-gray-600 leading-relaxed wrap-break-word">
+                                        We are pleased to offer you admission to the{" "}
+                                        <span className="font-semibold text-gray-900">{program?.name || "program"}</span> at{" "}
+                                        <span className="font-semibold text-gray-900">{university?.name || "our university"}</span>.
+                                    </Typography>
+                                    <Typography font="small" className="w-full text-gray-600 leading-relaxed wrap-break-word">
+                                        Your academic achievement and potential make you an excellent candidate for our program.
+                                        This offer is subject to the terms and conditions outlined in the full admission package.
+                                    </Typography>
+                                </div>
+                                <div className="relative z-10 w-full rounded-lg border border-gray-100">
+                                    <div className="w-full bg-gray-50 px-4 py-2 border-b border-gray-100">
+                                        <Typography className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                            Admission Details
+                                        </Typography>
+                                    </div>
+                                    <div className="w-full divide-y divide-gray-100">
+                                        {[
+                                            ["Program", program?.name],
+                                            ["Category", program?.category],
+                                            ["Duration", program?.program_length],
+                                            ["Study Type", junction?.study_type],
+                                            ["Intake Date", intakeDateFormatted !== "—" ? intakeDateFormatted : null],
+                                            ["Tuition Fee", tuitionFormatted !== "—" ? tuitionFormatted : null],
+                                        ]
+                                            .filter((row) => row[1])
+                                            .map(([label, value]) => (
+                                                <div
+                                                    key={label}
+                                                    className="w-full grid grid-cols-1 gap-1 px-4 py-2.5 sm:grid-cols-[minmax(100px,38%)_1fr] sm:gap-4"
+                                                >
+                                                    <Typography className="text-xs font-medium text-gray-500 shrink-0">
+                                                        {label}
+                                                    </Typography>
+                                                    <Typography className="text-xs font-semibold text-gray-800 wrap-break-word">
+                                                        {value}
+                                                    </Typography>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </div>
+                                {isOfferSigned ? (
+                                    <div className="relative z-10 w-full pt-4 border-t border-dashed border-gray-200 flex flex-col items-end gap-1">
+                                        <img
+                                            src={offer.file_url}
+                                            alt="Signature"
+                                            className="h-12 w-32 max-w-full object-contain mix-blend-multiply"
+                                        />
+                                        <Typography className="text-[10px] text-gray-500 text-right wrap-break-word">
+                                            {student?.name} · Signed {acceptedAt || "—"}
+                                        </Typography>
+                                    </div>
+                                ) : (
+                                    <div className="relative z-10 w-full pt-4 border-t border-dashed border-gray-200 flex flex-col items-end gap-1">
+                                        <Typography className="text-xs text-gray-400 italic">
+                                            Signature required
+                                        </Typography>
+                                        <Typography className="text-[10px] text-gray-400">
+                                            Pending student signature
+                                        </Typography>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="w-full px-5 pb-5 pt-4 flex flex-col sm:flex-row gap-2">
+                            <Button
+                                variant="outline"
+                                className="flex-1 rounded-xl gap-2 border-white/50 bg-white/30"
+                                onClick={handleViewLetter}
+                            >
+                                <Eye className="size-4" />
+                                View full letter
+                            </Button>
+                            <Button
+                                className="flex-1 rounded-xl gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90"
+                                onClick={handleDownloadPDF}
+                            >
+                                <Download className="size-4" />
+                                Download PDF
+                            </Button>
+                        </div>
+                    </BluryCard>
+
+                    {offer.status === "ACCEPTED" && offer.file_url && (
+                        <Button
+                            className="w-full rounded-2xl h-12 text-sm font-bold gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 shadow-lg shadow-brand-byzantine/20"
+                            onClick={() =>
+                                toast("Coming soon", {
+                                    description: "Payment portal is under development.",
+                                })
+                            }
+                        >
+                            <CreditCard className="size-4" />
+                            Continue to payment
+                            <ArrowRight className="size-4" />
+                        </Button>
+                    )}
                 </div>
             </div>
+
+            {/* Signature Draw Modal */}
+            {isSignModalOpen && (
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-[#f8f9fa] rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl relative border border-white/20 animate-in zoom-in-95 duration-200">
+                        {/* Close button */}
+                        <button 
+                            onClick={() => setIsSignModalOpen(false)} 
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-full hover:bg-gray-200/50"
+                        >
+                            <X className="size-5" />
+                        </button>
+
+                        <div className="text-center space-y-1.5">
+                            <Typography font="title" className="text-xl font-extrabold text-gray-900">
+                                Draw Your Signature
+                            </Typography>
+                            <Typography className="text-xs text-gray-500">
+                                Please draw your signature in the white box below using your mouse or touch screen.
+                            </Typography>
+                        </div>
+
+                        {/* Drawing Canvas Container */}
+                        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-inner p-2 relative">
+                            <canvas
+                                ref={canvasRef}
+                                onMouseDown={startDrawing}
+                                onMouseMove={draw}
+                                onMouseUp={stopDrawing}
+                                onMouseLeave={stopDrawing}
+                                onTouchStart={startDrawing}
+                                onTouchMove={draw}
+                                onTouchEnd={stopDrawing}
+                                className="w-full h-48 cursor-crosshair touch-none bg-white rounded-xl"
+                            />
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center justify-between gap-3">
+                            <Button 
+                                variant="outline" 
+                                className="rounded-xl border-gray-300 text-gray-600 hover:bg-gray-100 font-semibold px-5"
+                                onClick={clearCanvas}
+                                disabled={isSubmitting}
+                            >
+                                Clear
+                            </Button>
+
+                            <div className="flex items-center gap-3">
+                                <Button 
+                                    variant="ghost" 
+                                    className="rounded-xl text-gray-500 hover:bg-gray-100"
+                                    onClick={() => setIsSignModalOpen(false)}
+                                    disabled={isSubmitting}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    className="bg-brand-byzantine hover:bg-brand-byzantine/90 text-white rounded-xl font-bold px-8 py-2.5 shadow-lg shadow-brand-byzantine/20 transition-all"
+                                    onClick={handleSaveSignature}
+                                    disabled={isSubmitting || !hasSigned}
+                                >
+                                    {isSubmitting ? "Saving..." : "Save"}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     )
 }
