@@ -146,27 +146,45 @@ export default function StudentDetailPage({ params }: PageProps) {
                     <div className="flex-1 space-y-6">
                         <Typography as="h3" font="text-xl" className="text-gray-900">Academic Record</Typography>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                            <div className="space-y-1">
-                                <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Highest Degree</Typography>
-                                <Typography as="p" font="title" className="text-gray-900">{edu?.qualification ?? "—"}</Typography>
-                                <Typography as="p" font="small" className="text-gray-500">{edu?.institution_name ?? "—"}</Typography>
-                            </div>
+                        <div className="space-y-6">
+                            {eduList.length === 0 ? (
+                                <Typography as="p" font="sub-text" className="text-gray-400">No academic records found.</Typography>
+                            ) : eduList.map((e: any, i: number) => {
+                                const obtained = parseFloat(e.obtained_marks)
+                                const total = parseFloat(e.total_marks)
+                                const percentage = (!isNaN(obtained) && !isNaN(total) && total > 0)
+                                    ? ((obtained / total) * 100).toFixed(1)
+                                    : null
 
-                            <div className="space-y-1">
-                                <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Final GPA</Typography>
-                                <Typography as="p" font="title" className="text-gray-900">{edu?.cumulative_gpa ?? "—"}</Typography>
-                            </div>
+                                return (
+                                    <div key={i} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pb-4 border-b border-gray-200/30 last:border-0">
+                                        <div className="space-y-1">
+                                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Degree</Typography>
+                                            <Typography as="p" font="title" className="text-gray-900">{e.degree?.name ?? "—"}</Typography>
+                                            <Typography as="p" font="small" className="text-gray-500 capitalize">{e.degree?.level?.toLowerCase() ?? ""}</Typography>
+                                        </div>
 
-                            {eduList.length > 1 && (
-                                <div className="space-y-1">
-                                    <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Qualifications</Typography>
-                                    {eduList.slice(1).map((e, i) => (
-                                        <Typography key={i} as="p" font="sub-text" className="text-gray-700">{e.qualification} — {e.institution_name}</Typography>
-                                    ))}
-                                </div>
+                                        <div className="space-y-1">
+                                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Institution</Typography>
+                                            <Typography as="p" font="title" className="text-gray-900">{e.institution_name ?? "—"}</Typography>
+                                        </div>
 
-                            )}
+                                        <div className="space-y-1">
+                                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Marks</Typography>
+                                            <Typography as="p" font="title" className="text-gray-900">
+                                                {e.obtained_marks ?? "—"} / {e.total_marks ?? "—"}
+                                            </Typography>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Percentage</Typography>
+                                            <Typography as="p" font="title" className="text-gray-900">
+                                                {percentage ? `${percentage}%` : "—"}
+                                            </Typography>
+                                        </div>
+                                    </div>
+                                )
+                            })}
                         </div>
                     </div>
                 </div>

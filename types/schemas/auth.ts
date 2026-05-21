@@ -246,7 +246,7 @@ export const agentProfileSchema = z.object({
 
 export const degreeStep2Schema = z.object({
     academics: z.array(z.object({
-        highestDegree: z.string().min(1, "Select degree"),
+        degree_id: z.string().min(1, "Select degree"),
 
         instituteName: z
             .string()
@@ -255,29 +255,52 @@ export const degreeStep2Schema = z.object({
             .min(2, "Institute Name is Too Short")
             .max(200, "Maximum 200 character allowed"),
 
-        gpa: z
+        obtained_marks: z
             .string()
             .trim()
-            .regex(/^\d+(\.\d{1,2})?$/, "Invalid GPA")
-            .refine((val) => {
-                const num = parseFloat(val);
-                return num >= 0 && num <= 4;
-            }, "GPA must be between 0 and 4"),
+            .min(1, "Obtained marks is required")
+            .regex(/^\d+(\.\d{1,2})?$/, "Must be a valid number"),
 
-        desiredProgram: z
+        total_marks: z
             .string()
             .trim()
-            .min(1, "Desired Program is required")
-            .min(2, "Desired Program is Too Short")
-            .max(200, "Maximum 200 character allowed"),
+            .min(1, "Total marks is required")
+            .regex(/^\d+(\.\d{1,2})?$/, "Must be a valid number"),
 
-        campus: z.string().min(1, "Select campus"),
-        englishTest: z.string().min(1, "Select test"),
+        start_date: z.string().optional(),
+        end_date: z.string().optional(),
+
         about: z
             .string()
             .trim()
             .min(1, "Plan is required")
             .min(10, "Too short")
             .max(500, "Too long"),
+    }).superRefine((val, ctx) => {
+        if (
+            val.obtained_marks &&
+            val.total_marks &&
+            parseFloat(val.obtained_marks) > parseFloat(val.total_marks)
+        ) {
+            ctx.addIssue({
+                path: ["obtained_marks"],
+                code: "custom",
+                message: "Obtained marks cannot exceed total marks",
+            })
+        }
     })).min(1, "At least one academic record is required")
+}).superRefine((data, ctx) => {
+    const ids = data.academics.map(a => a.degree_id).filter(Boolean)
+    const duplicates = ids.filter((id, i) => ids.indexOf(id) !== i)
+    if (duplicates.length > 0) {
+        data.academics.forEach((a, i) => {
+            if (duplicates.includes(a.degree_id)) {
+                ctx.addIssue({
+                    path: ["academics", i, "degree_id"],
+                    code: "custom",
+                    message: "This degree is already selected",
+                })
+            }
+        })
+    }
 });

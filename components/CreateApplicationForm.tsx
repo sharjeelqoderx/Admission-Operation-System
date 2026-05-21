@@ -68,10 +68,10 @@ type Program = {
 type Document = {
     id: string;
     name: string;
+    document_type_id: string;
+    document_type?: { id: string; name: string };
     created_at: string;
-    document_files?: {
-        file_url: string;
-    }[];
+    document_files?: { file_url: string }[];
 };
 
 
@@ -188,10 +188,10 @@ export function CreateApplicationForm() {
     const studentDetails: Student | undefined = studentDetailsResponse?.data;
 
     const { data: documentsResponse } = useQuery({
-        queryKey: ["student-documents", selectedStudentId],
+        queryKey: ["student-documents", selectedStudentId, programIdParam],
         queryFn: async () => {
             if (!selectedStudentId) return null;
-            const res = await fetch(`/api/document/student/${selectedStudentId}`);
+            const url = new URLSearchParams(); if (programIdParam) url.set("program_id", programIdParam); const res = await fetch(`/api/document/student/${selectedStudentId}?${url.toString()}`);
             if (!res.ok) throw new Error("Failed to fetch documents");
             return res.json();
         },
@@ -208,6 +208,19 @@ export function CreateApplicationForm() {
         }
     });
     const programs: Program[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
+
+    const { data: programDetailResponse } = useQuery({
+        queryKey: ["program-detail", programIdParam],
+        queryFn: async () => {
+            const res = await fetch(`/api/program/${programIdParam}`);
+            if (!res.ok) throw new Error("Failed to fetch program details");
+            return res.json();
+        },
+        enabled: !!programIdParam,
+    });
+    const requiredDocTypes: { id: string; name: string }[] = (
+        programDetailResponse?.data?.program_document_requirements ?? []
+    ).map((r: any) => r.document_type).filter(Boolean);
 
     useEffect(() => {
         if (programIdParam && programsResponse?.data) {
@@ -231,6 +244,19 @@ export function CreateApplicationForm() {
             if (!studentId || !documentIds || documentIds.length === 0) {
                 return;
             }
+
+            // Validate required document types
+            if (requiredDocTypes.length > 0) {
+                const studentDocTypeIds = documents
+                    .filter(d => documentIds.includes(d.id))
+                    .map((d: any) => d.document_type?.id ?? d.document_type_id)
+                const missingTypes = requiredDocTypes.filter(rt => !studentDocTypeIds.includes(rt.id))
+                if (missingTypes.length > 0) {
+                    toast.error(`Missing required documents: ${missingTypes.map(m => m.name).join(", ")}`)
+                    return
+                }
+            }
+
             setStep(2);
         } else if (step === 2) {
             setIsStep2Attempted(true);
@@ -333,6 +359,7 @@ export function CreateApplicationForm() {
                         students={students}
                         studentDetails={studentDetails}
                         documents={documents}
+                        requiredDocTypes={requiredDocTypes}
                         isDocumentsLoading={!documentsResponse}
                         role={user?.role}
                         isStepAttempted={isStep1Attempted}
@@ -369,7 +396,16 @@ export function CreateApplicationForm() {
     );
 }
 
-function Step1({ form, students, studentDetails, documents, role, isDocumentsLoading, isStepAttempted, onNext }: { form: any; students: Student[]; studentDetails?: Student; documents: Document[]; role?: string; isDocumentsLoading?: boolean; isStepAttempted?: boolean; onNext: () => void }) {
+function Step1({ form, students, studentDetails, documents, requiredDocTypes, role, isDocumentsLoading, isStepAttempted, onNext }: { form: any; students: Student[]; studentDetails?: Student; documents: Document[]; requiredDocTypes: { id: string; name: string }[]; role?: string; isDocumentsLoading?: boolean; isStepAttempted?: boolean; onNext: () => void }) {
+    const selectedDocIds = useStore(form.store, (s: any) => s.values.document_ids) || []
+
+    const studentDocTypeIds = documents
+        .filter((d: any) => selectedDocIds.includes(d.id))
+        .map((d: any) => d.document_type?.id ?? d.document_type_id)
+
+    const missingDocTypes = requiredDocTypes.filter(rt => !studentDocTypeIds.includes(rt.id))
+    const studentHasAllRequired = requiredDocTypes.length === 0 || missingDocTypes.length === 0
+    const studentId = useStore(form.store, (s: any) => s.values.profile_id)
     return (
         <div className="space-y-8">
             <div className="space-y-2">
@@ -432,7 +468,6 @@ function Step1({ form, students, studentDetails, documents, role, isDocumentsLoa
                         <FileText className="size-5 text-blue-600" />
                         <Typography as="h3" font="title" className="text-brand-secondary">Supporting Documents</Typography>
                     </div>
-
                 </div>
 
                 <form.Field name="document_ids">
@@ -441,88 +476,87 @@ function Step1({ form, students, studentDetails, documents, role, isDocumentsLoa
                             {isDocumentsLoading ? (
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     {[1, 2, 3, 4].map(i => (
-                                        <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />
+                                        <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />
                                     ))}
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {documents.length > 0 ? (
-                                        documents.map((doc) => {
-                                        const isChecked = field.state.value?.includes(doc.id);
-                                        return (
-                                            <div
-                                                key={doc.id}
-                                                onClick={() => {
-                                                    const current = field.state.value || [];
-                                                    const next = current.includes(doc.id)
-                                                        ? current.filter((id: string) => id !== doc.id)
-                                                        : [...current, doc.id];
-                                                    field.handleChange(next);
-                                                }}
-                                                className={cn(
-                                                    "bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border transition-all cursor-pointer group",
-                                                    isChecked ? "border-green-500 bg-green-50/30 shadow-md" : "border-gray-100 hover:border-gray-300"
-                                                )}
-                                            >
-                                                <div className="absolute top-3 left-3 z-10">
-                                                    {isChecked ? (
-                                                        <CheckSquare className="size-4 text-green-500 fill-green-50" />
-                                                    ) : (
-                                                        <Square className="size-4 text-brand-secondary/20 group-hover:text-brand-secondary/40" />
-                                                    )}
-                                                </div>
-                                                <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                                    {doc.document_files?.[0]?.file_url ? (
-                                                        <FilePreview
-                                                            url={doc.document_files[0].file_url}
-                                                            name={doc.name}
-                                                            showActions={false}
-                                                            className="border-none shadow-none size-full"
-                                                        />
-                                                    ) : (
-                                                        <FileText className={cn("size-10 transition-colors", isChecked ? "text-green-500" : "text-gray-300")} />
-                                                    )}
-                                                </div>
-
-                                                <div>
-                                                    <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{doc.name}</Typography>
-                                                    <Typography as="p" className="text-[8px] font-bold tracking-widest text-gray-500 uppercase mt-1">
-                                                        {new Date(doc.created_at).toLocaleDateString()}
-                                                    </Typography>
-                                                </div>
-                                            </div>
-                                        );
-                                    })
-                                ) : (
-                                    <div className="col-span-full py-12 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center gap-4">
-                                        <div className="size-12 rounded-full bg-gray-100 flex items-center justify-center">
+                                    {requiredDocTypes.length > 0 ? (
+                                        requiredDocTypes.map((rt) => {
+                                            const doc = documents.find(d => (d.document_type?.id ?? d.document_type_id) === rt.id)
+                                            const isChecked = doc ? field.state.value?.includes(doc.id) : false
+                                            if (doc) {
+                                                return (
+                                                    <div
+                                                        key={rt.id}
+                                                        onClick={() => {
+                                                            const current = field.state.value || []
+                                                            const next = current.includes(doc.id)
+                                                                ? current.filter((id: string) => id !== doc.id)
+                                                                : [...current, doc.id]
+                                                            field.handleChange(next)
+                                                        }}
+                                                        className={cn(
+                                                            "bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border transition-all cursor-pointer group",
+                                                            isChecked ? "border-green-500 bg-green-50/30 shadow-md" : "border-gray-100 hover:border-gray-300"
+                                                        )}
+                                                    >
+                                                        <div className="absolute top-3 left-3 z-10">
+                                                            {isChecked
+                                                                ? <CheckSquare className="size-4 text-green-500 fill-green-50" />
+                                                                : <Square className="size-4 text-brand-secondary/20 group-hover:text-brand-secondary/40" />}
+                                                        </div>
+                                                        <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                                            {doc.document_files?.[0]?.file_url ? (
+                                                                <FilePreview
+                                                                    url={doc.document_files[0].file_url}
+                                                                    name={rt.name}
+                                                                    showActions={false}
+                                                                    className="border-none shadow-none size-full"
+                                                                />
+                                                            ) : (
+                                                                <FileText className={cn("size-10", isChecked ? "text-green-500" : "text-gray-300")} />
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{rt.name}</Typography>
+                                                            <Typography as="p" className="text-[8px] font-bold tracking-widest text-gray-500 uppercase mt-1">
+                                                                {new Date(doc.created_at).toLocaleDateString()}
+                                                            </Typography>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            }
+                                            // Missing — empty upload slot
+                                            return (
+                                                <Link
+                                                    key={rt.id}
+                                                    href={`/dashboard/document/new?document_type_id=${rt.id}&from=application`}
+                                                    className="bg-red-50/50 rounded-xl p-3 space-y-3 relative border-2 border-dashed border-red-200 flex flex-col items-center justify-center gap-2 min-h-[140px] hover:bg-red-50 hover:border-red-300 transition-all group"
+                                                >
+                                                    <div className="size-10 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                                                        <FileText className="size-5 text-red-400" />
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <Typography as="p" className="text-[11px] font-bold text-red-600 truncate">{rt.name}</Typography>
+                                                        <Typography as="p" className="text-[9px] text-red-400 mt-0.5">Click to upload</Typography>
+                                                    </div>
+                                                </Link>
+                                            )
+                                        })
+                                    ) : (
+                                        <div className="col-span-full py-12 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center gap-4">
                                             <FileText className="size-6 text-gray-400" />
-                                        </div>
-                                        <div className="space-y-1">
                                             <Typography as="p" className="text-sm font-bold text-gray-900">
-                                                {form.getFieldValue("profile_id") ? "No documents found" : "No student selected"}
-                                            </Typography>
-                                            <Typography as="p" className="text-xs text-gray-500">
-                                                {form.getFieldValue("profile_id")
-                                                    ? "Document has not uploaded for this student"
-                                                    : "Please select a student above to view their available documents."}
+                                                {studentId ? "No required documents for this program" : "No student selected"}
                                             </Typography>
                                         </div>
-                                        {form.getFieldValue("profile_id") && (
-                                            <Link href={`/dashboard/document/new?student_id=${form.getFieldValue("profile_id")}&from=application`}>
-
-                                                <Button type="button" variant="outline" className="h-9 px-6 border rounded-xl border-gray-300 text-brand-secondary font-bold text-xs hover:bg-white transition-all shadow-sm">
-                                                    Upload New Document
-                                                </Button>
-                                            </Link>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        {(field.form.state.isSubmitted || isStepAttempted) && field.state.meta.errors?.[0] && (
-                            <p className="text-[10px] text-red-500 font-medium mt-2">Please select at least one document</p>
-                        )}
+                                    )}
+                                </div>
+                            )}
+                            {(field.form.state.isSubmitted || isStepAttempted) && field.state.meta.errors?.[0] && (
+                                <p className="text-[10px] text-red-500 font-medium mt-2">Please select at least one document</p>
+                            )}
                         </div>
                     )}
                 </form.Field>
@@ -845,7 +879,7 @@ function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitt
                                 {doc.document_files?.[0]?.file_url ? (
                                     <FilePreview
                                         url={doc.document_files[0].file_url}
-                                        name={doc.name}
+                                        name={doc.document_type?.name ?? ""}
                                         showActions={false}
                                         className="border-none shadow-none size-full"
                                     />
@@ -856,7 +890,7 @@ function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitt
                                 )}
                             </div>
                             <Typography as="p" className="text-[10px] font-bold text-gray-700 truncate px-1">
-                                {doc.name}
+                                {doc.document_type?.name ?? "—"}
                             </Typography>
                         </div>
                     ))}

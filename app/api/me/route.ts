@@ -68,15 +68,15 @@ export async function GET() {
                 ...extraData
             },
             academic: academics && academics.length > 0 ? academics.map(academic => ({
-                highestDegree: academic.qualification ?? "",
+                degree_id: academic.degree_id ?? "",
                 instituteName: academic.institution_name ?? "",
-                gpa: academic.cumulative_gpa ? String(academic.cumulative_gpa) : "",
-                startDate: academic.start_date ?? "",
-                endDate: academic.end_date ?? "",
+                obtained_marks: academic.obtained_marks ? String(academic.obtained_marks) : "",
+                total_marks: academic.total_marks ? String(academic.total_marks) : "",
+                start_date: academic.start_date ?? "",
+                end_date: academic.end_date ?? "",
                 about: academic.honors ?? "",
             })) : null,
             experience: experiences && experiences.length > 0 ? {
-                academicGap: experiences[0].timeline_gap_years ? String(experiences[0].timeline_gap_years) : "",
                 hasExperience: "yes" as const,
                 entries: experiences.map(experience => ({
                     jobTitle: experience.title ?? "",

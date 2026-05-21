@@ -26,6 +26,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                             avatar_url
                         )
                     )
+                ),
+                program_document_requirements (
+                    id,
+                    document_type:document_type_id ( id, name )
                 )
             `)
             .eq("id", id)

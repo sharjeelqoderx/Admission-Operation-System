@@ -5,7 +5,6 @@ import { ok, err } from "@/lib/api"
 
 const schema = z.object({
     userId: z.string().uuid(),
-    academicGap: z.number().min(0).max(50).optional(),
     hasExperience: z.enum(["yes", "no"]),
     experiences: z.array(z.object({
         name: z.string().optional(),
@@ -35,7 +34,7 @@ export async function POST(req: NextRequest) {
     const parsed = schema.safeParse(body)
     if (!parsed.success) return err(parsed.error.issues[0].message, 400)
 
-    const { userId, academicGap, hasExperience, experiences } = parsed.data
+    const { userId, hasExperience, experiences } = parsed.data
 
     const supabase = await createSupabaseServerClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -48,7 +47,6 @@ export async function POST(req: NextRequest) {
     if (hasExperience === "yes" && experiences && experiences.length > 0) {
         const payload = experiences.map((exp) => ({
             profile_id: userId,
-            timeline_gap_years: academicGap,
             title: exp.name,
             organization_name: exp.organization,
             industry_sector: exp.industry,

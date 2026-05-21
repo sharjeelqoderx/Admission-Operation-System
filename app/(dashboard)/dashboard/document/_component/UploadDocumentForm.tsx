@@ -33,6 +33,7 @@ export function UploadDocumentForm() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const studentIdParam = searchParams.get("student_id")
+    const documentTypeIdParam = searchParams.get("document_type_id")
     const queryClient = useQueryClient()
 
     const { data: user } = useQuery({
@@ -47,11 +48,22 @@ export function UploadDocumentForm() {
 
     const { data: studentsData } = useQuery({
         queryKey: ["students"],
+        enabled: user?.role !== "STUDENT",
         queryFn: async () => {
             const res = await fetch("/api/student")
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error ?? "Failed")
             return json.data as { profile_id: string; student_code: string; profile: { name: string } }[]
+        },
+    })
+
+    const { data: documentTypes = [] } = useQuery<{ id: string; name: string }[]>({
+        queryKey: ["document-types"],
+        queryFn: async () => {
+            const res = await fetch("/api/document-type")
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error ?? "Failed")
+            return json.data
         },
     })
 
@@ -67,9 +79,13 @@ export function UploadDocumentForm() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["documents"] })
             const from = searchParams.get("from")
+            const programId = searchParams.get("program_id")
             const studentId = form.state.values.student_id
             if (from === "application") {
-                router.push(`/dashboard/application/new?student_id=${studentId}`)
+                const params = new URLSearchParams()
+                if (studentId) params.set("student_id", studentId)
+                if (programId) params.set("program_id", programId)
+                router.push(`/dashboard/application/new?${params.toString()}`)
             } else {
                 router.push("/dashboard/document")
             }
@@ -83,7 +99,7 @@ export function UploadDocumentForm() {
     const form = useForm({
         defaultValues: {
             student_id: studentIdParam || "",
-            name: "",
+            document_type_id: documentTypeIdParam || "",
             files: [] as File[],
             comment: "",
         } as DocumentInput,
@@ -95,7 +111,7 @@ export function UploadDocumentForm() {
             if (!parsed.success) return
             const fd = new FormData()
             fd.set("student_id", parsed.data.student_id)
-            fd.set("name", parsed.data.name)
+            fd.set("document_type_id", parsed.data.document_type_id)
             parsed.data.files.forEach((file) => {
                 fd.append("files", file)
             })
@@ -110,7 +126,10 @@ export function UploadDocumentForm() {
         } else if (studentIdParam) {
             form.setFieldValue("student_id", studentIdParam);
         }
-    }, [user, studentIdParam])
+        if (documentTypeIdParam) {
+            form.setFieldValue("document_type_id", documentTypeIdParam);
+        }
+    }, [user, studentIdParam, documentTypeIdParam])
 
     const handleFileChange = (index: number, file: File | null) => {
         const currentFiles = [...(form.state.values.files || [])]
@@ -154,16 +173,24 @@ export function UploadDocumentForm() {
                         </form.Field>
                     )}
 
-                    <form.Field name="name">
+                    <form.Field name="document_type_id">
                         {(field) => (
-                            <F field={field} label="File Name">
-                                <Input
-                                    id={field.name}
+                            <F field={field} label="Document Type">
+                                <Select
                                     value={field.state.value}
-                                    onBlur={field.handleBlur}
-                                    onChange={(e) => field.handleChange(e.target.value)}
-                                    placeholder="Enter file name (e.g. Passport, Degree)"
-                                />
+                                    onValueChange={(v) => field.handleChange(v)}
+                                >
+                                    <SelectTrigger className="h-12">
+                                        <SelectValue placeholder="Select document type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {documentTypes.map((dt) => (
+                                            <SelectItem key={dt.id} value={dt.id}>
+                                                {dt.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </F>
                         )}
                     </form.Field>
@@ -260,7 +287,7 @@ export function UploadDocumentForm() {
 
                 <form.Subscribe selector={(s) => ({ isSubmitting: s.isSubmitting, values: s.values })}>
                     {({ isSubmitting, values }) => {
-                        const canSubmit = !!values.student_id && !!values.name?.trim() && (values.files?.length || 0) >= 1
+                        const canSubmit = !!values.student_id && !!values.document_type_id && (values.files?.length || 0) >= 1
                         return (
                             <Button
                                 type="submit"

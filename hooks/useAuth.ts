@@ -60,16 +60,15 @@ type AuthUserResponse = {
     }
 
     academic: Array<{
-        highestDegree: string
+        degree_id: string
         instituteName: string
-        gpa: string
-        desiredProgram: string
-        campus: string
-        englishTest: string
+        obtained_marks: string
+        total_marks: string
+        start_date: string
+        end_date: string
         about: string
     }> | null
     experience: {
-        academicGap: string
         hasExperience: "yes"
         entries: Array<{
             jobTitle: string
@@ -98,19 +97,18 @@ type ProfilePayload = {
 type AcademicPayload = {
     userId: ProfileRow["id"]
     academics: Array<{
-        qualification: string
+        degree_id: string
         instituteName: string
-        gpa: number
-        desiredProgram: string
-        campus: string
-        englishTest: string
-        about: string
+        obtained_marks: number
+        total_marks: number
+        start_date?: string
+        end_date?: string
+        about?: string
     }>
 }
 
 type ExperiencePayload = {
     userId: ProfileRow["id"]
-    academicGap?: number
     hasExperience: "yes" | "no"
     experiences: Array<{
         name?: string

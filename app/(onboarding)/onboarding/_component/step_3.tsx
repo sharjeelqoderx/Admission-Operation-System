@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils"
 import { PageLoader } from "@/components/shared/page-loader"
 
 const schema = z.object({
-    academicGap: z.string().trim().regex(/^\d*$/, "Must be a number").refine(v => v === "" || (Number(v) >= 0 && Number(v) <= 50), "Must be between 0 and 50"),
     hasExperience: z.enum(["yes", "no"], { message: "Please select an option" }),
     experiences: z.array(z.object({
         jobTitle: z.string(),
@@ -38,7 +37,6 @@ const schema = z.object({
 })
 
 type Defaults = {
-    academicGap: string
     hasExperience: "yes" | "no"
     experiences?: Array<{
         jobTitle: string
@@ -63,7 +61,6 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
             if (!meData?.id) return
             await saveExperience.mutateAsync({
                 userId: meData.id,
-                academicGap: Number(value.academicGap),
                 hasExperience: value.hasExperience,
                 experiences: value.hasExperience === "yes" ? (value.experiences?.map(exp => ({
                     name: exp.jobTitle,
@@ -83,34 +80,6 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
         <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-
-                {/* Academic Gap */}
-                <form.Field name="academicGap">
-                    {(field) => (
-                        <div className="sm:col-span-2 min-w-[200px]">
-                            <F
-                                isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                                error={field.state.meta.errors?.[0]}
-                                label="Academic Gap (in years)"
-                            >
-                                <Input
-                                    id={field.name}
-                                    type="number"
-                                    value={field.state.value}
-                                    onBlur={field.handleBlur}
-                                    onChange={e => field.handleChange(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (["e", "E", "+", "-", ".", "ArrowUp", "ArrowDown"].includes(e.key)) {
-                                            e.preventDefault()
-                                        }
-                                    }}
-                                    placeholder="e.g. 1"
-                                    className="w-full min-w-[200px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                />
-                            </F>
-                        </div>
-                    )}
-                </form.Field>
 
                 {/* Experience Yes/No */}
                 <form.Field name="hasExperience">
@@ -306,7 +275,6 @@ export function Step3Work({ onBack }: { onBack: () => void }) {
     }]
 
     const defaults: Defaults = {
-        academicGap: meData?.experience?.academicGap ?? "",
         hasExperience: meData?.experience?.hasExperience ?? "no",
         experiences,
     }

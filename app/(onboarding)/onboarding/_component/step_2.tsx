@@ -1,35 +1,71 @@
 "use client"
 
 import { useForm } from "@tanstack/react-form"
+import { useQuery } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DatePicker } from "./_shared"
 import { Typography } from "@/components/shared/Typography"
 import { degreeStep2Schema } from "@/types/schemas/auth"
 import { F } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
 import { PageLoader } from "@/components/shared/page-loader"
 
-type Defaults = { academics: Array<{ highestDegree: string; instituteName: string; gpa: string; desiredProgram: string; campus: string; englishTest: string; about: string }> }
+type EducationType = { id: string; name: string; level: string }
+
+type AcademicEntry = {
+    degree_id: string
+    instituteName: string
+    obtained_marks: string
+    total_marks: string
+    start_date: string
+    end_date: string
+    about: string
+}
+
+type Defaults = { academics: AcademicEntry[] }
+
+const EMPTY_ENTRY: AcademicEntry = {
+    degree_id: "",
+    instituteName: "",
+    obtained_marks: "",
+    total_marks: "",
+    start_date: "",
+    end_date: "",
+    about: "",
+}
 
 function Step2Form({ defaultValues, onBack, onNext }: { defaultValues: Defaults; onBack: () => void; onNext: () => void; onSkip: () => void }) {
     const { me, academic: saveAcademic } = useAuth()
     const { data: meData } = me
 
+    const { data: educationTypes = [], isLoading: loadingTypes } = useQuery<EducationType[]>({
+        queryKey: ["education-types"],
+        queryFn: async () => {
+            const res = await fetch("/api/education")
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error ?? "Failed to load")
+            return json.data
+        },
+    })
+
     const form = useForm({
         defaultValues,
-        validators: { onSubmit: degreeStep2Schema },
         onSubmit: async ({ value }) => {
             if (!meData?.id) return
+            const parsed = degreeStep2Schema.safeParse(value)
+            if (!parsed.success) return
             await saveAcademic.mutateAsync({
                 userId: meData.id,
-                academics: value.academics.map(val => ({
-                    qualification: val.highestDegree,
+                academics: parsed.data.academics.map(val => ({
+                    degree_id: val.degree_id,
                     instituteName: val.instituteName,
-                    gpa: Number(val.gpa),
-                    desiredProgram: val.desiredProgram,
-                    campus: val.campus,
-                    englishTest: val.englishTest,
-                    about: val.about
+                    obtained_marks: Number(val.obtained_marks),
+                    total_marks: Number(val.total_marks),
+                    start_date: val.start_date || undefined,
+                    end_date: val.end_date || undefined,
+                    about: val.about,
                 }))
             })
             onNext()
@@ -37,13 +73,7 @@ function Step2Form({ defaultValues, onBack, onNext }: { defaultValues: Defaults;
     })
 
     return (
-        <form
-            onSubmit={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                form.handleSubmit()
-            }}
-        >
+        <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}>
             <form.Field name="academics" mode="array">
                 {(field) => (
                     <div className="space-y-8">
@@ -60,48 +90,146 @@ function Step2Form({ defaultValues, onBack, onNext }: { defaultValues: Defaults;
                                         Remove
                                     </Button>
                                 )}
+
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 pt-2">
-                                    <form.Field name={`academics[${i}].highestDegree`}>
+
+                                    {/* Degree dropdown */}
+                                    <form.Field name={`academics[${i}].degree_id`}>
                                         {(subField) => (
-                                            <F isInvalid={subField.state.meta.isTouched && !subField.state.meta.isValid} error={subField.state.meta.errors?.[0]} label="Highest Degree">
-                                                <Input value={subField.state.value} onBlur={subField.handleBlur} onChange={(e) => subField.handleChange(e.target.value)} placeholder="e.g. Bachelor's in Computer Science" className="w-full" />
+                                            <F
+                                                isInvalid={subField.state.meta.isTouched && !subField.state.meta.isValid}
+                                                error={subField.state.meta.errors?.[0]}
+                                                label="Highest Degree"
+                                            >
+                                                <Select
+                                                    value={subField.state.value}
+                                                    onValueChange={subField.handleChange}
+                                                    disabled={loadingTypes}
+                                                >
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder={loadingTypes ? "Loading..." : "Select degree"} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {educationTypes.map((et) => (
+                                                            <SelectItem key={et.id} value={et.id}>
+                                                                {et.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </F>
                                         )}
                                     </form.Field>
 
+                                    {/* Institute Name */}
                                     <form.Field name={`academics[${i}].instituteName`}>
                                         {(subField) => (
-                                            <F isInvalid={subField.state.meta.isTouched && !subField.state.meta.isValid} error={subField.state.meta.errors?.[0]} label="Institute Name">
-                                                <Input value={subField.state.value} onBlur={subField.handleBlur} onChange={(e) => subField.handleChange(e.target.value)} placeholder="e.g. University of Berlin" className="w-full" />
+                                            <F
+                                                isInvalid={subField.state.meta.isTouched && !subField.state.meta.isValid}
+                                                error={subField.state.meta.errors?.[0]}
+                                                label="Institute Name"
+                                            >
+                                                <Input
+                                                    value={subField.state.value}
+                                                    onBlur={subField.handleBlur}
+                                                    onChange={(e) => subField.handleChange(e.target.value)}
+                                                    placeholder="e.g. University of Berlin"
+                                                    className="w-full"
+                                                />
                                             </F>
                                         )}
                                     </form.Field>
 
-                                    <form.Field name={`academics[${i}].gpa`}>
+                                    {/* Obtained Marks */}
+                                    <form.Field name={`academics[${i}].obtained_marks`}>
                                         {(subField) => (
-                                            <div className="sm:col-span-2">
-                                                <F isInvalid={subField.state.meta.isTouched && !subField.state.meta.isValid} error={subField.state.meta.errors?.[0]} label="GPA (0–4)">
-                                                    <Input value={subField.state.value} onBlur={subField.handleBlur} onChange={(e) => subField.handleChange(e.target.value)} placeholder="Enter you GPA" className="w-full" />
-                                                </F>
-                                            </div>
+                                            <F
+                                                isInvalid={subField.state.meta.isTouched && !subField.state.meta.isValid}
+                                                error={subField.state.meta.errors?.[0]}
+                                                label="Obtained Marks"
+                                            >
+                                                <Input
+                                                    type="number"
+                                                    value={subField.state.value}
+                                                    onBlur={subField.handleBlur}
+                                                    onChange={(e) => subField.handleChange(e.target.value)}
+                                                    onKeyDown={(e) => ["e", "E", "-", "+", "."].includes(e.key) && e.preventDefault()}
+                                                    placeholder="e.g. 850"
+                                                    className="w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                />
+                                            </F>
                                         )}
                                     </form.Field>
 
-                                    <form.Field name={`academics[${i}].desiredProgram`}>
-                                        {(subField) => <input type="hidden" value={subField.state.value} />}
-                                    </form.Field>
-                                    <form.Field name={`academics[${i}].campus`}>
-                                        {(subField) => <input type="hidden" value={subField.state.value} />}
-                                    </form.Field>
-                                    <form.Field name={`academics[${i}].englishTest`}>
-                                        {(subField) => <input type="hidden" value={subField.state.value} />}
+                                    {/* Total Marks */}
+                                    <form.Field name={`academics[${i}].total_marks`}>
+                                        {(subField) => (
+                                            <F
+                                                isInvalid={subField.state.meta.isTouched && !subField.state.meta.isValid}
+                                                error={subField.state.meta.errors?.[0]}
+                                                label="Total Marks"
+                                            >
+                                                <Input
+                                                    type="number"
+                                                    value={subField.state.value}
+                                                    onBlur={subField.handleBlur}
+                                                    onChange={(e) => subField.handleChange(e.target.value)}
+                                                    onKeyDown={(e) => ["e", "E", "-", "+", "."].includes(e.key) && e.preventDefault()}
+                                                    placeholder="e.g. 1100"
+                                                    className="w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                />
+                                            </F>
+                                        )}
                                     </form.Field>
 
+                                    {/* About */}
+                                    <form.Field name={`academics[${i}].start_date`}>
+                                        {(subField) => (
+                                            <F
+                                                isInvalid={subField.state.meta.isTouched && !subField.state.meta.isValid}
+                                                error={subField.state.meta.errors?.[0]}
+                                                label="Start Date"
+                                            >
+                                                <DatePicker
+                                                    value={subField.state.value ?? ""}
+                                                    onChange={(val: string) => subField.handleChange(val)}
+                                                />
+                                            </F>
+                                        )}
+                                    </form.Field>
+
+                                    <form.Field name={`academics[${i}].end_date`}>
+                                        {(subField) => (
+                                            <F
+                                                isInvalid={subField.state.meta.isTouched && !subField.state.meta.isValid}
+                                                error={subField.state.meta.errors?.[0]}
+                                                label="End Date"
+                                            >
+                                                <DatePicker
+                                                    value={subField.state.value ?? ""}
+                                                    onChange={(val: string) => subField.handleChange(val)}
+s                                                />
+                                            </F>
+                                        )}
+                                    </form.Field>
+
+                                    {/* About */}
                                     <form.Field name={`academics[${i}].about`}>
                                         {(subField) => (
                                             <div className="sm:col-span-2">
-                                                <F isInvalid={subField.state.meta.isTouched && !subField.state.meta.isValid} error={subField.state.meta.errors?.[0]} label="Why do you want to study here?">
-                                                    <textarea value={subField.state.value} onBlur={subField.handleBlur} onChange={(e) => subField.handleChange(e.target.value)} placeholder="Enter about your academic..." rows={4} className="w-full rounded-md border border-input bg-brand-input px-3 py-3 text-sm outline-none resize-none placeholder:text-muted-foreground" />
+                                                <F
+                                                    isInvalid={subField.state.meta.isTouched && !subField.state.meta.isValid}
+                                                    error={subField.state.meta.errors?.[0]}
+                                                    label="Why do you want to study here?"
+                                                >
+                                                    <textarea
+                                                        value={subField.state.value}
+                                                        onBlur={subField.handleBlur}
+                                                        onChange={(e) => subField.handleChange(e.target.value)}
+                                                        placeholder="Enter about your academic..."
+                                                        rows={4}
+                                                        className="w-full rounded-md border border-input bg-brand-input px-3 py-3 text-sm outline-none resize-none placeholder:text-muted-foreground"
+                                                    />
                                                 </F>
                                             </div>
                                         )}
@@ -114,7 +242,7 @@ function Step2Form({ defaultValues, onBack, onNext }: { defaultValues: Defaults;
                             type="button"
                             variant="outline"
                             className="w-full"
-                            onClick={() => field.pushValue({ highestDegree: "", instituteName: "", gpa: "", desiredProgram: "Invoked", campus: "Invoked", englishTest: "Invoked", about: "" })}
+                            onClick={() => field.pushValue({ ...EMPTY_ENTRY })}
                         >
                             + Add another education
                         </Button>
@@ -146,25 +274,25 @@ export function Step2Academic({ onBack, onNext, onSkip }: { onBack: () => void; 
 
     if (isLoading) return <PageLoader label="Loading academic details..." />
 
-    const academics = meData?.academic?.length ? meData.academic.map(a => ({
-        highestDegree: a.highestDegree ?? "",
-        instituteName: a.instituteName ?? "",
-        gpa: a.gpa ?? "",
-        desiredProgram: "Invoked",
-        campus: "Invoked",
-        englishTest: "Invoked",
-        about: a.about ?? "",
-    })) : [{
-        highestDegree: "",
-        instituteName: "",
-        gpa: "",
-        desiredProgram: "Invoked",
-        campus: "Invoked",
-        englishTest: "Invoked",
-        about: "",
-    }]
+    const academics: AcademicEntry[] = meData?.academic?.length
+        ? meData.academic.map((a: any) => ({
+            degree_id: a.degree_id ?? "",
+            instituteName: a.instituteName ?? "",
+            obtained_marks: a.obtained_marks ?? "",
+            total_marks: a.total_marks ?? "",
+            start_date: a.start_date ?? "",
+            end_date: a.end_date ?? "",
+            about: a.about ?? "",
+        }))
+        : [{ ...EMPTY_ENTRY }]
 
-    const defaults: Defaults = { academics }
-
-    return <Step2Form key={JSON.stringify(defaults)} defaultValues={defaults} onBack={onBack} onNext={onNext} onSkip={onSkip} />
+    return (
+        <Step2Form
+            key={JSON.stringify(academics)}
+            defaultValues={{ academics }}
+            onBack={onBack}
+            onNext={onNext}
+            onSkip={onSkip}
+        />
+    )
 }

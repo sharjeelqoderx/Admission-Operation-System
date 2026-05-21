@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
                 .select(`
                     id, 
                     profile_id, 
-                    name, 
+                    document_type_id,
+                    document_type:document_type_id(name),
                     created_at, 
                     document_review(status, created_at), 
                     document_files(file_url, type),
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
                 .eq("profile_id", user.id);
  
             if (search) {
-                query = query.ilike("name", `%${search}%`);
+                query = query.ilike("document_type.name", `%${search}%`);
             }
  
             const { data: documents, error: docsError } = await query.order("created_at", { ascending: false });
@@ -50,7 +51,8 @@ export async function GET(req: NextRequest) {
             const result = documents.map((d: any) => ({
                 id: d.id,
                 profile_id: d.profile_id,
-                name: d.name,
+                document_type_id: d.document_type_id,
+                name: d.document_type?.name ?? "—",
                 created_at: d.created_at,
                 status: d.document_review?.[0]?.status ?? "PENDING",
                 files_count: d.document_files?.length ?? 0,
@@ -102,7 +104,7 @@ export async function GET(req: NextRequest) {
         // Fetch documents uploaded by this agent
         let docsQuery = supabase
             .from("document")
-            .select("id, profile_id, name, created_at, document_review(status, created_at), document_files(file_url, type)")
+            .select("id, profile_id, document_type_id, document_type:document_type_id(name), created_at, document_review(status, created_at), document_files(file_url, type)")
             .in("profile_id", profileIds);
  
         const { data: documents, error: docsError } = await docsQuery
@@ -164,7 +166,7 @@ export async function POST(req: NextRequest) {
 
         const validated = DocumentFormSchema.parse({
             student_id: formData.get("student_id") ?? "",
-            name: formData.get("name") ?? "",
+            document_type_id: formData.get("document_type_id") ?? "",
             files: files,
             comment: formData.get("comment") ?? undefined,
         })
@@ -175,7 +177,7 @@ export async function POST(req: NextRequest) {
             .insert({
                 profile_id: validated.student_id,
                 uploaded_by_profile_id: user.id,
-                name: validated.name,
+                document_type_id: validated.document_type_id,
             })
             .select()
             .single()

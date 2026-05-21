@@ -185,7 +185,6 @@ export default function ProfilePage() {
     const experienceMutation = useMutation({
         mutationFn: async (payload: {
             userId: string
-            academicGap: number
             hasExperience: string
             experiences: unknown[]
         }) => {
@@ -203,6 +202,15 @@ export default function ProfilePage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["me"] })
             setShowSuccess(true)
+        },
+    })
+
+    const { data: educationTypes = [] } = useQuery<{ id: string; name: string; level: string }[]>({
+        queryKey: ["education-types"],
+        queryFn: async () => {
+            const res = await fetch("/api/education")
+            const json = await res.json()
+            return json.data ?? []
         },
     })
 
@@ -229,16 +237,16 @@ export default function ProfilePage() {
             description: user?.profile?.description ?? "",
             avatar: null as File | null,
 
-            // New fields for Student
+            // Academic
             academics: user?.academic?.map((a: any) => ({
-                qualification: a.highestDegree || "",
+                degree_id: a.degree_id || "",
                 instituteName: a.instituteName || "",
-                gpa: a.gpa || "",
-                startDate: a.startDate || "",
-                endDate: a.endDate || "",
+                obtained_marks: a.obtained_marks || "",
+                total_marks: a.total_marks || "",
+                start_date: a.start_date || "",
+                end_date: a.end_date || "",
                 about: a.about || ""
             })) || [],
-            academicGap: user?.experience?.academicGap || "0",
             hasExperience: user?.experience?.hasExperience || "no",
             experiences: user?.experience?.entries?.map((e: any) => ({
                 name: e.jobTitle || "",
@@ -304,9 +312,12 @@ export default function ProfilePage() {
         const value = form.state.values
         await academicMutation.mutateAsync({
             userId: user.id,
-            academics: value.academics.map((a: { gpa: string }) => ({
-                ...a,
-                gpa: parseFloat(a.gpa) || 0,
+            academics: value.academics.map((a: any) => ({
+                degree_id: a.degree_id,
+                instituteName: a.instituteName,
+                obtained_marks: parseFloat(a.obtained_marks) || 0,
+                total_marks: parseFloat(a.total_marks) || 0,
+                about: a.about,
             })),
         })
         setEditingSection(null)
@@ -316,7 +327,6 @@ export default function ProfilePage() {
         const value = form.state.values
         await experienceMutation.mutateAsync({
             userId: user.id,
-            academicGap: parseInt(value.academicGap) || 0,
             hasExperience: value.hasExperience,
             experiences: value.experiences,
         })
@@ -680,11 +690,12 @@ export default function ProfilePage() {
                                             onClick={() => {
                                                 const current = field.state.value || []
                                                 field.handleChange([...current, {
-                                                    qualification: "",
+                                                    degree_id: "",
                                                     instituteName: "",
-                                                    gpa: "",
-                                                    startDate: "",
-                                                    endDate: "",
+                                                    obtained_marks: "",
+                                                    total_marks: "",
+                                                    start_date: "",
+                                                    end_date: "",
                                                     about: ""
                                                 }])
                                             }}
@@ -699,7 +710,13 @@ export default function ProfilePage() {
                         <form.Field name="academics">
                             {(field) => (
                                 <div className="space-y-6">
-                                    {(field.state.value || []).map((item: any, index: number) => (
+                                    {(field.state.value || []).map((item: any, index: number) => {
+                                        const obtained = parseFloat(item.obtained_marks)
+                                        const total = parseFloat(item.total_marks)
+                                        const percentage = (!isNaN(obtained) && !isNaN(total) && total > 0)
+                                            ? ((obtained / total) * 100).toFixed(1) + "%"
+                                            : null
+                                        return (
                                         <div key={index} className="relative p-6 bg-white/20 rounded-xl border border-white/30 space-y-4">
                                             {isEditingAcademic && (
                                                 <Button
@@ -717,22 +734,32 @@ export default function ProfilePage() {
                                                 </Button>
                                             )}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                {/* Degree */}
                                                 <div className="space-y-2">
-                                                    <FieldLabel>Qualification / Degree</FieldLabel>
+                                                    <FieldLabel>Degree</FieldLabel>
                                                     {isEditingAcademic ? (
-                                                        <Input
-                                                            value={item.qualification}
-                                                            onChange={(e) => {
+                                                        <Select
+                                                            value={item.degree_id}
+                                                            onValueChange={(v) => {
                                                                 const current = [...field.state.value]
-                                                                current[index].qualification = e.target.value
+                                                                current[index].degree_id = v
                                                                 field.handleChange(current)
                                                             }}
-                                                            placeholder="Bachelor's in CS"
-                                                        />
+                                                        >
+                                                            <SelectTrigger><SelectValue placeholder="Select degree" /></SelectTrigger>
+                                                            <SelectContent>
+                                                                {educationTypes.map((et) => (
+                                                                    <SelectItem key={et.id} value={et.id}>{et.name}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
                                                     ) : (
-                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.qualification || "N/A"}</Typography>
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">
+                                                            {educationTypes.find(e => e.id === item.degree_id)?.name || "N/A"}
+                                                        </Typography>
                                                     )}
                                                 </div>
+                                                {/* Institute */}
                                                 <div className="space-y-2">
                                                     <FieldLabel>Institute Name</FieldLabel>
                                                     {isEditingAcademic ? (
@@ -749,62 +776,88 @@ export default function ProfilePage() {
                                                         <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.instituteName || "N/A"}</Typography>
                                                     )}
                                                 </div>
+                                                {/* Percentage (view only) */}
                                                 <div className="space-y-2">
-                                                    <FieldLabel>GPA</FieldLabel>
+                                                    <FieldLabel>Percentage</FieldLabel>
+                                                    <Typography className="p-3 bg-white/10 rounded-lg font-medium">
+                                                        {percentage ?? "N/A"}
+                                                    </Typography>
+                                                </div>
+                                                {/* Obtained Marks */}
+                                                <div className="space-y-2">
+                                                    <FieldLabel>Obtained Marks</FieldLabel>
                                                     {isEditingAcademic ? (
                                                         <Input
                                                             type="number"
-                                                            step="0.01"
-                                                            value={item.gpa}
+                                                            value={item.obtained_marks}
+                                                            onKeyDown={(e) => ["e","E","-","+","."].includes(e.key) && e.preventDefault()}
                                                             onChange={(e) => {
                                                                 const current = [...field.state.value]
-                                                                current[index].gpa = e.target.value
+                                                                current[index].obtained_marks = e.target.value
                                                                 field.handleChange(current)
                                                             }}
-                                                            placeholder="3.8"
+                                                            placeholder="850"
+                                                            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                         />
                                                     ) : (
-                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.gpa || "N/A"}</Typography>
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.obtained_marks || "N/A"}</Typography>
                                                     )}
                                                 </div>
+                                                {/* Total Marks */}
+                                                <div className="space-y-2">
+                                                    <FieldLabel>Total Marks</FieldLabel>
+                                                    {isEditingAcademic ? (
+                                                        <Input
+                                                            type="number"
+                                                            value={item.total_marks}
+                                                            onKeyDown={(e) => ["e","E","-","+","."].includes(e.key) && e.preventDefault()}
+                                                            onChange={(e) => {
+                                                                const current = [...field.state.value]
+                                                                current[index].total_marks = e.target.value
+                                                                field.handleChange(current)
+                                                            }}
+                                                            placeholder="1100"
+                                                            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                        />
+                                                    ) : (
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.total_marks || "N/A"}</Typography>
+                                                    )}
+                                                </div>
+                                                {/* Start Date */}
                                                 <div className="space-y-2">
                                                     <FieldLabel>Start Date</FieldLabel>
                                                     {isEditingAcademic ? (
                                                         <DatePicker
-                                                            value={item.startDate}
+                                                            value={item.start_date}
                                                             onChange={(v) => {
                                                                 const current = [...field.state.value]
-                                                                current[index].startDate = v
+                                                                current[index].start_date = v
                                                                 field.handleChange(current)
                                                             }}
                                                             placeholder="Select Start Date"
                                                         />
                                                     ) : (
-                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.startDate || "N/A"}</Typography>
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.start_date || "N/A"}</Typography>
                                                     )}
                                                 </div>
+                                                {/* End Date */}
                                                 <div className="space-y-2">
                                                     <FieldLabel>End Date</FieldLabel>
                                                     {isEditingAcademic ? (
                                                         <DatePicker
-                                                            value={item.endDate}
+                                                            value={item.end_date}
                                                             onChange={(v) => {
                                                                 const current = [...field.state.value]
-                                                                if (current[index].startDate && v < current[index].startDate) {
-                                                                    return
-                                                                }
-                                                                current[index].endDate = v
+                                                                current[index].end_date = v
                                                                 field.handleChange(current)
                                                             }}
                                                             placeholder="Select End Date"
                                                         />
                                                     ) : (
-                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.endDate || "N/A"}</Typography>
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.end_date || "N/A"}</Typography>
                                                     )}
                                                 </div>
-                                                <div className="col-span-1 sm:col-span-2 lg:col-span-1 space-y-2 opacity-0 pointer-events-none hidden lg:block">
-                                                    {/* Spacer */}
-                                                </div>
+                                                {/* About */}
                                                 <div className="col-span-1 sm:col-span-2 lg:col-span-3 space-y-2">
                                                     <FieldLabel>Honors / Achievements</FieldLabel>
                                                     {isEditingAcademic ? (
@@ -824,7 +877,8 @@ export default function ProfilePage() {
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
+                                        )
+                                    })}
                                     {(field.state.value || []).length === 0 && (
                                         <div className="text-center py-12 bg-white/10 rounded-xl border border-dashed border-white/30">
                                             <Typography className="text-gray-500">No qualifications added yet.</Typography>
@@ -834,16 +888,21 @@ export default function ProfilePage() {
                             )}
                         </form.Field>
                         {isEditingAcademic && (
-                            <form.Subscribe selector={(s) => [s.isDirty, s.isSubmitting]}>
-                                {([isDirty, isSubmitting]) => (
-                                    <SectionSaveActions
-                                        onCancel={cancelEditing}
-                                        onSave={() => void saveAcademics()}
-                                        isSaving={isSubmitting || academicMutation.isPending}
-                                        isDirty={isDirty}
-                                    />
+                            <>
+                                {academicMutation.isError && (
+                                    <ErrorView message={academicMutation.error instanceof Error ? academicMutation.error.message : "Something went wrong"} />
                                 )}
-                            </form.Subscribe>
+                                <form.Subscribe selector={(s) => [s.isDirty, s.isSubmitting]}>
+                                    {([isDirty, isSubmitting]) => (
+                                        <SectionSaveActions
+                                            onCancel={cancelEditing}
+                                            onSave={() => void saveAcademics()}
+                                            isSaving={isSubmitting || academicMutation.isPending}
+                                            isDirty={isDirty}
+                                        />
+                                    )}
+                                </form.Subscribe>
+                            </>
                         )}
                         </div>
                         )}
@@ -879,25 +938,6 @@ export default function ProfilePage() {
                                 </form.Field>
                                 </div>
                             )}
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <form.Field name="academicGap">
-                                {(field) => (
-                                    <F field={field} label="Academic Gap (Years)">
-                                        {isEditingExperience ? (
-                                            <Input
-                                                type="number"
-                                                value={field.state.value}
-                                                onChange={(e) => field.handleChange(e.target.value)}
-                                                placeholder="0"
-                                            />
-                                        ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg font-medium">{field.state.value || "0"}</div>
-                                        )}
-                                    </F>
-                                )}
-                            </form.Field>
-                        </div>
 
                         <form.Field name="experiences">
                             {(field) => (

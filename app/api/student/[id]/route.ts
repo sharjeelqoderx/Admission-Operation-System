@@ -34,10 +34,10 @@ export async function GET(
             .eq("profile_id", id)
             .maybeSingle()
 
-        // 3. Education
+        // 3. Education with degree type name
         const { data: education } = await supabase
             .from("education")
-            .select("*")
+            .select("*, degree:degree_id(name, level)")
             .eq("profile_id", id)
         return NextResponse.json(
             {

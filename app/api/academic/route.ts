@@ -6,11 +6,12 @@ import { ok, err } from "@/lib/api"
 const schema = z.object({
     userId: z.string().uuid(),
     academics: z.array(z.object({
-        qualification: z.string().min(1, "Qualification required"),
+        degree_id: z.string().uuid("Invalid degree"),
         instituteName: z.string().min(2, "Institute name required"),
-        gpa: z.number().min(0).max(4),
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
+        obtained_marks: z.number().min(0),
+        total_marks: z.number().min(0),
+        start_date: z.string().optional(),
+        end_date: z.string().optional(),
         about: z.string().optional(),
     }))
 })
@@ -22,27 +23,32 @@ export async function POST(req: NextRequest) {
 
     const { userId, academics } = parsed.data
 
+    // Server-side duplicate degree_id check
+    const degreeIds = academics.map(a => a.degree_id)
+    if (new Set(degreeIds).size !== degreeIds.length) {
+        return err("Duplicate degree selected. Each degree can only be added once.", 400)
+    }
+
     const supabase = await createSupabaseServerClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) return err("Unauthorized", 401)
     if (user.id !== userId) return err("Forbidden", 403)
 
-    // First delete existing records to replace them
     await supabase.from("education").delete().eq("profile_id", userId)
 
     if (academics.length > 0) {
         const payload = academics.map(data => ({
             profile_id: userId,
-            qualification: data.qualification,
+            degree_id: data.degree_id,
             institution_name: data.instituteName,
-            cumulative_gpa: String(data.gpa),
-            honors: data.about,
-            start_date: data.startDate || null,
-            end_date: data.endDate || null,
+            obtained_marks: data.obtained_marks,
+            total_marks: data.total_marks,
+            start_date: data.start_date || null,
+            end_date: data.end_date || null,
+            honors: data.about ?? null,
         }))
 
         const { error } = await supabase.from("education").insert(payload)
-
         if (error) return err(error.message, 500)
     }
 
