@@ -144,6 +144,8 @@ function filterByRole(routes: any[], role: Role) {
           c.allowFor.includes(role)
         );
 
+        if (children.length === 0) return null;
+
         return { ...route, children };
       }
 

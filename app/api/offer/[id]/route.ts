@@ -1,25 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
-        // Validate auth
         const supabase = await createSupabaseServerClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        // Validate auth
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser();
 
         if (authError || !user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json(
+                { error: "Unauthorized" },
+                { status: 401 }
+            );
         }
 
-        const { id } = await params;
+        const { id } = await context.params;
 
-        // Use admin client to bypass RLS
-        const adminSupabase = await createSupabaseAdminClient();
-
-        const { data: offer, error } = await adminSupabase
+        const { data: offer, error } = await supabase
             .from("offer_letter")
             .select(`
                 id,
@@ -59,8 +63,15 @@ export async function GET(
                             study_type
                         )
                     ),
-                    university:university_id ( id, name ),
-                    agent:submitted_by_profile_id ( id, name, email ),
+                    university:university_id (
+                        id,
+                        name
+                    ),
+                    agent:submitted_by_profile_id (
+                        id,
+                        name,
+                        email
+                    ),
                     application_review (
                         id,
                         status,
@@ -73,65 +84,128 @@ export async function GET(
             .eq("id", id)
             .single();
 
-        if (error) {
-            console.error("GET /api/offer/[id] error:", error);
-            return NextResponse.json({ error: "Offer not found", details: error.message }, { status: 404 });
+        if (error || !offer) {
+            console.error(
+                "GET /api/offer/[id] error:",
+                error
+            );
+
+            return NextResponse.json(
+                {
+                    error: "Offer not found",
+                },
+                { status: 404 }
+            );
         }
 
-        return NextResponse.json({ data: offer }, { status: 200 });
+        return NextResponse.json(
+            { data: offer },
+            { status: 200 }
+        );
     } catch (e) {
-        console.error("GET /api/offer/[id] error:", e);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        console.error(
+            "GET /api/offer/[id] error:",
+            e
+        );
+
+        return NextResponse.json(
+            { error: "Internal Server Error" },
+            { status: 500 }
+        );
     }
 }
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = await createSupabaseServerClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        const supabase =
+            await createSupabaseServerClient();
+
+        // Validate auth
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser();
 
         if (authError || !user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json(
+                { error: "Unauthorized" },
+                { status: 401 }
+            );
         }
 
-        const { id } = await params;
-        const { signatureDataUrl } = await req.json();
+        const { id } = await context.params;
+
+        const { signatureDataUrl } =
+            await req.json();
 
         if (!signatureDataUrl) {
-            return NextResponse.json({ error: "Signature data is required" }, { status: 400 });
+            return NextResponse.json(
+                {
+                    error:
+                        "Signature data is required",
+                },
+                { status: 400 }
+            );
         }
 
-        // Convert base64 data url to Buffer
-        const base64Data = signatureDataUrl.replace(/^data:image\/\w+;base64,/, "");
-        const buffer = Buffer.from(base64Data, "base64");
+        // Convert base64 to buffer
+        const base64Data =
+            signatureDataUrl.replace(
+                /^data:image\/\w+;base64,/,
+                ""
+            );
 
-        // Use admin client to bypass RLS for updating files/database
-        const adminSupabase = await createSupabaseAdminClient();
+        const buffer = Buffer.from(
+            base64Data,
+            "base64"
+        );
 
-        // 1. Upload signature image to Supabase Storage
-        const bucketName = "student-admission";
+        // Upload signature
+        const bucketName =
+            "student-admission";
+
         const objectPath = `signatures/${user.id}/${id}_signature.png`;
 
-        const { error: uploadError } = await adminSupabase.storage
-            .from(bucketName)
-            .upload(objectPath, buffer, {
-                contentType: "image/png",
-                upsert: true
-            });
+        const { error: uploadError } =
+            await supabase.storage
+                .from(bucketName)
+                .upload(objectPath, buffer, {
+                    contentType: "image/png",
+                    upsert: true,
+                });
 
         if (uploadError) {
-            console.error("Signature upload error:", uploadError);
-            return NextResponse.json({ error: "Failed to upload signature", details: uploadError.message }, { status: 500 });
+            console.error(
+                "Signature upload error:",
+                uploadError
+            );
+
+            return NextResponse.json(
+                {
+                    error:
+                        "Failed to upload signature",
+                    details:
+                        uploadError.message,
+                },
+                { status: 500 }
+            );
         }
 
-        const baseUrl = process.env.SUPABASE_URL;
-        const publicUrl = `${baseUrl}/storage/v1/object/public/${bucketName}/${objectPath}`;
+        // Get public URL
+        const {
+            data: { publicUrl },
+        } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(objectPath);
 
-        // 2. Fetch the offer to verify the student profile ID
-        const { data: offer, error: fetchError } = await adminSupabase
+        // Fetch offer
+        const {
+            data: offer,
+            error: fetchError,
+        } = await supabase
             .from("offer_letter")
             .select(`
                 id,
@@ -143,39 +217,89 @@ export async function POST(
             .single();
 
         if (fetchError || !offer) {
-            return NextResponse.json({ error: "Offer not found" }, { status: 404 });
+            return NextResponse.json(
+                { error: "Offer not found" },
+                { status: 404 }
+            );
         }
 
-        const studentProfileId = (offer.application as any).profile_id;
+        const studentProfileId =
+            (offer.application as any)
+                ?.profile_id;
 
-        // 3. Update profile signature
-        const { error: profileError } = await adminSupabase
-            .from("profile")
-            .update({ signature: publicUrl })
-            .eq("id", studentProfileId);
+        // Update profile signature
+        const { error: profileError } =
+            await supabase
+                .from("profile")
+                .update({
+                    signature: publicUrl,
+                })
+                .eq("id", studentProfileId);
 
         if (profileError) {
-            console.error("Profile update error:", profileError);
+            console.error(
+                "Profile update error:",
+                profileError
+            );
+
+            return NextResponse.json(
+                {
+                    error:
+                        "Failed to update profile",
+                },
+                { status: 500 }
+            );
         }
 
-        // 4. Update offer_letter table: status = ACCEPTED, accepted_at = NOW(), file_url = publicUrl
-        const { error: offerError } = await adminSupabase
-            .from("offer_letter")
-            .update({
-                status: "ACCEPTED",
-                accepted_at: new Date().toISOString(),
-                file_url: publicUrl
-            })
-            .eq("id", id);
+        // Update offer
+        const { error: offerError } =
+            await supabase
+                .from("offer_letter")
+                .update({
+                    status: "ACCEPTED",
+                    accepted_at:
+                        new Date().toISOString(),
+                    file_url: publicUrl,
+                })
+                .eq("id", id);
 
         if (offerError) {
-            console.error("Offer update error:", offerError);
-            return NextResponse.json({ error: "Failed to update offer letter", details: offerError.message }, { status: 500 });
+            console.error(
+                "Offer update error:",
+                offerError
+            );
+
+            return NextResponse.json(
+                {
+                    error:
+                        "Failed to update offer letter",
+                    details:
+                        offerError.message,
+                },
+                { status: 500 }
+            );
         }
 
-        return NextResponse.json({ success: true, url: publicUrl }, { status: 200 });
+        return NextResponse.json(
+            {
+                success: true,
+                url: publicUrl,
+            },
+            { status: 200 }
+        );
     } catch (e: any) {
-        console.error("POST /api/offer/[id] error:", e);
-        return NextResponse.json({ error: "Internal Server Error", details: e?.message }, { status: 500 });
+        console.error(
+            "POST /api/offer/[id] error:",
+            e
+        );
+
+        return NextResponse.json(
+            {
+                error:
+                    "Internal Server Error",
+                details: e?.message,
+            },
+            { status: 500 }
+        );
     }
 }
