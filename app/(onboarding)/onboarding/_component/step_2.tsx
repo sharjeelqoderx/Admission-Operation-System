@@ -208,7 +208,7 @@ function Step2Form({ defaultValues, onBack, onNext }: { defaultValues: Defaults;
                                                 <DatePicker
                                                     value={subField.state.value ?? ""}
                                                     onChange={(val: string) => subField.handleChange(val)}
-s                                                />
+                                                />
                                             </F>
                                         )}
                                     </form.Field>
