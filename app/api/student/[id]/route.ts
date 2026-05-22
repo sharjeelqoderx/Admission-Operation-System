@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server"
 
 export async function GET(
     req: NextRequest,
@@ -199,17 +199,33 @@ export async function DELETE(
 
         const { id } = await params
 
+        // First, look up the student record to get the profile_id
+        const { data: student, error: studentError } = await supabase
+            .from("student")
+            .select("profile_id")
+            .eq("id", id)
+            .maybeSingle()
+
+        if (studentError || !student) {
+            return NextResponse.json({ error: "Student not found" }, { status: 404 })
+        }
+
+        const profileId = student.profile_id
+
+        // Use service role client to bypass RLS for admin operations
+        const serviceSupabase = createSupabaseServiceClient()
+
         // 1. Delete education
-        await supabase.from("education").delete().eq("profile_id", id)
+        await serviceSupabase.from("education").delete().eq("profile_id", profileId)
 
         // 2. Delete student details
-        await supabase.from("student").delete().eq("profile_id", id)
+        await serviceSupabase.from("student").delete().eq("profile_id", profileId)
 
         // 3. Delete profile
-        const { error: profileError } = await supabase
+        const { error: profileError } = await serviceSupabase
             .from("profile")
             .delete()
-            .eq("id", id)
+            .eq("id", profileId)
 
         if (profileError) {
             console.error(profileError)

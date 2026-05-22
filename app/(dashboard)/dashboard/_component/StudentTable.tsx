@@ -186,13 +186,6 @@ export function StudentTable({
                                                 <Link href={`/dashboard/student/${student.profile_id}/edit`}>
                                                     <Pencil className="size-[18px]" />
                                                 </Link>
-
-                                                <button
-                                                    onClick={() => onDelete(student.id, student.profile?.name)}
-                                                    disabled={deletingId === student.id}
-                                                >
-                                                    <Trash2 className="size-[18px]" />
-                                                </button>
                                             </div>
                                         </TableCell>
                                     </TableRow>

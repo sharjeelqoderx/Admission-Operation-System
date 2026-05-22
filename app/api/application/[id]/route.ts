@@ -34,8 +34,8 @@ export async function GET(
                 documents:application_document (
                     document:document_id (
                         id,
-                        name,
                         created_at,
+                        document_type:document_type_id ( id, name ),
                         document_files ( file_url, type ),
                         document_review ( status, feedback )
                     )

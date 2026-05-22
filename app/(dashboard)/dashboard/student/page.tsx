@@ -23,6 +23,7 @@ import {
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/hooks/useAuth"
+import { toast } from "sonner"
 import { useState, useRef, memo } from "react"
 
 const StatsDashboard = memo(({ stats, statsLoading }: { stats: any, statsLoading: boolean }) => {
@@ -170,8 +171,12 @@ function StudentListSection() {
 
     const handleDelete = async (id: string, name: string) => {
         setDeletingId(id)
+        const toastId = toast.loading(`Deleting ${name}...`)
         try {
             await deleteStudent.mutateAsync(id)
+            toast.success(`${name} deleted successfully!`, { id: toastId })
+        } catch (e: any) {
+            toast.error(e.message || "Failed to delete student", { id: toastId })
         } finally {
             setDeletingId(null)
         }

@@ -41,10 +41,14 @@ export async function GET(req: NextRequest) {
         } else if (profile?.role === "STUDENT") {
             // Students see their own applications
             query = query.eq("profile_id", user.id);
-        } else {
+        } else if (profile?.role === "AGENT") {
             // Agents see applications they submitted
             query = query.eq("submitted_by_profile_id", user.id);
+        } else if (profile?.role === "UNIVERSITY") {
+            // Universities see applications assigned to them
+            query = query.eq("university_id", user.id);
         }
+        // ADMIN and other roles see all applications
 
         if (limit) {
             query = query.limit(parseInt(limit, 10));

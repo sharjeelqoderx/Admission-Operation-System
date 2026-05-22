@@ -1,5 +1,6 @@
 import "server-only"
 import { createServerClient } from "@supabase/ssr"
+import { createClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 
 export async function createSupabaseServerClient() {
@@ -21,4 +22,12 @@ export async function createSupabaseServerClient() {
             },
         }
     )
+}
+
+export function createSupabaseServiceClient() {
+    const supabaseUrl = process.env.SUPABASE_URL!
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY! ?? process.env.SERVICE_ROLE_KEY!
+    return createClient(supabaseUrl, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+    })
 }
