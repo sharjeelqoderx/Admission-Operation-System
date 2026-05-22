@@ -136,9 +136,8 @@ export const ApplicationTable = React.memo(function ApplicationTable({ applicati
                                                 variant="outline"
                                                 className="h-9 px-6"
                                                 asChild
-                                                disabled={!app.program?.id}
                                             >
-                                                <Link href={app.program?.id ? `/dashboard/program/${app.program.id}` : "#"}>
+                                                <Link href={`/dashboard/application/${app.id}`}>
                                                     View
                                                 </Link>
                                             </Button>

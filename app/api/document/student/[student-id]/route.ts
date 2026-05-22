@@ -14,6 +14,39 @@ export async function GET(
         const { searchParams } = new URL(req.url)
         const programId = searchParams.get("program_id")
 
+        const { data: profile } = await supabase
+            .from("profile")
+            .select("role")
+            .eq("id", user.id)
+            .single()
+
+        if (profile?.role === "STUDENT" && user.id !== studentId) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
+
+        if (profile?.role === "AGENT") {
+            const { data: agentRow } = await supabase
+                .from("agent")
+                .select("id")
+                .eq("profile_id", user.id)
+                .maybeSingle()
+
+            if (!agentRow) {
+                return NextResponse.json({ error: "Agent profile not found" }, { status: 403 })
+            }
+
+            const { data: studentRow } = await supabase
+                .from("student")
+                .select("id")
+                .eq("profile_id", studentId)
+                .eq("created_by_agent_id", agentRow.id)
+                .maybeSingle()
+
+            if (!studentRow) {
+                return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+            }
+        }
+
         // If program_id provided, fetch required doc type ids first
         let requiredDocTypeIds: string[] | null = null
         if (programId) {
@@ -30,7 +63,7 @@ export async function GET(
             .eq("profile_id", studentId)
             .order("created_at", { ascending: false })
 
-        if (requiredDocTypeIds !== null) {
+        if (requiredDocTypeIds !== null && requiredDocTypeIds.length > 0) {
             query = query.in("document_type_id", requiredDocTypeIds)
         }
 

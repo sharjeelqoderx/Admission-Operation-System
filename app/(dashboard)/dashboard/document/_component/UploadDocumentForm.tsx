@@ -77,14 +77,23 @@ export function UploadDocumentForm() {
             return json
         },
         onSuccess: () => {
+            const studentId = form.state.values.student_id
             queryClient.invalidateQueries({ queryKey: ["documents"] })
+            queryClient.invalidateQueries({ queryKey: ["student-documents"] })
+            if (studentId) {
+                queryClient.invalidateQueries({
+                    queryKey: ["student-documents", studentId],
+                    exact: false,
+                })
+            }
             const from = searchParams.get("from")
             const programId = searchParams.get("program_id")
-            const studentId = form.state.values.student_id
             if (from === "application") {
                 const params = new URLSearchParams()
                 if (studentId) params.set("student_id", studentId)
                 if (programId) params.set("program_id", programId)
+                params.set("step", "2")
+                params.set("uploaded", "1")
                 router.push(`/dashboard/application/new?${params.toString()}`)
             } else {
                 router.push("/dashboard/document")

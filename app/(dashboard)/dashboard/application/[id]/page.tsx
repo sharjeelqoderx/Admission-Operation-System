@@ -215,7 +215,7 @@ export default function ApplicationDetailsPage() {
                                     <div key={i} className="bg-white/60 backdrop-blur-md border border-white/60 rounded-xl p-4 flex flex-col gap-3 shadow-sm">
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-1">
-                                                <Typography className="text-sm font-bold text-gray-900 leading-tight">{doc.name}</Typography>
+                                                <Typography className="text-sm font-bold text-gray-900 leading-tight">{doc.document_type?.name ?? "Document"}</Typography>
                                                 <Typography className="text-[10px] text-gray-500 font-medium uppercase">
                                                     {doc.document_files?.length || 0} Files • {new Date(doc.created_at).toLocaleDateString()}
                                                 </Typography>

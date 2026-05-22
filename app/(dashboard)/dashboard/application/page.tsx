@@ -8,8 +8,13 @@ import { GraduationCap, FileText, Plus } from "lucide-react"
 import Link from "next/link"
 import { ApplicationsListTable, type ApplicationRow } from "./_component/ApplicationsListTable"
 import { BluryCard } from "@/components/shared/blury-card"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function ApplicationsPage() {
+    const { me } = useAuth()
+    const role = me.data?.role
+    const canCreateApplication = me.isSuccess && (role === "AGENT" || role === "STUDENT")
+
     const { data: response, isLoading, isError, refetch } = useQuery({
         queryKey: ["applications"],
         queryFn: async () => {
@@ -34,15 +39,15 @@ export default function ApplicationsPage() {
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div className="space-y-1 max-w-2xl">
                     <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
-                        {response?.role === "STUDENT" ? "My Applications" : "All Applications"}
+                        {role === "STUDENT" ? "My Applications" : "All Applications"}
                     </Typography>
                     <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
-                        {response?.role === "STUDENT" 
+                        {role === "STUDENT"
                             ? "Track your submitted applications and their current status."
                             : "Track and manage all student applications submitted through your agency."}
                     </Typography>
                 </div>
-                {response?.role !== "STUDENT" && (
+                {canCreateApplication && (
                     <Link href="/dashboard/application/new">
                         <Button className="px-6 gap-2 font-normal">
                             <Plus size={24} className="text-white" /> New Application
@@ -96,7 +101,7 @@ export default function ApplicationsPage() {
 
             <ApplicationsListTable
                 applications={applications}
-                role={response?.role}
+                role={role ?? response?.role}
                 isLoading={isLoading}
                 isError={isError}
                 onRetry={handleRetry}

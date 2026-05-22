@@ -272,9 +272,8 @@ export default function StudentDetailPage({ params }: PageProps) {
                                                 variant="outline"
                                                 className="h-9 px-6 bg-white/20 border-white/40 text-[#1e3a8a] hover:bg-white/40 hover:text-[#1e3a8a] rounded-lg font-bold text-[12px] transition-all shadow-sm"
                                                 asChild
-                                                disabled={!app.program?.id}
                                             >
-                                                <Link href={app.program?.id ? `/dashboard/program/${app.program.id}` : "#"}>
+                                                <Link href={`/dashboard/application/${app.id}`}>
                                                     View
                                                 </Link>
                                             </Button>
