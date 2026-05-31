@@ -6,7 +6,7 @@ import { useState } from "react";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
-
+console.log("started")
   return (
     <QueryClientProvider client={queryClient}>
       {children}
