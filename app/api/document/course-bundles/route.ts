@@ -215,7 +215,7 @@ export async function GET(req: NextRequest) {
                 console.error("course-bundles document_type_level error:", documentTypeLevelsError)
             } else {
                 levelsByDocumentType = buildLevelsByDocumentType(
-                    (documentTypeLevels ?? []) as Array<{
+                    (documentTypeLevels ?? []) as unknown as Array<{
                         document_type_id: string
                         level: { id: string; name: string } | null
                     }>

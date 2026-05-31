@@ -51,7 +51,10 @@ export async function GET(
         let requiredDocTypeIds: string[] | null = null
         if (courseId) {
             const course = await fetchCourseProgramById(supabase, courseId)
-            requiredDocTypeIds = (course?.degree?.requirements ?? [])
+            const requirements = (course?.degree as unknown as {
+                requirements?: Array<{ document_type?: { id?: string } | null }>
+            } | null)?.requirements
+            requiredDocTypeIds = (requirements ?? [])
                 .map((requirement) => requirement.document_type?.id)
                 .filter((id): id is string => Boolean(id))
         }

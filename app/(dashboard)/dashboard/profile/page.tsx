@@ -1279,8 +1279,12 @@ export default function ProfilePage() {
                                                 className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                 value={field.state.value}
                                                 onChange={(e) => {
-                                                    const val = Math.max(0, Number(e.target.value))
-                                                    field.handleChange(val)
+                                                    const parsed = Number(e.target.value)
+                                                    field.handleChange(
+                                                        e.target.value === ""
+                                                            ? ""
+                                                            : String(Math.max(0, Number.isNaN(parsed) ? 0 : parsed))
+                                                    )
                                                 }}
                                                 placeholder="5"
                                             />

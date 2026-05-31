@@ -83,7 +83,12 @@ export default function StudentDetailPage({ params }: PageProps) {
                 application_no: string | null
                 status: string
                 created_at: string
-                program: { id: string; name: string | null } | null
+                course: {
+                    id: string
+                    name: string | null
+                    deadline_date?: string | null
+                    degree?: { id: string; name: string; fees?: string | null; intake_date?: string | null } | null
+                } | null
                 agent: { id: string; name: string | null } | null
             }[]
         },

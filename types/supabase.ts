@@ -26,6 +26,7 @@ export type Database = {
           nationality: string | null
           other_contact_number: string | null
           profile_id: string
+          state: string | null
           updated_at: string
           website: string | null
         }
@@ -40,6 +41,7 @@ export type Database = {
           nationality?: string | null
           other_contact_number?: string | null
           profile_id: string
+          state?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -54,6 +56,7 @@ export type Database = {
           nationality?: string | null
           other_contact_number?: string | null
           profile_id?: string
+          state?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -278,35 +281,6 @@ export type Database = {
           },
         ]
       }
-      course: {
-        Row: {
-          deadline_date: string | null
-          degree_id: string | null
-          id: string
-          name: string
-        }
-        Insert: {
-          deadline_date?: string | null
-          degree_id?: string | null
-          id?: string
-          name: string
-        }
-        Update: {
-          deadline_date?: string | null
-          degree_id?: string | null
-          id?: string
-          name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "course_degree_id_fkey"
-            columns: ["degree_id"]
-            isOneToOne: false
-            referencedRelation: "degree"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       campus_program_junction: {
         Row: {
           agent_commission: number | null
@@ -432,44 +406,31 @@ export type Database = {
           },
         ]
       }
-      document: {
+      course: {
         Row: {
-          created_at: string
+          deadline_date: string | null
+          degree_id: string | null
           id: string
-          name: string | null
-          profile_id: string
-          updated_at: string
-          uploaded_by_profile_id: string | null
+          name: string
         }
         Insert: {
-          created_at?: string
+          deadline_date?: string | null
+          degree_id?: string | null
           id?: string
-          name?: string | null
-          profile_id: string
-          updated_at?: string
-          uploaded_by_profile_id?: string | null
+          name: string
         }
         Update: {
-          created_at?: string
+          deadline_date?: string | null
+          degree_id?: string | null
           id?: string
-          name?: string | null
-          profile_id?: string
-          updated_at?: string
-          uploaded_by_profile_id?: string | null
+          name?: string
         }
         Relationships: [
           {
-            foreignKeyName: "document_profile_id_fkey"
-            columns: ["profile_id"]
+            foreignKeyName: "course_degree_id_fkey"
+            columns: ["degree_id"]
             isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_uploaded_by_profile_id_fkey"
-            columns: ["uploaded_by_profile_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
+            referencedRelation: "degree"
             referencedColumns: ["id"]
           },
         ]
@@ -560,47 +521,49 @@ export type Database = {
           },
         ]
       }
-      document_type: {
+      document: {
         Row: {
-          code: string | null
           created_at: string
-          description: string | null
+          document_type_id: string | null
           id: string
-          is_active: boolean
-          may_expire: boolean
-          name: string
-          type: string | null
-          university_id: string | null
+          profile_id: string
           updated_at: string
+          uploaded_by_profile_id: string | null
         }
         Insert: {
-          code?: string | null
           created_at?: string
-          description?: string | null
+          document_type_id?: string | null
           id?: string
-          is_active?: boolean
-          may_expire?: boolean
-          name: string
-          type?: string | null
-          university_id?: string | null
+          profile_id: string
           updated_at?: string
+          uploaded_by_profile_id?: string | null
         }
         Update: {
-          code?: string | null
           created_at?: string
-          description?: string | null
+          document_type_id?: string | null
           id?: string
-          is_active?: boolean
-          may_expire?: boolean
-          name?: string
-          type?: string | null
-          university_id?: string | null
+          profile_id?: string
           updated_at?: string
+          uploaded_by_profile_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "document_type_university_id_fkey"
-            columns: ["university_id"]
+            foreignKeyName: "document_document_type_id_fkey"
+            columns: ["document_type_id"]
+            isOneToOne: false
+            referencedRelation: "document_type"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_uploaded_by_profile_id_fkey"
+            columns: ["uploaded_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profile"
             referencedColumns: ["id"]
@@ -684,10 +647,96 @@ export type Database = {
           },
         ]
       }
+      document_type: {
+        Row: {
+          code: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          may_expire: boolean
+          name: string
+          type: string | null
+          university_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          may_expire?: boolean
+          name: string
+          type?: string | null
+          university_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          may_expire?: boolean
+          name?: string
+          type?: string | null
+          university_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_type_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_type_level: {
+        Row: {
+          created_at: string
+          document_type_id: string
+          id: string
+          level_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_type_id: string
+          id?: string
+          level_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_type_id?: string
+          id?: string
+          level_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_type_level_document_type_id_fkey"
+            columns: ["document_type_id"]
+            isOneToOne: false
+            referencedRelation: "document_type"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_type_level_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       education: {
         Row: {
           created_at: string
-          cumulative_gpa: string | null
+          degree_id: string | null
           end_date: string | null
           gpa: number | null
           grade_type: string | null
@@ -703,7 +752,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          cumulative_gpa?: string | null
+          degree_id?: string | null
           end_date?: string | null
           gpa?: number | null
           grade_type?: string | null
@@ -719,7 +768,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          cumulative_gpa?: string | null
+          degree_id?: string | null
           end_date?: string | null
           gpa?: number | null
           grade_type?: string | null
@@ -735,8 +784,50 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "education_degree_id_fkey"
+            columns: ["degree_id"]
+            isOneToOne: false
+            referencedRelation: "education_type"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "education_profile_id_fkey"
             columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      education_type: {
+        Row: {
+          created_at: string
+          id: string
+          level: Database["public"]["Enums"]["education_level_enum"]
+          name: string
+          university_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level: Database["public"]["Enums"]["education_level_enum"]
+          name: string
+          university_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: Database["public"]["Enums"]["education_level_enum"]
+          name?: string
+          university_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "education_type_university_id_fkey"
+            columns: ["university_id"]
             isOneToOne: false
             referencedRelation: "profile"
             referencedColumns: ["id"]
@@ -1047,6 +1138,45 @@ export type Database = {
           },
         ]
       }
+      program_document_requirements: {
+        Row: {
+          created_at: string
+          document_type_id: string
+          id: string
+          program_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_type_id: string
+          id?: string
+          program_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_type_id?: string
+          id?: string
+          program_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_document_requirements_document_type_id_fkey"
+            columns: ["document_type_id"]
+            isOneToOne: false
+            referencedRelation: "document_type"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_document_requirements_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "program"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student: {
         Row: {
           address: string | null
@@ -1060,6 +1190,7 @@ export type Database = {
           nationality: string | null
           passport_file_url: string | null
           profile_id: string
+          state: string | null
           student_code: string | null
           updated_at: string
           zip_code: string | null
@@ -1076,6 +1207,7 @@ export type Database = {
           nationality?: string | null
           passport_file_url?: string | null
           profile_id: string
+          state?: string | null
           student_code?: string | null
           updated_at?: string
           zip_code?: string | null
@@ -1092,6 +1224,7 @@ export type Database = {
           nationality?: string | null
           passport_file_url?: string | null
           profile_id?: string
+          state?: string | null
           student_code?: string | null
           updated_at?: string
           zip_code?: string | null
@@ -1122,6 +1255,7 @@ export type Database = {
           description: string | null
           id: string
           profile_id: string
+          state: string | null
           updated_at: string
           website: string | null
         }
@@ -1133,6 +1267,7 @@ export type Database = {
           description?: string | null
           id?: string
           profile_id: string
+          state?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -1144,6 +1279,7 @@ export type Database = {
           description?: string | null
           id?: string
           profile_id?: string
+          state?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -1168,7 +1304,6 @@ export type Database = {
           organization_name: string | null
           profile_id: string
           start_date: string | null
-          timeline_gap_years: number | null
           title: string | null
           updated_at: string
         }
@@ -1182,7 +1317,6 @@ export type Database = {
           organization_name?: string | null
           profile_id: string
           start_date?: string | null
-          timeline_gap_years?: number | null
           title?: string | null
           updated_at?: string
         }
@@ -1196,7 +1330,6 @@ export type Database = {
           organization_name?: string | null
           profile_id?: string
           start_date?: string | null
-          timeline_gap_years?: number | null
           title?: string | null
           updated_at?: string
         }
@@ -1228,6 +1361,7 @@ export type Database = {
         | "VERIFIED"
         | "PENDING"
         | "ACTION_REQUIRED"
+      education_level_enum: "SCHOOL" | "COLLEGE" | "DIPLOMA" | "UNIVERSITY"
       gender_enum: "MALE" | "FEMALE"
       offer_status_enum: "PENDING" | "ACCEPTED" | "REJECTED"
       payment_status_enum: "PENDING" | "CONFIRMED" | "FAILED"
@@ -1372,6 +1506,7 @@ export const Constants = {
         "PENDING",
         "ACTION_REQUIRED",
       ],
+      education_level_enum: ["SCHOOL", "COLLEGE", "DIPLOMA", "UNIVERSITY"],
       gender_enum: ["MALE", "FEMALE"],
       offer_status_enum: ["PENDING", "ACCEPTED", "REJECTED"],
       payment_status_enum: ["PENDING", "CONFIRMED", "FAILED"],
