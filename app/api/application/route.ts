@@ -100,12 +100,19 @@ async function attachCoursesToApplications(
 
     const coursesWithLevels = await attachLevelsToCourses(
         supabase,
-        (courses ?? []) as CourseRow[]
+        (courses ?? []) as unknown as CourseRow[]
     );
     const courseById = new Map(coursesWithLevels.map((course) => [course.id, course]));
 
     return applications.map((application) => {
         const course = courseById.get(application.course_id) ?? null;
+        const degree = course?.degree as unknown as {
+            id: string
+            name: string
+            fees?: string | null
+            intake_date?: string | null
+        } | null;
+
         return {
             id: application.id,
             application_no: application.application_no,
@@ -124,14 +131,12 @@ async function attachCoursesToApplications(
                       id: course.id,
                       name: course.name,
                       deadline_date: course.deadline_date,
-                      degree: course.degree
+                      degree: degree
                           ? {
-                                id: (course.degree as { id: string }).id,
-                                name: (course.degree as { name: string }).name,
-                                fees: (course.degree as { fees?: string | null }).fees ?? null,
-                                intake_date:
-                                    (course.degree as { intake_date?: string | null }).intake_date ??
-                                    null,
+                                id: degree.id,
+                                name: degree.name,
+                                fees: degree.fees ?? null,
+                                intake_date: degree.intake_date ?? null,
                             }
                           : null,
                   }
@@ -245,7 +250,7 @@ export async function GET(req: NextRequest) {
 
         const result = await attachCoursesToApplications(
             supabase,
-            (applications ?? []) as ApplicationListRow[]
+            (applications ?? []) as unknown as ApplicationListRow[]
         );
 
         return NextResponse.json({ data: result, role: profile.role }, { status: 200 });

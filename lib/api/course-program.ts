@@ -107,6 +107,6 @@ export async function fetchCourseProgramById(
         return null
     }
 
-    const [course] = await attachLevelsToCourses(supabase, [data as CourseRow])
+    const [course] = await attachLevelsToCourses(supabase, [data as unknown as CourseRow])
     return course
 }

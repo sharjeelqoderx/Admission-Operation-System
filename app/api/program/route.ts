@@ -137,25 +137,18 @@ export async function GET(req: NextRequest) {
             )
         }
 
-        let result = data ?? []
-
-        try {
-            result = await attachLevelsToCourses(supabase, result as CourseRow[])
-        } catch (levelAttachError) {
-            console.error("level attach error:", levelAttachError)
-            return NextResponse.json(
-                { error: "Failed to attach level data", details: levelAttachError },
-                { status: 500 }
-            )
-        }
+        const coursesWithLevels = await attachLevelsToCourses(
+            supabase,
+            (data ?? []) as unknown as CourseRow[]
+        )
 
         return NextResponse.json({
-            data: result,
+            data: coursesWithLevels,
             pagination: {
                 total: totalCount ?? 0,
                 limit,
                 offset,
-                hasMore: offset + result.length < (totalCount ?? 0),
+                hasMore: offset + coursesWithLevels.length < (totalCount ?? 0),
             },
         })
     } catch (error) {

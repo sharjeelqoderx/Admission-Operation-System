@@ -4,7 +4,7 @@ import React, { useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { StudentFormSchema } from "@/types/schemas/student"
+import { StudentFormSchema, type StudentInput } from "@/types/schemas/student"
 import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
@@ -174,7 +174,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                     obtained_marks: "",
                     total_marks: "",
                 }],
-        },
+        } as StudentInput,
         validators: {
             onSubmit: StudentFormSchema,
         },
