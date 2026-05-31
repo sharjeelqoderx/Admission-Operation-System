@@ -1,24 +1,81 @@
 "use client"
 
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useRef } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
-import { GraduationCap, FileText, Plus } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { GraduationCap, FileText, Plus, RotateCcw, Search } from "lucide-react"
 import Link from "next/link"
 import { ApplicationsListTable, type ApplicationRow } from "./_component/ApplicationsListTable"
 import { BluryCard } from "@/components/shared/blury-card"
+import { DatePicker } from "@/components/shared/date-picker"
 import { useAuth } from "@/hooks/useAuth"
+import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 
 export default function ApplicationsPage() {
     const { me } = useAuth()
     const role = me.data?.role
     const canCreateApplication = me.isSuccess && (role === "AGENT" || role === "STUDENT")
+    const showStudentSearch = role !== "STUDENT"
+
+    const searchParams = useSearchParams()
+    const router = useRouter()
+    const pathname = usePathname()
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+    const q = searchParams.get("q") || ""
+    const status = searchParams.get("status") || "all"
+    const degreeId = searchParams.get("degree_id") || "all"
+    const dateFrom = searchParams.get("date_from") || ""
+    const dateTo = searchParams.get("date_to") || ""
+
+    const { data: degrees = [], isLoading: degreesLoading } = useDegrees()
+
+    const updateParams = useCallback(
+        (updates: Record<string, string>) => {
+            const params = new URLSearchParams(searchParams.toString())
+            Object.entries(updates).forEach(([key, value]) => {
+                if (value && value !== "all") {
+                    params.set(key, value)
+                } else {
+                    params.delete(key)
+                }
+            })
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+        },
+        [pathname, router, searchParams]
+    )
+
+    const handleSearch = useCallback(
+        (term: string) => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current)
+            timeoutRef.current = setTimeout(() => {
+                updateParams({ q: term })
+            }, 400)
+        },
+        [updateParams]
+    )
 
     const { data: response, isLoading, isError, refetch } = useQuery({
-        queryKey: ["applications"],
+        queryKey: ["applications", q, status, degreeId, dateFrom, dateTo],
         queryFn: async () => {
-            const res = await fetch("/api/application")
+            const url = new URL("/api/application", window.location.origin)
+            if (q) url.searchParams.set("q", q)
+            if (status !== "all") url.searchParams.set("status", status)
+            if (degreeId !== "all") url.searchParams.set("degree_id", degreeId)
+            if (dateFrom) url.searchParams.set("date_from", dateFrom)
+            if (dateTo) url.searchParams.set("date_to", dateTo)
+
+            const res = await fetch(url.toString())
             if (!res.ok) throw new Error("Failed to fetch applications")
             const json = await res.json()
             return json
@@ -29,6 +86,26 @@ export default function ApplicationsPage() {
         () => (Array.isArray(response?.data) ? response.data : []),
         [response]
     )
+
+    const pendingCount = useMemo(
+        () => applications.filter((application: ApplicationRow) => application.status === "PENDING").length,
+        [applications]
+    )
+
+    const hasActiveFilters = useMemo(
+        () =>
+            Boolean(q) ||
+            status !== "all" ||
+            degreeId !== "all" ||
+            Boolean(dateFrom) ||
+            Boolean(dateTo),
+        [q, status, degreeId, dateFrom, dateTo]
+    )
+
+    const handleResetFilters = useCallback(() => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current)
+        router.replace(pathname, { scroll: false })
+    }, [pathname, router])
 
     const handleRetry = useCallback(() => { refetch() }, [refetch])
 
@@ -93,10 +170,84 @@ export default function ApplicationsPage() {
                             Pending
                         </Typography>
                         <Typography as="p" className="text-[28px] font-extrabold text-gray-900 leading-none">
-                            {isLoading ? "—" : applications.filter((a: any) => a.status === "PENDING").length}
+                            {isLoading ? "—" : pendingCount}
                         </Typography>
                     </div>
                 </div>
+            </div>
+
+            {/* ── Filters ── */}
+            <div className="flex flex-nowrap items-center gap-3 overflow-x-auto p-1">
+                {showStudentSearch && (
+                    <div className="relative min-w-[220px] flex-1">
+                        <Search className="absolute left-3 top-1/2 z-10 -translate-y-1/2 size-4 text-gray-400" />
+                        <Input
+                            key={q}
+                            type="text"
+                            placeholder="Search student name or email"
+                            className="w-full backdrop-blur-md ps-9"
+                            defaultValue={q}
+                            onChange={(e) => handleSearch(e.target.value)}
+                        />
+                    </div>
+                )}
+
+                <Select value={status} onValueChange={(value) => updateParams({ status: value })}>
+                    <SelectTrigger className="w-[160px] shrink-0">
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All statuses</SelectItem>
+                        <SelectItem value="PENDING">Pending</SelectItem>
+                        <SelectItem value="APPROVED">Approved</SelectItem>
+                        <SelectItem value="NEEDS_REVISION">Needs revision</SelectItem>
+                        <SelectItem value="REJECTED">Rejected</SelectItem>
+                    </SelectContent>
+                </Select>
+
+                <Select
+                    value={degreeId}
+                    onValueChange={(value) => updateParams({ degree_id: value })}
+                    disabled={degreesLoading}
+                >
+                    <SelectTrigger className="w-[200px] shrink-0">
+                        <SelectValue placeholder={degreesLoading ? "Loading..." : "Degree"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All degrees</SelectItem>
+                        {degrees.map((degree) => (
+                            <SelectItem key={degree.id} value={degree.id}>
+                                {formatDegreeLabel(degree)}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+
+                <DatePicker
+                    value={dateFrom}
+                    onChange={(value) => updateParams({ date_from: value })}
+                    placeholder="From date"
+                    className="w-[160px] shrink-0 h-10 text-xs"
+                />
+
+                <DatePicker
+                    value={dateTo}
+                    onChange={(value) => updateParams({ date_to: value })}
+                    placeholder="To date"
+                    className="w-[160px] shrink-0 h-10 text-xs"
+                />
+
+                {hasActiveFilters && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleResetFilters}
+                        className="shrink-0 h-10 gap-2 border-white/40 bg-white/20 hover:bg-white/40"
+                    >
+                        <RotateCcw className="size-4" />
+                        Reset
+                    </Button>
+                )}
             </div>
 
             <ApplicationsListTable

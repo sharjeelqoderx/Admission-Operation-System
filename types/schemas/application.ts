@@ -1,5 +1,31 @@
 import { z } from "zod";
 
+export const ApplicationStatusFilterSchema = z.enum([
+  "all",
+  "APPROVED",
+  "REJECTED",
+  "NEEDS_REVISION",
+  "PENDING",
+]);
+
+export const ApplicationListQuerySchema = z.object({
+  student_id: z.string().uuid().optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  status: ApplicationStatusFilterSchema.optional(),
+  degree_id: z.string().uuid().optional(),
+  date_from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "date_from must be YYYY-MM-DD")
+    .optional(),
+  date_to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "date_to must be YYYY-MM-DD")
+    .optional(),
+  q: z.string().trim().min(1).optional(),
+});
+
+export type ApplicationListQuery = z.infer<typeof ApplicationListQuerySchema>;
+
 export const CreateApplicationSchema = z.object({
   profile_id: z.string().min(1, "Please select a student"),
   course_id: z.string().uuid("Please select a course"),

@@ -13,7 +13,7 @@ export default function DocumentPage() {
         return <PageLoader label="Loading documents..." />
     }
 
-    if (user?.role === "AGENT" || user?.role === "STUDENT") {
+    if (user?.role === "AGENT") {
         return <DocumentStudentsList />
     }
 

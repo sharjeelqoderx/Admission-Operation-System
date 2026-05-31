@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { CreateApplicationSchema } from "@/types/schemas/application";
+import { CreateApplicationSchema, ApplicationListQuerySchema } from "@/types/schemas/application";
 import {
     attachLevelsToCourses,
     COURSE_SELECT,
@@ -179,6 +179,110 @@ async function canAccessStudentApplications(
     return role === "UNIVERSITY" || role === "ADMIN";
 }
 
+async function resolveCourseIdsForDegree(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    degreeId: string
+) {
+    const { data: courses, error } = await supabase
+        .from("course")
+        .select("id")
+        .eq("degree_id", degreeId);
+
+    if (error) {
+        throw error;
+    }
+
+    return (courses ?? []).map((course) => course.id);
+}
+
+async function resolveMatchingStudentProfileIds(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    searchTerm: string,
+    options: {
+        role: string;
+        userId: string;
+        studentId?: string;
+    }
+) {
+    if (options.studentId) {
+        return [options.studentId];
+    }
+
+    const escaped = searchTerm.replace(/[%_,]/g, "\\$&");
+    const pattern = `%${escaped}%`;
+
+    if (options.role === "STUDENT") {
+        const { data: profile, error } = await supabase
+            .from("profile")
+            .select("id, name, email")
+            .eq("id", options.userId)
+            .maybeSingle();
+
+        if (error) {
+            throw error;
+        }
+
+        if (!profile) {
+            return [];
+        }
+
+        const haystack = `${profile.name ?? ""} ${profile.email ?? ""}`.toLowerCase();
+        return haystack.includes(searchTerm.toLowerCase()) ? [profile.id] : [];
+    }
+
+    let allowedProfileIds: string[] | null = null;
+
+    if (options.role === "AGENT") {
+        const { data: agentRow, error: agentError } = await supabase
+            .from("agent")
+            .select("id")
+            .eq("profile_id", options.userId)
+            .maybeSingle();
+
+        if (agentError) {
+            throw agentError;
+        }
+
+        if (!agentRow) {
+            return [];
+        }
+
+        const { data: students, error: studentsError } = await supabase
+            .from("student")
+            .select("profile_id")
+            .eq("created_by_agent_id", agentRow.id);
+
+        if (studentsError) {
+            throw studentsError;
+        }
+
+        allowedProfileIds = (students ?? [])
+            .map((student) => student.profile_id)
+            .filter(Boolean);
+
+        if (allowedProfileIds.length === 0) {
+            return [];
+        }
+    }
+
+    let profileQuery = supabase
+        .from("profile")
+        .select("id")
+        .or(`name.ilike.${pattern},email.ilike.${pattern}`);
+
+    if (allowedProfileIds) {
+        profileQuery = profileQuery.in("id", allowedProfileIds);
+    }
+
+    const { data: profiles, error } = await profileQuery;
+
+    if (error) {
+        throw error;
+    }
+
+    return (profiles ?? []).map((profile) => profile.id);
+}
+
 export async function GET(req: NextRequest) {
     try {
         const supabase = await createSupabaseServerClient();
@@ -189,8 +293,35 @@ export async function GET(req: NextRequest) {
         }
 
         const { searchParams } = new URL(req.url);
-        const studentId = searchParams.get("student_id");
-        const limit = searchParams.get("limit");
+        const queryParse = ApplicationListQuerySchema.safeParse({
+            student_id: searchParams.get("student_id") ?? undefined,
+            limit: searchParams.get("limit") ?? undefined,
+            status: searchParams.get("status") ?? undefined,
+            degree_id: searchParams.get("degree_id") ?? undefined,
+            date_from: searchParams.get("date_from") ?? undefined,
+            date_to: searchParams.get("date_to") ?? undefined,
+            q: searchParams.get("q") ?? undefined,
+        });
+
+        if (!queryParse.success) {
+            return NextResponse.json(
+                {
+                    error: "Invalid query parameters",
+                    details: queryParse.error.flatten(),
+                },
+                { status: 400 }
+            );
+        }
+
+        const {
+            student_id: studentId,
+            limit,
+            status,
+            degree_id: degreeId,
+            date_from: dateFrom,
+            date_to: dateTo,
+            q: searchTerm,
+        } = queryParse.data;
 
         const { data: profile, error: profileError } = await supabase
             .from("profile")
@@ -215,6 +346,28 @@ export async function GET(req: NextRequest) {
             }
         }
 
+        let filteredCourseIds: string[] | null = null;
+        let filteredProfileIds: string[] | null = null;
+
+        if (degreeId) {
+            filteredCourseIds = await resolveCourseIdsForDegree(supabase, degreeId);
+            if (filteredCourseIds.length === 0) {
+                return NextResponse.json({ data: [], role: profile.role }, { status: 200 });
+            }
+        }
+
+        if (searchTerm) {
+            filteredProfileIds = await resolveMatchingStudentProfileIds(supabase, searchTerm, {
+                role: profile.role,
+                userId: user.id,
+                studentId,
+            });
+
+            if (filteredProfileIds.length === 0) {
+                return NextResponse.json({ data: [], role: profile.role }, { status: 200 });
+            }
+        }
+
         let query = supabase
             .from("application")
             .select(APPLICATION_LIST_SELECT)
@@ -230,8 +383,28 @@ export async function GET(req: NextRequest) {
             query = query.eq("university_id", user.id);
         }
 
+        if (status && status !== "all") {
+            query = query.eq("status", status);
+        }
+
+        if (dateFrom) {
+            query = query.gte("created_at", `${dateFrom}T00:00:00.000Z`);
+        }
+
+        if (dateTo) {
+            query = query.lte("created_at", `${dateTo}T23:59:59.999Z`);
+        }
+
+        if (filteredCourseIds) {
+            query = query.in("course_id", filteredCourseIds);
+        }
+
+        if (filteredProfileIds) {
+            query = query.in("profile_id", filteredProfileIds);
+        }
+
         if (limit) {
-            query = query.limit(parseInt(limit, 10));
+            query = query.limit(limit);
         }
 
         const { data: applications, error } = await query;

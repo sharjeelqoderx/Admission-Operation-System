@@ -219,7 +219,7 @@ function StudentListSection() {
             </div>
 
             {/* Tabs */}
-            <div className="flex items-center gap-2 pt-2">
+            {/* <div className="flex items-center gap-2 pt-2">
                 <button className="px-5 py-1.5 rounded-full bg-brand-secondary text-white text-xs font-medium shadow-sm">
                     All Students
                 </button>
@@ -229,7 +229,7 @@ function StudentListSection() {
                 <button className="px-5 py-1.5 rounded-full bg-[#8ba4d5] text-white text-xs font-medium hover:bg-brand-secondary">
                     Country
                 </button>
-            </div>
+            </div> */}
 
             <StudentTable
                 students={studentsQuery.data?.data || []}
