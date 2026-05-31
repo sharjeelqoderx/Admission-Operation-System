@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
+import { getFileSizeLimitError, isFileWithinSizeLimit } from "@/lib/constants/file-upload"
 
 export async function POST(req: NextRequest) {
     try {
@@ -12,6 +13,7 @@ export async function POST(req: NextRequest) {
         const form = await req.formData()
         const file = form.get("file")
         if (!(file instanceof File)) return err("File is required", 400)
+        if (!isFileWithinSizeLimit(file)) return err(getFileSizeLimitError(file.name), 400)
 
         const { publicUrl } = await uploadPublicImage({
             supabase,

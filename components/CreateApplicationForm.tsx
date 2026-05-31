@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 
 import { Typography } from "@/components/shared/Typography";
+import { BluryCard } from "@/components/shared/blury-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, CheckSquare, Square, FileText, GraduationCap, User2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import Link from "next/link";
 import { FilePreview } from "@/components/shared/FilePreview";
+import ImageUploadCard from "@/components/shared/image-upload-card";
+import { Plus, Loader2 } from "lucide-react";
 
 import {
     Select,
@@ -32,8 +34,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { DatePicker } from "@/components/shared/date-picker";
 import { useForm, useStore } from "@tanstack/react-form";
 import { CreateApplicationSchema, type CreateApplicationInput } from "@/types/schemas/application";
+import type { CourseProgram } from "@/types/schemas/program";
+import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program";
+import { useLevels } from "@/hooks/useLevels";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { ErrorView } from "@/components/shared/error-view";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 
 type Student = {
@@ -49,20 +62,12 @@ type Student = {
     gender?: string;
     id?: string;
     student?: {
-        nationality?: string;
-    };
-};
-
-type Program = {
-    program_id: string;
-    university_id: string;
-    university_name?: string;
-    name: string;
-    tuition_fee: string;
-    currency?: string;
-    intake_date?: string;
-    deadline?: string;
-    status?: string;
+        student_code?: string | null;
+        nationality?: string | null;
+        country?: string | null;
+        state?: string | null;
+        city?: string | null;
+    } | null;
 };
 
 type Document = {
@@ -74,6 +79,35 @@ type Document = {
     document_files?: { file_url: string }[];
 };
 
+
+function getCourseStatus(course: CourseProgram): "AVAILABLE" | "CLOSED" {
+    if (!course.deadline_date) return "AVAILABLE";
+
+    const deadline = new Date(course.deadline_date);
+    if (Number.isNaN(deadline.getTime())) return "AVAILABLE";
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    deadline.setHours(0, 0, 0, 0);
+
+    return deadline >= today ? "AVAILABLE" : "CLOSED";
+}
+
+function parseCourseFees(fees?: string | null): number | undefined {
+    if (!fees) return undefined;
+
+    const parsed = parseFloat(fees.replace(/[^\d.]/g, ""));
+    return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+function getStudentCode(studentDetails?: Student, students?: Student[], profileId?: string): string {
+    if (studentDetails?.student?.student_code) {
+        return studentDetails.student.student_code;
+    }
+
+    const fromList = students?.find((student) => student.profile.id === profileId);
+    return fromList?.student_code ?? "-";
+}
 
 function F({ field, label, isStepAttempted, children }: { field: any; label: string; isStepAttempted?: boolean; children: React.ReactNode }) {
     const isSubmitted = field.form.state.isSubmitted || isStepAttempted;
@@ -100,7 +134,7 @@ export function CreateApplicationForm() {
     const searchParams = useSearchParams();
     const queryClient = useQueryClient();
     const studentIdParam = searchParams.get("student_id");
-    const programIdParam = searchParams.get("program_id");
+    const courseIdParam = searchParams.get("course_id");
     const stepParam = searchParams.get("step");
     const uploadedParam = searchParams.get("uploaded");
 
@@ -118,6 +152,7 @@ export function CreateApplicationForm() {
 
     const { data: studentsResponse } = useQuery({
         queryKey: ["students"],
+        enabled: user?.role === "AGENT",
         queryFn: async () => {
             const res = await fetch("/api/student");
             if (!res.ok) throw new Error("Failed to fetch students");
@@ -151,7 +186,7 @@ export function CreateApplicationForm() {
     const form = useForm({
         defaultValues: {
             profile_id: studentIdParam || "",
-            program_id: programIdParam || "",
+            course_id: courseIdParam || "",
             university_id: "",
 
             document_ids: [] as string[],
@@ -175,7 +210,7 @@ export function CreateApplicationForm() {
     }, [user, studentIdParam, form]);
 
     const selectedStudentId = useStore(form.store, (s: any) => s.values.profile_id);
-    const selectedProgramId = useStore(form.store, (s: any) => s.values.program_id) || programIdParam || "";
+    const selectedCourseId = useStore(form.store, (s: any) => s.values.course_id) || courseIdParam || "";
 
     const { data: studentDetailsResponse } = useQuery({
         queryKey: ["student", selectedStudentId],
@@ -190,11 +225,11 @@ export function CreateApplicationForm() {
     const studentDetails: Student | undefined = studentDetailsResponse?.data;
 
     const { data: documentsResponse, isLoading: isDocumentsLoading, refetch: refetchDocuments } = useQuery({
-        queryKey: ["student-documents", selectedStudentId, selectedProgramId],
+        queryKey: ["student-documents", selectedStudentId, selectedCourseId],
         queryFn: async () => {
             if (!selectedStudentId) return null;
             const params = new URLSearchParams();
-            if (selectedProgramId) params.set("program_id", selectedProgramId);
+            if (selectedCourseId) params.set("course_id", selectedCourseId);
             const res = await fetch(`/api/document/student/${selectedStudentId}?${params.toString()}`);
             if (!res.ok) throw new Error("Failed to fetch documents");
             return res.json();
@@ -206,10 +241,10 @@ export function CreateApplicationForm() {
     const documents: Document[] = Array.isArray(documentsResponse?.data) ? documentsResponse.data : [];
 
     useEffect(() => {
-        if (stepParam === "2" && (studentIdParam || selectedStudentId) && (programIdParam || selectedProgramId)) {
+        if (stepParam === "2" && (studentIdParam || selectedStudentId) && (courseIdParam || selectedCourseId)) {
             setStep(2);
         }
-    }, [stepParam, studentIdParam, programIdParam, selectedStudentId, selectedProgramId]);
+    }, [stepParam, studentIdParam, courseIdParam, selectedStudentId, selectedCourseId]);
 
     useEffect(() => {
         if (uploadedParam !== "1" || !selectedStudentId) return;
@@ -227,30 +262,31 @@ export function CreateApplicationForm() {
         queryKey: ["programs"],
         queryFn: async () => {
             const res = await fetch("/api/program?limit=50");
-            if (!res.ok) throw new Error("Failed to fetch programs");
+            if (!res.ok) throw new Error("Failed to fetch courses");
             return res.json();
         }
     });
-    const programs: Program[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
+    const courses: CourseProgram[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
+    const { data: levels = [] } = useLevels();
 
     const { data: programDetailResponse } = useQuery({
-        queryKey: ["program-detail", selectedProgramId],
+        queryKey: ["course-detail", selectedCourseId],
         queryFn: async () => {
-            const res = await fetch(`/api/program/${selectedProgramId}`);
-            if (!res.ok) throw new Error("Failed to fetch program details");
+            const res = await fetch(`/api/program/${selectedCourseId}`);
+            if (!res.ok) throw new Error("Failed to fetch course details");
             return res.json();
         },
-        enabled: !!selectedProgramId,
+        enabled: !!selectedCourseId,
     });
 
     const requiredDocTypes: { id: string; name: string }[] = useMemo(() => {
-        const fromProgram = (
-            programDetailResponse?.data?.program_document_requirements ?? []
+        const fromCourse = (
+            programDetailResponse?.data?.degree?.requirements ?? []
         )
             .map((r: { document_type?: { id: string; name: string } }) => r.document_type)
             .filter((t: { id: string; name: string } | undefined): t is { id: string; name: string } => Boolean(t?.id));
 
-        if (fromProgram.length > 0) return fromProgram;
+        if (fromCourse.length > 0) return fromCourse;
 
         // No program requirements configured — show types from student's uploaded documents
         const seen = new Set<string>();
@@ -266,28 +302,33 @@ export function CreateApplicationForm() {
     }, [programDetailResponse, documents]);
 
     useEffect(() => {
-        if (programIdParam && programsResponse?.data) {
-            const programs: Program[] = programsResponse.data;
-            const program = programs.find(p => p.program_id === programIdParam);
-            if (program) {
-                form.setFieldValue("program_id", program.program_id);
-                form.setFieldValue("university_id", program.university_id);
-                form.setFieldValue("intake_date", program.intake_date || "N/A");
+        if (courseIdParam && courses.length > 0) {
+            const course = courses.find((item) => item.id === courseIdParam);
+            if (course) {
+                form.setFieldValue("course_id", course.id);
+                form.setFieldValue("intake_date", course.degree?.intake_date || "N/A");
+                form.setFieldValue("tuition_fee", parseCourseFees(course.degree?.fees));
+
+                const levelId = course.degree?.level_id;
+                const universityId = levels.find((level) => level.id === levelId)?.university_id;
+                if (universityId) {
+                    form.setFieldValue("university_id", universityId);
+                }
             }
         }
-    }, [programIdParam, programsResponse, form]);
+    }, [courseIdParam, courses, levels, form]);
 
-    const prevProgramRef = useRef<string>("");
+    const prevCourseRef = useRef<string>("");
     useEffect(() => {
-        if (prevProgramRef.current && prevProgramRef.current !== selectedProgramId) {
+        if (prevCourseRef.current && prevCourseRef.current !== selectedCourseId) {
             form.setFieldValue("document_ids", []);
         }
-        prevProgramRef.current = selectedProgramId;
-    }, [selectedProgramId, form]);
+        prevCourseRef.current = selectedCourseId;
+    }, [selectedCourseId, form]);
 
     // Auto-select documents for required types that are not yet selected (e.g. after upload)
     useEffect(() => {
-        if (!selectedProgramId || documents.length === 0) return;
+        if (!selectedCourseId || documents.length === 0) return;
 
         const currentIds = form.getFieldValue("document_ids") as string[];
         const selectedDocs = documents.filter((d) => currentIds.includes(d.id));
@@ -316,7 +357,7 @@ export function CreateApplicationForm() {
         if (toAdd.length > 0) {
             form.setFieldValue("document_ids", [...currentIds, ...toAdd]);
         }
-    }, [selectedProgramId, requiredDocTypes, documents, form]);
+    }, [selectedCourseId, requiredDocTypes, documents, form]);
 
 
     const handleNextStep = async () => {
@@ -331,12 +372,12 @@ export function CreateApplicationForm() {
             setStep(2);
         } else if (step === 2) {
             setIsStep2Attempted(true);
-            const programId = form.getFieldValue("program_id");
+            const courseId = form.getFieldValue("course_id");
             const studentId = form.getFieldValue("profile_id");
             const documentIds = form.getFieldValue("document_ids");
 
-            if (!programId) {
-                toast.error("Please select a program first.");
+            if (!courseId) {
+                toast.error("Please select a course first.");
                 return;
             }
 
@@ -365,11 +406,11 @@ export function CreateApplicationForm() {
                 if (res.ok) {
                     const json = await res.json();
                     const existing = (json.data || []).find((app: any) => 
-                        app.program?.id === programId && app.status !== "REJECTED"
+                        app.course?.id === courseId && app.status !== "REJECTED"
                     );
                     if (existing) {
-                        setDuplicateError("Application is already created for this program");
-                        toast.error("Application is already created for this program");
+                        setDuplicateError("Application is already created for this course");
+                        toast.error("Application is already created for this course");
                         setIsCheckingDuplicate(false);
                         return;
                     }
@@ -422,7 +463,7 @@ export function CreateApplicationForm() {
                     )}>
                         2
                     </div>
-                    <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Program Selection</span>
+                    <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Course Selection</span>
                 </div>
 
                 <div className="flex flex-col items-center gap-3">
@@ -456,11 +497,15 @@ export function CreateApplicationForm() {
                 {step === 2 && (
                     <Step2
                         form={form}
-                        programs={programs}
+                        courses={courses}
+                        students={students}
                         studentDetails={studentDetails}
+                        selectedStudentId={selectedStudentId}
                         documents={documents}
                         requiredDocTypes={requiredDocTypes}
-                        selectedProgramId={selectedProgramId}
+                        selectedCourseId={selectedCourseId}
+                        levels={levels}
+                        refetchDocuments={refetchDocuments}
                         isDocumentsLoading={isDocumentsLoading}
                         onNext={handleNextStep}
                         onBack={() => setStep(1)}
@@ -474,7 +519,7 @@ export function CreateApplicationForm() {
                         form={form}
                         studentDetails={studentDetails}
                         allDocuments={documents}
-                        programs={programs}
+                        courses={courses}
                         onBack={() => setStep(2)}
                         isSubmitting={createApplication.isPending}
                         error={createApplication.error?.message}
@@ -541,13 +586,181 @@ function Step1({ form, students, studentDetails, role, isStepAttempted, onNext }
                             <Input type="date" value={studentDetails?.date_of_birth || ""} disabled className="border-0 bg-transparent h-11 text-sm disabled:opacity-70" />
                         </div>
                     </div>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Country</label>
+                        <div className="bg-white/40 backdrop-blur-md rounded-xl border border-white/60 shadow-sm">
+                            <Input value={studentDetails?.student?.country || ""} disabled placeholder="Country" className="border-0 bg-transparent h-11 text-sm disabled:opacity-70" />
+                        </div>
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">State</label>
+                        <div className="bg-white/40 backdrop-blur-md rounded-xl border border-white/60 shadow-sm">
+                            <Input value={studentDetails?.student?.state || ""} disabled placeholder="State" className="border-0 bg-transparent h-11 text-sm disabled:opacity-70" />
+                        </div>
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">City</label>
+                        <div className="bg-white/40 backdrop-blur-md rounded-xl border border-white/60 shadow-sm">
+                            <Input value={studentDetails?.student?.city || ""} disabled placeholder="City" className="border-0 bg-transparent h-11 text-sm disabled:opacity-70" />
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div className="flex justify-end pt-6 border-t border-gray-200/50">
-                <Button type="button" onClick={onNext} className="h-12 px-8 bg-brand-secondary hover:bg-brand-secondary/90 text-white font-bold rounded-xl shadow-lg">Next Step: Program Selection</Button>
+                <Button type="button" onClick={onNext} className="h-12 px-8 bg-brand-secondary hover:bg-brand-secondary/90 text-white font-bold rounded-xl shadow-lg">Next Step: Course Selection</Button>
             </div>
         </div>
+    );
+}
+
+function SupportingDocumentUploadModal({
+    open,
+    onOpenChange,
+    studentId,
+    documentType,
+    onUploaded,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    studentId: string;
+    documentType: { id: string; name: string } | null;
+    onUploaded: (documentId: string) => void;
+}) {
+    const [frontFile, setFrontFile] = useState<File | null>(null);
+    const [backFile, setBackFile] = useState<File | null>(null);
+    const queryClient = useQueryClient();
+
+    const uploadMutation = useMutation({
+        mutationFn: async () => {
+            if (!studentId || !documentType?.id || !frontFile) {
+                throw new Error("Please upload the front side file");
+            }
+
+            const formData = new FormData();
+            formData.set("student_id", studentId);
+            formData.set("document_type_id", documentType.id);
+            formData.append("files", frontFile);
+            if (backFile) {
+                formData.append("files", backFile);
+            }
+
+            const res = await fetch("/api/document", { method: "POST", body: formData });
+            const json = await res.json();
+            if (!res.ok) {
+                throw new Error(json.error ?? "Failed to upload document");
+            }
+
+            return json.data as { id: string };
+        },
+        onSuccess: (data) => {
+            toast.success("Document uploaded successfully");
+            queryClient.invalidateQueries({ queryKey: ["student-documents"], exact: false });
+            queryClient.invalidateQueries({ queryKey: ["documents"] });
+            onUploaded(data.id);
+            setFrontFile(null);
+            setBackFile(null);
+            onOpenChange(false);
+        },
+        onError: (error: Error) => {
+            toast.error(error.message);
+        },
+    });
+
+    const handleOpenChange = useCallback(
+        (nextOpen: boolean) => {
+            if (uploadMutation.isPending) return;
+            if (!nextOpen) {
+                setFrontFile(null);
+                setBackFile(null);
+            }
+            onOpenChange(nextOpen);
+        },
+        [onOpenChange, uploadMutation.isPending]
+    );
+
+    return (
+        <Dialog open={open} onOpenChange={handleOpenChange}>
+            <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>
+                        Upload {documentType?.name ?? "Document"}
+                    </DialogTitle>
+                    <DialogDescription>
+                        Add the required file for this document type. It will be attached to supporting documents automatically.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+                    <div className="space-y-2">
+                        <Typography font="small" className="text-gray-400 uppercase tracking-widest">
+                            Front Side
+                        </Typography>
+                        <ImageUploadCard
+                            value={frontFile}
+                            onChange={setFrontFile}
+                            message="Front File"
+                            accept="image/*,application/pdf,.doc,.docx"
+                            className={cn(
+                                "min-h-[160px] border-2 border-transparent hover:border-brand-byzantine bg-gray-50/50 hover:bg-gray-100/50 transition-all"
+                            )}
+                            emptyIcon={<Plus size={32} className="text-gray-300" />}
+                        />
+                    </div>
+
+                    <div className={cn("space-y-2 transition-opacity", !frontFile && "opacity-50")}>
+                        <Typography font="small" className="text-gray-400 uppercase tracking-widest">
+                            Back Side (Optional)
+                        </Typography>
+                        <ImageUploadCard
+                            value={backFile}
+                            onChange={(file) => {
+                                if (!frontFile && file) return;
+                                setBackFile(file);
+                            }}
+                            message="Back File"
+                            accept="image/*,application/pdf,.doc,.docx"
+                            disabled={!frontFile}
+                            className={cn(
+                                "min-h-[160px] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 hover:border-brand-byzantine/30 transition-all",
+                                !frontFile && "cursor-not-allowed pointer-events-none"
+                            )}
+                            emptyIcon={<Plus size={32} className="text-gray-300" />}
+                        />
+                    </div>
+                </div>
+
+                {uploadMutation.error instanceof Error && (
+                    <ErrorView message={uploadMutation.error.message} />
+                )}
+
+                <DialogFooter className="gap-2 sm:gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleOpenChange(false)}
+                        disabled={uploadMutation.isPending}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        onClick={() => uploadMutation.mutate()}
+                        disabled={!frontFile || uploadMutation.isPending}
+                        className="bg-brand-byzantine hover:bg-brand-byzantine/90"
+                    >
+                        {uploadMutation.isPending ? (
+                            <>
+                                <Loader2 className="size-4 animate-spin" />
+                                Uploading...
+                            </>
+                        ) : (
+                            "Upload Document"
+                        )}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -555,18 +768,41 @@ function SupportingDocumentsSection({
     form,
     documents,
     requiredDocTypes,
-    selectedProgramId,
+    selectedCourseId,
+    selectedStudentId,
+    refetchDocuments,
     isDocumentsLoading,
     isStepAttempted,
 }: {
     form: any;
     documents: Document[];
     requiredDocTypes: { id: string; name: string }[];
-    selectedProgramId: string;
+    selectedCourseId: string;
+    selectedStudentId: string;
+    refetchDocuments: () => Promise<unknown>;
     isDocumentsLoading?: boolean;
     isStepAttempted?: boolean;
 }) {
-    if (!selectedProgramId) {
+    const [uploadModalOpen, setUploadModalOpen] = useState(false);
+    const [activeDocumentType, setActiveDocumentType] = useState<{ id: string; name: string } | null>(null);
+
+    const openUploadModal = useCallback((documentType: { id: string; name: string }) => {
+        setActiveDocumentType(documentType);
+        setUploadModalOpen(true);
+    }, []);
+
+    const handleDocumentUploaded = useCallback(
+        async (documentId: string) => {
+            await refetchDocuments();
+            const currentIds = (form.getFieldValue("document_ids") as string[]) || [];
+            if (!currentIds.includes(documentId)) {
+                form.setFieldValue("document_ids", [...currentIds, documentId]);
+            }
+        },
+        [form, refetchDocuments]
+    );
+
+    if (!selectedCourseId) {
         return (
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                 <div className="flex items-center gap-2 mb-4">
@@ -575,7 +811,7 @@ function SupportingDocumentsSection({
                 </div>
                 <div className="py-10 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
                     <Typography as="p" className="text-sm font-medium text-gray-500">
-                        Select a program above to view required supporting documents.
+                        Select a course above to view required supporting documents.
                     </Typography>
                 </div>
             </div>
@@ -583,7 +819,16 @@ function SupportingDocumentsSection({
     }
 
     return (
-        <div className="bg-white rounded-2xl p-6 space-y-6 shadow-sm border border-gray-100">
+        <>
+            <SupportingDocumentUploadModal
+                open={uploadModalOpen}
+                onOpenChange={setUploadModalOpen}
+                studentId={selectedStudentId}
+                documentType={activeDocumentType}
+                onUploaded={handleDocumentUploaded}
+            />
+
+            <div className="bg-white rounded-2xl p-6 space-y-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <FileText className="size-5 text-blue-600" />
@@ -648,10 +893,11 @@ function SupportingDocumentsSection({
                                         );
                                     }
                                     return (
-                                        <Link
+                                        <button
                                             key={rt.id}
-                                            href={`/dashboard/document/new?document_type_id=${rt.id}&student_id=${form.getFieldValue("profile_id")}&program_id=${selectedProgramId}&from=application`}
-                                            className="bg-red-50/50 rounded-xl p-3 space-y-3 relative border-2 border-dashed border-red-200 flex flex-col items-center justify-center gap-2 min-h-[140px] hover:bg-red-50 hover:border-red-300 transition-all group"
+                                            type="button"
+                                            onClick={() => openUploadModal(rt)}
+                                            className="bg-red-50/50 rounded-xl p-3 space-y-3 relative border-2 border-dashed border-red-200 flex flex-col items-center justify-center gap-2 min-h-[140px] hover:bg-red-50 hover:border-red-300 transition-all group w-full"
                                         >
                                             <div className="size-10 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
                                                 <FileText className="size-5 text-red-400" />
@@ -660,7 +906,7 @@ function SupportingDocumentsSection({
                                                 <Typography as="p" className="text-[11px] font-bold text-red-600 truncate">{rt.name}</Typography>
                                                 <Typography as="p" className="text-[9px] text-red-400 mt-0.5">Click to upload</Typography>
                                             </div>
-                                        </Link>
+                                        </button>
                                     );
                                 })}
                             </div>
@@ -715,9 +961,7 @@ function SupportingDocumentsSection({
                             <div className="col-span-full py-12 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center gap-4">
                                 <FileText className="size-6 text-gray-400" />
                                 <Typography as="p" className="text-sm font-bold text-gray-900">No documents uploaded yet</Typography>
-                                <Link href={`/dashboard/document/new?student_id=${form.getFieldValue("profile_id")}&program_id=${selectedProgramId}&from=application`}>
-                                    <Button type="button" variant="outline" className="text-xs font-bold">Upload Document</Button>
-                                </Link>
+                                <Typography as="p" className="text-xs text-gray-500">Upload required documents using the cards above.</Typography>
                             </div>
                         )}
                         {isStepAttempted && (!field.state.value || field.state.value.length === 0) && (
@@ -727,22 +971,86 @@ function SupportingDocumentsSection({
                 )}
             </form.Field>
         </div>
+        </>
     );
 }
 
-function Step2({ form, programs, studentDetails, documents, requiredDocTypes, selectedProgramId, isDocumentsLoading, isChecking, error, isStepAttempted, onNext, onBack }: { form: any; programs: Program[]; studentDetails?: Student; documents: Document[]; requiredDocTypes: { id: string; name: string }[]; selectedProgramId: string; isDocumentsLoading?: boolean; isChecking?: boolean; error?: string | null; isStepAttempted?: boolean; onNext: () => void; onBack: () => void }) {
+function Step2({
+    form,
+    courses,
+    students,
+    studentDetails,
+    selectedStudentId,
+    documents,
+    requiredDocTypes,
+    selectedCourseId,
+    levels,
+    refetchDocuments,
+    isDocumentsLoading,
+    isChecking,
+    error,
+    isStepAttempted,
+    onNext,
+    onBack,
+}: {
+    form: any;
+    courses: CourseProgram[];
+    students: Student[];
+    studentDetails?: Student;
+    selectedStudentId: string;
+    documents: Document[];
+    requiredDocTypes: { id: string; name: string }[];
+    selectedCourseId: string;
+    levels: Array<{ id: string; university_id: string | null }>;
+    refetchDocuments: () => Promise<unknown>;
+    isDocumentsLoading?: boolean;
+    isChecking?: boolean;
+    error?: string | null;
+    isStepAttempted?: boolean;
+    onNext: () => void;
+    onBack: () => void;
+}) {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [maxFees, setMaxFees] = useState("");
     const [submissionDate, setSubmissionDate] = useState("");
 
-    const filteredPrograms = programs.filter((p) => {
-        const matchesSearch = p.name?.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === "all" || (statusFilter === "available");
-        const matchesFees = !maxFees || parseFloat(p.tuition_fee) <= parseFloat(maxFees);
-        const matchesDate = !submissionDate || (p.deadline && new Date(p.deadline) >= new Date(submissionDate));
+    const studentCode = getStudentCode(studentDetails, students, selectedStudentId);
+
+    const filteredCourses = courses.filter((course) => {
+        const degreeName = course.degree?.name?.toLowerCase() ?? "";
+        const courseName = course.name?.toLowerCase() ?? "";
+        const search = searchTerm.toLowerCase();
+        const matchesSearch =
+            !search || courseName.includes(search) || degreeName.includes(search);
+        const status = getCourseStatus(course);
+        const matchesStatus =
+            statusFilter === "all" ||
+            (statusFilter === "available" && status === "AVAILABLE") ||
+            (statusFilter === "closed" && status === "CLOSED");
+        const courseFees = parseCourseFees(course.degree?.fees);
+        const matchesFees = !maxFees || (courseFees != null && courseFees <= parseFloat(maxFees));
+        const matchesDate =
+            !submissionDate ||
+            (course.deadline_date && new Date(course.deadline_date) >= new Date(submissionDate));
+
         return matchesSearch && matchesStatus && matchesFees && matchesDate;
     });
+
+    const handleSelectCourse = useCallback(
+        (course: CourseProgram) => {
+            form.setFieldValue("course_id", course.id);
+            form.setFieldValue("intake_date", course.degree?.intake_date || "N/A");
+            form.setFieldValue("tuition_fee", parseCourseFees(course.degree?.fees));
+
+            const levelId = course.degree?.level_id;
+            const universityId = levels.find((level) => level.id === levelId)?.university_id;
+            if (universityId) {
+                form.setFieldValue("university_id", universityId);
+            }
+        },
+        [form, levels]
+    );
 
     return (
         <div className="space-y-6">
@@ -756,11 +1064,10 @@ function Step2({ form, programs, studentDetails, documents, requiredDocTypes, se
             <div className="flex flex-col lg:flex-row gap-6">
                 <div className="flex-1 bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-6 space-y-4 shadow-sm">
                     <div className="flex flex-col gap-4">
-                        {/* Search - Full Width */}
                         <div className="relative bg-white rounded-xl shadow-sm border border-gray-200 w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                             <Input
-                                placeholder="Search programs by name or keywords..."
+                                placeholder="Search courses or degrees..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="border-0 bg-transparent h-11 pl-10 text-xs focus-visible:ring-0 w-full"
@@ -768,20 +1075,19 @@ function Step2({ form, programs, studentDetails, documents, requiredDocTypes, se
                         </div>
 
                         <div className="flex flex-wrap gap-4">
-                            {/* Status Select */}
                             <div className="flex-1 min-w-[200px]">
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                                     <SelectTrigger className="h-11 bg-white border-gray-200 rounded-xl text-xs">
                                         <SelectValue placeholder="Status" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Programs</SelectItem>
+                                        <SelectItem value="all">All Courses</SelectItem>
                                         <SelectItem value="available">Available</SelectItem>
+                                        <SelectItem value="closed">Closed</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
-                            {/* Max Fees */}
                             <div className="flex-1 min-w-[200px] relative bg-white rounded-xl shadow-sm border border-gray-200">
                                 <Input
                                     type="text"
@@ -798,7 +1104,6 @@ function Step2({ form, programs, studentDetails, documents, requiredDocTypes, se
                                 />
                             </div>
 
-                            {/* Submission Date */}
                             <div className="flex-1 min-w-[200px] relative bg-white rounded-xl shadow-sm border border-gray-200">
                                 <DatePicker
                                     value={submissionDate}
@@ -832,60 +1137,69 @@ function Step2({ form, programs, studentDetails, documents, requiredDocTypes, se
                     </div>
                     <div className="mt-4">
                         <Typography as="h4" className="text-[16px] font-bold text-brand-secondary">{studentDetails?.name}</Typography>
-                        <Typography as="p" className="text-[11px] text-gray-500 font-bold mt-0.5">ID: {studentDetails?.id?.slice(0, 8)}</Typography>
+                        <Typography as="p" className="text-[11px] text-gray-500 font-bold mt-0.5">ID: {studentCode}</Typography>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xl border border-white/30 rounded-[24px] overflow-hidden shadow-sm">
-                <form.Field name="program_id">
+            <BluryCard
+                isCentered={false}
+                blurAmount="backdrop-blur-xl"
+                blendColorClass="bg-white/10"
+                childClass="p-0!"
+                className="rounded-[24px] overflow-hidden border border-white/30 shadow-sm p-0"
+            >
+                <form.Field name="course_id">
                     {(field: any) => (
                         <Table>
                             <TableHeader className="bg-white/30">
                                 <TableRow className="hover:bg-transparent border-b-white/20">
                                     <TableHead className="px-8 py-5 text-[10px] font-bold tracking-widest text-gray-500 uppercase">Program</TableHead>
-                                    <TableHead className="px-8 py-5 text-[10px] font-bold tracking-widest text-gray-500 uppercase">Semester Fees</TableHead>
+                                    <TableHead className="px-8 py-5 text-[10px] font-bold tracking-widest text-gray-500 uppercase">Fees</TableHead>
+                                    <TableHead className="px-8 py-5 text-[10px] font-bold tracking-widest text-gray-500 uppercase">Intake Date</TableHead>
                                     <TableHead className="px-8 py-5 text-[10px] font-bold tracking-widest text-gray-500 uppercase">Status</TableHead>
-                                    <TableHead className="px-8 py-5 text-[10px] font-bold tracking-widest text-gray-500 uppercase">Deadline</TableHead>
+                                    <TableHead className="px-8 py-5 text-[10px] font-bold tracking-widest text-gray-500 uppercase">Last Date</TableHead>
                                     <TableHead className="px-8 py-5 text-[10px] font-bold tracking-widest text-gray-500 uppercase">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredPrograms.length > 0 ? (
-                                    filteredPrograms.map((p, i) => {
-                                        const isSelected = field.state.value === p.program_id;
+                                {filteredCourses.length > 0 ? (
+                                    filteredCourses.map((course) => {
+                                        const isSelected = field.state.value === course.id;
+                                        const status = getCourseStatus(course);
+
                                         return (
-                                            <TableRow key={i} className="hover:bg-white/20 transition-colors border-b-white/10">
+                                            <TableRow key={course.id} className="hover:bg-white/20 transition-colors border-b-white/10">
                                                 <TableCell className="px-8 py-6">
                                                     <div className="flex flex-col">
-                                                        <Typography as="span" className="text-[13px] font-bold text-gray-900 leading-snug">{p.name}</Typography>
-                                                        <Typography as="span" className="text-[10px] text-gray-500 font-medium mt-0.5">{p.intake_date || "N/A"} Intake</Typography>
+                                                        <Typography as="span" className="text-[13px] font-bold text-gray-900 leading-snug">{course.name}</Typography>
+                                                        <Typography as="span" className="text-[10px] text-gray-500 font-medium mt-0.5">{course.degree?.name ?? "N/A"}</Typography>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="px-8 py-6">
-                                                    <Typography as="span" className="text-[13px] font-bold text-gray-700">{p.currency || "€"}{p.tuition_fee}</Typography>
+                                                    <Typography as="span" className="text-[13px] font-bold text-gray-700">{course.degree?.fees ?? "Contact University"}</Typography>
+                                                </TableCell>
+                                                <TableCell className="px-8 py-6">
+                                                    <Typography as="span" className="text-[12px] font-medium text-gray-600">{formatIntakeDate(course.degree?.intake_date)}</Typography>
                                                 </TableCell>
                                                 <TableCell className="px-8 py-6">
                                                     <div className={cn(
                                                         "inline-flex items-center h-7 px-4 rounded-full text-[9px] font-bold tracking-widest uppercase",
-                                                        p.status?.toLowerCase() === "available" || !p.status ? "bg-blue-500 text-white" : "bg-green-500 text-white"
+                                                        status === "AVAILABLE" ? "bg-blue-500 text-white" : "bg-gray-400 text-white"
                                                     )}>
-                                                        {p.status || "AVAILABLE"}
+                                                        {status}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="px-8 py-6">
-                                                    <Typography as="span" className="text-[12px] font-medium text-gray-600">{p.deadline ? new Date(p.deadline).toLocaleDateString() : "N/A"}</Typography>
+                                                    <Typography as="span" className="text-[12px] font-medium text-gray-600">{formatProgramDate(course.deadline_date)}</Typography>
                                                 </TableCell>
                                                 <TableCell className="px-8 py-6">
                                                     <Button
                                                         type="button"
                                                         variant="outline"
                                                         onClick={() => {
-                                                            field.handleChange(p.program_id);
-                                                            form.setFieldValue("university_id", p.university_id);
-                                                            form.setFieldValue("intake_date", p.intake_date || "N/A");
-                                                            form.setFieldValue("tuition_fee", p.tuition_fee);
-                                                            form.setFieldValue("currency", p.currency || "€");
+                                                            field.handleChange(course.id);
+                                                            handleSelectCourse(course);
                                                         }}
                                                         className={cn(
                                                             "h-8 px-5 rounded-lg font-bold text-[11px] transition-all shadow-sm",
@@ -900,11 +1214,11 @@ function Step2({ form, programs, studentDetails, documents, requiredDocTypes, se
                                     })
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="px-8 py-20 text-center">
+                                        <TableCell colSpan={6} className="px-8 py-20 text-center">
                                             <div className="flex flex-col items-center gap-2">
                                                 <Search className="size-8 text-gray-300" />
                                                 <Typography as="p" className="text-sm font-medium text-gray-500">
-                                                    No programs found matching your filters.
+                                                    No courses found matching your filters.
                                                 </Typography>
                                             </div>
                                         </TableCell>
@@ -914,22 +1228,24 @@ function Step2({ form, programs, studentDetails, documents, requiredDocTypes, se
                         </Table>
                     )}
                 </form.Field>
-                {isStepAttempted && !form.getFieldValue("program_id") && (
-                    <p className="text-[10px] text-red-500 font-bold mt-2 text-right uppercase tracking-widest">Please select a program to continue</p>
+                {isStepAttempted && !form.getFieldValue("course_id") && (
+                    <p className="text-[10px] text-red-500 font-bold mt-2 px-8 pb-4 text-right uppercase tracking-widest">Please select a course to continue</p>
                 )}
-            </div>
+            </BluryCard>
 
             <SupportingDocumentsSection
                 form={form}
                 documents={documents}
                 requiredDocTypes={requiredDocTypes}
-                selectedProgramId={selectedProgramId}
+                selectedCourseId={selectedCourseId}
+                selectedStudentId={selectedStudentId}
+                refetchDocuments={refetchDocuments}
                 isDocumentsLoading={isDocumentsLoading}
                 isStepAttempted={isStepAttempted}
             />
 
             <div className="flex justify-between items-center pt-8 border-t border-gray-200/50">
-                <Button type="button" variant="outline" onClick={onBack} className="h-12 px-8 border-gray-300 text-brand-secondary font-bold rounded-xl">Back to Profile</Button>
+                <Button type="button" variant="outline" onClick={onBack} className="h-12 px-8 border-gray-300 border text-brand-secondary font-bold rounded-xl">Back to Profile</Button>
                 <Button
                     type="button"
                     onClick={onNext}
@@ -950,24 +1266,21 @@ function Step2({ form, programs, studentDetails, documents, requiredDocTypes, se
     );
 }
 
-function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitting, error }: { form: any; studentDetails?: Student; allDocuments: Document[]; programs: Program[]; onBack: () => void; isSubmitting: boolean; error?: string }) {
+function Step3({ form, studentDetails, allDocuments, courses, onBack, isSubmitting, error }: { form: any; studentDetails?: Student; allDocuments: Document[]; courses: CourseProgram[]; onBack: () => void; isSubmitting: boolean; error?: string }) {
 
 
-    const selectedProgramId = useStore(form.store, (s: any) => s.values.program_id);
+    const selectedCourseId = useStore(form.store, (s: any) => s.values.course_id);
     const selectedDocIds = useStore(form.store, (s: any) => s.values.document_ids) || [];
     const declarations = useStore(form.store, (s: any) => s.values.declarations);
-    const selectedProgram = programs.find((p) => p.program_id === selectedProgramId);
+    const selectedCourse = courses.find((course) => course.id === selectedCourseId);
 
     const selectedDocs = allDocuments.filter(doc => selectedDocIds.includes(doc.id));
 
 
     const isAllChecked = Array.isArray(declarations) && declarations.every(Boolean);
 
-    const availableIntakes = programs
-        .filter((prog) => prog.program_id === selectedProgramId)
-        .map((prog) => prog.intake_date)
-        .filter(Boolean);
-    const uniqueIntakes = Array.from(new Set(availableIntakes)) as string[];
+    const intakeDate = selectedCourse?.degree?.intake_date;
+    const uniqueIntakes = intakeDate ? [intakeDate] : [];
 
     return (
         <div className="space-y-6">
@@ -975,13 +1288,14 @@ function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitt
                 <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                     <div className="flex items-center gap-2 mb-6">
                         <GraduationCap className="size-5 text-brand-secondary" />
-                        <Typography as="h3" font="title" className="text-brand-secondary font-bold">Selected Program Details</Typography>
+                        <Typography as="h3" font="title" className="text-brand-secondary font-bold">Selected Course Details</Typography>
                     </div>
 
                     <div className="flex flex-col sm:flex-row justify-between gap-6">
                         <div className="space-y-1">
-                            <Typography as="h4" font="text-lg" className="font-extrabold text-gray-900 leading-tight">{selectedProgram?.name}</Typography>
-                            <Typography as="p" font="small" className="text-gray-500">{selectedProgram?.university_name}</Typography>
+                            <Typography as="h4" font="text-lg" className="font-extrabold text-gray-900 leading-tight">{selectedCourse?.name}</Typography>
+                            <Typography as="p" font="small" className="text-gray-500">{selectedCourse?.degree?.name ?? "N/A"}</Typography>
+                            <Typography as="p" font="small" className="text-gray-500">{selectedCourse?.degree?.fees ?? "Contact University"}</Typography>
                         </div>
                         <div className="space-y-1.5 w-full sm:w-64">
                             <form.Field name="intake_date">
@@ -994,7 +1308,7 @@ function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitt
                                             <SelectContent>
                                                 {uniqueIntakes.map((date) => (
                                                     <SelectItem key={date} value={date} className="font-medium">
-                                                        {new Date(date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                                        {formatIntakeDate(date)}
                                                     </SelectItem>
                                                 ))}
                                                 {uniqueIntakes.length === 0 && (
@@ -1137,7 +1451,7 @@ function Step3({ form, studentDetails, allDocuments, programs, onBack, isSubmitt
                     type="button"
                     variant="outline"
                     onClick={onBack}
-                    className="h-12 px-8 border-gray-300 text-brand-secondary font-bold rounded-xl w-full sm:w-auto"
+                    className="h-12 px-8 border-gray-300 border text-brand-secondary font-bold rounded-xl w-full sm:w-auto"
                     disabled={isSubmitting}
                 >
                     Back to Selection

@@ -79,7 +79,7 @@ export function StudentDashboard() {
                         ) : offers.length > 0 ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {offers.map((offer: any, i: number) => (
-                                    <div key={i} className="flex justify-between items-center bg-white/40 backdrop-blur-sm p-3 rounded-xl border border-white/60 shadow-sm">
+                                    <div key={i} className="dashboard-panel flex justify-between items-center p-3">
                                         <div className="truncate flex-1 pr-4">
                                             <p className="font-bold text-xs truncate text-gray-800">{offer.program_name}</p>
                                             <p className="text-[10px] text-green-600 font-bold uppercase tracking-wider mt-0.5">Offer Received</p>
@@ -101,7 +101,7 @@ export function StudentDashboard() {
                 {/* Container 3: Applying For (Full Width) */}
                 <div className="md:col-span-2 lg:col-span-12">
                     <BluryCard 
-                        className="h-full min-h-[220px] relative overflow-hidden border-none"
+                        className="h-full min-h-[220px] relative overflow-hidden"
                         childClass="p-0"
                     >
                         {/* Background Decor */}
@@ -138,11 +138,11 @@ export function StudentDashboard() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {appsData.slice(0, 3).map((app: any, i: number) => (
                                         <Link href={`/dashboard/application/${app.id}`} key={i}>
-                                            <div className="group bg-white/60 hover:bg-white transition-all p-5 rounded-2xl border border-white/80 shadow-sm hover:shadow-md">
+                                            <div className="dashboard-panel group hover:shadow-md transition-shadow p-5">
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div className="space-y-1 truncate flex-1 pr-4">
                                                         <Typography className="font-bold text-sm text-gray-900 truncate group-hover:text-brand-byzantine transition-colors">
-                                                            {app.program?.name || 'Application'}
+                                                            {app.course?.name || 'Application'}
                                                         </Typography>
                                                         <Typography className="text-[10px] text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1.5">
                                                             <Calendar className="size-3" />
@@ -176,7 +176,7 @@ export function StudentDashboard() {
                 {/* Container 4: New Programs (Full Width) */}
                 <div className="md:col-span-2 lg:col-span-12">
                     <BluryCard 
-                        className="h-full min-h-[220px] relative overflow-hidden border-none"
+                        className="h-full min-h-[220px] relative overflow-hidden"
                         childClass="p-0"
                     >
                         {/* Background Decor */}
@@ -214,7 +214,7 @@ export function StudentDashboard() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                                     {programsData.map((prog: any, i: number) => (
                                         <Link href={`/dashboard/program/${prog.program_id}`} key={i}>
-                                            <div className="group h-full bg-white/40 hover:bg-white transition-all p-4 sm:p-5 rounded-2xl border border-white/60 shadow-sm hover:shadow-md flex flex-col justify-between">
+                                            <div className="dashboard-panel group h-full hover:shadow-md transition-shadow p-4 sm:p-5 flex flex-col justify-between">
                                                 <div className="space-y-3">
                                                     <div className="size-10 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-brand-byzantine/10 transition-colors">
                                                         <GraduationCap className="size-5 text-gray-400 group-hover:text-brand-byzantine transition-colors" />
@@ -229,7 +229,7 @@ export function StudentDashboard() {
                                                         </Typography>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center justify-between pt-4 mt-4 border-t border-white/40">
+                                                <div className="flex items-center justify-between pt-4 mt-4 border-t border-[color:var(--dashboard-card-border)]">
                                                     <Typography className="text-[10px] font-extrabold text-brand-byzantine">{prog.currency || "€"}{prog.tuition_fee}</Typography>
                                                     <ArrowRight className="size-3 text-gray-300 group-hover:text-brand-byzantine transition-transform group-hover:translate-x-1" />
                                                 </div>

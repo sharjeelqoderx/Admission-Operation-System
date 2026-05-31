@@ -12,6 +12,11 @@ import {
 } from "@dnd-kit/core"
 import { useDroppable, useDraggable } from "@dnd-kit/core"
 import { cn } from "@/lib/utils"
+import {
+    MAX_FILE_SIZE_MB,
+    getFileSizeLimitError,
+    isFileWithinSizeLimit,
+} from "@/lib/constants/file-upload"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { UploadCloudIcon, FileIcon, XIcon, GripVerticalIcon } from "lucide-react"
@@ -32,7 +37,6 @@ interface FileDropZoneProps {
     onFilesAdded: (files: File[]) => void
     accept?: string
     multiple?: boolean
-    maxSizeMB?: number
 }
 
 interface DragDropCardProps {
@@ -40,9 +44,47 @@ interface DragDropCardProps {
     description?: string
     accept?: string
     multiple?: boolean
-    maxSizeMB?: number
     onChange?: (files: UploadedFile[]) => void
     className?: string
+    existingFile?: { url: string; name?: string } | null
+}
+
+function isImageUrl(url: string) {
+    return /\.(jpe?g|png|webp|gif)(\?|$)/i.test(url)
+}
+
+function fileNameFromUrl(url: string, fallback = "Uploaded file") {
+    try {
+        const segment = url.split("/").pop()?.split("?")[0]
+        return segment ? decodeURIComponent(segment) : fallback
+    } catch {
+        return fallback
+    }
+}
+
+function ExistingRemoteFile({ url, name }: { url: string; name: string }) {
+    const isImage = isImageUrl(url)
+
+    return (
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-brand-input px-3 py-2.5 text-sm">
+            {isImage ? (
+                <img src={url} alt={name} className="size-8 rounded object-cover shrink-0" />
+            ) : (
+                <FileIcon className="size-8 shrink-0 text-muted-foreground" />
+            )}
+            <div className="flex-1 min-w-0">
+                <p className="truncate font-medium">{name}</p>
+                <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary underline underline-offset-2"
+                >
+                    View file
+                </a>
+            </div>
+        </div>
+    )
 }
 
 // ─── Draggable File Item ──────────────────────────────────────
@@ -92,17 +134,16 @@ function DraggableFile({ item, onRemove }: DraggableFileProps) {
 }
 
 // ─── Drop Zone ────────────────────────────────────────────────
-function FileDropZone({ onFilesAdded, accept, multiple, maxSizeMB = 5 }: FileDropZoneProps) {
+function FileDropZone({ onFilesAdded, accept, multiple }: FileDropZoneProps) {
     const [isDragOver, setIsDragOver] = useState(false)
     const [error, setError] = useState("")
     const inputRef = useRef<HTMLInputElement>(null)
     const { setNodeRef, isOver } = useDroppable({ id: "drop-zone" })
 
     const validate = (files: File[]): File[] => {
-        const maxBytes = maxSizeMB * 1024 * 1024
         const valid = files.filter(f => {
-            if (f.size > maxBytes) {
-                setError(`"${f.name}" exceeds ${maxSizeMB}MB limit`)
+            if (!isFileWithinSizeLimit(f)) {
+                setError(getFileSizeLimitError(f.name))
                 return false
             }
             return true
@@ -117,7 +158,7 @@ function FileDropZone({ onFilesAdded, accept, multiple, maxSizeMB = 5 }: FileDro
         const files = Array.from(e.dataTransfer.files)
         const valid = validate(files)
         if (valid.length) onFilesAdded(multiple ? valid : [valid[0]])
-    }, [onFilesAdded, multiple, maxSizeMB])
+    }, [onFilesAdded, multiple])
 
     const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files ?? [])
@@ -153,7 +194,7 @@ function FileDropZone({ onFilesAdded, accept, multiple, maxSizeMB = 5 }: FileDro
                     <span className="text-primary underline underline-offset-2">browse</span>
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                    {accept ? `Accepted: ${accept}` : "Any file type"} · Max {maxSizeMB}MB
+                    {accept ? `Accepted: ${accept}` : "Any file type"} · Max {MAX_FILE_SIZE_MB}MB
                     {multiple ? " · Multiple files allowed" : ""}
                 </p>
             </div>
@@ -178,14 +219,15 @@ export function DragDropCard({
     description = "Drag and drop or click to upload",
     accept,
     multiple = true,
-    maxSizeMB = 5,
     onChange,
     className,
+    existingFile,
 }: DragDropCardProps) {
     const [files, setFiles] = useState<UploadedFile[]>([])
     const [activeId, setActiveId] = useState<string | null>(null)
 
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+    const showExistingFile = files.length === 0 && !!existingFile?.url
 
     const addFiles = (newFiles: File[]) => {
         const items: UploadedFile[] = newFiles.map(file => ({
@@ -235,8 +277,19 @@ export function DragDropCard({
                         onFilesAdded={addFiles}
                         accept={accept}
                         multiple={multiple}
-                        maxSizeMB={maxSizeMB}
                     />
+
+                    {showExistingFile && (
+                        <div className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                1 file uploaded
+                            </p>
+                            <ExistingRemoteFile
+                                url={existingFile.url}
+                                name={existingFile.name ?? fileNameFromUrl(existingFile.url)}
+                            />
+                        </div>
+                    )}
 
                     {files.length > 0 && (
                         <div className="space-y-2">

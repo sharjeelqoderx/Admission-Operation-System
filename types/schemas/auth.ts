@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Gender } from "..";
+import { fileWithinSizeLimit, MAX_FILE_SIZE_LABEL } from "@/lib/constants/file-upload";
 
 /* =========================
    HELPERS
@@ -199,6 +200,14 @@ export const profileStep1Schema = z.object({
         .string()
         .min(1, "Country is required")
         .min(2, "Country name is too short"),
+    state: z
+        .string()
+        .min(1, "State is required")
+        .min(2, "State is too short"),
+    city: z
+        .string()
+        .min(1, "City is required")
+        .min(2, "City is too short"),
     nationality: z
         .string()
         .min(1, "Nationality is required")
@@ -208,7 +217,7 @@ export const profileStep1Schema = z.object({
     avatar_url: z
         .any()
         .refine((val) => val instanceof File || (typeof val === 'string' && val.length > 0), "Profile picture is required")
-        .refine((val) => !(val instanceof File) || val.size <= 5 * 1024 * 1024, "Max file size is 5MB")
+        .refine(fileWithinSizeLimit, `Max file size is ${MAX_FILE_SIZE_LABEL}`)
         .refine(
             (val) => typeof val === 'string' || (val instanceof File && ["image/jpeg", "image/png", "image/webp"].includes(val.type)),
             "Only JPEG, PNG or WEBP images are allowed"
@@ -235,6 +244,8 @@ export const agentProfileSchema = z.object({
     contact_person_name: z.string().trim().min(2).optional(),
     gender: z.enum(["MALE", "FEMALE"]).optional(),
     country: z.string().trim().min(2).optional(),
+    state: z.string().trim().min(2).optional(),
+    city: z.string().trim().min(2).optional(),
     website: z.string().trim().optional(),
     experience_years: z.number().min(0).optional(),
     address: z.string().trim().min(5).optional(),
@@ -246,7 +257,7 @@ export const agentProfileSchema = z.object({
 
 export const degreeStep2Schema = z.object({
     academics: z.array(z.object({
-        degree_id: z.string().min(1, "Select degree"),
+        qualification: z.string().uuid("Select degree"),
 
         instituteName: z
             .string()
@@ -255,20 +266,16 @@ export const degreeStep2Schema = z.object({
             .min(2, "Institute Name is Too Short")
             .max(200, "Maximum 200 character allowed"),
 
-        obtained_marks: z
-            .string()
-            .trim()
-            .min(1, "Obtained marks is required")
-            .regex(/^\d+(\.\d{1,2})?$/, "Must be a valid number"),
+        grade_type: z.enum(["percentage", "gpa"]),
 
-        total_marks: z
-            .string()
-            .trim()
-            .min(1, "Total marks is required")
-            .regex(/^\d+(\.\d{1,2})?$/, "Must be a valid number"),
+        gpa: z.string(),
 
-        start_date: z.string().optional(),
-        end_date: z.string().optional(),
+        obtained_marks: z.string(),
+
+        total_marks: z.string(),
+
+        start_date: z.string().min(1, "Start date is required"),
+        end_date: z.string().min(1, "End date is required"),
 
         about: z
             .string()
@@ -277,9 +284,65 @@ export const degreeStep2Schema = z.object({
             .min(10, "Too short")
             .max(500, "Too long"),
     }).superRefine((val, ctx) => {
+        if (val.grade_type === "gpa") {
+            if (!val.gpa.trim()) {
+                ctx.addIssue({
+                    path: ["gpa"],
+                    code: "custom",
+                    message: "GPA is required",
+                })
+                return
+            }
+            if (!/^\d+(\.\d{1,2})?$/.test(val.gpa.trim())) {
+                ctx.addIssue({
+                    path: ["gpa"],
+                    code: "custom",
+                    message: "Must be a valid number",
+                })
+                return
+            }
+            const gpaValue = parseFloat(val.gpa)
+            if (gpaValue < 0 || gpaValue > 4) {
+                ctx.addIssue({
+                    path: ["gpa"],
+                    code: "custom",
+                    message: "GPA must be between 0 and 4",
+                })
+            }
+            return
+        }
+
+        if (!val.obtained_marks.trim()) {
+            ctx.addIssue({
+                path: ["obtained_marks"],
+                code: "custom",
+                message: "Obtained marks is required",
+            })
+        } else if (!/^\d+(\.\d{1,2})?$/.test(val.obtained_marks.trim())) {
+            ctx.addIssue({
+                path: ["obtained_marks"],
+                code: "custom",
+                message: "Must be a valid number",
+            })
+        }
+
+        if (!val.total_marks.trim()) {
+            ctx.addIssue({
+                path: ["total_marks"],
+                code: "custom",
+                message: "Total marks is required",
+            })
+        } else if (!/^\d+(\.\d{1,2})?$/.test(val.total_marks.trim())) {
+            ctx.addIssue({
+                path: ["total_marks"],
+                code: "custom",
+                message: "Must be a valid number",
+            })
+        }
+
         if (
-            val.obtained_marks &&
-            val.total_marks &&
+            val.obtained_marks.trim() &&
+            val.total_marks.trim() &&
             parseFloat(val.obtained_marks) > parseFloat(val.total_marks)
         ) {
             ctx.addIssue({
@@ -290,13 +353,13 @@ export const degreeStep2Schema = z.object({
         }
     })).min(1, "At least one academic record is required")
 }).superRefine((data, ctx) => {
-    const ids = data.academics.map(a => a.degree_id).filter(Boolean)
+    const ids = data.academics.map(a => a.qualification).filter(Boolean)
     const duplicates = ids.filter((id, i) => ids.indexOf(id) !== i)
     if (duplicates.length > 0) {
         data.academics.forEach((a, i) => {
-            if (duplicates.includes(a.degree_id)) {
+            if (duplicates.includes(a.qualification)) {
                 ctx.addIssue({
-                    path: ["academics", i, "degree_id"],
+                    path: ["academics", i, "qualification"],
                     code: "custom",
                     message: "This degree is already selected",
                 })

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select"
 import ImageUploadCard from "./shared/image-upload-card"
 import { DatePicker } from "@/components/shared/date-picker"
+import { CountrySelect } from "@/components/shared/country-select"
 import { Building, FileText, ChevronDown, GraduationCap, Loader2 } from "lucide-react"
 
 function F({ field, label, children }: { field: any; label: string; children: React.ReactNode }) {
@@ -77,6 +78,8 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
             dob: profile?.date_of_birth || "",
             gender: (profile?.gender?.toUpperCase() || "") as "MALE" | "FEMALE",
             country: student?.country || "",
+            state: student?.state || "",
+            city: student?.city || "",
             nationality: student?.nationality || "",
             guardian_email: student?.guardian_email || "",
             guardian_phone: student?.guardian_phone || "",
@@ -95,6 +98,8 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
             fd.set("dob", value.dob)
             fd.set("gender", value.gender)
             fd.set("country", value.country)
+            fd.set("state", value.state)
+            fd.set("city", value.city)
             fd.set("nationality", value.nationality)
             fd.set("guardian_email", value.guardian_email)
             fd.set("guardian_phone", value.guardian_phone)
@@ -222,8 +227,28 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
 
                                 <form.Field name="country">
                                     {(field) => (
-                                        <F field={field} label="Country/Location">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter country name" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                        <F field={field} label="Country">
+                                            <CountrySelect
+                                                value={field.state.value}
+                                                onValueChange={field.handleChange}
+                                                className="h-12 bg-white border-none rounded-sm shadow-sm text-sm"
+                                            />
+                                        </F>
+                                    )}
+                                </form.Field>
+
+                                <form.Field name="state">
+                                    {(field) => (
+                                        <F field={field} label="State">
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter state" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                        </F>
+                                    )}
+                                </form.Field>
+
+                                <form.Field name="city">
+                                    {(field) => (
+                                        <F field={field} label="City">
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter city" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
                                         </F>
                                     )}
                                 </form.Field>
@@ -248,7 +273,12 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                     <form.Field name="nationality">
                                         {(field) => (
                                             <F field={field} label="Nationality">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your nationality" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                                <CountrySelect
+                                                    value={field.state.value}
+                                                    onValueChange={field.handleChange}
+                                                    placeholder="Select nationality"
+                                                    className="h-12 bg-white border-none rounded-sm shadow-sm text-sm"
+                                                />
                                             </F>
                                         )}
                                     </form.Field>

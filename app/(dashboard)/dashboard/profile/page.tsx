@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "@tanstack/react-form"
 import { Typography } from "@/components/shared/Typography"
@@ -28,6 +28,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { DatePicker } from "@/components/shared/date-picker"
+import { CountrySelect } from "@/components/shared/country-select"
 import ImageUploadCard from "@/components/shared/image-upload-card"
 import {
     Dialog,
@@ -37,6 +38,80 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
+import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
+import {
+    type AcademicFormItem,
+    computePercentage,
+    createEmptyAcademicItem,
+    mapAcademicToFormItem,
+    normalizeDateValue,
+} from "@/types/schemas/academic"
+
+type MeUser = {
+    fullName?: string
+    phone?: string
+    avatarUrl?: string | null
+    profile?: Record<string, string | undefined | null>
+    academic?: Array<{
+        qualification?: string | null
+        instituteName?: string | null
+        grade_type?: string | null
+        gpa?: string | number | null
+        obtained_marks?: string | number | null
+        total_marks?: string | number | null
+        start_date?: string | null
+        end_date?: string | null
+        about?: string | null
+    }> | null
+    experience?: {
+        hasExperience?: "yes" | "no"
+        entries?: Array<{
+            jobTitle?: string
+            organization?: string
+            industry?: string
+            country?: string
+            startDate?: string
+            endDate?: string
+            responsibilities?: string
+        }>
+    } | null
+}
+
+function getProfileFormValues(user?: MeUser | null) {
+    return {
+        fullName: user?.fullName ?? "",
+        phone: user?.phone ?? "",
+        date_of_birth: user?.profile?.dateOfBirth ?? "",
+        gender: user?.profile?.gender ?? "",
+        country: user?.profile?.country ?? "",
+        state: user?.profile?.state ?? "",
+        city: user?.profile?.city ?? "",
+        nationality: user?.profile?.nationality ?? "",
+        address: user?.profile?.address ?? "",
+        zip_code: user?.profile?.zip_code ?? "",
+        guardian_email: user?.profile?.guardian_email ?? "",
+        guardian_phone: user?.profile?.guardian_phone ?? "",
+        contact_person_name: user?.profile?.contact_person_name ?? "",
+        other_contact_number: user?.profile?.other_contact_number ?? "",
+        website: user?.profile?.website ?? "",
+        experience_years: user?.profile?.experience_years ?? "0",
+        description: user?.profile?.description ?? "",
+        avatar: null as File | null,
+        academics: user?.academic?.length
+            ? user.academic.map(mapAcademicToFormItem)
+            : [createEmptyAcademicItem()],
+        hasExperience: user?.experience?.hasExperience || "no",
+        experiences: user?.experience?.entries?.map((e) => ({
+            name: e.jobTitle || "",
+            organization: e.organization || "",
+            industry: e.industry || "",
+            country: e.country || "",
+            startDate: e.startDate || "",
+            endDate: e.endDate || "",
+            responsibility: e.responsibilities || "",
+        })) || [],
+    }
+}
 
 type StudentTab = "student-details" | "academic" | "experience"
 type EditSection = "basic" | StudentTab
@@ -50,7 +125,7 @@ const STUDENT_TABS: { id: StudentTab; label: string; icon: React.ComponentType<{
 function buildStudentProfileFormData(
     value: Record<string, unknown>,
     user: { avatarUrl?: string | null },
-    extra?: { city?: string; address?: string; zip_code?: string }
+    extra?: { address?: string; zip_code?: string }
 ) {
     const fd = new FormData()
     fd.append("fullName", String(value.fullName ?? ""))
@@ -58,10 +133,11 @@ function buildStudentProfileFormData(
     fd.append("dob", String(value.date_of_birth ?? ""))
     fd.append("gender", String(value.gender ?? "").toLowerCase())
     fd.append("country", String(value.country ?? ""))
+    fd.append("state", String(value.state ?? ""))
+    fd.append("city", String(value.city ?? ""))
     fd.append("nationality", String(value.nationality ?? ""))
     fd.append("guardianEmail", String(value.guardian_email ?? ""))
     fd.append("guardianPhone", String(value.guardian_phone ?? ""))
-    if (extra?.city !== undefined) fd.append("city", extra.city)
     if (extra?.address !== undefined) fd.append("address", extra.address)
     if (extra?.zip_code !== undefined) fd.append("zip_code", extra.zip_code)
     const avatar = value.avatar
@@ -143,6 +219,7 @@ export default function ProfilePage() {
             const json = await res.json()
             return json.data
         },
+        refetchOnMount: "always",
     })
 
     const mutation = useMutation({
@@ -205,59 +282,13 @@ export default function ProfilePage() {
         },
     })
 
-    const { data: educationTypes = [] } = useQuery<{ id: string; name: string; level: string }[]>({
-        queryKey: ["education-types"],
-        queryFn: async () => {
-            const res = await fetch("/api/education")
-            const json = await res.json()
-            return json.data ?? []
-        },
-    })
+    const { data: degrees = [] } = useDegrees()
 
     const [isEditing, setIsEditing] = useState(false)
     const [activeTab, setActiveTab] = useState<StudentTab>("student-details")
     const [editingSection, setEditingSection] = useState<EditSection | null>(null)
     const form = useForm({
-        defaultValues: {
-            fullName: user?.fullName ?? "",
-            phone: user?.phone ?? "",
-            date_of_birth: user?.profile?.dateOfBirth ?? "",
-            gender: user?.profile?.gender ?? "",
-            country: user?.profile?.country ?? "",
-            nationality: user?.profile?.nationality ?? "",
-            city: user?.profile?.city ?? "",
-            address: user?.profile?.address ?? "",
-            zip_code: user?.profile?.zip_code ?? "",
-            guardian_email: user?.profile?.guardian_email ?? "",
-            guardian_phone: user?.profile?.guardian_phone ?? "",
-            contact_person_name: user?.profile?.contact_person_name ?? "",
-            other_contact_number: user?.profile?.other_contact_number ?? "",
-            website: user?.profile?.website ?? "",
-            experience_years: user?.profile?.experience_years ?? "0",
-            description: user?.profile?.description ?? "",
-            avatar: null as File | null,
-
-            // Academic
-            academics: user?.academic?.map((a: any) => ({
-                degree_id: a.degree_id || "",
-                instituteName: a.instituteName || "",
-                obtained_marks: a.obtained_marks || "",
-                total_marks: a.total_marks || "",
-                start_date: a.start_date || "",
-                end_date: a.end_date || "",
-                about: a.about || ""
-            })) || [],
-            hasExperience: user?.experience?.hasExperience || "no",
-            experiences: user?.experience?.entries?.map((e: any) => ({
-                name: e.jobTitle || "",
-                organization: e.organization || "",
-                industry: e.industry || "",
-                country: e.country || "",
-                startDate: e.startDate || "",
-                endDate: e.endDate || "",
-                responsibility: e.responsibilities || ""
-            })) || []
-        },
+        defaultValues: getProfileFormValues(user),
         onSubmit: async ({ value }) => {
             const fd = new FormData()
             Object.entries(value).forEach(([key, val]) => {
@@ -284,10 +315,20 @@ export default function ProfilePage() {
         },
     })
 
+    useEffect(() => {
+        if (!user || editingSection) return
+        form.reset(getProfileFormValues(user))
+    }, [user, editingSection, form])
+
     const cancelEditing = () => {
-        form.reset()
+        form.reset(getProfileFormValues(user))
         setEditingSection(null)
         setIsEditing(false)
+    }
+
+    const startEditingSection = (section: EditSection) => {
+        form.reset(getProfileFormValues(user))
+        setEditingSection(section)
     }
 
     const saveBasicInfo = async () => {
@@ -300,7 +341,6 @@ export default function ProfilePage() {
     const saveStudentDetails = async () => {
         const value = form.state.values
         const fd = buildStudentProfileFormData(value, user, {
-            city: value.city,
             address: value.address,
             zip_code: value.zip_code,
         })
@@ -312,14 +352,19 @@ export default function ProfilePage() {
         const value = form.state.values
         await academicMutation.mutateAsync({
             userId: user.id,
-            academics: value.academics.map((a: any) => ({
-                degree_id: a.degree_id,
+            academics: value.academics.map((a: AcademicFormItem) => ({
+                qualification: a.qualification,
                 instituteName: a.instituteName,
-                obtained_marks: parseFloat(a.obtained_marks) || 0,
-                total_marks: parseFloat(a.total_marks) || 0,
+                grade_type: a.grade_type,
+                gpa: a.grade_type === "gpa" ? parseFloat(a.gpa) : null,
+                obtained_marks: a.grade_type === "percentage" ? parseFloat(a.obtained_marks) : null,
+                total_marks: a.grade_type === "percentage" ? parseFloat(a.total_marks) : null,
+                start_date: a.start_date || undefined,
+                end_date: a.end_date || undefined,
                 about: a.about,
             })),
         })
+        await queryClient.refetchQueries({ queryKey: ["me"] })
         setEditingSection(null)
     }
 
@@ -345,7 +390,7 @@ export default function ProfilePage() {
 
     const handleTabChange = (tab: StudentTab) => {
         if (editingSection) {
-            form.reset()
+            form.reset(getProfileFormValues(user))
             setEditingSection(null)
         }
         setActiveTab(tab)
@@ -376,7 +421,7 @@ export default function ProfilePage() {
                             <Typography font="title">Basic Information</Typography>
                         </div>
                         {isStudent && editingSection === null && (
-                            <ProfileEditButton onClick={() => setEditingSection("basic")} />
+                            <ProfileEditButton onClick={() => startEditingSection("basic")} />
                         )}
                     </div>
 
@@ -554,7 +599,7 @@ export default function ProfilePage() {
                                 })()}
                             </div>
                             {editingSection === null && (
-                                <ProfileEditButton onClick={() => setEditingSection(activeTab)} />
+                                <ProfileEditButton onClick={() => startEditingSection(activeTab)} />
                             )}
                         </div>
 
@@ -571,7 +616,7 @@ export default function ProfilePage() {
                                 {(field) => (
                                     <F field={field} label="Nationality">
                                         {isEditingStudentDetails ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Nationality" />
+                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your nationality" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
                                                 <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
@@ -584,7 +629,20 @@ export default function ProfilePage() {
                                 {(field) => (
                                     <F field={field} label="Country">
                                         {isEditingStudentDetails ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Country" />
+                                            <CountrySelect value={field.state.value} onValueChange={field.handleChange} />
+                                        ) : (
+                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                            </div>
+                                        )}
+                                    </F>
+                                )}
+                            </form.Field>
+                            <form.Field name="state">
+                                {(field) => (
+                                    <F field={field} label="State">
+                                        {isEditingStudentDetails ? (
+                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your state" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
                                                 <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
@@ -597,7 +655,7 @@ export default function ProfilePage() {
                                 {(field) => (
                                     <F field={field} label="City">
                                         {isEditingStudentDetails ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your City" />
+                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your city" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
                                                 <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
@@ -678,7 +736,7 @@ export default function ProfilePage() {
 
                         {activeTab === "academic" && (
                         <div className="space-y-6">
-                            {isEditingAcademic && (
+                            {/* {isEditingAcademic && (
                                 <div className="flex justify-end">
                                 <form.Field name="academics">
                                     {(field) => (
@@ -690,7 +748,7 @@ export default function ProfilePage() {
                                             onClick={() => {
                                                 const current = field.state.value || []
                                                 field.handleChange([...current, {
-                                                    degree_id: "",
+                                                    qualification: "",
                                                     instituteName: "",
                                                     obtained_marks: "",
                                                     total_marks: "",
@@ -705,17 +763,17 @@ export default function ProfilePage() {
                                     )}
                                 </form.Field>
                                 </div>
-                            )}
+                            )} */}
 
                         <form.Field name="academics">
                             {(field) => (
                                 <div className="space-y-6">
-                                    {(field.state.value || []).map((item: any, index: number) => {
-                                        const obtained = parseFloat(item.obtained_marks)
-                                        const total = parseFloat(item.total_marks)
-                                        const percentage = (!isNaN(obtained) && !isNaN(total) && total > 0)
-                                            ? ((obtained / total) * 100).toFixed(1) + "%"
-                                            : null
+                                    {(field.state.value || []).map((item: AcademicFormItem, index: number) => {
+                                        const isGpa = item.grade_type === "gpa"
+                                        const percentage = computePercentage(item.obtained_marks, item.total_marks)
+                                        const savedAcademic = user?.academic?.[index]
+                                        const startDate = item.start_date || normalizeDateValue(savedAcademic?.start_date)
+                                        const endDate = item.end_date || normalizeDateValue(savedAcademic?.end_date)
                                         return (
                                         <div key={index} className="relative p-6 bg-white/20 rounded-xl border border-white/30 space-y-4">
                                             {isEditingAcademic && (
@@ -734,28 +792,32 @@ export default function ProfilePage() {
                                                 </Button>
                                             )}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                {/* Degree */}
+                                                {/* Highest Degree */}
                                                 <div className="space-y-2">
-                                                    <FieldLabel>Degree</FieldLabel>
+                                                    <FieldLabel>Highest Degree</FieldLabel>
                                                     {isEditingAcademic ? (
                                                         <Select
-                                                            value={item.degree_id}
+                                                            value={item.qualification}
                                                             onValueChange={(v) => {
                                                                 const current = [...field.state.value]
-                                                                current[index].degree_id = v
+                                                                current[index].qualification = v
                                                                 field.handleChange(current)
                                                             }}
                                                         >
-                                                            <SelectTrigger><SelectValue placeholder="Select degree" /></SelectTrigger>
+                                                            <SelectTrigger><SelectValue placeholder="Select highest degree" /></SelectTrigger>
                                                             <SelectContent>
-                                                                {educationTypes.map((et) => (
-                                                                    <SelectItem key={et.id} value={et.id}>{et.name}</SelectItem>
+                                                                {degrees.map((degree) => (
+                                                                    <SelectItem key={degree.id} value={degree.id}>
+                                                                        {formatDegreeLabel(degree)}
+                                                                    </SelectItem>
                                                                 ))}
                                                             </SelectContent>
                                                         </Select>
                                                     ) : (
                                                         <Typography className="p-3 bg-white/10 rounded-lg font-medium">
-                                                            {educationTypes.find(e => e.id === item.degree_id)?.name || "N/A"}
+                                                            {degrees.find((d) => d.id === item.qualification)
+                                                                ? formatDegreeLabel(degrees.find((d) => d.id === item.qualification)!)
+                                                                : "N/A"}
                                                         </Typography>
                                                     )}
                                                 </div>
@@ -776,59 +838,114 @@ export default function ProfilePage() {
                                                         <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.instituteName || "N/A"}</Typography>
                                                     )}
                                                 </div>
-                                                {/* Percentage (view only) */}
+                                                {/* Grade Type */}
                                                 <div className="space-y-2">
-                                                    <FieldLabel>Percentage</FieldLabel>
-                                                    <Typography className="p-3 bg-white/10 rounded-lg font-medium">
-                                                        {percentage ?? "N/A"}
-                                                    </Typography>
-                                                </div>
-                                                {/* Obtained Marks */}
-                                                <div className="space-y-2">
-                                                    <FieldLabel>Obtained Marks</FieldLabel>
+                                                    <FieldLabel>Grade Type</FieldLabel>
                                                     {isEditingAcademic ? (
-                                                        <Input
-                                                            type="number"
-                                                            value={item.obtained_marks}
-                                                            onKeyDown={(e) => ["e","E","-","+","."].includes(e.key) && e.preventDefault()}
-                                                            onChange={(e) => {
+                                                        <Select
+                                                            value={item.grade_type}
+                                                            onValueChange={(v: "percentage" | "gpa") => {
                                                                 const current = [...field.state.value]
-                                                                current[index].obtained_marks = e.target.value
+                                                                current[index] = {
+                                                                    ...current[index],
+                                                                    grade_type: v,
+                                                                    gpa: v === "percentage" ? "" : current[index].gpa,
+                                                                    obtained_marks: v === "gpa" ? "" : current[index].obtained_marks,
+                                                                    total_marks: v === "gpa" ? "" : current[index].total_marks,
+                                                                }
                                                                 field.handleChange(current)
                                                             }}
-                                                            placeholder="850"
-                                                            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                        />
+                                                        >
+                                                            <SelectTrigger><SelectValue placeholder="Select grade type" /></SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="percentage">Percentage</SelectItem>
+                                                                <SelectItem value="gpa">GPA</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
                                                     ) : (
-                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.obtained_marks || "N/A"}</Typography>
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">
+                                                            {isGpa ? "GPA" : "Percentage"}
+                                                        </Typography>
                                                     )}
                                                 </div>
-                                                {/* Total Marks */}
-                                                <div className="space-y-2">
-                                                    <FieldLabel>Total Marks</FieldLabel>
-                                                    {isEditingAcademic ? (
-                                                        <Input
-                                                            type="number"
-                                                            value={item.total_marks}
-                                                            onKeyDown={(e) => ["e","E","-","+","."].includes(e.key) && e.preventDefault()}
-                                                            onChange={(e) => {
-                                                                const current = [...field.state.value]
-                                                                current[index].total_marks = e.target.value
-                                                                field.handleChange(current)
-                                                            }}
-                                                            placeholder="1100"
-                                                            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                        />
-                                                    ) : (
-                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.total_marks || "N/A"}</Typography>
-                                                    )}
-                                                </div>
+                                                {isGpa ? (
+                                                    <div className="space-y-2">
+                                                        <FieldLabel>GPA</FieldLabel>
+                                                        {isEditingAcademic ? (
+                                                            <Input
+                                                                type="number"
+                                                                step="0.01"
+                                                                min="0"
+                                                                max="4"
+                                                                value={item.gpa}
+                                                                onChange={(e) => {
+                                                                    const current = [...field.state.value]
+                                                                    current[index].gpa = e.target.value
+                                                                    field.handleChange(current)
+                                                                }}
+                                                                placeholder="3.50"
+                                                                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                            />
+                                                        ) : (
+                                                            <Typography className="p-3 bg-white/10 rounded-lg font-medium">
+                                                                {item.gpa || "N/A"}
+                                                            </Typography>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className="space-y-2">
+                                                            <FieldLabel>Percentage</FieldLabel>
+                                                            <Typography className="p-3 bg-white/10 rounded-lg font-medium">
+                                                                {percentage ?? "N/A"}
+                                                            </Typography>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <FieldLabel>Obtained Marks</FieldLabel>
+                                                            {isEditingAcademic ? (
+                                                                <Input
+                                                                    type="number"
+                                                                    value={item.obtained_marks}
+                                                                    onKeyDown={(e) => ["e", "E", "-", "+", "."].includes(e.key) && e.preventDefault()}
+                                                                    onChange={(e) => {
+                                                                        const current = [...field.state.value]
+                                                                        current[index].obtained_marks = e.target.value
+                                                                        field.handleChange(current)
+                                                                    }}
+                                                                    placeholder="850"
+                                                                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                />
+                                                            ) : (
+                                                                <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.obtained_marks || "N/A"}</Typography>
+                                                            )}
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <FieldLabel>Total Marks</FieldLabel>
+                                                            {isEditingAcademic ? (
+                                                                <Input
+                                                                    type="number"
+                                                                    value={item.total_marks}
+                                                                    onKeyDown={(e) => ["e", "E", "-", "+", "."].includes(e.key) && e.preventDefault()}
+                                                                    onChange={(e) => {
+                                                                        const current = [...field.state.value]
+                                                                        current[index].total_marks = e.target.value
+                                                                        field.handleChange(current)
+                                                                    }}
+                                                                    placeholder="1100"
+                                                                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                />
+                                                            ) : (
+                                                                <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.total_marks || "N/A"}</Typography>
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                )}
                                                 {/* Start Date */}
                                                 <div className="space-y-2">
                                                     <FieldLabel>Start Date</FieldLabel>
                                                     {isEditingAcademic ? (
                                                         <DatePicker
-                                                            value={item.start_date}
+                                                            value={startDate}
                                                             onChange={(v) => {
                                                                 const current = [...field.state.value]
                                                                 current[index].start_date = v
@@ -837,7 +954,7 @@ export default function ProfilePage() {
                                                             placeholder="Select Start Date"
                                                         />
                                                     ) : (
-                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.start_date || "N/A"}</Typography>
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{startDate || "N/A"}</Typography>
                                                     )}
                                                 </div>
                                                 {/* End Date */}
@@ -845,7 +962,7 @@ export default function ProfilePage() {
                                                     <FieldLabel>End Date</FieldLabel>
                                                     {isEditingAcademic ? (
                                                         <DatePicker
-                                                            value={item.end_date}
+                                                            value={endDate}
                                                             onChange={(v) => {
                                                                 const current = [...field.state.value]
                                                                 current[index].end_date = v
@@ -854,7 +971,7 @@ export default function ProfilePage() {
                                                             placeholder="Select End Date"
                                                         />
                                                     ) : (
-                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.end_date || "N/A"}</Typography>
+                                                        <Typography className="p-3 bg-white/10 rounded-lg font-medium">{endDate || "N/A"}</Typography>
                                                     )}
                                                 </div>
                                                 {/* About */}
@@ -1014,14 +1131,13 @@ export default function ProfilePage() {
                                                 <div className="space-y-2">
                                                     <FieldLabel>Country</FieldLabel>
                                                     {isEditingExperience ? (
-                                                        <Input
+                                                        <CountrySelect
                                                             value={item.country}
-                                                            onChange={(e) => {
+                                                            onValueChange={(v) => {
                                                                 const current = [...field.state.value]
-                                                                current[index].country = e.target.value
+                                                                current[index].country = v
                                                                 field.handleChange(current)
                                                             }}
-                                                            placeholder="USA"
                                                         />
                                                     ) : (
                                                         <Typography className="p-3 bg-white/10 rounded-lg font-medium">{item.country || "N/A"}</Typography>
@@ -1180,7 +1296,20 @@ export default function ProfilePage() {
                                 {(field) => (
                                     <F field={field} label="Country">
                                         {isEditing ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Country" />
+                                            <CountrySelect value={field.state.value} onValueChange={field.handleChange} />
+                                        ) : (
+                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                            </div>
+                                        )}
+                                    </F>
+                                )}
+                            </form.Field>
+                            <form.Field name="state">
+                                {(field) => (
+                                    <F field={field} label="State">
+                                        {isEditing ? (
+                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your state" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
                                                 <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
@@ -1193,7 +1322,7 @@ export default function ProfilePage() {
                                 {(field) => (
                                     <F field={field} label="City">
                                         {isEditing ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your City" />
+                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your city" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
                                                 <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
@@ -1258,7 +1387,20 @@ export default function ProfilePage() {
                                 {(field) => (
                                     <F field={field} label="Country">
                                         {isEditing ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Country" />
+                                            <CountrySelect value={field.state.value} onValueChange={field.handleChange} />
+                                        ) : (
+                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                            </div>
+                                        )}
+                                    </F>
+                                )}
+                            </form.Field>
+                            <form.Field name="state">
+                                {(field) => (
+                                    <F field={field} label="State">
+                                        {isEditing ? (
+                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your state" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
                                                 <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
@@ -1271,7 +1413,7 @@ export default function ProfilePage() {
                                 {(field) => (
                                     <F field={field} label="City">
                                         {isEditing ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your City" />
+                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your city" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
                                                 <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>

@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react"
 import { X, ImageIcon, FileText, FileSpreadsheet, File } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { MAX_FILE_SIZE_ERROR_MESSAGE, isFileWithinSizeLimit } from "@/lib/constants/file-upload"
 import { Typography } from "./Typography"
 
 
@@ -65,8 +66,8 @@ export function ImageUploadCard({
     }, [value])
 
     const handleFile = (file: File) => {
-        if (file.size > 10 * 1024 * 1024) {
-            alert("File is too large (Max 10MB)")
+        if (!isFileWithinSizeLimit(file)) {
+            alert(MAX_FILE_SIZE_ERROR_MESSAGE)
             return
         }
         onChange?.(file)

@@ -12,10 +12,13 @@ import { BluryCard } from "@/components/shared/blury-card"
 import { Typography } from "@/components/shared/Typography"
 // import { Checkbox } from "@/components/ui/checkbox"
 import { useAuth } from "@/hooks/useAuth"
+import { useQueryClient } from "@tanstack/react-query"
+import { clearSessionQueryCache } from "@/lib/query/session-cache"
 import { Eye, EyeOff } from "lucide-react"
 
 export function LoginForm() {
     const router = useRouter()
+    const queryClient = useQueryClient()
     const { login } = useAuth()
     const [apiError, setApiError] = useState("")
     const [showPassword, setShowPassword] = useState(false)
@@ -26,6 +29,7 @@ export function LoginForm() {
         onSubmit: async ({ value }) => {
             setApiError("")
             try {
+                clearSessionQueryCache(queryClient)
                 await login.mutateAsync({ email: value.email, password: value.password })
                 router.push("/dashboard")
                 router.refresh()

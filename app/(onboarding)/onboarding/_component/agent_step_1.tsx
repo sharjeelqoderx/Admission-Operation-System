@@ -1,25 +1,65 @@
 "use client"
 
 import { useForm } from "@tanstack/react-form"
+import { Loader2 } from "lucide-react"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { F, GENDERS } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
+import { CountrySelect } from "@/components/shared/country-select"
+import { PageLoader } from "@/components/shared/page-loader"
 
 const schema = z.object({
     agentName: z.string().trim().min(2, "Agent name is required"),
     contactPersonName: z.string().trim().min(2, "Contact person name is required"),
     gender: z.enum(["male", "female", "other"], { message: "Select gender" }),
     primaryBaseCountry: z.string().trim().min(2, "Country is required"),
+    primaryBaseState: z.string().trim().min(2, "State is required"),
+    primaryBaseCity: z.string().trim().min(2, "City is required"),
     website: z.string().trim().refine(v => v === "" || v.includes("."), "Enter a valid URL").or(z.literal("")),
 })
 
-export function AgentStep1({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+type AgentStep1Values = {
+    agentName: string
+    contactPersonName: string
+    gender: string
+    primaryBaseCountry: string
+    primaryBaseState: string
+    primaryBaseCity: string
+    website: string
+}
+
+function getFieldState(field: {
+    state: { meta: { isTouched: boolean; isValid: boolean; errors?: unknown[] } }
+    form: { state: { isSubmitted: boolean } }
+}) {
+    const isInvalid = (field.state.meta.isTouched || field.form.state.isSubmitted) && !field.state.meta.isValid
+    const raw = field.state.meta.errors?.[0]
+    const error = raw == null
+        ? undefined
+        : typeof raw === "string"
+            ? { message: raw }
+            : (raw as { message?: string })
+    return { isInvalid, error }
+}
+
+function normalizeGender(value?: string) {
+    const gender = value?.toLowerCase()
+    return gender === "male" || gender === "female" || gender === "other" ? gender : ""
+}
+
+function AgentStep1Form({
+    defaultValues,
+    onNext,
+}: {
+    defaultValues: AgentStep1Values
+    onNext: () => void
+}) {
     const { agentProfile } = useAuth()
     const form = useForm({
-        defaultValues: { agentName: "", contactPersonName: "", gender: "", primaryBaseCountry: "", website: "" },
+        defaultValues,
         validators: { onSubmit: schema },
         onSubmit: async ({ value }) => {
             const fd = new FormData()
@@ -27,6 +67,8 @@ export function AgentStep1({ onNext, onSkip }: { onNext: () => void; onSkip: () 
             fd.append("contact_person_name", value.contactPersonName)
             fd.append("gender", value.gender === "male" ? "MALE" : value.gender === "female" ? "FEMALE" : "")
             fd.append("country", value.primaryBaseCountry)
+            fd.append("state", value.primaryBaseState)
+            fd.append("city", value.primaryBaseCity)
             fd.append("website", value.website)
             await agentProfile.mutateAsync(fd)
             onNext()
@@ -37,47 +79,121 @@ export function AgentStep1({ onNext, onSkip }: { onNext: () => void; onSkip: () 
         <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
 
-                <form.Field name="agentName">{(field) => (
-                    <F isInvalid={field.state.meta.isTouched && !field.state.meta.isValid} error={field.state.meta.errors?.[0]} label="Agent Name">
-                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. Global Edu Consultants" />
+                <form.Field name="agentName">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="Agent Name">
+                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. Horizon Education Group" />
                     </F>
-                )}</form.Field>
+                    )
+                }}</form.Field>
 
-                <form.Field name="contactPersonName">{(field) => (
-                    <F isInvalid={field.state.meta.isTouched && !field.state.meta.isValid} error={field.state.meta.errors?.[0]} label="Contact Person Name">
-                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. Ahmed Khan" />
+                <form.Field name="contactPersonName">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="Contact Person Name">
+                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. John Smith" />
                     </F>
-                )}</form.Field>
+                    )
+                }}</form.Field>
 
-                <form.Field name="gender">{(field) => (
-                    <F isInvalid={field.state.meta.isTouched && !field.state.meta.isValid} error={field.state.meta.errors?.[0]} label="Gender">
+                <form.Field name="gender">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="Gender">
                         <Select value={field.state.value} onValueChange={field.handleChange}>
                             <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
                             <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g} className="capitalize">{g}</SelectItem>)}</SelectContent>
                         </Select>
                     </F>
-                )}</form.Field>
+                    )
+                }}</form.Field>
 
-                <form.Field name="primaryBaseCountry">{(field) => (
-                    <F isInvalid={field.state.meta.isTouched && !field.state.meta.isValid} error={field.state.meta.errors?.[0]} label="Primary Base Country">
-                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. Pakistan" />
+                <form.Field name="primaryBaseCountry">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="Primary Base Country">
+                        <CountrySelect
+                            value={field.state.value}
+                            onValueChange={field.handleChange}
+                        />
                     </F>
-                )}</form.Field>
+                    )
+                }}</form.Field>
+
+                <form.Field name="primaryBaseState">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="State">
+                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. California" />
+                    </F>
+                    )
+                }}</form.Field>
+
+                <form.Field name="primaryBaseCity">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="City">
+                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. Los Angeles" />
+                    </F>
+                    )
+                }}</form.Field>
 
                 <div className="col-span-1 sm:col-span-2">
-                    <form.Field name="website">{(field) => (
-                        <F isInvalid={field.state.meta.isTouched && !field.state.meta.isValid} error={field.state.meta.errors?.[0]} label="Professional Website / Portfolio (optional)">
-                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="https://youragency.com" />
+                    <form.Field name="website">{(field) => {
+                        const { isInvalid, error } = getFieldState(field)
+                        return (
+                        <F isInvalid={isInvalid} error={error} label="Professional Website / Portfolio (optional)">
+                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="https://www.horizonedu.com" />
                         </F>
-                    )}</form.Field>
+                        )
+                    }}</form.Field>
                 </div>
 
             </div>
 
             <div className="flex gap-3 mt-8">
-                {/* <Button type="button" variant="ghost" className="flex-1 hover:bg-transparent" onClick={onSkip}>Skip for now</Button> */}
-                <Button type="submit" className="flex-1 capitalize">Continue</Button>
+                <Button type="submit" className="flex-1 capitalize gap-2" disabled={agentProfile.isPending}>
+                    {agentProfile.isPending && <Loader2 className="size-4 animate-spin" />}
+                    {agentProfile.isPending ? "Saving..." : "Continue"}
+                </Button>
             </div>
         </form>
+    )
+}
+
+export function AgentStep1({ onNext }: { onNext: () => void; onSkip: () => void }) {
+    const { me } = useAuth()
+    const { data: meData, isLoading } = me
+
+    if (isLoading) {
+        return <PageLoader label="Preparing your profile..." />
+    }
+
+    const agentProfile = meData?.profile as {
+        contact_person_name?: string
+        country?: string
+        state?: string
+        city?: string
+        website?: string
+        gender?: string
+    } | undefined
+
+    const defaultValues: AgentStep1Values = {
+        agentName: meData?.fullName ?? "",
+        contactPersonName: agentProfile?.contact_person_name ?? "",
+        gender: normalizeGender(agentProfile?.gender ?? meData?.profile?.gender),
+        primaryBaseCountry: agentProfile?.country ?? meData?.profile?.country ?? "",
+        primaryBaseState: agentProfile?.state ?? meData?.profile?.state ?? "",
+        primaryBaseCity: agentProfile?.city ?? meData?.profile?.city ?? "",
+        website: agentProfile?.website ?? "",
+    }
+
+    return (
+        <AgentStep1Form
+            key={JSON.stringify(defaultValues)}
+            defaultValues={defaultValues}
+            onNext={onNext}
+        />
     )
 }

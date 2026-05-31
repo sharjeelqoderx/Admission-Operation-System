@@ -103,7 +103,7 @@ export const ApplicationTable = React.memo(function ApplicationTable({ applicati
                                         {/* Program */}
                                         <TableCell className="px-8 py-6 whitespace-nowrap">
                                             <Typography font="sub-text" as="span" className="font-bold text-blue-text">
-                                                {app.program?.name ?? "—"}
+                                                {app.course?.name ?? "—"}
                                             </Typography>
                                         </TableCell>
 

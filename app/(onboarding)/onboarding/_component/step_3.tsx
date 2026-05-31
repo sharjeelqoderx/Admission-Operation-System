@@ -10,6 +10,7 @@ import { F, DatePicker } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 import { PageLoader } from "@/components/shared/page-loader"
+import { CountrySelect } from "@/components/shared/country-select"
 
 const schema = z.object({
     hasExperience: z.enum(["yes", "no"], { message: "Please select an option" }),
@@ -170,7 +171,11 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
                                                         {(subField) => (
                                                             <div className="min-w-[200px]">
                                                                 <F isInvalid={subField.state.meta.isTouched && !subField.state.meta.isValid} error={subField.state.meta.errors?.[0]} label="Country / Location">
-                                                                    <Input value={subField.state.value || ""} onChange={(e) => subField.handleChange(e.target.value)} className="w-full min-w-[200px]" placeholder="Enter country name" />
+                                                                    <CountrySelect
+                                                                        value={subField.state.value || ""}
+                                                                        onValueChange={subField.handleChange}
+                                                                        className="w-full min-w-[200px]"
+                                                                    />
                                                                 </F>
                                                             </div>
                                                         )}

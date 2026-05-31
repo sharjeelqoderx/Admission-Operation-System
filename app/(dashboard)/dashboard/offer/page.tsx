@@ -11,7 +11,7 @@ import { OfferTable } from "./_component/OfferTable"
 export default function OfferPage() {
     const [searchQuery, setSearchQuery] = useState("")
 
-    const { data: response, isLoading, isError } = useQuery({
+    const { data: response, isLoading, isError, refetch } = useQuery({
         queryKey: ["offers"],
         queryFn: async () => {
             const res = await fetch("/api/offer")
@@ -60,11 +60,12 @@ export default function OfferPage() {
             </div>
 
             {/* ── Table ── */}
-            <OfferTable 
+            <OfferTable
                 offers={offers}
                 isLoading={isLoading}
                 isError={isError}
                 searchQuery={searchQuery}
+                onRetry={() => refetch()}
             />
         </main >
     )

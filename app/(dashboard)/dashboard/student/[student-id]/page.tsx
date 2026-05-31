@@ -20,6 +20,35 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 
 import { Mail, MapPin } from "lucide-react"
 import { BluryCard } from "@/components/shared/blury-card"
+import { formatLocation } from "@/lib/utils/location"
+import { useDegrees, formatDegreeLabel, type DegreeOption } from "@/hooks/useDegrees"
+import { resolveGradeType } from "@/types/schemas/academic"
+
+type EducationRecord = {
+    qualification?: string | null
+    institution_name?: string | null
+    grade_type?: string | null
+    gpa?: number | string | null
+    obtained_marks?: number | string | null
+    total_marks?: number | string | null
+    qualification_degree?: DegreeOption | null
+}
+
+function getHighestDegreeLabel(
+    record: EducationRecord,
+    degrees: DegreeOption[]
+) {
+    if (record.qualification_degree) {
+        return formatDegreeLabel(record.qualification_degree)
+    }
+
+    const matched = degrees.find((degree) => degree.id === record.qualification)
+    if (matched) {
+        return formatDegreeLabel(matched)
+    }
+
+    return record.qualification ?? "—"
+}
 
 type PageProps = {
     params: Promise<{ "student-id": string }>
@@ -40,6 +69,8 @@ export default function StudentDetailPage({ params }: PageProps) {
         },
         enabled: !!id,
     })
+
+    const { data: degrees = [] } = useDegrees()
 
     const { data: applicationsData, isLoading: appsLoading } = useQuery({
         queryKey: ["applications", "student", id],
@@ -70,9 +101,17 @@ export default function StudentDetailPage({ params }: PageProps) {
     )
 
     const s = student.student
-    const eduList: any[] = Array.isArray(student.education) ? student.education : student.education ? [student.education] : []
-    const edu = eduList[0]
+    const eduList: EducationRecord[] = Array.isArray(student.education)
+        ? student.education
+        : student.education
+            ? [student.education]
+            : []
     const avatarSrc = student.avatar_url ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name ?? "S")}&background=random`
+    const locationLine = formatLocation({
+        city: s?.city,
+        state: s?.state,
+        country: s?.country,
+    })
 
     const basicInfo = [
         { label: "Email", value: student.email },
@@ -82,6 +121,8 @@ export default function StudentDetailPage({ params }: PageProps) {
         { label: "Phone", value: student.phone },
         { label: "Guardian Email", value: s?.guardian_email },
         { label: "Country", value: s?.country },
+        { label: "State", value: s?.state },
+        { label: "City", value: s?.city },
         { label: "Guardian Phone", value: s?.guardian_phone },
     ]
 
@@ -107,10 +148,10 @@ export default function StudentDetailPage({ params }: PageProps) {
                                 <Typography font="sub-text" className="text-gray-500">{student.email}</Typography>
                             </div>
                         )}
-                        {s?.country && (
+                        {locationLine !== "—" && (
                             <div className="flex items-center gap-2">
                                 <MapPin className="size-4 opacity-60" />
-                                <Typography font="sub-text" className="text-gray-500">{s.city ? `${s.city}, ${s.country}` : s.country}</Typography>
+                                <Typography font="sub-text" className="text-gray-500">{locationLine}</Typography>
                             </div>
                         )}
                     </div>
@@ -149,19 +190,26 @@ export default function StudentDetailPage({ params }: PageProps) {
                         <div className="space-y-6">
                             {eduList.length === 0 ? (
                                 <Typography as="p" font="sub-text" className="text-gray-400">No academic records found.</Typography>
-                            ) : eduList.map((e: any, i: number) => {
-                                const obtained = parseFloat(e.obtained_marks)
-                                const total = parseFloat(e.total_marks)
-                                const percentage = (!isNaN(obtained) && !isNaN(total) && total > 0)
-                                    ? ((obtained / total) * 100).toFixed(1)
-                                    : null
+                            ) : eduList.map((e, i) => {
+                                const gradeType = resolveGradeType(e)
+                                const isGpa = gradeType === "gpa"
+                                const obtained = parseFloat(String(e.obtained_marks ?? ""))
+                                const total = parseFloat(String(e.total_marks ?? ""))
+                                const percentage =
+                                    !isGpa &&
+                                    !isNaN(obtained) &&
+                                    !isNaN(total) &&
+                                    total > 0
+                                        ? ((obtained / total) * 100).toFixed(1)
+                                        : null
 
                                 return (
-                                    <div key={i} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pb-4 border-b border-gray-200/30 last:border-0">
+                                    <div key={i} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 pb-4 border-b border-gray-200/30 last:border-0">
                                         <div className="space-y-1">
-                                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Degree</Typography>
-                                            <Typography as="p" font="title" className="text-gray-900">{e.degree?.name ?? "—"}</Typography>
-                                            <Typography as="p" font="small" className="text-gray-500 capitalize">{e.degree?.level?.toLowerCase() ?? ""}</Typography>
+                                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Highest Degree</Typography>
+                                            <Typography as="p" font="title" className="text-gray-900">
+                                                {getHighestDegreeLabel(e, degrees)}
+                                            </Typography>
                                         </div>
 
                                         <div className="space-y-1">
@@ -169,19 +217,30 @@ export default function StudentDetailPage({ params }: PageProps) {
                                             <Typography as="p" font="title" className="text-gray-900">{e.institution_name ?? "—"}</Typography>
                                         </div>
 
-                                        <div className="space-y-1">
-                                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Marks</Typography>
-                                            <Typography as="p" font="title" className="text-gray-900">
-                                                {e.obtained_marks ?? "—"} / {e.total_marks ?? "—"}
-                                            </Typography>
-                                        </div>
+                                        {isGpa ? (
+                                            <div className="space-y-1">
+                                                <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">GPA</Typography>
+                                                <Typography as="p" font="title" className="text-gray-900">
+                                                    {e.gpa ?? "—"}
+                                                </Typography>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="space-y-1">
+                                                    <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Marks</Typography>
+                                                    <Typography as="p" font="title" className="text-gray-900">
+                                                        {e.obtained_marks ?? "—"} / {e.total_marks ?? "—"}
+                                                    </Typography>
+                                                </div>
 
-                                        <div className="space-y-1">
-                                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Percentage</Typography>
-                                            <Typography as="p" font="title" className="text-gray-900">
-                                                {percentage ? `${percentage}%` : "—"}
-                                            </Typography>
-                                        </div>
+                                                <div className="space-y-1">
+                                                    <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Percentage</Typography>
+                                                    <Typography as="p" font="title" className="text-gray-900">
+                                                        {percentage ? `${percentage}%` : "—"}
+                                                    </Typography>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 )
                             })}
@@ -255,7 +314,7 @@ export default function StudentDetailPage({ params }: PageProps) {
                                         </TableCell>
                                         <TableCell className="px-8 py-6 whitespace-nowrap">
                                             <Typography as="span" font="sub-text" className="font-medium">
-                                                {app.program?.name ?? "—"}
+                                                {app.course?.name ?? "—"}
                                             </Typography>
                                         </TableCell>
                                         <TableCell className="px-8 py-6 whitespace-nowrap">

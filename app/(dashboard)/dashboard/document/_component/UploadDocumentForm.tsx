@@ -48,7 +48,7 @@ export function UploadDocumentForm() {
 
     const { data: studentsData } = useQuery({
         queryKey: ["students"],
-        enabled: user?.role !== "STUDENT",
+        enabled: user?.role === "AGENT",
         queryFn: async () => {
             const res = await fetch("/api/student")
             const json = await res.json()
@@ -87,11 +87,11 @@ export function UploadDocumentForm() {
                 })
             }
             const from = searchParams.get("from")
-            const programId = searchParams.get("program_id")
+            const courseId = searchParams.get("course_id")
             if (from === "application") {
                 const params = new URLSearchParams()
                 if (studentId) params.set("student_id", studentId)
-                if (programId) params.set("program_id", programId)
+                if (courseId) params.set("course_id", courseId)
                 params.set("step", "2")
                 params.set("uploaded", "1")
                 router.push(`/dashboard/application/new?${params.toString()}`)

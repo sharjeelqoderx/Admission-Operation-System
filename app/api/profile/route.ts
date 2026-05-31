@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
+import { getFileSizeLimitError, isFileWithinSizeLimit } from "@/lib/constants/file-upload"
 
 import { profileStep1Schema } from "@/types/schemas/auth"
 
@@ -38,6 +39,9 @@ export async function POST(req: NextRequest) {
 
                 // Upload image
                 if (validData.avatar_url instanceof File && validData.avatar_url.size > 0) {
+                    if (!isFileWithinSizeLimit(validData.avatar_url)) {
+                        return err(getFileSizeLimitError(validData.avatar_url.name), 400)
+                    }
                     const uploaded = await uploadPublicImage({
                         supabase, bucket: "student-admission", userId: user.id, file: validData.avatar_url,
                     })
@@ -74,10 +78,11 @@ export async function POST(req: NextRequest) {
                         profile_id: user.id,
                         student_code,
                         country: validData.country,
+                        state: validData.state,
+                        city: validData.city,
                         nationality: validData.nationality,
                         guardian_email: validData.guardianEmail,
                         guardian_phone: validData.guardianPhone,
-                        city: typeof data.city === "string" ? data.city : null,
                         address: typeof data.address === "string" ? data.address : null,
                         zip_code: typeof data.zip_code === "string" ? data.zip_code : null,
                     }, { onConflict: "profile_id" })
@@ -89,6 +94,9 @@ export async function POST(req: NextRequest) {
             // Fallback for other roles (AGENT, UNIVERSITY) using FormData
             const file = form.get("avatar")
             if (file instanceof File && file.size > 0) {
+                if (!isFileWithinSizeLimit(file)) {
+                    return err(getFileSizeLimitError(file.name), 400)
+                }
                 const uploaded = await uploadPublicImage({
                     supabase, bucket: "student-admission", userId: user.id, file,
                 })
@@ -122,6 +130,7 @@ export async function POST(req: NextRequest) {
                     contact_person_name: data.contact_person_name,
                     nationality: data.nationality,
                     country: data.country,
+                    state: data.state,
                     city: data.city,
                     address: data.address,
                     other_contact_number: data.other_contact_number,
@@ -136,6 +145,7 @@ export async function POST(req: NextRequest) {
                     profile_id: user.id,
                     website: data.website,
                     country: data.country,
+                    state: data.state,
                     city: data.city,
                     address: data.address,
                     description: data.description,

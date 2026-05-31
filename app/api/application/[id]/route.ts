@@ -15,20 +15,32 @@ export async function GET(
 
         const { id } = await params;
 
-        // Fetch user role
         const { data: profile } = await supabase
             .from("profile")
             .select("role")
             .eq("id", user.id)
             .single();
 
-        // Fetch application with related data
         let query = supabase
             .from("application")
             .select(`
                 *,
                 student:profile_id ( id, name, avatar_url, email, date_of_birth, gender ),
-                program:program_id ( *, campus_program_junction ( * ) ),
+                course:course_id (
+                    id,
+                    name,
+                    deadline_date,
+                    degree:degree_id (
+                        id,
+                        name,
+                        fees,
+                        intake_date,
+                        duration,
+                        location,
+                        language_of_study,
+                        study_mode
+                    )
+                ),
                 university:university_id ( * ),
                 agent:submitted_by_profile_id ( id, name ),
                 documents:application_document (
@@ -43,7 +55,6 @@ export async function GET(
             `)
             .eq("id", id);
 
-        // Role-based filtering
         if (profile?.role === "STUDENT") {
             query = query.eq("profile_id", user.id);
         } else if (profile?.role === "AGENT") {

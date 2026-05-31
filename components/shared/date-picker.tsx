@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { format } from "date-fns"
+import { format, parse, isValid } from "date-fns"
 import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,12 @@ type DatePickerProps = {
 export function DatePicker({ value, onChange, placeholder = "Pick a date", className }: DatePickerProps) {
     const [open, setOpen] = useState(false)
     const today = new Date()
-    const parsed = value ? new Date(value) : null
+    const parsed = value
+        ? (() => {
+            const localDate = parse(value.slice(0, 10), "yyyy-MM-dd", new Date())
+            return isValid(localDate) ? localDate : null
+        })()
+        : null
     
     // Initialize view to the current year/month or the parsed date's year/month
     const [viewYear, setViewYear] = useState(parsed?.getFullYear() ?? today.getFullYear() - 18)

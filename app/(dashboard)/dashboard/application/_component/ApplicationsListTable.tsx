@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useMemo } from "react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -7,6 +7,7 @@ import {
     Table,
     TableHeader,
     TableBody,
+    TableFooter,
     TableRow,
     TableHead,
     TableCell,
@@ -14,14 +15,27 @@ import {
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
+import { cn } from "@/lib/utils"
 
 export type ApplicationRow = {
     id: string
     application_no: string | null
     status: string
     created_at: string
-    student: { id: string; name: string | null; avatar_url: string | null; email: string | null } | null
-    program: { id: string; name: string | null } | null
+    student: {
+        id: string
+        name: string | null
+        avatar_url: string | null
+        email: string | null
+        student_code?: string | null
+    } | null
+    course: {
+        id: string
+        name: string | null
+        deadline_date?: string | null
+        degree?: { id: string; name: string; fees?: string | null; intake_date?: string | null } | null
+    } | null
     agent: { id: string; name: string | null } | null
 }
 
@@ -31,6 +45,19 @@ type Props = {
     isLoading: boolean
     isError: boolean
     onRetry: () => void
+    showPagination?: boolean
+}
+
+function formatSubmittedDate(value: string) {
+    return new Date(value).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    })
+}
+
+function getApplicationNumber(app: ApplicationRow) {
+    return app.application_no ?? `APP-${app.id.slice(0, 8).toUpperCase()}`
 }
 
 export const ApplicationsListTable = React.memo(function ApplicationsListTable({
@@ -39,7 +66,24 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
     isLoading,
     isError,
     onRetry,
+    showPagination = true,
 }: Props) {
+    const isStudent = role === "STUDENT"
+    const isAgent = role === "AGENT"
+    const showStudentColumn = !isStudent
+    const showAgentColumn = role === "UNIVERSITY"
+    const showApplicationNoColumn = isStudent || isAgent
+    const showExtendedProgramColumns = isStudent || isAgent
+
+    const columnCount = useMemo(() => {
+        if (isStudent) return 8
+        if (isAgent) return 9
+        if (showAgentColumn) return 6
+        return 5
+    }, [isStudent, isAgent, showAgentColumn])
+
+    const tableMinWidth = isAgent ? "min-w-[1200px]" : "min-w-[900px]"
+
     if (isLoading) {
         return (
             <BluryCard
@@ -50,7 +94,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                 className="rounded-lg p-0"
             >
                 <div className="flex flex-col items-center justify-center py-24 gap-3">
-                    <Loader2 className="size-8 text-[#9B51E0] animate-spin" />
+                    <Loader2 className="size-8 text-brand-secondary animate-spin" />
                     <Typography as="p" className="text-sm font-medium text-gray-500">
                         Loading applications...
                     </Typography>
@@ -82,7 +126,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                     </div>
                     <button
                         onClick={onRetry}
-                        className="px-5 py-2 rounded-xl text-sm font-semibold bg-[#9B51E0] text-white hover:bg-[#8a42cf] transition-colors"
+                        className="px-5 py-2 rounded-xl text-sm font-semibold bg-brand-secondary text-white hover:bg-brand-secondary/90 transition-colors"
                     >
                         Retry
                     </button>
@@ -99,51 +143,64 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
             childClass="p-0!"
             className="rounded-lg p-0"
         >
-            <div className="overflow-x-auto">
-                <Table className="w-full text-left border-collapse min-w-[900px]">
-                    <TableHeader>
-                        <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
-                            {role !== "STUDENT" && (
-                                <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
-                                    Student Name
+            <div className="overflow-x-auto rounded-xl">
+                <Table className={cn("w-full text-left border-collapse", tableMinWidth)}>
+                    <TableHeader className="sticky top-0 z-10">
+                        <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
+                            {showApplicationNoColumn && (
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    Application No
                                 </TableHead>
                             )}
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
+                            {showStudentColumn && (
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    Student
+                                </TableHead>
+                            )}
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Program
                             </TableHead>
-                            {role !== "AGENT" && (
-                                <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
-                                    Agent Name
+                            {showExtendedProgramColumns && (
+                                <>
+                                    <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                        Fees
+                                    </TableHead>
+                                    <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                        Intake
+                                    </TableHead>
+                                    <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                        Deadline
+                                    </TableHead>
+                                </>
+                            )}
+                            {showAgentColumn && (
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    Agent
                                 </TableHead>
                             )}
-                            {role === "AGENT" && (
-                                <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
-                                    Agent Name
-                                </TableHead>
-                            )}
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Status
                             </TableHead>
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
-                                Date
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                Submitted
                             </TableHead>
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Action
                             </TableHead>
                         </TableRow>
                     </TableHeader>
 
-                    <TableBody className="divide-y divide-white/10">
+                    <TableBody className="bg-white/45">
                         {applications.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="px-8 py-16 text-center">
+                                <TableCell colSpan={columnCount} className="px-8 py-16 text-center">
                                     <Typography as="p" className="text-sm text-gray-500 font-medium">
                                         No applications found. Create your first application!
                                     </Typography>
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            applications.map((app) => {
+                            applications.map((app, index) => {
                                 const studentName = app.student?.name ?? "—"
                                 const initials = studentName
                                     .split(" ")
@@ -153,11 +210,25 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                     .toUpperCase()
 
                                 return (
-                                    <TableRow key={app.id} className="hover:bg-white/10 transition-colors group">
-                                        {/* Student Name */}
-                                        {role !== "STUDENT" && (
-                                            <TableCell className="px-8 py-6 whitespace-nowrap">
-                                                <div className="flex items-center gap-4">
+                                    <TableRow
+                                        key={app.id}
+                                        className={cn(
+                                            "border-b border-brand-secondary/15 transition-colors",
+                                            index % 2 === 0 ? "bg-white/70" : "bg-white/45",
+                                            "hover:bg-brand-secondary/5"
+                                        )}
+                                    >
+                                        {showApplicationNoColumn && (
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <Typography as="span" className="text-sm font-bold text-gray-900">
+                                                    {getApplicationNumber(app)}
+                                                </Typography>
+                                            </TableCell>
+                                        )}
+
+                                        {showStudentColumn && (
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <div className="flex items-center gap-3">
                                                     <Avatar className="size-10 rounded-xl border-2 border-white/50">
                                                         <AvatarImage
                                                             src={
@@ -175,9 +246,14 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                                         <Typography as="span" className="text-sm font-bold text-gray-900">
                                                             {studentName}
                                                         </Typography>
-                                                        {app.application_no && (
+                                                        {app.student?.student_code && (
                                                             <Typography as="span" className="text-[11px] text-gray-500 font-light">
-                                                                {app.application_no}
+                                                                {app.student.student_code}
+                                                            </Typography>
+                                                        )}
+                                                        {app.student?.email && (
+                                                            <Typography as="span" className="text-[11px] text-gray-500 font-light">
+                                                                {app.student.email}
                                                             </Typography>
                                                         )}
                                                     </div>
@@ -185,54 +261,58 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                             </TableCell>
                                         )}
 
-                                        {/* Program */}
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <div className="flex flex-col">
                                                 <Typography as="span" className="text-sm font-bold text-gray-700">
-                                                    {app.program?.name ?? "—"}
+                                                    {app.course?.name ?? "—"}
                                                 </Typography>
-                                                {role === "STUDENT" && app.application_no && (
+                                                {app.course?.degree?.name && (
                                                     <Typography as="span" className="text-[11px] text-gray-500 font-light">
-                                                        {app.application_no}
+                                                        {app.course.degree.name}
                                                     </Typography>
                                                 )}
                                             </div>
                                         </TableCell>
 
-                                        {/* Agent Name */}
-                                        {role !== "AGENT" && (
-                                            <TableCell className="px-8 py-6 whitespace-nowrap">
-                                                <Typography as="span" className="text-sm font-light text-gray-600">
-                                                    {app.agent?.name ?? "—"}
-                                                </Typography>
-                                            </TableCell>
+                                        {showExtendedProgramColumns && (
+                                            <>
+                                                <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                    <Typography as="span" className="text-sm font-medium text-gray-700">
+                                                        {app.course?.degree?.fees ?? "Contact University"}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                    <Typography as="span" className="text-sm font-medium text-gray-600">
+                                                        {formatIntakeDate(app.course?.degree?.intake_date)}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                    <Typography as="span" className="text-sm font-medium text-gray-600">
+                                                        {formatProgramDate(app.course?.deadline_date)}
+                                                    </Typography>
+                                                </TableCell>
+                                            </>
                                         )}
-                                        {role === "AGENT" && (
-                                            <TableCell className="px-8 py-6 whitespace-nowrap">
+
+                                        {showAgentColumn && (
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
                                                 <Typography as="span" className="text-sm font-light text-gray-600">
                                                     {app.agent?.name ?? "—"}
                                                 </Typography>
                                             </TableCell>
                                         )}
 
-                                        {/* Status */}
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <StatusBadge status={app.status} />
                                         </TableCell>
 
-                                        {/* Date */}
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <Typography as="span" className="text-sm font-medium text-gray-600">
-                                                {new Date(app.created_at).toLocaleDateString("en-US", {
-                                                    month: "short",
-                                                    day: "numeric",
-                                                    year: "numeric",
-                                                })}
+                                                {formatSubmittedDate(app.created_at)}
                                             </Typography>
                                         </TableCell>
 
-                                        {/* Action */}
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <Button
                                                 variant="outline"
                                                 className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
@@ -248,31 +328,38 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                             })
                         )}
                     </TableBody>
+
+                    <TableFooter className="border-t-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
+                        <TableRow className="hover:bg-brand-secondary/10 border-0">
+                            <TableCell colSpan={columnCount} className="px-8 py-5">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1">
+                                        <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                            Showing
+                                        </Typography>
+                                        <Typography as="span" className="text-[12px] font-bold text-brand-blue-text mx-1">
+                                            {applications.length}
+                                        </Typography>
+                                        <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                            entries
+                                        </Typography>
+                                    </div>
+
+                                    {showPagination && (
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="outline" size="icon">
+                                                <ChevronLeft size={16} />
+                                            </Button>
+                                            <Button variant="outline" size="icon">
+                                                <ChevronRight size={16} />
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    </TableFooter>
                 </Table>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between px-8 py-5 border-t border-white/20 bg-white/5">
-                <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1">
-                    <Typography as="span" className="text-[12px] font-light text-gray-500">
-                        Showing
-                    </Typography>
-                    <Typography as="span" className="text-[12px] font-bold text-gray-700 mx-1">
-                        {applications.length}
-                    </Typography>
-                    <Typography as="span" className="text-[12px] font-light text-gray-500">
-                        entries
-                    </Typography>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon">
-                        <ChevronLeft size={16} />
-                    </Button>
-                    <Button variant="outline" size="icon">
-                        <ChevronRight size={16} />
-                    </Button>
-                </div>
             </div>
         </BluryCard>
     )

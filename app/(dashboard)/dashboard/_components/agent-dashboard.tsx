@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button';
 import { BluryCard } from '@/components/shared/blury-card';
 import { cn } from '@/lib/utils';
 import { Typography } from '@/components/shared/Typography';
-import { ApplicationTable, type ApplicationRow } from '../_component/ApplicationTable';
+import {
+    ApplicationsListTable,
+    type ApplicationRow,
+} from '@/app/(dashboard)/dashboard/application/_component/ApplicationsListTable';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
@@ -27,7 +30,12 @@ export function AgentDashboard() {
         },
     })
 
-    const { data: recentAppsData, isLoading: appsLoading } = useQuery<ApplicationRow[]>({
+    const {
+        data: recentAppsData,
+        isLoading: appsLoading,
+        isError: appsError,
+        refetch: refetchApps,
+    } = useQuery<ApplicationRow[]>({
         queryKey: ['applications', 'recent'],
         queryFn: async () => {
             const res = await fetch('/api/application?limit=10')
@@ -89,7 +97,7 @@ export function AgentDashboard() {
                         blendColorClass="bg-white/10"
                     >
                         <div className="space-y-6">
-                            <div className={cn(stat.color, "border-x border-white/40 p-2 w-fit rounded-l-lg rounded-r-lg")}>
+                            <div className={cn(stat.color, "border-x-2 border-white/40 p-2 w-fit rounded-lg")}>
                                 <stat.icon className="w-8 h-8 opacity-80" />
                             </div>
                             <div className="space-y-1">
@@ -122,7 +130,14 @@ export function AgentDashboard() {
                     </Button>
                 </div>
 
-                <ApplicationTable applications={recentApplications} isLoading={appsLoading} />
+                <ApplicationsListTable
+                    applications={recentApplications}
+                    role="AGENT"
+                    isLoading={appsLoading}
+                    isError={appsError}
+                    onRetry={() => refetchApps()}
+                    showPagination={false}
+                />
             </div>
         </div>
     );

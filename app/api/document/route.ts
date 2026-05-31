@@ -23,47 +23,57 @@ export async function GET(req: NextRequest) {
             .single();
  
         if (profile?.role === "STUDENT") {
-            // Fetch student's own documents
+            const { data: studentProfile } = await supabase
+                .from("profile")
+                .select("id, name, avatar_url")
+                .eq("id", user.id)
+                .single()
+
             let query = supabase
                 .from("document")
                 .select(`
-                    id, 
-                    profile_id, 
-                    document_type_id,
-                    document_type:document_type_id(name),
-                    created_at, 
-                    document_review(status, created_at), 
-                    document_files(file_url, type),
-                    profile:profile_id (name, avatar_url)
+                    id,
+                    profile_id,
+                    created_at,
+                    document_review(status, created_at)
                 `)
-                .eq("profile_id", user.id);
- 
-            if (search) {
-                query = query.ilike("document_type.name", `%${search}%`);
-            }
- 
-            const { data: documents, error: docsError } = await query.order("created_at", { ascending: false });
- 
+                .eq("profile_id", user.id)
+
+            const { data: documents, error: docsError } = await query.order("created_at", {
+                ascending: false,
+            })
+
             if (docsError) {
-                return NextResponse.json({ error: "Failed to fetch documents", details: docsError }, { status: 500 });
+                return NextResponse.json(
+                    { error: "Failed to fetch documents", details: docsError },
+                    { status: 500 }
+                )
             }
- 
-            const result = documents.map((d: any) => ({
-                id: d.id,
-                profile_id: d.profile_id,
-                document_type_id: d.document_type_id,
-                name: d.document_type?.name ?? "—",
-                created_at: d.created_at,
-                status: d.document_review?.[0]?.status ?? "PENDING",
-                files_count: d.document_files?.length ?? 0,
-                student_name: d.profile?.name,
-                avatar_url: d.profile?.avatar_url
-            })).filter((d: any) => {
-                if (status && status !== "ALL" && d.status !== status) return false;
-                return true;
-            });
- 
-            return NextResponse.json({ data: result, role: "STUDENT" }, { status: 200 });
+
+            const docs = documents ?? []
+            const lastDoc = docs.length
+                ? [...docs].sort(
+                      (a, b) =>
+                          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                  )[0]
+                : null
+
+            return NextResponse.json(
+                {
+                    data: [
+                        {
+                            student_id: user.id,
+                            student_name: studentProfile?.name ?? "—",
+                            avatar_url: studentProfile?.avatar_url ?? null,
+                            document_count: docs.length,
+                            last_uploaded_at: lastDoc?.created_at ?? null,
+                            last_doc_status: lastDoc?.document_review?.[0]?.status ?? null,
+                        },
+                    ],
+                    role: "STUDENT",
+                },
+                { status: 200 }
+            )
         }
  
         // Agent logic (Existing)
@@ -117,22 +127,20 @@ export async function GET(req: NextRequest) {
         let result = students
             .map((s: any) => {
                 const docs = (documents ?? []).filter((d: any) => d.profile_id === s.profile_id)
-                if (!docs.length) return null
-                
-                // Filter by search name
+
                 if (search && !s.profile?.name?.toLowerCase().includes(search)) return null
- 
-                const lastDoc = [...docs].sort((a: any) =>
-                    new Date(a.created_at).getTime() - new Date(a.created_at).getTime()
-                ).sort((a: any, b: any) =>
-                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                )[0]
- 
-                const lastStatus = lastDoc?.document_review?.[0]?.status ?? "PENDING"
-                
-                // Filter by status
+
+                const lastDoc = docs.length
+                    ? [...docs].sort(
+                          (a: any, b: any) =>
+                              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                      )[0]
+                    : null
+
+                const lastStatus = lastDoc?.document_review?.[0]?.status ?? null
+
                 if (status && status !== "ALL" && lastStatus !== status) return null
- 
+
                 return {
                     student_id: s.profile_id,
                     student_name: s.profile?.name ?? "—",
@@ -170,6 +178,12 @@ export async function POST(req: NextRequest) {
             files: files,
             comment: formData.get("comment") ?? undefined,
         })
+
+        await supabase
+            .from("document")
+            .delete()
+            .eq("profile_id", validated.student_id)
+            .eq("document_type_id", validated.document_type_id)
 
         // Create document record — profile_id = student, uploaded_by = agent
         const { data: document, error: docError } = await supabase

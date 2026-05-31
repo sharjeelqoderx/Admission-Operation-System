@@ -34,17 +34,56 @@ export async function GET(
             .eq("profile_id", id)
             .maybeSingle()
 
-        // 3. Education with degree type name
+        // 3. Education records
         const { data: education } = await supabase
             .from("education")
-            .select("*, degree:degree_id(name, level)")
+            .select("*")
             .eq("profile_id", id)
+
+        const qualificationIds = [
+            ...new Set(
+                (education ?? [])
+                    .map((row) => row.qualification)
+                    .filter((value): value is string => Boolean(value))
+            ),
+        ]
+
+        let qualificationDegreeById = new Map<
+            string,
+            {
+                id: string
+                name: string
+                credits: number | null
+                location: string | null
+                language_of_study: string | null
+                duration: string | null
+            }
+        >()
+
+        if (qualificationIds.length > 0) {
+            const { data: qualificationDegrees } = await supabase
+                .from("degree")
+                .select("id, name, credits, location, language_of_study, duration")
+                .in("id", qualificationIds)
+
+            qualificationDegreeById = new Map(
+                (qualificationDegrees ?? []).map((degree) => [degree.id, degree])
+            )
+        }
+
+        const enrichedEducation = (education ?? []).map((row) => ({
+            ...row,
+            qualification_degree: row.qualification
+                ? qualificationDegreeById.get(row.qualification) ?? null
+                : null,
+        }))
+
         return NextResponse.json(
             {
                 data: {
                     ...profile,
                     student: student || null,
-                    education: education || null,
+                    education: enrichedEducation,
                 },
             },
             { status: 200 }
@@ -86,6 +125,8 @@ export async function PATCH(
             dob: getString("dob"),
             gender: getString("gender"),
             country: getString("country"),
+            state: getString("state"),
+            city: getString("city"),
             nationality: getString("nationality"),
             guardian_email: getString("guardian_email"),
             guardian_phone: getString("guardian_phone"),
@@ -130,6 +171,8 @@ export async function PATCH(
                 {
                     profile_id: id,
                     country: data.country,
+                    state: data.state,
+                    city: data.city,
                     nationality: data.nationality,
                     guardian_email: data.guardian_email,
                     guardian_phone: data.guardian_phone,
@@ -145,13 +188,31 @@ export async function PATCH(
 
         // 3. Update or insert education rows
         for (const row of data.academic) {
-            if (!row.qualification && !row.institution_name && !row.gpa) continue
+            if (
+                !row.qualification &&
+                !row.institution_name &&
+                !row.gpa &&
+                !row.obtained_marks &&
+                !row.total_marks
+            ) {
+                continue
+            }
 
+            const gradeType = row.grade_type === "gpa" ? "gpa" : "percentage"
             const payload = {
                 profile_id: id,
                 qualification: row.qualification || "",
                 institution_name: row.institution_name || "",
-                cumulative_gpa: row.gpa || null,
+                grade_type: gradeType,
+                gpa: gradeType === "gpa" && row.gpa ? parseFloat(row.gpa) : null,
+                obtained_marks:
+                    gradeType === "percentage" && row.obtained_marks
+                        ? parseFloat(row.obtained_marks)
+                        : null,
+                total_marks:
+                    gradeType === "percentage" && row.total_marks
+                        ? parseFloat(row.total_marks)
+                        : null,
             }
 
             if (row.id) {

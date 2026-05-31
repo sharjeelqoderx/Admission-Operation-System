@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { profileStep1Schema } from "@/types/schemas/auth"
 import { ImageUploadCard } from "@/components/shared/image-upload-card"
 import { PageLoader } from "@/components/shared/page-loader"
+import { CountrySelect } from "@/components/shared/country-select"
 
 /* ---------------- FORM ---------------- */
 
@@ -35,6 +36,8 @@ function Step1Form({
             dob: defaultValues.dob,
             gender: defaultValues.gender,
             country: defaultValues.country,
+            state: defaultValues.state,
+            city: defaultValues.city,
             nationality: defaultValues.nationality,
             guardianEmail: defaultValues.guardianEmail,
             guardianPhone: defaultValues.guardianPhone,
@@ -50,6 +53,8 @@ function Step1Form({
                 fd.append("dob", value.dob)
                 fd.append("gender", value.gender)
                 fd.append("country", value.country)
+                fd.append("state", value.state)
+                fd.append("city", value.city)
                 fd.append("nationality", value.nationality)
                 fd.append("guardianEmail", value.guardianEmail)
                 fd.append("guardianPhone", value.guardianPhone)
@@ -129,7 +134,6 @@ function Step1Form({
                     )}
                 </form.Field>
 
-                {/* Country */}
                 <form.Field name="country">
                     {(field) => (
                         <F
@@ -137,16 +141,46 @@ function Step1Form({
                             isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
                             error={field.state.meta.errors?.[0]}
                         >
-                            <Input
+                            <CountrySelect
                                 value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="Enter your country"
+                                onValueChange={field.handleChange}
                             />
                         </F>
                     )}
                 </form.Field>
 
-                {/* Nationality */}
+                <form.Field name="state">
+                    {(field) => (
+                        <F
+                            label="State"
+                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                            error={field.state.meta.errors?.[0]}
+                        >
+                            <Input
+                                value={field.state.value}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="Enter your state"
+                            />
+                        </F>
+                    )}
+                </form.Field>
+
+                <form.Field name="city">
+                    {(field) => (
+                        <F
+                            label="City"
+                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                            error={field.state.meta.errors?.[0]}
+                        >
+                            <Input
+                                value={field.state.value}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="Enter your city"
+                            />
+                        </F>
+                    )}
+                </form.Field>
+
                 <form.Field name="nationality">
                     {(field) => (
                         <F
@@ -241,6 +275,8 @@ export function Step1Basic({ onNext }: { onNext: () => void }) {
         dob: meData?.profile?.dateOfBirth ?? "",
         gender: (meData?.profile?.gender?.toLowerCase() as any) ?? "",
         country: meData?.profile?.country ?? "",
+        state: meData?.profile?.state ?? "",
+        city: meData?.profile?.city ?? "",
         nationality: meData?.profile?.nationality ?? "",
         guardianEmail: meData?.profile?.guardianEmail ?? "",
         guardianPhone: meData?.profile?.guardianPhone ?? "",

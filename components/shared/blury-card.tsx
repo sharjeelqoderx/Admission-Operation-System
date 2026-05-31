@@ -22,6 +22,7 @@ export const BluryCard = ({
     isCentered = true,
     className,
     blendColorClass,
+    overlayColor = "bg-black/40",
 }: CustomAuthCardProps & { blendColorClass?: string }) => {
 
     const cornerMap = {
@@ -36,7 +37,7 @@ export const BluryCard = ({
     return (
         <Card
             className={cn(
-                "relative overflow-hidden bg-transparent ring-0 border-x border-white/40 rounded-l-lg rounded-r-lg",
+                "relative overflow-hidden bg-brand-secondary/3 ring-0 border-x border-white/40 rounded-l-lg rounded-r-lg",
                 sharpClasses,
                 (!backgroundImage ? blurAmount : ''),
                 className

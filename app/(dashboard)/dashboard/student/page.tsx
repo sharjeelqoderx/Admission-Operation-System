@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { Input } from "@/components/ui/input"
-import { StudentTable } from "../_component/StudentTable"
+import { StudentTable } from "../_components/StudentTable"
 import { PageLoader } from "@/components/shared/page-loader"
 import { BluryCard } from "@/components/shared/blury-card"
 import {

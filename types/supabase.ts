@@ -70,10 +70,10 @@ export type Database = {
       application: {
         Row: {
           application_no: string | null
+          course_id: string
           created_at: string
           id: string
           profile_id: string
-          program_id: string
           status: Database["public"]["Enums"]["app_status_enum"]
           submitted_by_profile_id: string | null
           university_id: string
@@ -81,10 +81,10 @@ export type Database = {
         }
         Insert: {
           application_no?: string | null
+          course_id: string
           created_at?: string
           id?: string
           profile_id: string
-          program_id: string
           status?: Database["public"]["Enums"]["app_status_enum"]
           submitted_by_profile_id?: string | null
           university_id: string
@@ -92,10 +92,10 @@ export type Database = {
         }
         Update: {
           application_no?: string | null
+          course_id?: string
           created_at?: string
           id?: string
           profile_id?: string
-          program_id?: string
           status?: Database["public"]["Enums"]["app_status_enum"]
           submitted_by_profile_id?: string | null
           university_id?: string
@@ -103,17 +103,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "application_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "application_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profile"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "application_program_id_fkey"
-            columns: ["program_id"]
-            isOneToOne: false
-            referencedRelation: "program"
             referencedColumns: ["id"]
           },
           {
@@ -274,6 +274,35 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course: {
+        Row: {
+          deadline_date: string | null
+          degree_id: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          deadline_date?: string | null
+          degree_id?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          deadline_date?: string | null
+          degree_id?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_degree_id_fkey"
+            columns: ["degree_id"]
+            isOneToOne: false
+            referencedRelation: "degree"
             referencedColumns: ["id"]
           },
         ]
@@ -445,6 +474,139 @@ export type Database = {
           },
         ]
       }
+      degree: {
+        Row: {
+          credits: number | null
+          duration: string | null
+          fees: string | null
+          id: string
+          intake_date: string | null
+          language_of_study: string | null
+          level_id: string | null
+          location: string | null
+          name: string
+          study_mode: Database["public"]["Enums"]["study_mode_enum"] | null
+        }
+        Insert: {
+          credits?: number | null
+          duration?: string | null
+          fees?: string | null
+          id?: string
+          intake_date?: string | null
+          language_of_study?: string | null
+          level_id?: string | null
+          location?: string | null
+          name: string
+          study_mode?: Database["public"]["Enums"]["study_mode_enum"] | null
+        }
+        Update: {
+          credits?: number | null
+          duration?: string | null
+          fees?: string | null
+          id?: string
+          intake_date?: string | null
+          language_of_study?: string | null
+          level_id?: string | null
+          location?: string | null
+          name?: string
+          study_mode?: Database["public"]["Enums"]["study_mode_enum"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "degree_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      degree_requirement: {
+        Row: {
+          created_at: string
+          degree_id: string
+          document_type_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          degree_id: string
+          document_type_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          degree_id?: string
+          document_type_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "degree_requirement_degree_id_fkey"
+            columns: ["degree_id"]
+            isOneToOne: false
+            referencedRelation: "degree"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "degree_requirement_document_type_id_fkey"
+            columns: ["document_type_id"]
+            isOneToOne: false
+            referencedRelation: "document_type"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_type: {
+        Row: {
+          code: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          may_expire: boolean
+          name: string
+          type: string | null
+          university_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          may_expire?: boolean
+          name: string
+          type?: string | null
+          university_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          may_expire?: boolean
+          name?: string
+          type?: string | null
+          university_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_type_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_files: {
         Row: {
           created_at: string
@@ -527,42 +689,86 @@ export type Database = {
           created_at: string
           cumulative_gpa: string | null
           end_date: string | null
+          gpa: number | null
+          grade_type: string | null
           honors: string | null
           id: string
           institution_name: string | null
+          obtained_marks: number | null
           profile_id: string
           qualification: string | null
           start_date: string | null
+          total_marks: number | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           cumulative_gpa?: string | null
           end_date?: string | null
+          gpa?: number | null
+          grade_type?: string | null
           honors?: string | null
           id?: string
           institution_name?: string | null
+          obtained_marks?: number | null
           profile_id: string
           qualification?: string | null
           start_date?: string | null
+          total_marks?: number | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           cumulative_gpa?: string | null
           end_date?: string | null
+          gpa?: number | null
+          grade_type?: string | null
           honors?: string | null
           id?: string
           institution_name?: string | null
+          obtained_marks?: number | null
           profile_id?: string
           qualification?: string | null
           start_date?: string | null
+          total_marks?: number | null
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "education_profile_id_fkey"
             columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      levels: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          university_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          university_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          university_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "levels_university_id_fkey"
+            columns: ["university_id"]
             isOneToOne: false
             referencedRelation: "profile"
             referencedColumns: ["id"]
@@ -1027,6 +1233,7 @@ export type Database = {
       payment_status_enum: "PENDING" | "CONFIRMED" | "FAILED"
       program_status_enum: "ACTIVE" | "INACTIVE"
       role_enum: "STUDENT" | "AGENT" | "UNIVERSITY" | "ADMIN"
+      study_mode_enum: "full_time" | "part_time"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1170,6 +1377,7 @@ export const Constants = {
       payment_status_enum: ["PENDING", "CONFIRMED", "FAILED"],
       program_status_enum: ["ACTIVE", "INACTIVE"],
       role_enum: ["STUDENT", "AGENT", "UNIVERSITY", "ADMIN"],
+      study_mode_enum: ["full_time", "part_time"],
     },
   },
 } as const

@@ -134,6 +134,8 @@ export async function POST(req: NextRequest) {
             dob: getString("dob"),
             gender: getString("gender"),
             country: getString("country"),
+            state: getString("state"),
+            city: getString("city"),
             nationality: getString("nationality"),
             guardian_email: getString("guardian_email"),
             guardian_phone: getString("guardian_phone"),
@@ -287,6 +289,8 @@ export async function POST(req: NextRequest) {
                 created_by_agent_id: agentRow.id,
                 student_code: studentCode,
                 country: validatedData.country || null,
+                state: validatedData.state || null,
+                city: validatedData.city || null,
                 nationality: validatedData.nationality || null,
                 guardian_email: validatedData.guardian_email || null,
                 guardian_phone: validatedData.guardian_phone || null,
@@ -307,14 +311,17 @@ export async function POST(req: NextRequest) {
 
         /* ---------------- EDUCATION (MULTIPLE) ---------------- */
         if (validatedData.academic_background?.length) {
-            const educationRows = validatedData.academic_background.map(
-                (item: any) => ({
-                    profile_id: newUserId,
-                    qualification: item.qualification,
-                    institution_name: item.institution_name,
-                    cumulative_gpa: item.gpa,
-                })
-            )
+            const educationRows = validatedData.academic_background.map((item) => ({
+                profile_id: newUserId,
+                qualification: item.qualification,
+                institution_name: item.institution_name,
+                grade_type: item.grade_type,
+                gpa: item.grade_type === "gpa" ? parseFloat(item.gpa) : null,
+                obtained_marks:
+                    item.grade_type === "percentage" ? parseFloat(item.obtained_marks) : null,
+                total_marks:
+                    item.grade_type === "percentage" ? parseFloat(item.total_marks) : null,
+            }))
 
             const { error: deleteError } = await supabase
                 .from("education")
