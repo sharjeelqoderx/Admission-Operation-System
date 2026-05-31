@@ -13,13 +13,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { GraduationCap, FileText, Plus, RotateCcw, Search } from "lucide-react"
+import { GraduationCap, FileText, Plus, RotateCcw, Search, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
-import { ApplicationsListTable, type ApplicationRow } from "./_component/ApplicationsListTable"
+import { ApplicationsListTable } from "./_component/ApplicationsListTable"
 import { BluryCard } from "@/components/shared/blury-card"
 import { DatePicker } from "@/components/shared/date-picker"
 import { useAuth } from "@/hooks/useAuth"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
+import type { ApplicationListStats } from "@/types/schemas/application"
 
 export default function ApplicationsPage() {
     const { me } = useAuth()
@@ -87,9 +88,14 @@ export default function ApplicationsPage() {
         [response]
     )
 
-    const pendingCount = useMemo(
-        () => applications.filter((application: ApplicationRow) => application.status === "PENDING").length,
-        [applications]
+    const stats = useMemo<ApplicationListStats>(
+        () =>
+            response?.stats ?? {
+                total: 0,
+                pending: 0,
+                accepted: 0,
+            },
+        [response]
     )
 
     const hasActiveFilters = useMemo(
@@ -151,7 +157,7 @@ export default function ApplicationsPage() {
                             Total Applications
                         </Typography>
                         <Typography as="p" className="text-[28px] font-extrabold text-gray-900 leading-none">
-                            {isLoading ? "—" : applications.length}
+                            {isLoading ? "—" : stats.total}
                         </Typography>
                     </div>
                 </div>
@@ -170,7 +176,26 @@ export default function ApplicationsPage() {
                             Pending
                         </Typography>
                         <Typography as="p" className="text-[28px] font-extrabold text-gray-900 leading-none">
-                            {isLoading ? "—" : pendingCount}
+                            {isLoading ? "—" : stats.pending}
+                        </Typography>
+                    </div>
+                </div>
+                <div className="flex items-center gap-4">
+                    <BluryCard
+                        isCentered={false}
+                        sharpCorners={[]}
+                        blurAmount="backdrop-blur-2xl"
+                        className="p-4"
+                        childClass="md:p-0"
+                    >
+                        <CheckCircle2 className="size-6 text-gray-700" />
+                    </BluryCard>
+                    <div>
+                        <Typography as="p" className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                            Accepted
+                        </Typography>
+                        <Typography as="p" className="text-[28px] font-extrabold text-gray-900 leading-none">
+                            {isLoading ? "—" : stats.accepted}
                         </Typography>
                     </div>
                 </div>

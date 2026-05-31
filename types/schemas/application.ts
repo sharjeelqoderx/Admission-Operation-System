@@ -26,6 +26,12 @@ export const ApplicationListQuerySchema = z.object({
 
 export type ApplicationListQuery = z.infer<typeof ApplicationListQuerySchema>;
 
+export type ApplicationListStats = {
+  total: number
+  pending: number
+  accepted: number
+}
+
 export const CreateApplicationSchema = z.object({
   profile_id: z.string().min(1, "Please select a student"),
   course_id: z.string().uuid("Please select a course"),
