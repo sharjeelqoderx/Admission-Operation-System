@@ -20,11 +20,12 @@ import {
     type LucideIcon
 } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
-
 type NavItem = {
     icon: LucideIcon
     label: string
     href?: string
+    /** When true, links to under-development page instead of `href`. */
+    x?: boolean
     subItems?: { icon: LucideIcon; label: string; href: string }[]
 }
 
@@ -43,9 +44,9 @@ const navItems: NavItem[] = [
     { icon: BookOpen, label: "Programs", href: "/program" },
     { icon: Files, label: "All Documents", href: "/document" },
     { icon: Award, label: "Offers", href: "/offer" },
-    { icon: CreditCard, label: "Payments", href: "/payment" },
-    { icon: BadgeDollarSign, label: "Commissions", href: "/commission" },
-    { icon: MessageSquare, label: "Messages", href: "/chat" },
+    { icon: CreditCard, label: "Payments", href: "/dashboard/payment", x: true },
+    { icon: BadgeDollarSign, label: "Commissions", href: "/dashboard/commission" },
+    { icon: MessageSquare, label: "Messages", href: "/dashboard/chat", x: true },
     { icon: UserCircle, label: "Agent Profile", href: "/profile" },
 ]
 

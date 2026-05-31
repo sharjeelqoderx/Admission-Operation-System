@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
+import { normalizeDateValue } from "@/types/schemas/academic"
 
 export async function GET() {
     try {
@@ -51,6 +52,77 @@ export async function GET() {
             .select("*")
             .eq("profile_id", user.id)
 
+        let agentKyc: {
+            registrationCertificateUrl: string | null
+            idCardFrontUrl: string | null
+            idCardBackUrl: string | null
+        } | null = null
+
+        if (role === "AGENT") {
+            const { data: agentDocuments } = await supabase
+                .from("document")
+                .select("document_type_id, created_at, document_type:document_type_id(code, name), document_files(file_url, type)")
+                .eq("profile_id", user.id)
+                .order("created_at", { ascending: true })
+
+            const docs = agentDocuments ?? []
+
+            const latestUrlForCode = (code: string) => {
+                let url: string | null = null
+                for (const doc of docs) {
+                    const docType = doc.document_type as { code?: string | null; name?: string | null } | null
+                    if (docType?.code !== code) continue
+                    for (const file of doc.document_files ?? []) {
+                        url = file.file_url
+                    }
+                }
+                return url
+            }
+
+            const legacyFrontUrls: string[] = []
+            const legacyBackUrls: string[] = []
+            const legacyCnicFrontUrls: string[] = []
+            const legacyCnicBackUrls: string[] = []
+
+            for (const doc of docs) {
+                const docType = doc.document_type as { code?: string | null; name?: string | null } | null
+                const isLegacyCnic =
+                    !!doc.document_type_id &&
+                    (docType?.code === "CNIC" || docType?.name === "CNIC")
+
+                for (const file of doc.document_files ?? []) {
+                    if (isLegacyCnic) {
+                        if (file.type === "FRONT") legacyCnicFrontUrls.push(file.file_url)
+                        if (file.type === "BACK") legacyCnicBackUrls.push(file.file_url)
+                    } else if (!doc.document_type_id) {
+                        if (file.type === "FRONT") legacyFrontUrls.push(file.file_url)
+                        if (file.type === "BACK") legacyBackUrls.push(file.file_url)
+                    }
+                }
+            }
+
+            agentKyc = {
+                registrationCertificateUrl:
+                    latestUrlForCode("AGENT_REGISTRATION") ??
+                    legacyFrontUrls[0] ??
+                    null,
+                idCardFrontUrl:
+                    latestUrlForCode("AGENT_ID_FRONT") ??
+                    legacyCnicFrontUrls.at(-1) ??
+                    (legacyFrontUrls.length > 1
+                        ? legacyFrontUrls.at(-1)
+                        : legacyBackUrls.length > 0
+                            ? legacyFrontUrls[0]
+                            : null) ??
+                    null,
+                idCardBackUrl:
+                    latestUrlForCode("AGENT_ID_BACK") ??
+                    legacyCnicBackUrls.at(-1) ??
+                    legacyBackUrls.at(-1) ??
+                    null,
+            }
+        }
+
         return ok({
             id: user.id,
             email: profile?.email ?? user.email ?? "",
@@ -62,18 +134,22 @@ export async function GET() {
                 dateOfBirth: profile?.date_of_birth ?? "",
                 gender: profile?.gender ?? "",
                 country: extraData.country ?? "",
+                state: extraData.state ?? "",
+                city: extraData.city ?? "",
                 nationality: extraData.nationality ?? "",
                 guardianEmail: extraData.guardian_email ?? "",
                 guardianPhone: extraData.guardian_phone ?? "",
                 ...extraData
             },
             academic: academics && academics.length > 0 ? academics.map(academic => ({
-                degree_id: academic.degree_id ?? "",
+                qualification: academic.qualification ?? "",
+                grade_type: academic.grade_type ?? null,
+                gpa: academic.gpa != null ? String(academic.gpa) : "",
                 instituteName: academic.institution_name ?? "",
-                obtained_marks: academic.obtained_marks ? String(academic.obtained_marks) : "",
-                total_marks: academic.total_marks ? String(academic.total_marks) : "",
-                start_date: academic.start_date ?? "",
-                end_date: academic.end_date ?? "",
+                obtained_marks: academic.obtained_marks != null ? String(academic.obtained_marks) : "",
+                total_marks: academic.total_marks != null ? String(academic.total_marks) : "",
+                start_date: normalizeDateValue(academic.start_date),
+                end_date: normalizeDateValue(academic.end_date),
                 about: academic.honors ?? "",
             })) : null,
             experience: experiences && experiences.length > 0 ? {
@@ -88,6 +164,7 @@ export async function GET() {
                     responsibilities: experience.key_responsibilities ?? "",
                 }))
             } : null,
+            agentKyc,
         })
     } catch (e) {
         console.log('error -> ', e)

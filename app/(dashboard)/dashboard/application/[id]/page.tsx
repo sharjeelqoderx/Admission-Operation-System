@@ -50,10 +50,10 @@ export default function ApplicationDetailsPage() {
     }
 
     const student = application.student
-    const program = application.program
+    const course = application.course
+    const degree = course?.degree
     const university = application.university
     const documents = application.documents || []
-    const junction = program?.campus_program_junction?.[0]
 
     return (
         <div className="space-y-6 sm:space-y-8">
@@ -140,7 +140,7 @@ export default function ApplicationDetailsPage() {
                     <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-8 space-y-6">
                         <div className="flex items-center gap-2 text-brand-secondary">
                             <GraduationCap className="size-5" />
-                            <Typography font="title" className="text-lg font-bold">Program Selection</Typography>
+                            <Typography font="title" className="text-lg font-bold">Course Selection</Typography>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -153,8 +153,12 @@ export default function ApplicationDetailsPage() {
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Course / Program</Typography>
-                                    <Typography className="font-bold text-brand-secondary text-lg leading-tight">{program?.name}</Typography>
+                                    <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Course</Typography>
+                                    <Typography className="font-bold text-brand-secondary text-lg leading-tight">{course?.name}</Typography>
+                                </div>
+                                <div className="space-y-1">
+                                    <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Degree</Typography>
+                                    <Typography className="font-bold text-brand-secondary">{degree?.name ?? "N/A"}</Typography>
                                 </div>
                             </div>
 
@@ -163,12 +167,16 @@ export default function ApplicationDetailsPage() {
                                     <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Intake</Typography>
                                     <div className="flex items-center gap-2">
                                         <Clock className="size-4 text-gray-400" />
-                                        <Typography className="font-bold text-brand-secondary">{junction?.intake_date || "N/A"}</Typography>
+                                        <Typography className="font-bold text-brand-secondary">{degree?.intake_date || "N/A"}</Typography>
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tuition Fee</Typography>
-                                    <Typography className="font-bold text-brand-secondary">{junction?.currency || "€"}{junction?.tuition_fee || "0"}</Typography>
+                                    <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Fees</Typography>
+                                    <Typography className="font-bold text-brand-secondary">{degree?.fees || "Contact University"}</Typography>
+                                </div>
+                                <div className="space-y-1">
+                                    <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Last Date</Typography>
+                                    <Typography className="font-bold text-brand-secondary">{course?.deadline_date || "N/A"}</Typography>
                                 </div>
                             </div>
                         </div>

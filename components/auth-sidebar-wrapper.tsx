@@ -2,8 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import { BluryCard } from "@/components/shared/blury-card";
-import Image from "next/image";
-import { Typography } from "./shared/Typography";
 import { ReactNode } from "react";
 import { SidebarContent } from "./SideBarContent";
 

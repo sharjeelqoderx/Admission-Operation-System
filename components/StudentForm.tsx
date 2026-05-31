@@ -4,7 +4,7 @@ import React, { useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { StudentFormSchema, type StudentInput } from "@/types/schemas/student"
+import { StudentFormSchema } from "@/types/schemas/student"
 import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
@@ -19,18 +19,35 @@ import {
 } from "@/components/ui/select"
 import ImageUploadCard from "./shared/image-upload-card"
 import { DatePicker } from "@/components/shared/date-picker"
+import { CountrySelect } from "@/components/shared/country-select"
 import { Building, ChevronDown, School, FileUp } from "lucide-react"
+import { resolveGradeType, type GradeType } from "@/types/schemas/academic"
+import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
+
+function getFieldState(field: {
+    state: { meta: { isTouched: boolean; isValid: boolean; errors?: unknown[] } }
+    form: { state: { isSubmitted: boolean } }
+}) {
+    const isInvalid =
+        (field.state.meta.isTouched || field.form.state.isSubmitted) &&
+        !field.state.meta.isValid
+    const raw = field.state.meta.errors?.[0]
+    const error =
+        raw == null
+            ? undefined
+            : typeof raw === "string"
+              ? raw
+              : (raw as { message?: string }).message
+    return { isInvalid, error }
+}
 
 function F({ field, label, children }: { field: any; label: string; children: React.ReactNode }) {
-    const isSubmitted = field.form.state.isSubmitted
-    const isInvalid = isSubmitted && !field.state.meta.isValid
-    const error = field.state.meta.errors?.[0]
-    const errorMessage = typeof error === "string" ? error : (error as any)?.message
+    const { isInvalid, error } = getFieldState(field)
     return (
         <Field data-invalid={isInvalid}>
             <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
             {children}
-            {isInvalid && errorMessage && <FieldError errors={[{ message: errorMessage }]} />}
+            {isInvalid && error && <FieldError errors={[{ message: error }]} />}
         </Field>
     )
 }
@@ -44,6 +61,8 @@ type StudentData = {
     avatar_url?: string | null
     student?: {
         country?: string | null
+        state?: string | null
+        city?: string | null
         nationality?: string | null
         guardian_email?: string | null
         guardian_phone?: string | null
@@ -53,12 +72,18 @@ type StudentData = {
         id?: string | null
         qualification?: string | null
         institution_name?: string | null
-        cumulative_gpa?: number | string | null
+        grade_type?: string | null
+        gpa?: number | string | null
+        obtained_marks?: number | string | null
+        total_marks?: number | string | null
     }> | {
         id?: string | null
         qualification?: string | null
         institution_name?: string | null
-        cumulative_gpa?: number | string | null
+        grade_type?: string | null
+        gpa?: number | string | null
+        obtained_marks?: number | string | null
+        total_marks?: number | string | null
     } | null
 }
 
@@ -71,6 +96,7 @@ type Props = {
 export function StudentForm({ mode, studentId, defaultData }: Props) {
     const router = useRouter()
     const queryClient = useQueryClient()
+    const { data: degrees = [], isLoading: loadingDegrees } = useDegrees()
 
     const mutation = useMutation({
         mutationFn: async (fd: FormData) => {
@@ -103,61 +129,112 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
             email: defaultData?.email ?? "",
             phone: defaultData?.phone ?? "",
             dob: defaultData?.date_of_birth ?? "",
-            gender: (defaultData?.gender?.toUpperCase() ?? "") as "MALE" | "FEMALE",
+            gender: (defaultData?.gender?.toUpperCase() === "MALE" || defaultData?.gender?.toUpperCase() === "FEMALE"
+                ? defaultData.gender.toUpperCase()
+                : undefined) as "MALE" | "FEMALE" | undefined,
             country: defaultData?.student?.country ?? "",
+            state: defaultData?.student?.state ?? "",
+            city: defaultData?.student?.city ?? "",
             nationality: defaultData?.student?.nationality ?? "",
             guardian_email: defaultData?.student?.guardian_email ?? "",
             guardian_phone: defaultData?.student?.guardian_phone ?? "",
             avatar_url: undefined as File | undefined,
             passport_file_url: undefined as File | undefined,
             academic_background: eduList?.length
-                ? eduList.map(e => ({
-                    id: (e as any).id ?? undefined,
-                    qualification: e.qualification ?? "",
-                    institution_name: e.institution_name ?? "",
-                    gpa: e.cumulative_gpa?.toString() ?? "",
-                }))
-                : [{ qualification: "", institution_name: "", gpa: "" }],
-        } as StudentInput,
-
-        validators: { onSubmit: StudentFormSchema, onChange: StudentFormSchema },
+                ? eduList.map((e) => {
+                    const gradeType = resolveGradeType(e)
+                    return {
+                        id: (e as { id?: string }).id ?? undefined,
+                        qualification: e.qualification ?? "",
+                        institution_name: e.institution_name ?? "",
+                        grade_type: gradeType,
+                        gpa:
+                            gradeType === "gpa" && e.gpa != null && e.gpa !== ""
+                                ? String(e.gpa)
+                                : "",
+                        obtained_marks:
+                            gradeType === "percentage" &&
+                            e.obtained_marks != null &&
+                            e.obtained_marks !== ""
+                                ? String(e.obtained_marks)
+                                : "",
+                        total_marks:
+                            gradeType === "percentage" &&
+                            e.total_marks != null &&
+                            e.total_marks !== ""
+                                ? String(e.total_marks)
+                                : "",
+                    }
+                })
+                : [{
+                    qualification: "",
+                    institution_name: "",
+                    grade_type: "percentage" as GradeType,
+                    gpa: "",
+                    obtained_marks: "",
+                    total_marks: "",
+                }],
+        },
+        validators: {
+            onSubmit: StudentFormSchema,
+        },
 
         onSubmit: async ({ value }) => {
             const fd = new FormData()
-            Object.entries(value).forEach(([key, val]) => {
-                if (key === "academic_background") {
-                    fd.set(key, JSON.stringify(val))
-                } else if (key === "avatar_url" && val instanceof File) {
-                    fd.set("avatar_url", val)
-                } else if (key === "passport_file_url" && val instanceof File) {
-                    fd.set("passport_file_url", val)
-                } else if (val !== undefined && val !== null) {
-                    fd.set(key, val as string)
-                }
-            })
+            fd.set("full_name", value.full_name)
+            fd.set("email", value.email)
+            fd.set("phone", value.phone)
+            fd.set("dob", value.dob)
+            fd.set("gender", value.gender)
+            fd.set("country", value.country)
+            fd.set("state", value.state)
+            fd.set("city", value.city)
+            fd.set("nationality", value.nationality)
+            fd.set("guardian_email", value.guardian_email)
+            fd.set("guardian_phone", value.guardian_phone)
+            fd.set("academic_background", JSON.stringify(value.academic_background))
+            if (value.avatar_url instanceof File) fd.set("avatar_url", value.avatar_url)
+            if (value.passport_file_url instanceof File) fd.set("passport_file_url", value.passport_file_url)
+
             await mutation.mutateAsync(fd)
         },
     })
 
+    const handleFormSubmit = useCallback(
+        (e: React.FormEvent) => {
+            e.preventDefault()
+            e.stopPropagation()
+            void form.handleSubmit()
+        },
+        [form]
+    )
+
     const addRow = useCallback(() => {
         form.setFieldValue("academic_background", (prev: any) => [
             ...prev,
-            { qualification: "", institution_name: "", gpa: "" }
+            {
+                qualification: "",
+                institution_name: "",
+                grade_type: "percentage",
+                gpa: "",
+                obtained_marks: "",
+                total_marks: "",
+            },
         ])
     }, [form])
 
-    const removeRow = useCallback((index: number) => {
-        if (form.getFieldValue("academic_background").length <= 1) return
-        form.setFieldValue("academic_background", (prev: any) =>
-            prev.filter((_: any, i: number) => i !== index)
-        )
-    }, [form])
+    // const removeRow = useCallback((index: number) => {
+    //     if (form.getFieldValue("academic_background").length <= 1) return
+    //     form.setFieldValue("academic_background", (prev: any) =>
+    //         prev.filter((_: any, i: number) => i !== index)
+    //     )
+    // }, [form])
 
     return (
         <div className="space-y-8">
             <div className="bg-white/5 p-8 relative overflow-hidden">
 
-                <form id="student-form" onSubmit={(e) => { e.preventDefault(); form.handleSubmit() }} className="space-y-12 relative z-10">
+                <form id="student-form" onSubmit={handleFormSubmit} className="space-y-12 relative z-10">
                     <FieldGroup className="space-y-10">
 
                         {/* ── Section: Enter Student Details ── */}
@@ -240,7 +317,10 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                         <F field={field} label="Date Of Birth">
                                             <DatePicker
                                                 value={field.state.value}
-                                                onChange={v => field.handleChange(v)}
+                                                onChange={(v) => {
+                                                    field.handleChange(v)
+                                                    field.handleBlur()
+                                                }}
                                                 placeholder="Select date of birth"
                                             />
                                         </F>
@@ -250,7 +330,13 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 <form.Field name="gender">
                                     {(field) => (
                                         <F field={field} label="Select Gender">
-                                            <Select value={field.state.value} onValueChange={v => field.handleChange(v as "MALE" | "FEMALE")}>
+                                            <Select
+                                                value={field.state.value || undefined}
+                                                onValueChange={(v) => {
+                                                    field.handleChange(v as "MALE" | "FEMALE")
+                                                    field.handleBlur()
+                                                }}
+                                            >
                                                 <SelectTrigger className="h-12"><SelectValue placeholder="Select your gender" /></SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="MALE">Male</SelectItem>
@@ -263,8 +349,30 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
 
                                 <form.Field name="country">
                                     {(field) => (
-                                        <F field={field} label="Country/Location">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter country name" />
+                                        <F field={field} label="Country">
+                                            <CountrySelect
+                                                value={field.state.value}
+                                                onValueChange={(v) => {
+                                                    field.handleChange(v)
+                                                    field.handleBlur()
+                                                }}
+                                            />
+                                        </F>
+                                    )}
+                                </form.Field>
+
+                                <form.Field name="state">
+                                    {(field) => (
+                                        <F field={field} label="State">
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter state" />
+                                        </F>
+                                    )}
+                                </form.Field>
+
+                                <form.Field name="city">
+                                    {(field) => (
+                                        <F field={field} label="City">
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter city" />
                                         </F>
                                     )}
                                 </form.Field>
@@ -281,7 +389,13 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                     <form.Field name="nationality">
                                         {(field) => (
                                             <F field={field} label="Nationality">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your nationality" />
+                                                <Input
+                                                    id={field.name}
+                                                    value={field.state.value}
+                                                    onBlur={field.handleBlur}
+                                                    onChange={(e) => field.handleChange(e.target.value)}
+                                                    placeholder="Enter nationality"
+                                                />
                                             </F>
                                         )}
                                     </form.Field>
@@ -317,92 +431,201 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 </div>
                             </div>
 
-                            <form.Field name="academic_background">
+                            <form.Field name="academic_background" mode="array">
                                 {(field) => (
                                     <div className="space-y-6">
+                                        {field.state.value.map((_, index) => (
+                                            <form.Subscribe
+                                                key={index}
+                                                selector={(state) => state.values.academic_background[index]?.grade_type}
+                                            >
+                                                {(gradeType) => {
+                                                    const isGpa = gradeType === "gpa"
 
-                                        {field.state.value.map((_, index: number) => (
-                                            <div key={index} className="flex flex-col md:flex-row flex-wrap gap-4">
+                                                    return (
+                                                        <div className="flex flex-col md:flex-row flex-wrap gap-4">
+                                                            <form.Field name={`academic_background[${index}].qualification`}>
+                                                                {(subField) => (
+                                                                    <div className="flex-1 min-w-[200px]">
+                                                                        <F field={subField} label="Highest Degree">
+                                                                            <Select
+                                                                                value={subField.state.value || undefined}
+                                                                                onValueChange={(v) => {
+                                                                                    subField.handleChange(v)
+                                                                                    subField.handleBlur()
+                                                                                }}
+                                                                                disabled={loadingDegrees}
+                                                                            >
+                                                                                <SelectTrigger className="h-12">
+                                                                                    <SelectValue
+                                                                                        placeholder={
+                                                                                            loadingDegrees
+                                                                                                ? "Loading degrees..."
+                                                                                                : "Select highest degree"
+                                                                                        }
+                                                                                    />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent>
+                                                                                    {!degrees.some(
+                                                                                        (d) => d.id === subField.state.value
+                                                                                    ) &&
+                                                                                        subField.state.value && (
+                                                                                            <SelectItem value={subField.state.value}>
+                                                                                                {subField.state.value}
+                                                                                            </SelectItem>
+                                                                                        )}
+                                                                                    {degrees.map((degree) => (
+                                                                                        <SelectItem key={degree.id} value={degree.id}>
+                                                                                            {formatDegreeLabel(degree)}
+                                                                                        </SelectItem>
+                                                                                    ))}
+                                                                                </SelectContent>
+                                                                            </Select>
+                                                                        </F>
+                                                                    </div>
+                                                                )}
+                                                            </form.Field>
 
-                                                {/* ── Qualification ── */}
-                                                <div className="flex-1 min-w-[200px]">
-                                                    <Typography as="span" className="text-sm font-medium text-gray-900">
-                                                        Qualification
-                                                    </Typography>
-                                                    <Input
-                                                        placeholder="Enter qualification"
-                                                        value={field.state.value[index].qualification}
-                                                        onChange={(e) => {
-                                                            const updated = [...field.state.value]
-                                                            updated[index] = {
-                                                                ...updated[index],
-                                                                qualification: e.target.value,
-                                                            }
-                                                            field.handleChange(updated)
-                                                        }}
-                                                    />
-                                                </div>
+                                                            <form.Field name={`academic_background[${index}].institution_name`}>
+                                                                {(subField) => (
+                                                                    <div className="flex-1 min-w-[200px]">
+                                                                        <F field={subField} label="Institution Name">
+                                                                            <Input
+                                                                                placeholder="Enter institution"
+                                                                                value={subField.state.value}
+                                                                                onBlur={subField.handleBlur}
+                                                                                onChange={(e) =>
+                                                                                    subField.handleChange(e.target.value)
+                                                                                }
+                                                                            />
+                                                                        </F>
+                                                                    </div>
+                                                                )}
+                                                            </form.Field>
 
-                                                {/* ── Institution ── */}
-                                                <div className="flex-1 min-w-[200px]">
-                                                    <Typography as="span" className="text-sm font-medium text-gray-900">
-                                                        Institution Name
-                                                    </Typography>
-                                                    <Input
-                                                        placeholder="Enter institution"
-                                                        value={field.state.value[index].institution_name}
-                                                        onChange={(e) => {
-                                                            const updated = [...field.state.value]
-                                                            updated[index] = {
-                                                                ...updated[index],
-                                                                institution_name: e.target.value,
-                                                            }
-                                                            field.handleChange(updated)
-                                                        }}
-                                                    />
-                                                </div>
+                                                            <form.Field name={`academic_background[${index}].grade_type`}>
+                                                                {(subField) => (
+                                                                    <div className="flex-1 min-w-[160px]">
+                                                                        <F field={subField} label="Grade Type">
+                                                                            <Select
+                                                                                value={subField.state.value}
+                                                                                onValueChange={(v: GradeType) => {
+                                                                                    subField.handleChange(v)
+                                                                                    subField.handleBlur()
+                                                                                    if (v === "gpa") {
+                                                                                        form.setFieldValue(
+                                                                                            `academic_background[${index}].obtained_marks`,
+                                                                                            ""
+                                                                                        )
+                                                                                        form.setFieldValue(
+                                                                                            `academic_background[${index}].total_marks`,
+                                                                                            ""
+                                                                                        )
+                                                                                    } else {
+                                                                                        form.setFieldValue(
+                                                                                            `academic_background[${index}].gpa`,
+                                                                                            ""
+                                                                                        )
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                <SelectTrigger className="h-12">
+                                                                                    <SelectValue placeholder="Select grade type" />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent>
+                                                                                    <SelectItem value="percentage">Percentage</SelectItem>
+                                                                                    <SelectItem value="gpa">GPA</SelectItem>
+                                                                                </SelectContent>
+                                                                            </Select>
+                                                                        </F>
+                                                                    </div>
+                                                                )}
+                                                            </form.Field>
 
-                                                <div className="flex-1 min-w-[200px]">
-                                                    <Typography as="span" className="text-sm font-medium text-gray-900">
-                                                        GPA
-                                                    </Typography>
+                                                            {isGpa ? (
+                                                                <form.Field name={`academic_background[${index}].gpa`}>
+                                                                    {(subField) => (
+                                                                        <div className="flex-1 min-w-[140px]">
+                                                                            <F field={subField} label="GPA">
+                                                                                <Input
+                                                                                    type="number"
+                                                                                    step="0.01"
+                                                                                    min="0"
+                                                                                    max="4"
+                                                                                    placeholder="e.g. 3.5"
+                                                                                    value={subField.state.value}
+                                                                                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                                    onBlur={subField.handleBlur}
+                                                                                    onChange={(e) =>
+                                                                                        subField.handleChange(e.target.value)
+                                                                                    }
+                                                                                    onKeyDown={(e) =>
+                                                                                        ["e", "E", "-", "+"].includes(e.key) &&
+                                                                                        e.preventDefault()
+                                                                                    }
+                                                                                />
+                                                                            </F>
+                                                                        </div>
+                                                                    )}
+                                                                </form.Field>
+                                                            ) : (
+                                                                <>
+                                                                    <form.Field name={`academic_background[${index}].obtained_marks`}>
+                                                                        {(subField) => (
+                                                                            <div className="flex-1 min-w-[140px]">
+                                                                                <F field={subField} label="Obtained Marks">
+                                                                                    <Input
+                                                                                        type="number"
+                                                                                        placeholder="e.g. 850"
+                                                                                        value={subField.state.value}
+                                                                                        className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                                        onBlur={subField.handleBlur}
+                                                                                        onChange={(e) =>
+                                                                                            subField.handleChange(e.target.value)
+                                                                                        }
+                                                                                        onKeyDown={(e) =>
+                                                                                            ["e", "E", "-", "+"].includes(e.key) &&
+                                                                                            e.preventDefault()
+                                                                                        }
+                                                                                    />
+                                                                                </F>
+                                                                            </div>
+                                                                        )}
+                                                                    </form.Field>
 
-                                                    <div className="flex gap-2 items-stretch">
-                                                        <Input
-                                                            placeholder="0.00"
-                                                            value={field.state.value[index].gpa}
-                                                            className="flex-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                            onChange={(e) => {
-                                                                const val = e.target.value.replace(/[^0-9.]/g, "")
-                                                                if (val.split(".").length > 2) return // Only allow one dot
-
-                                                                const updated = [...field.state.value]
-                                                                updated[index] = {
-                                                                    ...updated[index],
-                                                                    gpa: val,
-                                                                }
-                                                                field.handleChange(updated)
-                                                            }}
-                                                        />
-
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            className="h-full self-stretch min-h-12"
-                                                            disabled={field.state.value.length <= 1}
-                                                            onClick={() => removeRow(index)}
-                                                        >
-                                                            Remove
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                                                    <form.Field name={`academic_background[${index}].total_marks`}>
+                                                                        {(subField) => (
+                                                                            <div className="flex-1 min-w-[140px]">
+                                                                                <F field={subField} label="Total Marks">
+                                                                                    <Input
+                                                                                        type="number"
+                                                                                        placeholder="e.g. 1100"
+                                                                                        value={subField.state.value}
+                                                                                        className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                                        onBlur={subField.handleBlur}
+                                                                                        onChange={(e) =>
+                                                                                            subField.handleChange(e.target.value)
+                                                                                        }
+                                                                                        onKeyDown={(e) =>
+                                                                                            ["e", "E", "-", "+"].includes(e.key) &&
+                                                                                            e.preventDefault()
+                                                                                        }
+                                                                                    />
+                                                                                </F>
+                                                                            </div>
+                                                                        )}
+                                                                    </form.Field>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    )
+                                                }}
+                                            </form.Subscribe>
                                         ))}
-
                                     </div>
                                 )}
                             </form.Field>
-                            <div className="flex justify-end">
+                            {/* <div className="flex justify-end">
                                 <Button
                                     type="button"
                                     size="lg"
@@ -412,40 +635,30 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 >
                                     + Add More
                                 </Button>
+                            </div> */}
+                        </div>
+
+                        {apiError && (
+                            <div className="space-y-3">
+                                <ErrorView message={apiError} />
                             </div>
+                        )}
+
+                        <div className="border-t border-gray-200/40 pt-8 flex justify-end w-full">
+                            <form.Subscribe selector={s => s.isSubmitting}>
+                                {(isSubmitting) => (
+                                    <Button
+                                        type="submit"
+                                        className="w-full sm:w-auto sm:min-w-[200px] h-12 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white rounded-sm text-sm font-bold transition-all"
+                                        disabled={isSubmitting || mutation.isPending}
+                                    >
+                                        {mutation.isPending ? "Processing..." : mode === "edit" ? "Update Student" : "Register"}
+                                    </Button>
+                                )}
+                            </form.Subscribe>
                         </div>
                     </FieldGroup>
                 </form>
-
-                {apiError && (
-
-                    <div className="pt-10">
-                        <ErrorView message={apiError} />
-                    </div>
-                )}
-
-                <div className="mt-12 border-t border-gray-200/40 pt-8 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 w-full">
-                    <Button
-                        variant="outline"
-                        disabled
-                        className="w-full sm:flex-1 h-12 border border-brand-byzantine text-brand-byzantine hover:text-brand-byzantine hover:bg-brand-byzantine/5 rounded-sm font-bold"
-                    >
-                        Save Student Info
-                    </Button>
-
-                    <form.Subscribe selector={s => ({ isSubmitting: s.isSubmitting, isValid: s.isValid })}>
-                        {({ isSubmitting, isValid }) => (
-                            <Button
-                                type="submit"
-                                form="student-form"
-                                className="w-full sm:flex-1 h-12 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white rounded-sm text-sm font-bold transition-all"
-                                disabled={isSubmitting || mutation.isPending || !isValid}
-                            >
-                                {mutation.isPending ? "Processing..." : mode === "edit" ? "Update Student" : "Register"}
-                            </Button>
-                        )}
-                    </form.Subscribe>
-                </div>
             </div>
         </div>
 

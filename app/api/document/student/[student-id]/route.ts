@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { fetchCourseProgramById } from "@/lib/api/course-program"
 
 export async function GET(
     req: NextRequest,
@@ -12,7 +13,7 @@ export async function GET(
 
         const { "student-id": studentId } = await params
         const { searchParams } = new URL(req.url)
-        const programId = searchParams.get("program_id")
+        const courseId = searchParams.get("course_id")
 
         const { data: profile } = await supabase
             .from("profile")
@@ -47,14 +48,12 @@ export async function GET(
             }
         }
 
-        // If program_id provided, fetch required doc type ids first
         let requiredDocTypeIds: string[] | null = null
-        if (programId) {
-            const { data: reqs } = await supabase
-                .from("program_document_requirements")
-                .select("document_type_id")
-                .eq("program_id", programId)
-            requiredDocTypeIds = (reqs ?? []).map((r: any) => r.document_type_id)
+        if (courseId) {
+            const course = await fetchCourseProgramById(supabase, courseId)
+            requiredDocTypeIds = (course?.degree?.requirements ?? [])
+                .map((requirement) => requirement.document_type?.id)
+                .filter((id): id is string => Boolean(id))
         }
 
         let query = supabase

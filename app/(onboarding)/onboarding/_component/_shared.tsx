@@ -74,12 +74,18 @@ export function DatePicker({ value, onChange }: { value: string; onChange: (val:
     )
 }
 
-export function F({ isInvalid = false, error, label, children }: { isInvalid?: boolean; error?: any; label: string; children: React.ReactNode }) {
+export function F({ isInvalid = false, error, label, children }: { isInvalid?: boolean; error?: unknown; label: string; children: React.ReactNode }) {
+    const normalizedError = error == null
+        ? undefined
+        : typeof error === "string"
+            ? { message: error }
+            : (error as { message?: string })
+
     return (
         <Field data-invalid={isInvalid}>
             <FieldLabel>{label}</FieldLabel>
             {children}
-            {isInvalid && error && <FieldError errors={[error]} />}
+            {isInvalid && normalizedError?.message && <FieldError errors={[normalizedError]} />}
         </Field>
     )
 }

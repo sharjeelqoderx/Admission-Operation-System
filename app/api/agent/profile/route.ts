@@ -3,20 +3,73 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { agentProfileSchema } from "@/types/schemas/auth"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
+import { assertFilesWithinSizeLimit } from "@/lib/constants/file-upload"
 
 const BUCKET = "student-admission"
+
+const AGENT_DOC_TYPE_BY_FILE: Record<string, string> = {
+    registration_certificate: "AGENT_REGISTRATION",
+    id_card_front: "AGENT_ID_FRONT",
+    id_card_back: "AGENT_ID_BACK",
+}
+
+/** DB check constraint: document_files.type IN ('FRONT', 'BACK') */
+const AGENT_FILE_SIDE: Record<keyof typeof AGENT_DOC_TYPE_BY_FILE, "FRONT" | "BACK"> = {
+    registration_certificate: "FRONT",
+    id_card_front: "FRONT",
+    id_card_back: "BACK",
+}
+
+async function resolveDocumentTypeId(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    typeCode: string
+) {
+    const { data: byCode } = await supabase
+        .from("document_type")
+        .select("id")
+        .eq("code", typeCode)
+        .maybeSingle()
+    if (byCode?.id) return byCode.id
+
+    const { data: byName } = await supabase
+        .from("document_type")
+        .select("id")
+        .eq("name", typeCode)
+        .maybeSingle()
+
+    return byName?.id ?? null
+}
 
 async function uploadAndSaveDocument({
     supabase,
     userId,
     file,
-    name,
+    fileKey,
 }: {
     supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
     userId: string
     file: File
-    name: string
+    fileKey: keyof typeof AGENT_DOC_TYPE_BY_FILE
 }) {
+    const documentTypeId = await resolveDocumentTypeId(
+        supabase,
+        AGENT_DOC_TYPE_BY_FILE[fileKey]
+    )
+
+    const { data: document, error: docError } = await supabase
+        .from("document")
+        .insert({
+            profile_id: userId,
+            uploaded_by_profile_id: userId,
+            document_type_id: documentTypeId,
+        })
+        .select("id")
+        .single()
+
+    if (docError || !document) {
+        throw new Error(docError?.message ?? "Failed to create document")
+    }
+
     const uploaded = await uploadPublicImage({
         supabase,
         bucket: BUCKET,
@@ -24,14 +77,22 @@ async function uploadAndSaveDocument({
         file,
     })
 
-    const { error } = await supabase.from("document").insert({
-        profile_id: userId,
-        uploaded_by_profile_id: userId,
-        url: uploaded.publicUrl,
-        name,
+    const { error: fileError } = await supabase.from("document_files").insert({
+        document_id: document.id,
+        file_url: uploaded.publicUrl,
+        type: AGENT_FILE_SIDE[fileKey],
     })
 
-    if (error) throw new Error(error.message)
+    if (fileError) throw new Error(fileError.message)
+
+    const { error: reviewError } = await supabase.from("document_review").insert({
+        document_id: document.id,
+        reviewed_by_profile_id: null,
+        status: "PENDING",
+        feedback: null,
+    })
+
+    if (reviewError) throw new Error(reviewError.message)
 }
 
 export async function POST(req: NextRequest) {
@@ -54,6 +115,8 @@ export async function POST(req: NextRequest) {
             contact_person_name: maybe("contact_person_name"),
             gender: maybe("gender"),
             country: maybe("country"),
+            state: maybe("state"),
+            city: maybe("city"),
             website: maybe("website"),
             experience_years: experienceRaw ? Number(experienceRaw) : undefined,
             address: maybe("address"),
@@ -80,6 +143,8 @@ export async function POST(req: NextRequest) {
                 profile_id: user.id,
                 contact_person_name: data.contact_person_name,
                 country: data.country,
+                state: data.state,
+                city: data.city,
                 website: data.website,
                 experience_years: data.experience_years,
                 address: data.address,
@@ -90,12 +155,18 @@ export async function POST(req: NextRequest) {
         const idFront = form.get("id_card_front")
         const idBack = form.get("id_card_back")
 
+        assertFilesWithinSizeLimit(
+            registration instanceof File ? registration : null,
+            idFront instanceof File ? idFront : null,
+            idBack instanceof File ? idBack : null,
+        )
+
         if (registration instanceof File) {
             await uploadAndSaveDocument({
                 supabase,
                 userId: user.id,
                 file: registration,
-                name: "registration_certificate",
+                fileKey: "registration_certificate",
             })
         }
         if (idFront instanceof File) {
@@ -103,7 +174,7 @@ export async function POST(req: NextRequest) {
                 supabase,
                 userId: user.id,
                 file: idFront,
-                name: "id_card_front",
+                fileKey: "id_card_front",
             })
         }
         if (idBack instanceof File) {
@@ -111,7 +182,7 @@ export async function POST(req: NextRequest) {
                 supabase,
                 userId: user.id,
                 file: idBack,
-                name: "id_card_back",
+                fileKey: "id_card_back",
             })
         }
 

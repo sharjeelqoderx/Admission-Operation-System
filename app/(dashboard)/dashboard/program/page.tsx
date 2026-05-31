@@ -1,17 +1,18 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, SlidersHorizontal, AlertCircle } from "lucide-react"
-import { ProgramCard, ProgramSkeleton, InfiniteLoader } from "./_component/ProgramCard"
+import { ProgramCard, InfiniteLoader } from "./_component/ProgramCard"
 import { useDebounce } from "@/hooks/use-debounce"
+import { useLevels } from "@/hooks/useLevels"
 import { Button } from "@/components/ui/button"
-
 import { PageLoader } from "@/components/shared/page-loader"
+import type { ProgramListResponse } from "@/types/schemas/program"
 
 export default function ProgramDashboard() {
     const searchParams = useSearchParams()
@@ -20,10 +21,16 @@ export default function ProgramDashboard() {
     const observerTarget = useRef<HTMLDivElement>(null)
 
     const urlSearch = searchParams.get("search") || ""
-    const category = searchParams.get("category") || "ALL"
+    const levelId = searchParams.get("level_id") || "ALL"
 
     const [localSearch, setLocalSearch] = useState(urlSearch)
     const debouncedSearch = useDebounce(localSearch, 600)
+
+    const { data: levels = [], isLoading: levelsLoading } = useLevels()
+
+    useEffect(() => {
+        setLocalSearch(urlSearch)
+    }, [urlSearch])
 
     useEffect(() => {
         const params = new URLSearchParams(searchParams.toString())
@@ -40,15 +47,15 @@ export default function ProgramDashboard() {
         isFetchingNextPage,
         isLoading,
         isError,
-        refetch
-    } = useInfiniteQuery({
-        queryKey: ["programs", urlSearch, category],
+        refetch,
+    } = useInfiniteQuery<ProgramListResponse>({
+        queryKey: ["programs", urlSearch, levelId],
         queryFn: async ({ pageParam = 0 }) => {
             const params = new URLSearchParams()
             if (urlSearch) params.set("search", urlSearch)
-            if (category !== "ALL") params.set("category", category)
+            if (levelId !== "ALL") params.set("level_id", levelId)
             params.set("limit", "10")
-            params.set("offset", pageParam.toString())
+            params.set("offset", String(pageParam))
 
             const res = await fetch(`/api/program?${params.toString()}`)
             const json = await res.json()
@@ -61,7 +68,7 @@ export default function ProgramDashboard() {
             }
             return undefined
         },
-        initialPageParam: 0
+        initialPageParam: 0,
     })
 
     useEffect(() => {
@@ -81,15 +88,19 @@ export default function ProgramDashboard() {
         return () => observer.disconnect()
     }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-    const updateCategory = (val: string) => {
+    const updateLevel = (val: string) => {
         const params = new URLSearchParams(searchParams.toString())
-        if (val && val !== "ALL") params.set("category", val)
-        else params.delete("category")
+        if (val && val !== "ALL") params.set("level_id", val)
+        else params.delete("level_id")
         router.push(`${pathname}?${params.toString()}`)
     }
 
-    const categories = ["Engineering & IT", "Business & Management", "Media & Design", "Medical & Health", "Arts & Humanities", "Business & IT"]
-    const allPrograms = data?.pages?.flatMap((page) => page?.data || []) || []
+    const allPrograms = useMemo(
+        () => data?.pages.flatMap((page) => page.data) ?? [],
+        [data]
+    )
+
+    const isPageLoading = levelsLoading || isLoading || (isFetching && !isFetchingNextPage)
 
     return (
         <div className="space-y-8">
@@ -115,21 +126,23 @@ export default function ProgramDashboard() {
 
                 <div className="flex items-center gap-2 bg-white px-4 rounded-xl shadow-sm border border-gray-100 min-w-[240px]">
                     <SlidersHorizontal size={18} className="text-gray-400 shrink-0" />
-                    <Select value={category} onValueChange={updateCategory}>
+                    <Select value={levelId} onValueChange={updateLevel} disabled={levelsLoading}>
                         <SelectTrigger className="border-0 focus:ring-0 h-14 font-bold text-gray-700 bg-transparent">
-                            <SelectValue placeholder="All Categories" />
+                            <SelectValue placeholder="All Levels" />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl border-gray-100">
-                            <SelectItem value="ALL">All Categories</SelectItem>
-                            {categories.map(cat => (
-                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            <SelectItem value="ALL">All Levels</SelectItem>
+                            {levels.map((level) => (
+                                <SelectItem key={level.id} value={level.id}>
+                                    {level.name}
+                                </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                 </div>
             </div>
 
-            {(isLoading || (isFetching && !isFetchingNextPage)) ? (
+            {isPageLoading ? (
                 <PageLoader label={isLoading ? "Loading programs..." : "Searching programs..."} />
             ) : isError ? (
                 <div className="flex flex-col items-center justify-center py-32 text-center space-y-4">
@@ -137,13 +150,14 @@ export default function ProgramDashboard() {
                         <AlertCircle className="size-8 text-red-400" />
                     </div>
                     <Typography font="title" className="text-gray-700">Failed to load programs</Typography>
-
-                    <Button onClick={() => refetch()} variant="outline" className="rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50">Try Again</Button>
+                    <Button onClick={() => refetch()} variant="outline" className="rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50">
+                        Try Again
+                    </Button>
                 </div>
             ) : (
                 <div className="space-y-6">
-                    {allPrograms.map((program) => (
-                        <ProgramCard key={program.id} program={program} />
+                    {allPrograms.map((course) => (
+                        <ProgramCard key={course.id} course={course} />
                     ))}
 
                     <div ref={observerTarget} className="h-10 w-full" />
@@ -153,10 +167,9 @@ export default function ProgramDashboard() {
                     {!hasNextPage && allPrograms.length > 0 && (
                         <div className="text-center py-10">
                             <Typography font="small" className="text-gray-800 uppercase tracking-widest">
-                                You've reached the end of the catalog
+                                You&apos;ve reached the end of the catalog
                             </Typography>
                         </div>
-
                     )}
 
                     {allPrograms.length === 0 && !isFetching && (
@@ -164,9 +177,10 @@ export default function ProgramDashboard() {
                             <div className="size-16 rounded-2xl bg-gray-50 flex items-center justify-center">
                                 <Search className="size-8 text-gray-300" />
                             </div>
-                            <Typography font="sub-text" className="text-gray-500">No programs found matching your criteria</Typography>
+                            <Typography font="sub-text" className="text-gray-500">
+                                No programs found matching your criteria
+                            </Typography>
                         </div>
-
                     )}
                 </div>
             )}

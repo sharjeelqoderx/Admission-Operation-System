@@ -1,0 +1,48 @@
+import { z } from "zod"
+import type { Tables } from "@/types/supabase"
+
+export const ProgramListQuerySchema = z.object({
+    search: z.string().trim().optional(),
+    level_id: z.string().uuid().optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(10),
+    offset: z.coerce.number().int().min(0).default(0),
+})
+
+export type ProgramListQuery = z.infer<typeof ProgramListQuerySchema>
+
+export const ProgramDetailParamsSchema = z.object({
+    id: z.string().uuid(),
+})
+
+export type ProgramDetailParams = z.infer<typeof ProgramDetailParamsSchema>
+
+type DocumentTypeSummary = Pick<
+    Tables<"document_type">,
+    "id" | "name" | "code" | "type" | "description" | "is_active" | "may_expire"
+>
+
+export type CourseRequirement = Pick<
+    Tables<"degree_requirement">,
+    "id" | "created_at" | "updated_at"
+> & {
+    document_type: DocumentTypeSummary | null
+}
+
+export type CourseDegree = Tables<"degree"> & {
+    level: Pick<Tables<"levels">, "id" | "name"> | null
+    requirements: CourseRequirement[]
+}
+
+export type CourseProgram = Tables<"course"> & {
+    degree: CourseDegree | null
+}
+
+export type ProgramListResponse = {
+    data: CourseProgram[]
+    pagination: {
+        total: number
+        limit: number
+        offset: number
+        hasMore: boolean
+    }
+}

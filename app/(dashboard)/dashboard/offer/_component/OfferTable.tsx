@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useMemo } from "react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -9,35 +9,120 @@ import {
     Table,
     TableHeader,
     TableBody,
+    TableFooter,
     TableRow,
     TableHead,
     TableCell,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 
-export function OfferTable({
-    offers,
-    isLoading,
-    isError,
-    searchQuery
-}: {
-    offers: any[]
+export type OfferRow = {
+    id: string
+    status: string
+    created_at: string
+    application?: {
+        id: string
+        application_no: string | null
+        student?: { id: string; name: string | null; avatar_url: string | null; email: string | null } | null
+        course?: {
+            id: string
+            name: string | null
+            degree?: { id: string; name: string } | null
+        } | null
+        university?: { id: string; name: string | null } | null
+    } | null
+}
+
+type Props = {
+    offers: OfferRow[]
     isLoading: boolean
     isError: boolean
     searchQuery: string
-}) {
-    const filteredOffers = offers.filter(offer => {
-        if (!searchQuery) return true;
-        const s = searchQuery.toLowerCase();
-        return (
-            offer.application?.student?.name?.toLowerCase().includes(s) ||
-            offer.application?.student?.email?.toLowerCase().includes(s) ||
-            offer.application?.program?.name?.toLowerCase().includes(s)
-        )
-    });
+    onRetry: () => void
+}
 
+const COLUMN_COUNT = 6
+
+function formatCreatedDate(value: string) {
+    return new Date(value).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    })
+}
+
+export const OfferTable = React.memo(function OfferTable({
+    offers,
+    isLoading,
+    isError,
+    searchQuery,
+    onRetry,
+}: Props) {
+    const filteredOffers = useMemo(() => {
+        if (!searchQuery) return offers
+        const s = searchQuery.toLowerCase()
+        return offers.filter(
+            (offer) =>
+                offer.application?.student?.name?.toLowerCase().includes(s) ||
+                offer.application?.student?.email?.toLowerCase().includes(s) ||
+                offer.application?.course?.name?.toLowerCase().includes(s) ||
+                offer.application?.course?.degree?.name?.toLowerCase().includes(s)
+        )
+    }, [offers, searchQuery])
+
+    if (isLoading) {
+        return (
+            <BluryCard
+                isCentered={false}
+                blurAmount="backdrop-blur-lg"
+                blendColorClass="bg-white/10"
+                childClass="p-0!"
+                className="rounded-lg p-0"
+            >
+                <div className="flex flex-col items-center justify-center py-24 gap-3">
+                    <Loader2 className="size-8 text-brand-secondary animate-spin" />
+                    <Typography as="p" className="text-sm font-medium text-gray-500">
+                        Loading offers...
+                    </Typography>
+                </div>
+            </BluryCard>
+        )
+    }
+
+    if (isError) {
+        return (
+            <BluryCard
+                isCentered={false}
+                blurAmount="backdrop-blur-lg"
+                blendColorClass="bg-white/10"
+                childClass="p-0!"
+                className="rounded-lg p-0"
+            >
+                <div className="flex flex-col items-center justify-center py-24 gap-4">
+                    <div className="size-16 rounded-2xl bg-red-50 flex items-center justify-center">
+                        <AlertCircle className="size-8 text-red-400" />
+                    </div>
+                    <div className="text-center">
+                        <Typography as="p" className="text-sm font-bold text-gray-700">
+                            Failed to load offers
+                        </Typography>
+                        <Typography as="p" className="text-xs text-gray-500 mt-1">
+                            Check your connection and try again.
+                        </Typography>
+                    </div>
+                    <button
+                        onClick={onRetry}
+                        className="px-5 py-2 rounded-xl text-sm font-semibold bg-brand-secondary text-white hover:bg-brand-secondary/90 transition-colors"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </BluryCard>
+        )
+    }
 
     return (
         <BluryCard
@@ -47,63 +132,61 @@ export function OfferTable({
             childClass="p-0!"
             className="rounded-lg p-0"
         >
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl">
                 <Table className="w-full text-left border-collapse min-w-[900px]">
-                    <TableHeader>
-                        <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
-                                Student Name
+                    <TableHeader className="sticky top-0 z-10">
+                        <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                Student
                             </TableHead>
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Program
                             </TableHead>
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
-                                Campus
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                University
                             </TableHead>
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Status
                             </TableHead>
-                            <TableHead className="px-8 py-6 text-[10px] font-extrabold tracking-widest text-gray-600 uppercase">
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                Created
+                            </TableHead>
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Action
                             </TableHead>
                         </TableRow>
                     </TableHeader>
 
-                    <TableBody className="divide-y divide-white/10">
-                        {isLoading ? (
-                            Array.from({ length: 3 }).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell colSpan={5} className="px-8 py-6 text-center">
-                                        <div className="h-8 w-full bg-white/20 animate-pulse rounded" />
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        ) : isError ? (
+                    <TableBody className="bg-white/45">
+                        {filteredOffers.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="px-8 py-6 text-center text-red-500">
-                                    Failed to load offers.
-                                </TableCell>
-                            </TableRow>
-                        ) : filteredOffers.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5} className="px-8 py-6 text-center text-gray-500">
-                                    No offers found.
+                                <TableCell colSpan={COLUMN_COUNT} className="px-8 py-16 text-center">
+                                    <Typography as="p" className="text-sm text-gray-500 font-medium">
+                                        No offers found.
+                                    </Typography>
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredOffers.map((offer) => {
-                                const studentName = offer.application?.student?.name || "Unknown Student";
+                            filteredOffers.map((offer, index) => {
+                                const studentName = offer.application?.student?.name ?? "—"
                                 const initials = studentName
                                     .split(" ")
-                                    .map((n: string) => n[0])
+                                    .map((n) => n[0])
                                     .join("")
                                     .slice(0, 2)
-                                    .toUpperCase();
+                                    .toUpperCase()
 
                                 return (
-                                    <TableRow key={offer.id} className="hover:bg-white/10 transition-colors group">
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
-                                            <div className="flex items-center gap-4">
+                                    <TableRow
+                                        key={offer.id}
+                                        className={cn(
+                                            "border-b border-brand-secondary/15 transition-colors",
+                                            index % 2 === 0 ? "bg-white/70" : "bg-white/45",
+                                            "hover:bg-brand-secondary/5"
+                                        )}
+                                    >
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <div className="flex items-center gap-3">
                                                 <Avatar className="size-10 rounded-xl border-2 border-white/50">
                                                     <AvatarImage
                                                         src={
@@ -121,30 +204,45 @@ export function OfferTable({
                                                     <Typography as="span" className="text-sm font-bold text-gray-900">
                                                         {studentName}
                                                     </Typography>
-                                                    <Typography as="span" className="text-[11px] text-gray-500 font-light">
-                                                        {offer.application?.application_no || "N/A"}
-                                                    </Typography>
+                                                    {offer.application?.application_no && (
+                                                        <Typography as="span" className="text-[11px] text-gray-500 font-light">
+                                                            {offer.application.application_no}
+                                                        </Typography>
+                                                    )}
                                                 </div>
                                             </div>
                                         </TableCell>
 
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-bold text-gray-700">
-                                                {offer.application?.program?.name || "N/A"}
-                                            </Typography>
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <div className="flex flex-col">
+                                                <Typography as="span" className="text-sm font-bold text-gray-700">
+                                                    {offer.application?.course?.name ?? "—"}
+                                                </Typography>
+                                                {offer.application?.course?.degree?.name && (
+                                                    <Typography as="span" className="text-[11px] text-gray-500 font-light">
+                                                        {offer.application.course.degree.name}
+                                                    </Typography>
+                                                )}
+                                            </div>
                                         </TableCell>
 
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <Typography as="span" className="text-sm font-light text-gray-600">
-                                                {offer.application?.university?.name || "N/A"}
+                                                {offer.application?.university?.name ?? "—"}
                                             </Typography>
                                         </TableCell>
 
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <StatusBadge status={offer.status} />
                                         </TableCell>
 
-                                        <TableCell className="px-8 py-6 whitespace-nowrap">
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <Typography as="span" className="text-sm font-medium text-gray-600">
+                                                {formatCreatedDate(offer.created_at)}
+                                            </Typography>
+                                        </TableCell>
+
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <Button
                                                 variant="outline"
                                                 className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
@@ -160,31 +258,37 @@ export function OfferTable({
                             })
                         )}
                     </TableBody>
+
+                    <TableFooter className="border-t-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
+                        <TableRow className="hover:bg-brand-secondary/10 border-0">
+                            <TableCell colSpan={COLUMN_COUNT} className="px-8 py-5">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1">
+                                        <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                            Showing
+                                        </Typography>
+                                        <Typography as="span" className="text-[12px] font-bold text-brand-blue-text mx-1">
+                                            {filteredOffers.length}
+                                        </Typography>
+                                        <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                            entries
+                                        </Typography>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="outline" size="icon">
+                                            <ChevronLeft size={16} />
+                                        </Button>
+                                        <Button variant="outline" size="icon">
+                                            <ChevronRight size={16} />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    </TableFooter>
                 </Table>
-            </div>
-
-            <div className="flex items-center justify-between px-8 py-5 border-t border-white/20 bg-white/5">
-                <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1">
-                    <Typography as="span" className="text-[12px] font-light text-gray-500">
-                        Showing
-                    </Typography>
-                    <Typography as="span" className="text-[12px] font-bold text-gray-700 mx-1">
-                        {filteredOffers.length}
-                    </Typography>
-                    <Typography as="span" className="text-[12px] font-light text-gray-500">
-                        entries
-                    </Typography>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon">
-                        <ChevronLeft size={16} />
-                    </Button>
-                    <Button variant="outline" size="icon">
-                        <ChevronRight size={16} />
-                    </Button>
-                </div>
             </div>
         </BluryCard>
     )
-}
+})

@@ -13,6 +13,8 @@ import { BluryCard } from "@/components/shared/blury-card"
 import { Typography } from "@/components/shared/Typography"
 import { signupSchema } from "@/types/schemas/auth"
 import { useAuth } from "@/hooks/useAuth"
+import { useQueryClient } from "@tanstack/react-query"
+import { clearSessionQueryCache } from "@/lib/query/session-cache"
 import { ErrorView } from "@/components/shared/error-view"
 
 
@@ -24,6 +26,7 @@ export function SignupFirstStep({ onNext }: { onNext: () => void }) {
     const role = searchParams.get("role") ?? "student"
     const normalizedRole = role.toUpperCase() as "STUDENT" | "AGENT"
 
+    const queryClient = useQueryClient()
     const { signup } = useAuth()
 
     const form = useForm({
@@ -37,6 +40,7 @@ export function SignupFirstStep({ onNext }: { onNext: () => void }) {
 
         onSubmit: async ({ value }) => {
             try {
+                clearSessionQueryCache(queryClient)
                 await signup.mutateAsync({
                     fullName: value.fullName,
                     email: value.email,

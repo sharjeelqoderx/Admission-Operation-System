@@ -1,6 +1,178 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CreateApplicationSchema } from "@/types/schemas/application";
+import {
+    attachLevelsToCourses,
+    COURSE_SELECT,
+    type CourseRow,
+} from "@/lib/api/course-program";
+
+const APPLICATION_LIST_SELECT = `
+    id,
+    application_no,
+    status,
+    created_at,
+    course_id,
+    student:profile_id ( id, name, avatar_url, email ),
+    agent:submitted_by_profile_id ( id, name )
+`;
+
+type ApplicationListRow = {
+    id: string;
+    application_no: string | null;
+    status: string;
+    created_at: string;
+    course_id: string;
+    student: {
+        id: string;
+        name: string | null;
+        avatar_url: string | null;
+        email: string | null;
+    } | null;
+    agent: { id: string; name: string | null } | null;
+};
+
+async function attachStudentCodes(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    profileIds: string[]
+) {
+    if (profileIds.length === 0) {
+        return new Map<string, string | null>();
+    }
+
+    const { data: students, error } = await supabase
+        .from("student")
+        .select("profile_id, student_code")
+        .in("profile_id", profileIds);
+
+    if (error) {
+        throw error;
+    }
+
+    return new Map(
+        (students ?? []).map((student) => [student.profile_id, student.student_code])
+    );
+}
+
+async function attachCoursesToApplications(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    applications: ApplicationListRow[]
+) {
+    const profileIds = [
+        ...new Set(
+            applications
+                .map((application) => application.student?.id)
+                .filter((id): id is string => Boolean(id))
+        ),
+    ];
+    const studentCodeByProfile = await attachStudentCodes(supabase, profileIds);
+
+    const courseIds = [
+        ...new Set(applications.map((application) => application.course_id).filter(Boolean)),
+    ];
+
+    if (courseIds.length === 0) {
+        return applications.map((application) => ({
+            id: application.id,
+            application_no: application.application_no,
+            status: application.status,
+            created_at: application.created_at,
+            student: application.student
+                ? {
+                      ...application.student,
+                      student_code:
+                          studentCodeByProfile.get(application.student.id) ?? null,
+                  }
+                : null,
+            agent: application.agent,
+            course: null,
+        }));
+    }
+
+    const { data: courses, error } = await supabase
+        .from("course")
+        .select(COURSE_SELECT)
+        .in("id", courseIds);
+
+    if (error) {
+        throw error;
+    }
+
+    const coursesWithLevels = await attachLevelsToCourses(
+        supabase,
+        (courses ?? []) as CourseRow[]
+    );
+    const courseById = new Map(coursesWithLevels.map((course) => [course.id, course]));
+
+    return applications.map((application) => {
+        const course = courseById.get(application.course_id) ?? null;
+        return {
+            id: application.id,
+            application_no: application.application_no,
+            status: application.status,
+            created_at: application.created_at,
+            student: application.student
+                ? {
+                      ...application.student,
+                      student_code:
+                          studentCodeByProfile.get(application.student.id) ?? null,
+                  }
+                : null,
+            agent: application.agent,
+            course: course
+                ? {
+                      id: course.id,
+                      name: course.name,
+                      deadline_date: course.deadline_date,
+                      degree: course.degree
+                          ? {
+                                id: (course.degree as { id: string }).id,
+                                name: (course.degree as { name: string }).name,
+                                fees: (course.degree as { fees?: string | null }).fees ?? null,
+                                intake_date:
+                                    (course.degree as { intake_date?: string | null }).intake_date ??
+                                    null,
+                            }
+                          : null,
+                  }
+                : null,
+        };
+    });
+}
+
+async function canAccessStudentApplications(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    userId: string,
+    role: string | undefined,
+    studentId: string
+) {
+    if (role === "STUDENT") {
+        return userId === studentId;
+    }
+
+    if (role === "AGENT") {
+        const { data: agentRow } = await supabase
+            .from("agent")
+            .select("id")
+            .eq("profile_id", userId)
+            .maybeSingle();
+
+        if (!agentRow) {
+            return false;
+        }
+
+        const { data: studentRow } = await supabase
+            .from("student")
+            .select("id")
+            .eq("profile_id", studentId)
+            .eq("created_by_agent_id", agentRow.id)
+            .maybeSingle();
+
+        return Boolean(studentRow);
+    }
+
+    return role === "UNIVERSITY" || role === "ADMIN";
+}
 
 export async function GET(req: NextRequest) {
     try {
@@ -15,40 +187,43 @@ export async function GET(req: NextRequest) {
         const studentId = searchParams.get("student_id");
         const limit = searchParams.get("limit");
 
-        // Build query — join student profile, program name, and agent name
-        let query = supabase
-            .from("application")
-            .select(`
-                id,
-                application_no,
-                status,
-                created_at,
-                student:profile_id ( id, name, avatar_url, email ),
-                program:program_id ( id, name ),
-                agent:submitted_by_profile_id ( id, name )
-            `)
-            .order("created_at", { ascending: false });
-
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
             .from("profile")
             .select("role")
             .eq("id", user.id)
             .single();
 
+        if (profileError || !profile) {
+            return NextResponse.json({ error: "Profile not found" }, { status: 403 });
+        }
+
         if (studentId) {
-            // Filter by specific student (used on student detail page)
+            const allowed = await canAccessStudentApplications(
+                supabase,
+                user.id,
+                profile.role,
+                studentId
+            );
+
+            if (!allowed) {
+                return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            }
+        }
+
+        let query = supabase
+            .from("application")
+            .select(APPLICATION_LIST_SELECT)
+            .order("created_at", { ascending: false });
+
+        if (studentId) {
             query = query.eq("profile_id", studentId);
-        } else if (profile?.role === "STUDENT") {
-            // Students see their own applications
+        } else if (profile.role === "STUDENT") {
             query = query.eq("profile_id", user.id);
-        } else if (profile?.role === "AGENT") {
-            // Agents see applications they submitted
+        } else if (profile.role === "AGENT") {
             query = query.eq("submitted_by_profile_id", user.id);
-        } else if (profile?.role === "UNIVERSITY") {
-            // Universities see applications assigned to them
+        } else if (profile.role === "UNIVERSITY") {
             query = query.eq("university_id", user.id);
         }
-        // ADMIN and other roles see all applications
 
         if (limit) {
             query = query.limit(parseInt(limit, 10));
@@ -58,13 +233,29 @@ export async function GET(req: NextRequest) {
 
         if (error) {
             console.error("GET /api/application error:", error);
-            return NextResponse.json({ error: "Failed to fetch applications" }, { status: 500 });
+            return NextResponse.json(
+                {
+                    error: "Failed to fetch applications",
+                    message: error.message,
+                    details: error,
+                },
+                { status: 500 }
+            );
         }
 
-        return NextResponse.json({ data: applications ?? [], role: profile?.role }, { status: 200 });
+        const result = await attachCoursesToApplications(
+            supabase,
+            (applications ?? []) as ApplicationListRow[]
+        );
+
+        return NextResponse.json({ data: result, role: profile.role }, { status: 200 });
     } catch (e) {
         console.error("GET /api/application error:", e);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        const message = e instanceof Error ? e.message : "Unknown error occurred";
+        return NextResponse.json(
+            { error: "Internal Server Error", message },
+            { status: 500 }
+        );
     }
 }
 
@@ -80,7 +271,6 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const validatedData = CreateApplicationSchema.parse(body);
 
-        // Verify the profile making the request is an AGENT or the STUDENT themselves
         const { data: profile } = await supabase
             .from("profile")
             .select("id, role")
@@ -90,26 +280,34 @@ export async function POST(req: NextRequest) {
         if (!profile) {
             return NextResponse.json({ error: "Profile not found" }, { status: 403 });
         }
- 
-        // Check for existing application for this student and program
+
+        const { data: course } = await supabase
+            .from("course")
+            .select("id")
+            .eq("id", validatedData.course_id)
+            .maybeSingle();
+
+        if (!course) {
+            return NextResponse.json({ error: "Selected course not found" }, { status: 400 });
+        }
+
         const { data: existingApp } = await supabase
             .from("application")
             .select("id")
             .eq("profile_id", validatedData.profile_id)
-            .eq("program_id", validatedData.program_id)
-            .neq("status", "REJECTED") // Allow re-application if previous was rejected
+            .eq("course_id", validatedData.course_id)
+            .neq("status", "REJECTED")
             .maybeSingle();
  
         if (existingApp) {
-            return NextResponse.json({ error: "Application is already created for this program" }, { status: 400 });
+            return NextResponse.json({ error: "Application is already created for this course" }, { status: 400 });
         }
 
-        // Insert into application table using the regular supabase client (authenticated as the user)
         const { data: application, error: insertError } = await supabase
             .from("application")
             .insert({
                 profile_id: validatedData.profile_id,
-                program_id: validatedData.program_id,
+                course_id: validatedData.course_id,
                 university_id: validatedData.university_id,
                 status: "PENDING",
                 submitted_by_profile_id: user.id,
@@ -126,7 +324,6 @@ export async function POST(req: NextRequest) {
             }, { status: 400 });
         }
 
-        // 2. Link the selected documents to this application
         if (validatedData.document_ids && validatedData.document_ids.length > 0) {
             const documentLinks = validatedData.document_ids.map(docId => ({
                 application_id: application.id,
@@ -139,7 +336,6 @@ export async function POST(req: NextRequest) {
 
             if (docLinkError) {
                 console.error("Document Linking Error:", docLinkError);
-                // We don't fail the whole request but we log it
             }
         }
 
@@ -148,19 +344,20 @@ export async function POST(req: NextRequest) {
             message: "Application created successfully" 
         }, { status: 201 });
 
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error("CRITICAL: POST /api/application error:", e);
         
-        if (e?.name === "ZodError") {
+        if (e && typeof e === "object" && "name" in e && e.name === "ZodError" && "errors" in e) {
             return NextResponse.json({ 
                 error: "Validation failed", 
                 details: e.errors 
             }, { status: 400 });
         }
         
+        const message = e instanceof Error ? e.message : "Unknown error occurred";
         return NextResponse.json({ 
             error: "Internal Server Error",
-            message: e.message || "Unknown error occurred"
+            message,
         }, { status: 500 });
     }
 }

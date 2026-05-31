@@ -51,16 +51,19 @@ export async function GET(
                         date_of_birth,
                         signature
                     ),
-                    program:program_id (
+                    course:course_id (
                         id,
                         name,
-                        category,
-                        program_length,
-                        campus_program_junction (
+                        deadline_date,
+                        degree:degree_id (
+                            id,
+                            name,
+                            fees,
                             intake_date,
-                            tuition_fee,
-                            currency,
-                            study_type
+                            study_mode,
+                            duration,
+                            location,
+                            language_of_study
                         )
                     ),
                     university:university_id (

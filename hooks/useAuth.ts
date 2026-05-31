@@ -1,4 +1,6 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { clearSessionQueryCache } from "@/lib/query/session-cache"
+import { isSessionActive, setSessionActive } from "@/lib/auth/client-session"
 import { z } from "zod"
 import { Enums, Tables, TablesUpdate } from "@/types/supabase"
 import { loginSchema, otpSchema, signupSchema } from "@/types/schemas/auth"
@@ -54,14 +56,18 @@ type AuthUserResponse = {
         dateOfBirth: NonNullable<ProfileRow["date_of_birth"]> | ""
         gender: NonNullable<ProfileRow["gender"]> | ""
         country: NonNullable<StudentRow["country"]> | ""
+        state: NonNullable<StudentRow["state"]> | ""
+        city: NonNullable<StudentRow["city"]> | ""
         nationality: NonNullable<StudentRow["nationality"]> | ""
         guardianEmail: NonNullable<StudentRow["guardian_email"]> | ""
         guardianPhone: NonNullable<StudentRow["guardian_phone"]> | ""
     }
 
     academic: Array<{
-        degree_id: string
+        qualification: string
         instituteName: string
+        grade_type?: string | null
+        gpa?: string
         obtained_marks: string
         total_marks: string
         start_date: string
@@ -80,6 +86,11 @@ type AuthUserResponse = {
             responsibilities: string
         }>
     } | null
+    agentKyc?: {
+        registrationCertificateUrl: string | null
+        idCardFrontUrl: string | null
+        idCardBackUrl: string | null
+    } | null
     message?: string
 }
 
@@ -97,10 +108,12 @@ type ProfilePayload = {
 type AcademicPayload = {
     userId: ProfileRow["id"]
     academics: Array<{
-        degree_id: string
+        qualification: string
         instituteName: string
-        obtained_marks: number
-        total_marks: number
+        grade_type: "percentage" | "gpa"
+        gpa: number | null
+        obtained_marks: number | null
+        total_marks: number | null
         start_date?: string
         end_date?: string
         about?: string
@@ -143,16 +156,33 @@ async function get<T>(url: string): Promise<T> {
 }
 
 export function useAuth() {
+    const queryClient = useQueryClient()
+
     const login = useMutation({
         mutationFn: (payload: LoginPayload) =>
             post<AuthUserResponse>("/api/auth/login", payload),
+        onSuccess: () => {
+            setSessionActive(true)
+            clearSessionQueryCache(queryClient)
+        },
     })
     const signup = useMutation({
         mutationFn: (payload: SignupPayload) =>
             post<AuthUserResponse>("/api/auth/signup", payload),
+        onSuccess: () => {
+            setSessionActive(true)
+            clearSessionQueryCache(queryClient)
+        },
     })
     const logout = useMutation({
         mutationFn: () => post<{ message: string }>("/api/auth/logout", {}),
+        onMutate: () => {
+            setSessionActive(false)
+            queryClient.cancelQueries({ queryKey: ["me"] })
+        },
+        onSuccess: () => {
+            clearSessionQueryCache(queryClient)
+        },
     })
     const sendOtp = useMutation({
         mutationFn: (payload: SendOtpPayload) =>
@@ -161,13 +191,26 @@ export function useAuth() {
     const verifyOtp = useMutation({
         mutationFn: (payload: VerifyOtpPayload) =>
             post<{ message: string }>("/api/auth/verify-otp", payload),
+        onSuccess: () => {
+            setSessionActive(true)
+            clearSessionQueryCache(queryClient)
+        },
     })
     const me = useQuery({
         queryKey: ["me"],
-        queryFn: () => get<AuthUserResponse>("/api/me"),
-        staleTime: 5 * 60 * 1000,
-        gcTime: 30 * 60 * 1000,
-        refetchOnWindowFocus: false,
+        queryFn: async () => {
+            try {
+                return await get<AuthUserResponse>("/api/me")
+            } catch (error) {
+                setSessionActive(false)
+                throw error
+            }
+        },
+        enabled: isSessionActive(),
+        staleTime: 0,
+        gcTime: 0,
+        refetchOnMount: "always",
+        refetchOnWindowFocus: isSessionActive(),
         retry: false,
     })
     const profile = useMutation({
@@ -207,6 +250,9 @@ export function useAuth() {
             const data: ApiResponse<{ message: string }> = await res.json()
             if (!data.success) throw new Error(data.error ?? "Request failed")
             return data.data
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["me"] })
         },
     })
 

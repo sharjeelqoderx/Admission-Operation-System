@@ -23,7 +23,7 @@ import {
   Building,
   UserPlus,
   Eye,
-  FileUp,
+  // FileUp,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -83,12 +83,12 @@ const sidebarRoutes = [
     icon: Folder,
     allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
     children: [
-      {
-        label: 'Upload Document',
-        href: '/dashboard/document/new',
-        icon: FileUp,
-        allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
-      },
+      // {
+      //   label: 'Upload Document',
+      //   href: '/dashboard/document/new',
+      //   icon: FileUp,
+      //   allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+      // },
       {
         label: 'View Documents',
         href: '/dashboard/document',
@@ -258,7 +258,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div
               className="absolute inset-0"
               style={{
-                backgroundColor: "#e1e8fc",
+                backgroundColor: "#f0f4fe",
                 // backgroundImage: 'url("/bg-pattern.png")',
                 // backgroundSize: 'cover',
                 // backgroundPosition: 'center',

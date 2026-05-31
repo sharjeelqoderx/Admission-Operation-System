@@ -1,5 +1,174 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { ProgramListQuerySchema } from "@/types/schemas/program"
+import {
+    attachLevelsToCourses,
+    COURSE_SELECT,
+    type CourseRow,
+} from "@/lib/api/course-program"
+
+async function getDegreeIdsForLevel(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    levelId: string
+): Promise<string[]> {
+    const { data, error } = await supabase
+        .from("degree")
+        .select("id")
+        .eq("level_id", levelId)
+
+    if (error) {
+        throw error
+    }
+
+    return (data ?? []).map((row) => row.id)
+}
+
+export async function GET(req: NextRequest) {
+    try {
+        const supabase = await createSupabaseServerClient()
+        const { searchParams } = new URL(req.url)
+
+        const parsed = ProgramListQuerySchema.safeParse({
+            search: searchParams.get("search") ?? undefined,
+            level_id: searchParams.get("level_id") ?? undefined,
+            limit: searchParams.get("limit") ?? undefined,
+            offset: searchParams.get("offset") ?? undefined,
+        })
+
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Invalid query parameters", details: parsed.error.flatten() },
+                { status: 400 }
+            )
+        }
+
+        const { search, level_id, limit, offset } = parsed.data
+        const searchTerm = search?.trim()
+
+        let matchingDegreeIds: string[] = []
+        let levelDegreeIds: string[] | null = null
+
+        if (level_id) {
+            try {
+                levelDegreeIds = await getDegreeIdsForLevel(supabase, level_id)
+            } catch (levelError) {
+                console.error("level filter error:", levelError)
+                return NextResponse.json(
+                    { error: "Failed to filter by level", details: levelError },
+                    { status: 500 }
+                )
+            }
+
+            if (levelDegreeIds.length === 0) {
+                return NextResponse.json({
+                    data: [],
+                    pagination: { total: 0, limit, offset, hasMore: false },
+                })
+            }
+        }
+
+        if (searchTerm) {
+            const { data: degrees, error: degreeSearchError } = await supabase
+                .from("degree")
+                .select("id")
+                .or(
+                    `name.ilike.%${searchTerm}%,location.ilike.%${searchTerm}%,language_of_study.ilike.%${searchTerm}%`
+                )
+
+            if (degreeSearchError) {
+                console.error("degree search error:", degreeSearchError)
+                return NextResponse.json(
+                    { error: "Failed to search programs", details: degreeSearchError },
+                    { status: 500 }
+                )
+            }
+
+            matchingDegreeIds = (degrees ?? []).map((row) => row.id)
+        }
+
+        const getBaseQuery = () => {
+            let query = supabase
+                .from("course")
+                .select(COURSE_SELECT, { count: "exact" })
+
+            if (levelDegreeIds) {
+                query = query.in("degree_id", levelDegreeIds)
+            }
+
+            if (searchTerm) {
+                if (matchingDegreeIds.length > 0) {
+                    query = query.or(
+                        `name.ilike.%${searchTerm}%,degree_id.in.(${matchingDegreeIds.join(",")})`
+                    )
+                } else {
+                    query = query.ilike("name", `%${searchTerm}%`)
+                }
+            }
+
+            return query
+        }
+
+        const { count: totalCount, error: countError } = await getBaseQuery().limit(0)
+
+        if (countError) {
+            console.error("course count error:", countError)
+            return NextResponse.json(
+                { error: "Failed to fetch count", details: countError },
+                { status: 500 }
+            )
+        }
+
+        if (totalCount !== null && offset >= totalCount && offset > 0) {
+            return NextResponse.json({
+                data: [],
+                pagination: { total: totalCount, limit, offset, hasMore: false },
+            })
+        }
+
+        const { data, error } = await getBaseQuery()
+            .order("name", { ascending: true })
+            .range(offset, offset + limit - 1)
+
+        if (error) {
+            console.error("course fetch error:", error)
+            return NextResponse.json(
+                { error: "Failed to fetch programs", details: error },
+                { status: 500 }
+            )
+        }
+
+        let result = data ?? []
+
+        try {
+            result = await attachLevelsToCourses(supabase, result as CourseRow[])
+        } catch (levelAttachError) {
+            console.error("level attach error:", levelAttachError)
+            return NextResponse.json(
+                { error: "Failed to attach level data", details: levelAttachError },
+                { status: 500 }
+            )
+        }
+
+        return NextResponse.json({
+            data: result,
+            pagination: {
+                total: totalCount ?? 0,
+                limit,
+                offset,
+                hasMore: offset + result.length < (totalCount ?? 0),
+            },
+        })
+    } catch (error) {
+        console.error("Internal error:", error)
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    }
+}
+
+/*
+// ─── Legacy: campus_program_junction + program ─────────────────
+
+import { NextRequest, NextResponse } from "next/server"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 export async function GET(req: NextRequest) {
     try {
@@ -51,7 +220,6 @@ export async function GET(req: NextRequest) {
             return q
         }
 
-        // Get total count matching filters (using limit(0) to get count without data)
         const { count: totalCount, error: countError } = await getBaseQuery().limit(0)
 
         if (countError) {
@@ -59,7 +227,6 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Failed to fetch count", details: countError }, { status: 500 })
         }
 
-        // Return empty if offset is beyond count
         if (totalCount !== null && offset >= totalCount && offset > 0) {
             return NextResponse.json({
                 data: [],
@@ -116,3 +283,4 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
 }
+*/

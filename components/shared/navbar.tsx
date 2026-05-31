@@ -1,8 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, Search, ChevronDown, Menu, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Bell, ChevronDown, Menu, X } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -74,7 +73,7 @@ export function Navbar({
     return (
         <nav
             className={cn(
-                'h-20 bg-background/20 backdrop-blur-md border-b border-border/50',
+                'h-20 bg-white/75 backdrop-blur-md border-b border-border/50',
                 'flex items-center justify-between px-4 sm:px-8',
                 'sticky top-0 z-40'
             )}
@@ -97,65 +96,51 @@ export function Navbar({
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{title}</h1>
             </div>
 
-            <div className="flex items-center gap-4 sm:gap-8">
-                <div className="hidden lg:flex relative w-64 xl:w-80">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                        type="text"
-                        placeholder="Search for services"
-                        className="pl-10 pr-4 py-2 h-10 rounded-lg bg-gray-100 border-none text-sm focus-visible:ring-1 focus-visible:ring-purple-400"
-                    />
-                </div>
+            <div className="flex items-center gap-3 sm:gap-4">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative text-gray-600 hover:text-brand-byzantine"
+                    aria-label="Notifications"
+                >
+                    <Bell className="w-5 h-5" />
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-brand-byzantine rounded-full" />
+                </Button>
 
-                <div className="flex items-center gap-3">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="relative text-gray-600 hover:text-brand-byzantine"
-                        aria-label="Notifications"
-                    >
-                        <Bell className="w-5 h-5" />
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-brand-byzantine rounded-full" />
-                    </Button>
-
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-14 gap-3 px-4 py-2 border border-brand-byzantine rounded-xl hover:bg-brand-byzantine/10 bg-brand-byzantine/5 transition-colors">
-                                <div className="hidden sm:flex flex-col items-end">
-                                    <span className="text-sm font-bold text-gray-800 leading-tight">{userName}</span>
-                                    <span className="text-xs text-brand-byzantine font-medium">{userRole}</span>
-                                </div>
-                                <Avatar className="w-9 h-9 border-2 border-purple-100">
-                                    <AvatarImage src={userImage} alt={userName} />
-                                    <AvatarFallback className="bg-brand-byzantine text-white text-xs font-bold">
-                                        {userName
-                                            .split(' ')
-                                            .map((n) => n[0])
-                                            .join('')}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <ChevronDown className="w-4 h-4 text-gray-400" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 mt-2">
-                            <DropdownMenuItem className="flex flex-col items-start gap-1 cursor-pointer p-2">
-                                <span className="font-bold text-gray-800">{userName}</span>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="h-14 gap-3 px-4 py-2 border border-brand-byzantine rounded-xl hover:bg-brand-byzantine/10 bg-brand-byzantine/5 transition-colors">
+                            <div className="hidden sm:flex flex-col items-end">
+                                <span className="text-sm font-bold text-gray-800 leading-tight">{userName}</span>
                                 <span className="text-xs text-brand-byzantine font-medium">{userRole}</span>
-                            </DropdownMenuItem>
-                            {/* <DropdownMenuSeparator /> */}
-                            {/* <DropdownMenuItem className="cursor-pointer">Agent Profile</DropdownMenuItem> */}
-                            {/* <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem> */}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                className="text-red-600 cursor-pointer p-2"
-                                disabled={logout.isPending}
-                                onClick={handleLogout}
-                            >
-                                {logout.isPending ? 'Logging out...' : 'Logout'}
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
+                            </div>
+                            <Avatar className="w-9 h-9 border-2 border-purple-100">
+                                <AvatarImage src={userImage} alt={userName} />
+                                <AvatarFallback className="bg-brand-byzantine text-white text-xs font-bold">
+                                    {userName
+                                        .split(' ')
+                                        .map((n) => n[0])
+                                        .join('')}
+                                </AvatarFallback>
+                            </Avatar>
+                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56 mt-2">
+                        <DropdownMenuItem className="flex flex-col items-start gap-1 cursor-pointer p-2">
+                            <span className="font-bold text-gray-800">{userName}</span>
+                            <span className="text-xs text-brand-byzantine font-medium">{userRole}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            className="text-red-600 cursor-pointer p-2"
+                            disabled={logout.isPending}
+                            onClick={handleLogout}
+                        >
+                            {logout.isPending ? 'Logging out...' : 'Logout'}
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </nav>
     );

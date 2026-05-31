@@ -50,9 +50,17 @@ export async function GET(req: NextRequest) {
                             avatar_url,
                             email
                         ),
-                        program:program_id (
+                        course:course_id (
                             id,
-                            name
+                            name,
+                            deadline_date,
+                            degree:degree_id (
+                                id,
+                                name,
+                                fees,
+                                intake_date,
+                                study_mode
+                            )
                         ),
                         university:university_id (
                             id,
