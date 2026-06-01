@@ -27,7 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       lang="en"
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", publicSans.variable)}
     >
-      <body className="app-bg">
+      <body cz-shortcut-listen="true" className="app-bg">
         <Providers>{children}</Providers>
       </body>
     </html>

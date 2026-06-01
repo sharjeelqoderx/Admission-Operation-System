@@ -32,6 +32,11 @@ import {
     formatProgramDate,
     formatStudyMode,
 } from "@/lib/utils/program"
+import {
+    buildDbBedingteZuLetterHtml,
+    buildDbBedingteZuLetterParamsFromOffer,
+    openDbBedingteZuLetterPreview,
+} from "@/components/shared/db-bedingte-zu/db-bedingte-zu"
 
 
 function buildAdmissionDetailRows(
@@ -144,6 +149,8 @@ export default function OfferDetailsPage() {
     const [isDrawing, setIsDrawing] = React.useState(false)
     const [hasSigned, setHasSigned] = React.useState(false)
     const [isSubmitting, setIsSubmitting] = React.useState(false)
+    const [isDownloadingConditionalLetter, setIsDownloadingConditionalLetter] =
+        React.useState(false)
     const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
 
     const fetchOffer = useCallback(async () => {
@@ -156,7 +163,7 @@ export default function OfferDetailsPage() {
     const { data: offer, isLoading, isError, refetch } = useQuery({
         queryKey: ["offer", offerId],
         queryFn: fetchOffer,
-        enabled: !!offerId,
+        enabled: Boolean(offerId),
     })
 
     React.useEffect(() => {
@@ -167,7 +174,7 @@ export default function OfferDetailsPage() {
                     const rect = canvas.getBoundingClientRect()
                     canvas.width = rect.width
                     canvas.height = rect.height
-                    
+
                     const ctx = canvas.getContext("2d")
                     if (ctx) {
                         ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -244,7 +251,7 @@ export default function OfferDetailsPage() {
         setHasSigned(false)
     }
 
-    const handleSaveSignature = async () => {
+    const handleSaveSignature = useCallback(async () => {
         const canvas = canvasRef.current
         if (!canvas || !hasSigned) {
             toast.error("Please draw your signature first.")
@@ -276,20 +283,9 @@ export default function OfferDetailsPage() {
         } finally {
             setIsSubmitting(false)
         }
-    }
+    }, [hasSigned, offerId, refetch])
 
-    if (isLoading) return <PageLoader label="Loading offer details..." />
-
-    if (isError || !offer) {
-        return (
-            <div className="flex flex-col items-center justify-center py-40 gap-4">
-                <Typography className="font-bold text-gray-700">Offer not found</Typography>
-                <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
-            </div>
-        )
-    }
-
-    const app = offer.application
+    const app = offer?.application
     const student = app?.student
     const course = app?.course
     const degree = course?.degree
@@ -299,14 +295,14 @@ export default function OfferDetailsPage() {
     const latestReview = reviews[reviews.length - 1]
     const admissionDetailRows = buildAdmissionDetailRows(course, degree)
 
-    const issuedAt = offer.created_at
+    const issuedAt = offer?.created_at
         ? new Date(offer.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
         : "—"
     const appCreatedAt = app?.created_at
         ? new Date(app.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
         : "—"
 
-    const acceptedAt = (offer as any).accepted_at
+    const acceptedAt = (offer as any)?.accepted_at
         ? new Date((offer as any).accepted_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
         : null
 
@@ -315,16 +311,126 @@ export default function OfferDetailsPage() {
     const feesFormatted = degree?.fees ?? "—"
     const courseDisplayName = [course?.name, degree?.name].filter(Boolean).join(" · ") || "—"
 
-    const offerStatus = String(offer.status ?? "PENDING").toUpperCase()
-    const isOfferSigned = offerStatus === "ACCEPTED" && Boolean(offer.file_url)
+    const offerStatus = String(offer?.status ?? "PENDING").toUpperCase()
+    const isOfferSigned = offerStatus === "ACCEPTED" && Boolean(offer?.file_url)
     const canAcceptAndSign = !isOfferSigned && offerStatus !== "REJECTED"
+    const isDbBedingteZuEnabled = true
 
-    const openSignModal = () => {
+    const openSignModal = useCallback(() => {
         setHasSigned(false)
         setIsSignModalOpen(true)
-    }
+    }, [])
 
-    const handleViewLetter = () => {
+    const handleViewDbBedingteZuLetter = useCallback(() => {
+        if (!offer) return
+
+        const html = buildDbBedingteZuLetterHtml(
+            buildDbBedingteZuLetterParamsFromOffer(offer, window.location.origin)
+        )
+
+        const opened = openDbBedingteZuLetterPreview(html)
+        if (!opened) {
+            toast.error("Could not open preview. Please allow pop-ups for this site.")
+        }
+    }, [offer])
+
+    const handleDownloadDbBedingteZuPDF = useCallback(async () => {
+        if (typeof window === "undefined" || !offer) {
+            toast.error("Offer data is not ready yet.")
+            return
+        }
+
+        const offerSnapshot = offer
+        const pdfFileName = `db-bedingte-zu-${applicationRef}.pdf`
+
+        setIsDownloadingConditionalLetter(true)
+        const toastId = toast.loading("Generating conditional letter PDF...")
+
+        try {
+            const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+                import("jspdf"),
+                import("html2canvas"),
+            ])
+
+            const origin = window.location.origin
+            const html = buildDbBedingteZuLetterHtml(
+                buildDbBedingteZuLetterParamsFromOffer(offerSnapshot, origin)
+            )
+
+            const iframe = document.createElement("iframe")
+            iframe.style.position = "fixed"
+            iframe.style.left = "-9999px"
+            iframe.style.top = "-9999px"
+            iframe.style.width = "794px"
+            iframe.style.height = "1123px"
+            iframe.style.border = "none"
+            document.body.appendChild(iframe)
+
+            const doc = iframe.contentDocument || iframe.contentWindow?.document
+            if (!doc) throw new Error("Could not access iframe document")
+
+            doc.open()
+            doc.write(html)
+            doc.close()
+
+            const images = doc.getElementsByTagName("img")
+            if (images.length > 0) {
+                await Promise.all(
+                    Array.from(images).map((img) => {
+                        if (img.complete) return Promise.resolve()
+                        return new Promise<void>((resolve) => {
+                            img.onload = () => resolve()
+                            img.onerror = () => resolve()
+                        })
+                    })
+                )
+            } else {
+                await new Promise((resolve) => setTimeout(resolve, 100))
+            }
+
+            const pages = Array.from(doc.querySelectorAll<HTMLElement>(".a4-page"))
+            if (pages.length === 0) throw new Error("No pages found for PDF generation")
+
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4",
+            })
+
+            for (let i = 0; i < pages.length; i += 1) {
+                const pageEl = pages[i]
+                const canvas = await html2canvas(pageEl, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: "#ffffff",
+                    logging: false,
+                    width: 794,
+                    height: 1123,
+                    windowWidth: 794,
+                    windowHeight: 1123,
+                })
+
+                const imgData = canvas.toDataURL("image/png")
+                if (i > 0) pdf.addPage()
+                pdf.addImage(imgData, "PNG", 0, 0, 210, 297)
+            }
+
+            document.body.removeChild(iframe)
+
+            pdf.save(pdfFileName)
+            toast.success("Conditional letter PDF downloaded successfully!")
+        } catch (err) {
+            console.error(err)
+            toast.error("Failed to generate conditional letter PDF. Please try again.")
+        } finally {
+            toast.dismiss(toastId)
+            setIsDownloadingConditionalLetter(false)
+        }
+    }, [applicationRef, offer])
+
+    const handleViewLetter = useCallback(() => {
+        if (!offer) return
+
         const signatureHtml = offer.status === "ACCEPTED" && offer.file_url
             ? `<div style="margin-top:auto;border-top:1px dashed #e5e7eb;padding-top:24px;display:flex;flex-direction:column;align-items:flex-end;">
                  <img src="${offer.file_url}" alt="Signature" style="width:140px;height:48px;object-fit:contain;background:transparent;mix-blend-mode:multiply;" />
@@ -366,8 +472,8 @@ export default function OfferDetailsPage() {
             <thead><tr style="background:#f9fafb;"><th colspan="2" style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Admission Details</th></tr></thead>
             <tbody>
               ${admissionDetailRows.map(([label, value]) =>
-                `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
-              ).join("")}
+            `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
+        ).join("")}
             </tbody>
           </table>
           ${signatureHtml}
@@ -380,9 +486,22 @@ export default function OfferDetailsPage() {
             win.document.write(html)
             win.document.close()
         }
-    }
+    }, [
+        acceptedAt,
+        admissionDetailRows,
+        app?.application_no,
+        app?.id,
+        course?.name,
+        degree?.name,
+        issuedAt,
+        offer,
+        student?.name,
+        university?.name,
+    ])
 
-    const handleDownloadPDF = async () => {
+    const handleDownloadPDF = useCallback(async () => {
+        if (!offer) return
+
         const toastId = toast.loading("Generating PDF...")
 
         try {
@@ -483,8 +602,8 @@ export default function OfferDetailsPage() {
                     <thead><tr style="background:#f9fafb;"><th colspan="2" style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Admission Details</th></tr></thead>
                     <tbody>
                       ${admissionDetailRows.map(([label, value]) =>
-                        `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
-                      ).join("")}
+                `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
+            ).join("")}
                     </tbody>
                   </table>
                 </div>
@@ -546,6 +665,34 @@ export default function OfferDetailsPage() {
             toast.dismiss(toastId)
             toast.error("Failed to generate PDF. Please try again.")
         }
+    }, [
+        acceptedAt,
+        admissionDetailRows,
+        app?.application_no,
+        course?.name,
+        degree?.name,
+        issuedAt,
+        offer,
+        offerId,
+        student?.name,
+        university?.name,
+    ])
+
+    if (isDownloadingConditionalLetter) {
+        return <PageLoader label="Generating conditional letter PDF..." />
+    }
+
+    if (!offerId || isLoading) {
+        return <PageLoader label="Loading offer details..." />
+    }
+
+    if (isError || !offer) {
+        return (
+            <div className="flex flex-col items-center justify-center py-40 gap-4">
+                <Typography className="font-bold text-gray-700">Offer not found</Typography>
+                <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
+            </div>
+        )
     }
 
     return (
@@ -647,7 +794,7 @@ export default function OfferDetailsPage() {
                             <DetailRow
                                 label="Intake Date"
                                 value={intakeDateFormatted}
-                                // icon={<Clock className="size-3.5 text-gray-400 shrink-0" />}
+                            // icon={<Clock className="size-3.5 text-gray-400 shrink-0" />}
                             />
                             <DetailRow label="Fees" value={feesFormatted} />
                             <DetailRow label="Location" value={degree?.location} />
@@ -659,10 +806,37 @@ export default function OfferDetailsPage() {
                             <DetailRow
                                 label="Application Deadline"
                                 value={formatIntakeDate(course?.deadline_date) ?? undefined}
-                                // icon={<Calendar className="size-3.5 text-gray-400 shrink-0" />}
+                            // icon={<Calendar className="size-3.5 text-gray-400 shrink-0" />}
                             />
                         </div>
                     </BluryCard>
+
+                    {isDbBedingteZuEnabled && (
+                        <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6 space-y-4">
+                            <SectionHeader icon={FileCheck} title="DB-bedingte-zu Letter" />
+                            <Typography font="sub-text" className="text-sm text-gray-600">
+                                View or download the conditional letter (3 pages).
+                            </Typography>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 rounded-xl gap-2 border-white/50 bg-white/30"
+                                    onClick={handleViewDbBedingteZuLetter}
+                                >
+                                    <Eye className="size-4" />
+                                    View
+                                </Button>
+                                <Button
+                                    className="flex-1 rounded-xl gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90"
+                                    onClick={handleDownloadDbBedingteZuPDF}
+                                    disabled={isDownloadingConditionalLetter}
+                                >
+                                    <Download className="size-4" />
+                                    Download
+                                </Button>
+                            </div>
+                        </BluryCard>
+                    )}
 
                     {reviews.length > 0 && (
                         <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6">
@@ -845,8 +1019,8 @@ export default function OfferDetailsPage() {
                 <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="bg-[#f8f9fa] rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl relative border border-white/20 animate-in zoom-in-95 duration-200">
                         {/* Close button */}
-                        <button 
-                            onClick={() => setIsSignModalOpen(false)} 
+                        <button
+                            onClick={() => setIsSignModalOpen(false)}
                             className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-full hover:bg-gray-200/50"
                         >
                             <X className="size-5" />
@@ -878,8 +1052,8 @@ export default function OfferDetailsPage() {
 
                         {/* Action Buttons */}
                         <div className="flex items-center justify-between gap-3">
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 className="rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 font-semibold px-5"
                                 onClick={clearCanvas}
                                 disabled={isSubmitting}
@@ -888,8 +1062,8 @@ export default function OfferDetailsPage() {
                             </Button>
 
                             <div className="flex items-center gap-3">
-                                <Button 
-                                    variant="ghost" 
+                                <Button
+                                    variant="ghost"
                                     className="rounded-xl text-gray-500 hover:bg-gray-100"
                                     onClick={() => setIsSignModalOpen(false)}
                                     disabled={isSubmitting}
