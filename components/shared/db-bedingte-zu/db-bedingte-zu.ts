@@ -3,6 +3,62 @@ import {
   buildDbBedingteZuLetterHeaderHtml,
 } from "@/components/shared/db-bedingte-zu/letter-header-footer"
 
+export type LetterType =
+  | "business_administration"
+  | "international_business"
+  | "digital_business"
+  | "media_management"
+  | "tourism_management"
+  | "sport_management"
+  | "event_management"
+  | "health_management"
+  | "psychology"
+
+export const LETTER_CONFIGS: Record<
+  LetterType,
+  {
+    courseNameEN: string
+    courseNameDE: string
+  }
+> = {
+  business_administration: {
+    courseNameEN: "Business Administration",
+    courseNameDE: "Betriebswirtschaftslehre",
+  },
+  international_business: {
+    courseNameEN: "International Business",
+    courseNameDE: "Internationales Wirtschaften",
+  },
+  digital_business: {
+    courseNameEN: "Digital Business",
+    courseNameDE: "Digitale Wirtschaft",
+  },
+  media_management: {
+    courseNameEN: "Media Management",
+    courseNameDE: "Medienmanagement",
+  },
+  tourism_management: {
+    courseNameEN: "Tourism Management",
+    courseNameDE: "Tourismusmanagement",
+  },
+  sport_management: {
+    courseNameEN: "Sport Management",
+    courseNameDE: "Sportmanagement",
+  },
+  event_management: {
+    courseNameEN: "Event Management",
+    courseNameDE: "Eventmanagement",
+  },
+  health_management: {
+    courseNameEN: "Health Management",
+    courseNameDE: "Gesundheitsmanagement",
+  },
+  psychology: {
+    courseNameEN: "Psychology",
+    courseNameDE: "Psychologie",
+  },
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -31,6 +87,7 @@ export function buildDbBedingteZuLetterHtml(params: {
   programWindow: string
   registrationWindow: string
   universityName?: string
+  letterType: LetterType
 }) {
   const {
     origin,
@@ -50,9 +107,6 @@ export function buildDbBedingteZuLetterHtml(params: {
     website: "https://www.fh-mittelstand.de",
     email: "info@fh-mittelstand.de",
   })
-
-  const stampSrc = `${origin}/db-bedingte-zu/conditional-letter-stamp.png`
-  const signatureSrc = `${origin}/db-bedingte-zu/signature.png`
 
   const page1Body = `
       ${header}
@@ -123,10 +177,6 @@ export function buildDbBedingteZuLetterHtml(params: {
           Prof. Dr. Volker Wittberg<br/>
           Prorektor Internationales
         </div>
-        <div style="display:flex;align-items:flex-end;gap:12px;">
-          <img src="${signatureSrc}" alt="Signature" style="height:44px;width:auto;object-fit:contain;mix-blend-mode:multiply;"/>
-          <img src="${stampSrc}" alt="Stamp" style="height:64px;width:auto;object-fit:contain;"/>
-        </div>
       </div>
     `
 
@@ -191,10 +241,6 @@ export function buildDbBedingteZuLetterHtml(params: {
         <div style="font-size:11px;color:#111827;line-height:1.7;">
           With kind regards,<br/>
           <span style="font-weight:800;">${escapeHtml(universityName)}</span>
-        </div>
-        <div style="display:flex;align-items:flex-end;gap:12px;">
-          <img src="${signatureSrc}" alt="Signature" style="height:44px;width:auto;object-fit:contain;mix-blend-mode:multiply;"/>
-          <img src="${stampSrc}" alt="Stamp" style="height:64px;width:auto;object-fit:contain;"/>
         </div>
       </div>
     `

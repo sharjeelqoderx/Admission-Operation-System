@@ -1,7 +1,6 @@
 "use client"
 
-import React, { useCallback } from "react"
-import Link from "next/link"
+import React, { useCallback, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
@@ -25,11 +24,9 @@ import {
     X,
     CreditCard,
     ArrowRight,
-    Copy,
     Check
 } from "lucide-react"
 import { toast } from "sonner"
-import { useAuth } from "@/hooks/useAuth"
 import {
     formatIntakeDate,
     formatProgramDate,
@@ -145,12 +142,10 @@ function SummaryMetric({
     )
 }
 
-export default function OfferDetailsPage() {
+export default function OfferSignPage() {
     const params = useParams()
     const router = useRouter()
-    const offerId = params?.["offer-id"] as string
-    const { me } = useAuth()
-    const [copied, setCopied] = React.useState(false)
+    const offerId = params?.offerId as string
 
     const [isSignModalOpen, setIsSignModalOpen] = React.useState(false)
     const [isDrawing, setIsDrawing] = React.useState(false)
@@ -160,21 +155,8 @@ export default function OfferDetailsPage() {
         React.useState(false)
     const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
 
-    const handleCopySignLink = useCallback(async () => {
-        const signLink = `${window.location.origin}/offer-sign/${offerId}`
-        try {
-            await navigator.clipboard.writeText(signLink)
-            setCopied(true)
-            toast.success("Sign link copied to clipboard!")
-            setTimeout(() => setCopied(false), 2000)
-        } catch (err) {
-            console.error("Failed to copy link:", err)
-            toast.error("Failed to copy link")
-        }
-    }, [offerId])
-
     const fetchOffer = useCallback(async () => {
-        const res = await fetch(`/api/offer/${offerId}`)
+        const res = await fetch(`/api/public-offer/${offerId}`)
         if (!res.ok) throw new Error("Failed to fetch offer")
         const json = await res.json()
         return json.data
@@ -186,7 +168,19 @@ export default function OfferDetailsPage() {
         enabled: Boolean(offerId),
     })
 
-    React.useEffect(() => {
+    useEffect(() => {
+        // Automatically open sign modal when offer loads and is ready to sign
+        if (offer) {
+            const offerStatus = String(offer.status ?? "PENDING").toUpperCase()
+            const isOfferSigned = offerStatus === "ACCEPTED" && Boolean(offer.file_url)
+            const canAcceptAndSign = !isOfferSigned && offerStatus !== "REJECTED"
+            if (canAcceptAndSign) {
+                setIsSignModalOpen(true)
+            }
+        }
+    }, [offer])
+
+    useEffect(() => {
         if (isSignModalOpen) {
             setTimeout(() => {
                 const canvas = canvasRef.current
@@ -281,7 +275,7 @@ export default function OfferDetailsPage() {
         setIsSubmitting(true)
         try {
             const signatureDataUrl = canvas.toDataURL("image/png")
-            const response = await fetch(`/api/offer/${offerId}`, {
+            const response = await fetch(`/api/public-offer/${offerId}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -469,7 +463,7 @@ export default function OfferDetailsPage() {
           <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.03;pointer-events:none;transform:rotate(-35deg);"><span style="font-size:120px;font-weight:900;letter-spacing:8px;color:black;">OFFICIAL</span></div>
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
-              <div style="font-size:22px;font-weight:900;color:#1a1a2e;letter-spacing:-0.5px;">${university?.name || "University"}</div>
+              <div style="font-size:22px;font-weight:900;color:#1a1a2e;">${university?.name || "University"}</div>
               <div style="font-size:12px;color:#6b7280;margin-top:4px;">Official Offer of Admission</div>
             </div>
             <div style="text-align:right;font-size:11px;color:#9ca3af;">
@@ -599,7 +593,7 @@ export default function OfferDetailsPage() {
                   <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.03;pointer-events:none;transform:rotate(-35deg);"><span style="font-size:120px;font-weight:900;letter-spacing:8px;color:black;user-select:none;">OFFICIAL</span></div>
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;">
                     <div>
-                      <div style="font-size:22px;font-weight:900;color:#1a1a2e;letter-spacing:-0.5px;">${university?.name || "University"}</div>
+                      <div style="font-size:22px;font-weight:900;color:#1a1a2e;">${university?.name || "University"}</div>
                       <div style="font-size:12px;color:#6b7280;margin-top:4px;">Official Offer of Admission</div>
                     </div>
                     <div style="text-align:right;font-size:11px;color:#9ca3af;">
@@ -620,8 +614,8 @@ export default function OfferDetailsPage() {
                     <thead><tr style="background:#f9fafb;"><th colspan="2" style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Admission Details</th></tr></thead>
                     <tbody>
                       ${admissionDetailRows.map(([label, value]) =>
-                `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
-            ).join("")}
+            `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
+        ).join("")}
                     </tbody>
                   </table>
                 </div>
@@ -708,27 +702,16 @@ export default function OfferDetailsPage() {
         return (
             <div className="flex flex-col items-center justify-center py-40 gap-4">
                 <Typography className="font-bold text-gray-700">Offer not found</Typography>
-                <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
             </div>
         )
     }
 
     return (
-        <main className="mx-auto max-w-7xl space-y-6 pb-10">
+        <main className="mx-auto max-w-7xl space-y-6 pb-10 pt-8 px-4">
             {/* Page header */}
-            <div className="flex flex-col gap-4 mt-12">
+            <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            asChild
-                            className="rounded-xl shrink-0 size-10 border-white/40 bg-white/20"
-                        >
-                            <Link href="/dashboard/offer">
-                                <ChevronLeft className="size-5" />
-                            </Link>
-                        </Button>
                         <div className="min-w-0 flex-1 space-y-1">
                             <Typography className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
                                 Admission Offer
@@ -746,27 +729,14 @@ export default function OfferDetailsPage() {
                     </div>
 
                     {canAcceptAndSign && (
-                        <>
-                            {me.data?.role === "AGENT" ? (
-                                <Button
-                                    type="button"
-                                    className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
-                                    onClick={handleCopySignLink}
-                                >
-                                    {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                                    {copied ? "Copied!" : "Copy Sign Link"}
-                                </Button>
-                            ) : (
-                                <Button
-                                    type="button"
-                                    className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
-                                    onClick={openSignModal}
-                                >
-                                    <FileCheck className="size-4" />
-                                    Accept & Sign
-                                </Button>
-                            )}
-                        </>
+                        <Button
+                            type="button"
+                            className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
+                            onClick={openSignModal}
+                        >
+                            <FileCheck className="size-4" />
+                            Accept & Sign
+                        </Button>
                     )}
                 </div>
             </div>
@@ -825,7 +795,6 @@ export default function OfferDetailsPage() {
                             <DetailRow
                                 label="Intake Date"
                                 value={intakeDateFormatted}
-                            // icon={<Clock className="size-3.5 text-gray-400 shrink-0" />}
                             />
                             <DetailRow label="Fees" value={feesFormatted} />
                             <DetailRow label="Location" value={degree?.location} />
@@ -837,7 +806,6 @@ export default function OfferDetailsPage() {
                             <DetailRow
                                 label="Application Deadline"
                                 value={formatIntakeDate(course?.deadline_date) ?? undefined}
-                            // icon={<Calendar className="size-3.5 text-gray-400 shrink-0" />}
                             />
                         </div>
                     </BluryCard>
@@ -862,14 +830,14 @@ export default function OfferDetailsPage() {
                                             <div className="flex flex-col sm:flex-row gap-2">
                                                 <Button
                                                     variant="outline"
-                                                    className="flex-1 rounded-lg gap-1.5 border-white/50 bg-white/30 text-sm"
+                                                    className="flex-1 rounded-xl gap-1.5 border-white/50 bg-white/30 text-sm"
                                                     onClick={() => handleViewDbBedingteZuLetter(letterType)}
                                                 >
                                                     <Eye className="size-3.5" />
                                                     View
                                                 </Button>
                                                 <Button
-                                                    className="flex-1 rounded-lg gap-1.5 bg-brand-byzantine hover:bg-brand-byzantine/90 text-sm"
+                                                    className="flex-1 rounded-xl gap-1.5 bg-brand-byzantine hover:bg-brand-byzantine/90 text-sm"
                                                     onClick={() => handleDownloadDbBedingteZuPDF(letterType)}
                                                     disabled={isDownloadingConditionalLetter}
                                                 >
@@ -923,7 +891,7 @@ export default function OfferDetailsPage() {
                 </div>
 
                 {/* Sidebar */}
-                <div className="lg:col-span-5 xl:col-span-4 space-y-6 lg:sticky lg:top-6 lg:self-start">
+                <div className="lg:col-span-5 xl:col-span-4 space-y-6">
                     <BluryCard
                         isCentered={false}
                         className="rounded-2xl"
