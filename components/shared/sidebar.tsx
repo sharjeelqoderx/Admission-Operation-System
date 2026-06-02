@@ -19,7 +19,7 @@ export function Sidebar({ children, className, isOpen = true }: SidebarProps) {
                 'md:w-64 md:static md:translate-x-0',
                 'fixed inset-y-0 left-0 z-50 w-64',
                 isOpen ? 'translate-x-0' : '-translate-x-full',
-                'bg-[rgba(153,51,255,0.1)]',
+                'bg-[#e8e0fe]',
                 className
             )}
         >
@@ -39,8 +39,7 @@ export function Sidebar({ children, className, isOpen = true }: SidebarProps) {
             <nav
                 className={cn(
                     'flex-1 min-h-0 overflow-y-auto overflow-x-hidden',
-                    'relative z-10 space-y-0.5',
-                    '[scrollbar-gutter:stable]'
+                    'relative z-10 space-y-0.5 pr-0'
                 )}
                 aria-label="Dashboard navigation"
             >

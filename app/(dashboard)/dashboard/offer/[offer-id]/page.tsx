@@ -8,14 +8,11 @@ import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { PageLoader } from "@/components/shared/page-loader"
 import {
     Download,
     Eye,
     Mail,
-    Phone,
-    User,
     GraduationCap,
     Calendar,
     ChevronLeft,
@@ -29,8 +26,40 @@ import {
     CreditCard,
     ArrowRight
 } from "lucide-react"
-import Image from "next/image"
 import { toast } from "sonner"
+import {
+    formatIntakeDate,
+    formatProgramDate,
+    formatStudyMode,
+} from "@/lib/utils/program"
+
+
+function buildAdmissionDetailRows(
+    course: { name?: string; deadline_date?: string | null } | null | undefined,
+    degree: {
+        name?: string
+        duration?: string | null
+        study_mode?: string | null
+        intake_date?: string | null
+        fees?: string | null
+        location?: string | null
+        language_of_study?: string | null
+        credits?: number | null
+    } | null | undefined
+): [string, string][] {
+    return [
+        ["Course", course?.name],
+        ["Degree", degree?.name],
+        ["Duration", degree?.duration ?? undefined],
+        ["Study Mode", degree?.study_mode ?? undefined],
+        ["Intake Date", formatIntakeDate(degree?.intake_date) ?? undefined],
+        ["Fees", degree?.fees ?? undefined],
+        ["Location", degree?.location ?? undefined],
+        ["Language of Study", degree?.language_of_study ?? undefined],
+        ["Credits", degree?.credits != null ? String(degree.credits) : undefined],
+        ["Application Deadline", formatProgramDate(course?.deadline_date) ?? undefined],
+    ].filter((row): row is [string, string] => Boolean(row[1]))
+}
 
 function SectionHeader({
     icon: Icon,
@@ -262,12 +291,13 @@ export default function OfferDetailsPage() {
 
     const app = offer.application
     const student = app?.student
-    const program = app?.program
+    const course = app?.course
+    const degree = course?.degree
     const university = app?.university
     const agent = app?.agent
-    const junction = program?.campus_program_junction?.[0]
     const reviews: any[] = app?.application_review ?? []
     const latestReview = reviews[reviews.length - 1]
+    const admissionDetailRows = buildAdmissionDetailRows(course, degree)
 
     const issuedAt = offer.created_at
         ? new Date(offer.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
@@ -281,13 +311,9 @@ export default function OfferDetailsPage() {
         : null
 
     const applicationRef = app?.application_no || `APP-${app?.id?.slice(0, 8).toUpperCase()}`
-    const intakeDateFormatted = junction?.intake_date
-        ? new Date(junction.intake_date).toLocaleDateString("en-US", { dateStyle: "long" })
-        : "—"
-    const tuitionFormatted =
-        junction?.tuition_fee != null
-            ? `${junction.currency || "€"} ${junction.tuition_fee}`
-            : "—"
+    const intakeDateFormatted = formatIntakeDate(degree?.intake_date) ?? "—"
+    const feesFormatted = degree?.fees ?? "—"
+    const courseDisplayName = [course?.name, degree?.name].filter(Boolean).join(" · ") || "—"
 
     const offerStatus = String(offer.status ?? "PENDING").toUpperCase()
     const isOfferSigned = offerStatus === "ACCEPTED" && Boolean(offer.file_url)
@@ -331,7 +357,7 @@ export default function OfferDetailsPage() {
           <hr style="border:none;border-top:2px solid #f3f4f6;"/>
           <div style="font-size:15px;color:#374151;">Dear <strong>${student?.name || "Applicant"}</strong>,</div>
           <div style="font-size:14px;color:#4b5563;line-height:1.8;">
-            We are pleased to offer you admission to the <strong>${program?.name || "program"}</strong> at <strong>${university?.name || "our university"}</strong>.
+            We are pleased to offer you admission to the <strong>${course?.name || "course"}</strong>${degree?.name ? ` (${degree.name})` : ""} at <strong>${university?.name || "our university"}</strong>.
           </div>
           <div style="font-size:14px;color:#4b5563;line-height:1.8;">
             Your academic achievement and potential make you an excellent candidate for our program. This offer is subject to the terms and conditions outlined in the full admission package.
@@ -339,14 +365,7 @@ export default function OfferDetailsPage() {
           <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;">
             <thead><tr style="background:#f9fafb;"><th colspan="2" style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Admission Details</th></tr></thead>
             <tbody>
-              ${[
-                ["Program", program?.name],
-                ["Category", program?.category],
-                ["Duration", program?.program_length],
-                ["Study Type", junction?.study_type],
-                ["Intake Date", junction?.intake_date ? new Date(junction.intake_date).toLocaleDateString("en-US",{dateStyle:"long"}) : null],
-                ["Tuition Fee", junction?.tuition_fee ? `${junction.currency || ""} ${junction.tuition_fee}` : null],
-              ].filter(r => r[1]).map(([label, value]) =>
+              ${admissionDetailRows.map(([label, value]) =>
                 `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
               ).join("")}
             </tbody>
@@ -455,7 +474,7 @@ export default function OfferDetailsPage() {
                   <hr style="border:none;border-top:2px solid #f3f4f6;width:100%;"/>
                   <div style="font-size:15px;color:#374151;width:100%;">Dear <strong>${student?.name || "Applicant"}</strong>,</div>
                   <div style="font-size:14px;color:#4b5563;line-height:1.8;width:100%;">
-                    We are pleased to offer you admission to the <strong>${program?.name || "program"}</strong> at <strong>${university?.name || "our university"}</strong>.
+                    We are pleased to offer you admission to the <strong>${course?.name || "course"}</strong>${degree?.name ? ` (${degree.name})` : ""} at <strong>${university?.name || "our university"}</strong>.
                   </div>
                   <div style="font-size:14px;color:#4b5563;line-height:1.8;width:100%;">
                     Your academic achievement and potential make you an excellent candidate for our program. This offer is subject to the terms and conditions outlined in the full admission package.
@@ -463,14 +482,7 @@ export default function OfferDetailsPage() {
                   <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;">
                     <thead><tr style="background:#f9fafb;"><th colspan="2" style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Admission Details</th></tr></thead>
                     <tbody>
-                      ${[
-                        ["Program", program?.name],
-                        ["Category", program?.category],
-                        ["Duration", program?.program_length],
-                        ["Study Type", junction?.study_type],
-                        ["Intake Date", junction?.intake_date ? new Date(junction.intake_date).toLocaleDateString("en-US",{dateStyle:"long"}) : null],
-                        ["Tuition Fee", junction?.tuition_fee ? `${junction.currency || ""} ${junction.tuition_fee}` : null],
-                      ].filter(r => r[1]).map(([label, value]) =>
+                      ${admissionDetailRows.map(([label, value]) =>
                         `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
                       ).join("")}
                     </tbody>
@@ -563,7 +575,7 @@ export default function OfferDetailsPage() {
                                 <StatusBadge status={offer.status} />
                             </div>
                             <Typography font="sub-text" className="text-gray-500 text-sm">
-                                {student?.name || "Student"} · {program?.name || "Program"}
+                                {student?.name} · {courseDisplayName}
                             </Typography>
                         </div>
                     </div>
@@ -571,7 +583,7 @@ export default function OfferDetailsPage() {
                     {canAcceptAndSign && (
                         <Button
                             type="button"
-                            className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white rounded-xl h-11 px-6 font-bold shadow-lg shadow-brand-byzantine/20"
+                            className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
                             onClick={openSignModal}
                         >
                             <FileCheck className="size-4" />
@@ -579,8 +591,6 @@ export default function OfferDetailsPage() {
                         </Button>
                     )}
                 </div>
-
-             
             </div>
 
             {/* At-a-glance summary */}
@@ -595,11 +605,11 @@ export default function OfferDetailsPage() {
                     }
                 />
                 <SummaryMetric
-                    label="Program"
+                    label="Course"
                     icon={<GraduationCap className="size-3.5" />}
                     value={
                         <Typography className="text-sm font-bold text-gray-900 line-clamp-2">
-                            {program?.name || "—"}
+                            {course?.name || "—"}
                         </Typography>
                     }
                 />
@@ -611,10 +621,10 @@ export default function OfferDetailsPage() {
                     }
                 />
                 <SummaryMetric
-                    label="Tuition"
+                    label="Fees"
                     icon={<CreditCard className="size-3.5" />}
                     value={
-                        <Typography className="text-sm font-bold text-gray-900">{tuitionFormatted}</Typography>
+                        <Typography className="text-sm font-bold text-gray-900">{feesFormatted}</Typography>
                     }
                 />
             </div>
@@ -623,66 +633,34 @@ export default function OfferDetailsPage() {
                 {/* Main content */}
                 <div className="lg:col-span-7 xl:col-span-8 space-y-6">
                     <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6">
-                        <SectionHeader icon={User} title="Student Information" />
-                        <div className="mt-2 flex flex-col gap-6 sm:flex-row sm:items-start">
-                            <div className="mx-auto sm:mx-0 size-24 rounded-2xl overflow-hidden border-2 border-white/60 shadow-md shrink-0 bg-white/50">
-                                <Avatar className="size-full rounded-none">
-                                    <AvatarImage src={student?.avatar_url} />
-                                    <AvatarFallback className="text-2xl font-bold rounded-none bg-brand-byzantine/10 text-brand-byzantine">
-                                        {student?.name?.[0] ?? "?"}
-                                    </AvatarFallback>
-                                </Avatar>
-                            </div>
-                            <div className="flex-1 min-w-0 divide-y divide-white/15">
-                                <DetailRow label="Full Name" value={student?.name} />
-                                <DetailRow
-                                    label="Email"
-                                    value={student?.email}
-                                    icon={<Mail className="size-3.5 text-gray-400 shrink-0" />}
-                                />
-                                <DetailRow
-                                    label="Phone"
-                                    value={student?.phone}
-                                    icon={<Phone className="size-3.5 text-gray-400 shrink-0" />}
-                                />
-                                <DetailRow label="Gender" value={student?.gender} />
-                                <DetailRow
-                                    label="Date of Birth"
-                                    value={
-                                        student?.date_of_birth
-                                            ? new Date(student.date_of_birth).toLocaleDateString("en-US", {
-                                                  dateStyle: "long",
-                                              })
-                                            : "—"
-                                    }
-                                    icon={<Calendar className="size-3.5 text-gray-400 shrink-0" />}
-                                />
-                            </div>
-                        </div>
-                    </BluryCard>
-
-                    <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6">
-                        <SectionHeader icon={GraduationCap} title="Program Details" />
+                        <SectionHeader icon={GraduationCap} title="Course & Degree Details" />
                         <div className="mt-2">
                             <DetailRow
                                 label="University"
                                 value={university?.name}
                                 icon={<Building2 className="size-3.5 text-gray-400 shrink-0" />}
                             />
-                            <DetailRow label="Program" value={program?.name} />
-                            <DetailRow label="Category" value={program?.category} />
-                            <DetailRow label="Duration" value={program?.program_length} />
-                            {junction && (
-                                <>
-                                    <DetailRow
-                                        label="Intake Date"
-                                        value={intakeDateFormatted}
-                                        icon={<Clock className="size-3.5 text-gray-400 shrink-0" />}
-                                    />
-                                    <DetailRow label="Study Type" value={junction.study_type} />
-                                    <DetailRow label="Tuition Fee" value={tuitionFormatted} />
-                                </>
-                            )}
+                            <DetailRow label="Course" value={course?.name} />
+                            <DetailRow label="Degree" value={degree?.name} />
+                            <DetailRow label="Duration" value={degree?.duration} />
+                            <DetailRow label="Study Mode" value={formatStudyMode(degree?.study_mode)} />
+                            <DetailRow
+                                label="Intake Date"
+                                value={intakeDateFormatted}
+                                // icon={<Clock className="size-3.5 text-gray-400 shrink-0" />}
+                            />
+                            <DetailRow label="Fees" value={feesFormatted} />
+                            <DetailRow label="Location" value={degree?.location} />
+                            <DetailRow label="Language of Study" value={degree?.language_of_study} />
+                            <DetailRow
+                                label="Credits"
+                                value={degree?.credits != null ? String(degree.credits) : undefined}
+                            />
+                            <DetailRow
+                                label="Application Deadline"
+                                value={formatIntakeDate(course?.deadline_date) ?? undefined}
+                                // icon={<Calendar className="size-3.5 text-gray-400 shrink-0" />}
+                            />
                         </div>
                     </BluryCard>
 
@@ -815,122 +793,32 @@ export default function OfferDetailsPage() {
                         </BluryCard>
                     )}
 
-                    <BluryCard isCentered={false} className="rounded-2xl w-full" childClass="p-0 w-full">
-                        <div className="px-5 pt-5 pb-3 border-b border-white/20">
-                            <SectionHeader icon={FileCheck} title="Offer Letter" />
-                        </div>
-                        <div className="w-full bg-white border-y border-gray-100">
-                            <div className="w-full p-5 sm:p-6 flex flex-col gap-4 text-gray-800 relative">
-                                <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none select-none -rotate-25">
-                                    <Typography font="heading" className="text-black text-5xl sm:text-6xl font-black">
-                                        OFFICIAL
-                                    </Typography>
-                                </div>
-                                <div className="relative z-10 w-full flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between border-b border-gray-100 pb-4">
-                                    <div className="min-w-0 flex-1 space-y-1">
-                                        <Typography className="text-base sm:text-lg font-bold text-gray-900 leading-snug wrap-break-word">
-                                            {university?.name || "University"}
-                                        </Typography>
-                                        <Typography className="text-xs text-gray-500">
-                                            Official Offer of Admission
-                                        </Typography>
-                                    </div>
-                                    <div className="w-full sm:w-auto sm:shrink-0 sm:text-right text-xs text-gray-500 space-y-0.5">
-                                        <Typography className="text-gray-400">Date Issued</Typography>
-                                        <Typography className="font-semibold text-gray-700">{issuedAt}</Typography>
-                                        <Typography className="text-gray-400 pt-1 wrap-break-word">Ref: {applicationRef}</Typography>
-                                    </div>
-                                </div>
-                                <Image
-                                    src="/logo-dark.png"
-                                    width={96}
-                                    height={48}
-                                    alt="University logo"
-                                    className="relative z-10 h-9 w-auto max-w-full object-contain object-left"
-                                />
-                                <div className="relative z-10 w-full space-y-3">
-                                    <Typography font="small" className="w-full text-gray-700 leading-relaxed wrap-break-word">
-                                        Dear <span className="font-semibold text-gray-900">{student?.name || "Applicant"}</span>,
-                                    </Typography>
-                                    <Typography font="small" className="w-full text-gray-600 leading-relaxed wrap-break-word">
-                                        We are pleased to offer you admission to the{" "}
-                                        <span className="font-semibold text-gray-900">{program?.name || "program"}</span> at{" "}
-                                        <span className="font-semibold text-gray-900">{university?.name || "our university"}</span>.
-                                    </Typography>
-                                    <Typography font="small" className="w-full text-gray-600 leading-relaxed wrap-break-word">
-                                        Your academic achievement and potential make you an excellent candidate for our program.
-                                        This offer is subject to the terms and conditions outlined in the full admission package.
-                                    </Typography>
-                                </div>
-                                <div className="relative z-10 w-full rounded-lg border border-gray-100">
-                                    <div className="w-full bg-gray-50 px-4 py-2 border-b border-gray-100">
-                                        <Typography className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                            Admission Details
-                                        </Typography>
-                                    </div>
-                                    <div className="w-full divide-y divide-gray-100">
-                                        {[
-                                            ["Program", program?.name],
-                                            ["Category", program?.category],
-                                            ["Duration", program?.program_length],
-                                            ["Study Type", junction?.study_type],
-                                            ["Intake Date", intakeDateFormatted !== "—" ? intakeDateFormatted : null],
-                                            ["Tuition Fee", tuitionFormatted !== "—" ? tuitionFormatted : null],
-                                        ]
-                                            .filter((row) => row[1])
-                                            .map(([label, value]) => (
-                                                <div
-                                                    key={label}
-                                                    className="w-full grid grid-cols-1 gap-1 px-4 py-2.5 sm:grid-cols-[minmax(100px,38%)_1fr] sm:gap-4"
-                                                >
-                                                    <Typography className="text-xs font-medium text-gray-500 shrink-0">
-                                                        {label}
-                                                    </Typography>
-                                                    <Typography className="text-xs font-semibold text-gray-800 wrap-break-word">
-                                                        {value}
-                                                    </Typography>
-                                                </div>
-                                            ))}
-                                    </div>
-                                </div>
-                                {isOfferSigned ? (
-                                    <div className="relative z-10 w-full pt-4 border-t border-dashed border-gray-200 flex flex-col items-end gap-1">
-                                        <img
-                                            src={offer.file_url}
-                                            alt="Signature"
-                                            className="h-12 w-32 max-w-full object-contain mix-blend-multiply"
-                                        />
-                                        <Typography className="text-[10px] text-gray-500 text-right wrap-break-word">
-                                            {student?.name} · Signed {acceptedAt || "—"}
-                                        </Typography>
-                                    </div>
-                                ) : (
-                                    <div className="relative z-10 w-full pt-4 border-t border-dashed border-gray-200 flex flex-col items-end gap-1">
-                                        <Typography className="text-xs text-gray-400 italic">
-                                            Signature required
-                                        </Typography>
-                                        <Typography className="text-[10px] text-gray-400">
-                                            Pending student signature
-                                        </Typography>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="w-full px-5 pb-5 pt-4 flex flex-col sm:flex-row gap-2">
+                    <BluryCard
+                        isCentered={false}
+                        className="rounded-2xl w-full"
+                        childClass="p-5 sm:p-6 space-y-4"
+                    >
+                        <SectionHeader icon={FileCheck} title="Offer Letter" />
+                        <Typography font="sub-text" className="text-sm text-gray-600">
+                            {isOfferSigned
+                                ? `Signed by ${student?.name || "applicant"} on ${acceptedAt || "—"}.`
+                                : "Open or download your official offer letter."}
+                        </Typography>
+                        <div className="flex flex-col sm:flex-row gap-2">
                             <Button
                                 variant="outline"
                                 className="flex-1 rounded-xl gap-2 border-white/50 bg-white/30"
                                 onClick={handleViewLetter}
                             >
                                 <Eye className="size-4" />
-                                View full letter
+                                View
                             </Button>
                             <Button
                                 className="flex-1 rounded-xl gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90"
                                 onClick={handleDownloadPDF}
                             >
                                 <Download className="size-4" />
-                                Download PDF
+                                Download
                             </Button>
                         </div>
                     </BluryCard>
@@ -992,7 +880,7 @@ export default function OfferDetailsPage() {
                         <div className="flex items-center justify-between gap-3">
                             <Button 
                                 variant="outline" 
-                                className="rounded-xl border-gray-300 text-gray-600 hover:bg-gray-100 font-semibold px-5"
+                                className="rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 font-semibold px-5"
                                 onClick={clearCanvas}
                                 disabled={isSubmitting}
                             >
