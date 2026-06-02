@@ -56,7 +56,7 @@ export function buildDbBedingteZuLetterFooterHtml(params: {
 
     return `
       <hr style="border:none;border-top:1px solid #e5e7eb;"/>
-      <div style="height:14px;"></div>
+      <div style="height:8px;"></div>
       <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;">
         <div style="${cellStyle}">
           <div style="${labelStyle}">University</div>
