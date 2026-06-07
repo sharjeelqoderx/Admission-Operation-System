@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useEffect } from "react"
+import React, { useCallback, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
@@ -143,7 +143,7 @@ function SummaryMetric({
     )
 }
 
-export default function SignPage() {
+function SignPageContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const offerId = searchParams.get("offer_id") as string
@@ -1010,5 +1010,13 @@ export default function SignPage() {
                 </div>
             )}
         </main>
+    )
+}
+
+export default function SignPage() {
+    return (
+        <Suspense fallback={<PageLoader label="Loading offer details..." />}>
+            <SignPageContent />
+        </Suspense>
     )
 }
