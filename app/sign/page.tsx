@@ -1,8 +1,7 @@
 "use client"
 
-import React, { useCallback } from "react"
-import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
+import React, { useCallback, useEffect } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
@@ -25,11 +24,10 @@ import {
     X,
     CreditCard,
     ArrowRight,
-    Copy,
-    Check
+    Check,
+    Loader2
 } from "lucide-react"
 import { toast } from "sonner"
-import { useAuth } from "@/hooks/useAuth"
 import {
     formatIntakeDate,
     formatProgramDate,
@@ -145,12 +143,11 @@ function SummaryMetric({
     )
 }
 
-export default function OfferDetailsPage() {
-    const params = useParams()
+export default function SignPage() {
+    const searchParams = useSearchParams()
     const router = useRouter()
-    const offerId = params?.["offer-id"] as string
-    const { me } = useAuth()
-    const [copied, setCopied] = React.useState(false)
+    const offerId = searchParams.get("offer_id") as string
+    const userId = searchParams.get("user_id") as string
 
     const [isSignModalOpen, setIsSignModalOpen] = React.useState(false)
     const [isDrawing, setIsDrawing] = React.useState(false)
@@ -161,7 +158,7 @@ export default function OfferDetailsPage() {
     const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
 
     const fetchOffer = useCallback(async () => {
-        const res = await fetch(`/api/offer/${offerId}`)
+        const res = await fetch(`/api/public-offer/${offerId}`)
         if (!res.ok) throw new Error("Failed to fetch offer")
         const json = await res.json()
         return json.data
@@ -173,24 +170,19 @@ export default function OfferDetailsPage() {
         enabled: Boolean(offerId),
     })
 
-    const handleCopySignLink = useCallback(async () => {
-        if (!offer?.application?.student?.id) {
-            toast.error("Student data not available for this offer")
-            return
+    useEffect(() => {
+        // Automatically open sign modal when offer loads and is ready to sign
+        if (offer) {
+            const offerStatus = String(offer.status ?? "PENDING").toUpperCase()
+            const isOfferSigned = offerStatus === "ACCEPTED" && Boolean(offer.file_url)
+            const canAcceptAndSign = !isOfferSigned && offerStatus !== "REJECTED"
+            if (canAcceptAndSign) {
+                setIsSignModalOpen(true)
+            }
         }
-        const signLink = `${window.location.origin}/sign?user_id=${offer.application.student.id}&offer_id=${offerId}`
-        try {
-            await navigator.clipboard.writeText(signLink)
-            setCopied(true)
-            toast.success("Sign link copied to clipboard!")
-            setTimeout(() => setCopied(false), 2000)
-        } catch (err) {
-            console.error("Failed to copy link:", err)
-            toast.error("Failed to copy link")
-        }
-    }, [offer, offerId])
+    }, [offer])
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (isSignModalOpen) {
             setTimeout(() => {
                 const canvas = canvasRef.current
@@ -285,7 +277,7 @@ export default function OfferDetailsPage() {
         setIsSubmitting(true)
         try {
             const signatureDataUrl = canvas.toDataURL("image/png")
-            const response = await fetch(`/api/offer/${offerId}`, {
+            const response = await fetch(`/api/public-offer/${offerId}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -473,7 +465,7 @@ export default function OfferDetailsPage() {
           <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.03;pointer-events:none;transform:rotate(-35deg);"><span style="font-size:120px;font-weight:900;letter-spacing:8px;color:black;">OFFICIAL</span></div>
           <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div>
-              <div style="font-size:22px;font-weight:900;color:#1a1a2e;letter-spacing:-0.5px;">${university?.name || "University"}</div>
+              <div style="font-size:22px;font-weight:900;color:#1a1a2e;">${university?.name || "University"}</div>
               <div style="font-size:12px;color:#6b7280;margin-top:4px;">Official Offer of Admission</div>
             </div>
             <div style="text-align:right;font-size:11px;color:#9ca3af;">
@@ -603,7 +595,7 @@ export default function OfferDetailsPage() {
                   <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.03;pointer-events:none;transform:rotate(-35deg);"><span style="font-size:120px;font-weight:900;letter-spacing:8px;color:black;user-select:none;">OFFICIAL</span></div>
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;">
                     <div>
-                      <div style="font-size:22px;font-weight:900;color:#1a1a2e;letter-spacing:-0.5px;">${university?.name || "University"}</div>
+                      <div style="font-size:22px;font-weight:900;color:#1a1a2e;">${university?.name || "University"}</div>
                       <div style="font-size:12px;color:#6b7280;margin-top:4px;">Official Offer of Admission</div>
                     </div>
                     <div style="text-align:right;font-size:11px;color:#9ca3af;">
@@ -624,8 +616,8 @@ export default function OfferDetailsPage() {
                     <thead><tr style="background:#f9fafb;"><th colspan="2" style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Admission Details</th></tr></thead>
                     <tbody>
                       ${admissionDetailRows.map(([label, value]) =>
-                `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
-            ).join("")}
+            `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
+        ).join("")}
                     </tbody>
                   </table>
                 </div>
@@ -712,27 +704,16 @@ export default function OfferDetailsPage() {
         return (
             <div className="flex flex-col items-center justify-center py-40 gap-4">
                 <Typography className="font-bold text-gray-700">Offer not found</Typography>
-                <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
             </div>
         )
     }
 
     return (
-        <main className="mx-auto max-w-7xl space-y-6 pb-10">
+        <main className="mx-auto max-w-7xl space-y-6 pb-10 pt-8 px-4">
             {/* Page header */}
-            <div className="flex flex-col gap-4 mt-12">
+            <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            asChild
-                            className="rounded-xl shrink-0 size-10 border-white/40 bg-white/20"
-                        >
-                            <Link href="/dashboard/offer">
-                                <ChevronLeft className="size-5" />
-                            </Link>
-                        </Button>
                         <div className="min-w-0 flex-1 space-y-1">
                             <Typography className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
                                 Admission Offer
@@ -750,27 +731,14 @@ export default function OfferDetailsPage() {
                     </div>
 
                     {canAcceptAndSign && (
-                        <>
-                            {me.data?.role === "AGENT" ? (
-                                <Button
-                                    type="button"
-                                    className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
-                                    onClick={handleCopySignLink}
-                                >
-                                    {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                                    {copied ? "Copied!" : "Copy Sign Link"}
-                                </Button>
-                            ) : (
-                                <Button
-                                    type="button"
-                                    className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
-                                    onClick={openSignModal}
-                                >
-                                    <FileCheck className="size-4" />
-                                    Accept & Sign
-                                </Button>
-                            )}
-                        </>
+                        <Button
+                            type="button"
+                            className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
+                            onClick={openSignModal}
+                        >
+                            <FileCheck className="size-4" />
+                            Accept & Sign
+                        </Button>
                     )}
                 </div>
             </div>
@@ -829,7 +797,6 @@ export default function OfferDetailsPage() {
                             <DetailRow
                                 label="Intake Date"
                                 value={intakeDateFormatted}
-                            // icon={<Clock className="size-3.5 text-gray-400 shrink-0" />}
                             />
                             <DetailRow label="Fees" value={feesFormatted} />
                             <DetailRow label="Location" value={degree?.location} />
@@ -841,7 +808,6 @@ export default function OfferDetailsPage() {
                             <DetailRow
                                 label="Application Deadline"
                                 value={formatIntakeDate(course?.deadline_date) ?? undefined}
-                            // icon={<Calendar className="size-3.5 text-gray-400 shrink-0" />}
                             />
                         </div>
                     </BluryCard>
@@ -866,14 +832,14 @@ export default function OfferDetailsPage() {
                                             <div className="flex flex-col sm:flex-row gap-2">
                                                 <Button
                                                     variant="outline"
-                                                    className="flex-1 rounded-lg gap-1.5 border-white/50 bg-white/30 text-sm"
+                                                    className="flex-1 rounded-xl gap-1.5 border-white/50 bg-white/30 text-sm"
                                                     onClick={() => handleViewDbBedingteZuLetter(letterType)}
                                                 >
                                                     <Eye className="size-3.5" />
                                                     View
                                                 </Button>
                                                 <Button
-                                                    className="flex-1 rounded-lg gap-1.5 bg-brand-byzantine hover:bg-brand-byzantine/90 text-sm"
+                                                    className="flex-1 rounded-xl gap-1.5 bg-brand-byzantine hover:bg-brand-byzantine/90 text-sm"
                                                     onClick={() => handleDownloadDbBedingteZuPDF(letterType)}
                                                     disabled={isDownloadingConditionalLetter}
                                                 >
@@ -927,7 +893,7 @@ export default function OfferDetailsPage() {
                 </div>
 
                 {/* Sidebar */}
-                <div className="lg:col-span-5 xl:col-span-4 space-y-6 lg:sticky lg:top-6 lg:self-start">
+                <div className="lg:col-span-5 xl:col-span-4 space-y-6">
                     <BluryCard
                         isCentered={false}
                         className="rounded-2xl"
@@ -939,195 +905,106 @@ export default function OfferDetailsPage() {
                                 label="Offer Status"
                                 value={<StatusBadge status={offer.status} />}
                             />
-                            <DetailRow label="Offer Issued" value={issuedAt} />
+                            <DetailRow label="Application Ref" value={applicationRef} />
                             <DetailRow
-                                label="Application"
-                                value={<StatusBadge status={app?.status} />}
+                                label="Issued At"
+                                value={issuedAt}
+                                icon={<Calendar className="size-3.5 text-gray-400" />}
                             />
-                            <DetailRow label="Applied On" value={appCreatedAt} />
-                            {offer.status === "ACCEPTED" && (
+                            {acceptedAt && (
                                 <DetailRow
-                                    label="Signature"
-                                    value={
-                                        <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2.5 py-1 rounded-full uppercase tracking-wide">
-                                            Signed
-                                        </span>
-                                    }
+                                    label="Accepted At"
+                                    value={acceptedAt}
+                                    icon={<CheckCircle2 className="size-3.5 text-green-500" />}
                                 />
                             )}
-                            {acceptedAt && (
-                                <DetailRow label="Accepted On" value={acceptedAt} />
-                            )}
                         </div>
-                        {offer.feedback && (
-                            <div className="rounded-xl border border-amber-200/50 bg-amber-50/30 p-4 space-y-1">
-                                <Typography className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-                                    University feedback
-                                </Typography>
-                                <Typography font="small" className="text-gray-700 leading-relaxed">
-                                    {offer.feedback}
-                                </Typography>
-                            </div>
-                        )}
                     </BluryCard>
 
-                    {(agent || latestReview) && (
-                        <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6 space-y-4">
-                            {agent && (
-                                <div className="space-y-3 pb-4 border-b border-white/20">
-                                    <Typography className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-                                        Submitted by agent
-                                    </Typography>
-                                    <Typography className="font-bold text-gray-800">{agent.name || "—"}</Typography>
-                                    {agent.email && (
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <Mail className="size-3.5 shrink-0" />
-                                            <Typography className="text-sm break-all">{agent.email}</Typography>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                            {latestReview && (
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        {latestReview.status === "OFFERED" || latestReview.status === "APPROVED" ? (
-                                            <CheckCircle2 className="size-4 text-green-600 shrink-0" />
-                                        ) : (
-                                            <AlertCircle className="size-4 text-amber-600 shrink-0" />
-                                        )}
-                                        <Typography className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-                                            Latest review
-                                        </Typography>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-2">
-                                        <StatusBadge status={latestReview.status} />
-                                        <Typography className="text-[11px] text-gray-400">
-                                            {new Date(latestReview.created_at).toLocaleDateString("en-US", {
-                                                dateStyle: "medium",
-                                            })}
-                                        </Typography>
-                                    </div>
-                                    {latestReview.feedback && (
-                                        <Typography className="text-sm text-gray-600 leading-relaxed">
-                                            {latestReview.feedback}
-                                        </Typography>
-                                    )}
-                                </div>
-                            )}
-                        </BluryCard>
-                    )}
-
-                    <BluryCard
-                        isCentered={false}
-                        className="rounded-2xl w-full"
-                        childClass="p-5 sm:p-6 space-y-4"
-                    >
+                    <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6">
                         <SectionHeader icon={FileCheck} title="Offer Letter" />
-                        <Typography font="sub-text" className="text-sm text-gray-600">
-                            {isOfferSigned
-                                ? `Signed by ${student?.name || "applicant"} on ${acceptedAt || "—"}.`
-                                : "Open or download your official offer letter."}
-                        </Typography>
-                        <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="flex flex-col gap-3 mt-4">
                             <Button
                                 variant="outline"
-                                className="flex-1 rounded-xl gap-2 border-white/50 bg-white/30"
+                                className="w-full gap-2 border-white/50 bg-white/30"
                                 onClick={handleViewLetter}
                             >
                                 <Eye className="size-4" />
-                                View
+                                View Letter
                             </Button>
                             <Button
-                                className="flex-1 rounded-xl gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90"
+                                className="w-full gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90"
                                 onClick={handleDownloadPDF}
                             >
                                 <Download className="size-4" />
-                                Download
+                                Download PDF
                             </Button>
                         </div>
                     </BluryCard>
-
-                    {offer.status === "ACCEPTED" && offer.file_url && (
-                        <Button
-                            className="w-full rounded-2xl h-12 text-sm font-bold gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 shadow-lg shadow-brand-byzantine/20"
-                            onClick={() =>
-                                toast("Coming soon", {
-                                    description: "Payment portal is under development.",
-                                })
-                            }
-                        >
-                            <CreditCard className="size-4" />
-                            Continue to payment
-                            <ArrowRight className="size-4" />
-                        </Button>
-                    )}
                 </div>
             </div>
 
-            {/* Signature Draw Modal */}
+            {/* Signature Modal */}
             {isSignModalOpen && (
-                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-[#f8f9fa] rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl relative border border-white/20 animate-in zoom-in-95 duration-200">
-                        {/* Close button */}
-                        <button
-                            onClick={() => setIsSignModalOpen(false)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-full hover:bg-gray-200/50"
-                        >
-                            <X className="size-5" />
-                        </button>
-
-                        <div className="text-center space-y-1.5">
-                            <Typography font="title" className="text-xl font-extrabold text-gray-900">
-                                Draw Your Signature
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden">
+                        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                            <Typography font="title" className="text-lg font-bold">
+                                Sign Offer Letter
                             </Typography>
-                            <Typography className="text-xs text-gray-500">
-                                Please draw your signature in the white box below using your mouse or touch screen.
+                            <button
+                                onClick={() => setIsSignModalOpen(false)}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <X className="size-6" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <Typography className="text-sm text-gray-600">
+                                Please draw your signature below:
                             </Typography>
-                        </div>
-
-                        {/* Drawing Canvas Container */}
-                        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-inner p-2 relative">
-                            <canvas
-                                ref={canvasRef}
-                                onMouseDown={startDrawing}
-                                onMouseMove={draw}
-                                onMouseUp={stopDrawing}
-                                onMouseLeave={stopDrawing}
-                                onTouchStart={startDrawing}
-                                onTouchMove={draw}
-                                onTouchEnd={stopDrawing}
-                                className="w-full h-48 cursor-crosshair touch-none bg-white rounded-xl"
-                            />
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex items-center justify-between gap-3">
+                            <div className="border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-white">
+                                <canvas
+                                    ref={canvasRef}
+                                    className="w-full h-48 cursor-crosshair"
+                                    onMouseDown={startDrawing}
+                                    onMouseMove={draw}
+                                    onMouseUp={stopDrawing}
+                                    onMouseLeave={stopDrawing}
+                                    onTouchStart={startDrawing}
+                                    onTouchMove={draw}
+                                    onTouchEnd={stopDrawing}
+                                />
+                            </div>
                             <Button
                                 variant="outline"
-                                className="rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-100 font-semibold px-5"
                                 onClick={clearCanvas}
-                                disabled={isSubmitting}
+                                className="w-full"
                             >
-                                Clear
+                                Clear Signature
                             </Button>
-
-                            <div className="flex items-center gap-3">
-                                <Button
-                                    variant="ghost"
-                                    className="rounded-xl text-gray-500 hover:bg-gray-100"
-                                    onClick={() => setIsSignModalOpen(false)}
-                                    disabled={isSubmitting}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    className="bg-brand-byzantine hover:bg-brand-byzantine/90 text-white rounded-xl font-bold px-8 py-2.5 shadow-lg shadow-brand-byzantine/20 transition-all"
-                                    onClick={handleSaveSignature}
-                                    disabled={isSubmitting || !hasSigned}
-                                >
-                                    {isSubmitting ? "Saving..." : "Save"}
-                                </Button>
-                            </div>
+                        </div>
+                        <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsSignModalOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSaveSignature}
+                                disabled={!hasSigned || isSubmitting}
+                                className="bg-brand-byzantine hover:bg-brand-byzantine/90"
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="size-4 animate-spin mr-2" />
+                                        Saving...
+                                    </>
+                                ) : (
+                                    "Accept & Sign"
+                                )}
+                            </Button>
                         </div>
                     </div>
                 </div>
