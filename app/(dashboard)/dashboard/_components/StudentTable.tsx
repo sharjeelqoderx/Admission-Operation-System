@@ -23,6 +23,7 @@ import {
 import { BluryCard } from "@/components/shared/blury-card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 
 export type StudentRow = {
@@ -36,6 +37,9 @@ export type StudentRow = {
     guardian_email: string | null
     guardian_phone: string | null
     created_at: string
+    documents_uploaded_count?: number
+    total_document_types?: number
+    document_upload_percentage?: number
     profile: {
         id: string
         name: string | null
@@ -64,7 +68,7 @@ type Props = {
     onPageChange: (page: number) => void
 }
 
-const COLUMN_COUNT = 9
+const COLUMN_COUNT = 10
 
 function formatCreatedDate(value: string) {
     return new Date(value).toLocaleDateString("en-US", {
@@ -176,6 +180,9 @@ export const StudentTable = React.memo(function StudentTable({
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 DOB
+                            </TableHead>
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                Documents
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Created
@@ -294,6 +301,21 @@ export const StudentTable = React.memo(function StudentTable({
                                             <Typography as="span" className="text-sm font-medium text-gray-600">
                                                 {formatDateOfBirth(student.profile?.date_of_birth)}
                                             </Typography>
+                                        </TableCell>
+
+                                        <TableCell className="px-6 py-5 whitespace-nowrap min-w-[140px]">
+                                            <div className="flex flex-col gap-1.5">
+                                                <Typography as="span" className="text-sm font-bold text-brand-blue-text">
+                                                    {student.document_upload_percentage ?? 0}%
+                                                </Typography>
+                                                <Progress
+                                                    value={student.document_upload_percentage ?? 0}
+                                                    className="h-1.5 w-24"
+                                                />
+                                                <Typography as="span" className="text-[11px] text-gray-500 font-light">
+                                                    {student.documents_uploaded_count ?? 0}/{student.total_document_types ?? 0} uploaded
+                                                </Typography>
+                                            </div>
                                         </TableCell>
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
