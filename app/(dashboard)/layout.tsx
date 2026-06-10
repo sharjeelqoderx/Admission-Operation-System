@@ -258,7 +258,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div
               className="absolute inset-0"
               style={{
-                backgroundColor: "#f0f4fe",
+                backgroundColor: "#faf8ff",
                 // backgroundImage: 'url("/bg-pattern.png")',
                 // backgroundSize: 'cover',
                 // backgroundPosition: 'center',
