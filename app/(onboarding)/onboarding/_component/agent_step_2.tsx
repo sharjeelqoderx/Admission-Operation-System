@@ -146,6 +146,7 @@ function AgentStep2Form({
                             existingFile={toExistingFile(existingKyc.idCardFrontUrl, "ID card front")}
                             onChange={(files: UploadedFile[]) => field.handleChange(files[0]?.file ?? null)}
                             className="border-0 shadow-none p-0 bg-transparent ring-0"
+                            defaultBackgroundImage="/assets/id-card-front-example.svg"
                         />
                     </F>
                     )
@@ -161,6 +162,7 @@ function AgentStep2Form({
                             existingFile={toExistingFile(existingKyc.idCardBackUrl, "ID card back")}
                             onChange={(files: UploadedFile[]) => field.handleChange(files[0]?.file ?? null)}
                             className="border-0 shadow-none p-0 bg-transparent ring-0"
+                            defaultBackgroundImage="/assets/id-card-back-example.svg"
                         />
                     </F>
                     )

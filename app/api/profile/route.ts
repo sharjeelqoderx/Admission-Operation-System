@@ -49,11 +49,18 @@ export async function POST(req: NextRequest) {
                 }
 
                 // Update common profile
+                const title = data.title
+                const firstName = data.firstName
+                const lastName = data.lastName
+                const fullName = data.fullName || (firstName && lastName ? `${firstName} ${lastName}` : data.name)
                 const { error: profileError } = await supabase
                     .from("profile")
                     .update({
                         ...(avatar_url && { avatar_url }),
-                        name: data.fullName,
+                        ...(title && { title: title }),
+                        ...(firstName && { first_name: firstName }),
+                        ...(lastName && { last_name: lastName }),
+                        ...(fullName && { name: fullName }),
                         phone: data.phone,
                         date_of_birth: validData.dob,
                         gender: validData.gender.toUpperCase(),
@@ -108,11 +115,18 @@ export async function POST(req: NextRequest) {
 
         // Update common profile (non-student or JSON)
         if (role !== "STUDENT" || !contentType.includes("multipart/form-data")) {
+            const title = data.title
+            const firstName = data.firstName
+            const lastName = data.lastName
+            const fullName = data.fullName || (firstName && lastName ? `${firstName} ${lastName}` : data.name)
             const { error: profileError } = await supabase
                 .from("profile")
                 .update({
                     ...(avatar_url && { avatar_url }),
-                    name: data.fullName,
+                    ...(title && { title: title }),
+                    ...(firstName && { first_name: firstName }),
+                    ...(lastName && { last_name: lastName }),
+                    ...(fullName && { name: fullName }),
                     phone: data.phone,
                     date_of_birth: data.date_of_birth,
                     gender: data.gender,

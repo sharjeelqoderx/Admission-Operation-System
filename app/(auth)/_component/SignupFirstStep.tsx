@@ -9,16 +9,28 @@ import { Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { BluryCard } from "@/components/shared/blury-card"
+import { PhoneInputComponent } from "@/components/ui/phone-input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Typography } from "@/components/shared/Typography"
 import { signupSchema } from "@/types/schemas/auth"
 import { useAuth } from "@/hooks/useAuth"
 import { useQueryClient } from "@tanstack/react-query"
 import { clearSessionQueryCache } from "@/lib/query/session-cache"
 import { ErrorView } from "@/components/shared/error-view"
+import { z } from "zod"
+
+// Create a schema where title is required string (without default)
+const signupFirstStepSchema = z.object({
+  title: z.string(),
+  firstName: z.string().trim().min(1, "First Name is Required").min(2, "First Name is Too Short").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
+  lastName: z.string().trim().min(1, "Last Name is Required").min(2, "Last Name is Too Short").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
+  email: z.string().trim().min(1, "Email is required").max(254, "Email too long").email("Invalid email format").transform((val) => val.toLowerCase()),
+  phone: z.string().trim().min(1, "Phone is required").regex(/^\+?[\d\s\-\(\)]{8,30}$/, "Invalid phone number"),
+  password: z.string().min(1, "Password is required").min(8, "At least 8 characters").max(128, "Password too long").regex(/[A-Z]/, "Must contain uppercase").regex(/[a-z]/, "Must contain lowercase").regex(/[0-9]/, "Must contain number").regex(/[^A-Za-z0-9]/, "Must contain special character"),
+})
 
 
-export function SignupFirstStep({ onNext }: { onNext: () => void }) {
+export function SignupFirstStep() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const [showPassword, setShowPassword] = useState(false)
@@ -31,18 +43,22 @@ export function SignupFirstStep({ onNext }: { onNext: () => void }) {
 
     const form = useForm({
         defaultValues: {
-            fullName: "",
+            title: "",
+            firstName: "",
+            lastName: "",
             email: "",
             phone: "",
             password: "",
         },
-        validators: { onSubmit: signupSchema },
+        validators: { onSubmit: signupFirstStepSchema },
 
         onSubmit: async ({ value }) => {
             try {
                 clearSessionQueryCache(queryClient)
                 await signup.mutateAsync({
-                    fullName: value.fullName,
+                    title: value.title,
+                    firstName: value.firstName,
+                    lastName: value.lastName,
                     email: value.email,
                     phone: value.phone,
                     password: value.password,
@@ -55,7 +71,7 @@ export function SignupFirstStep({ onNext }: { onNext: () => void }) {
                 params.set("step", "2")
 
                 router.replace(`?${params.toString()}`)
-            } catch (e: any) {
+            } catch (e) {
                 console.log('[signup error]', e)
             }
         },
@@ -82,7 +98,7 @@ export function SignupFirstStep({ onNext }: { onNext: () => void }) {
                     }}
                 >
                     <FieldGroup>
-                        <form.Field name="fullName">
+                        <form.Field name="title">
                             {(field) => {
                                 const isInvalid =
                                     field.state.meta.isTouched &&
@@ -92,7 +108,34 @@ export function SignupFirstStep({ onNext }: { onNext: () => void }) {
                                 return (
                                     <Field data-invalid={isInvalid}>
                                         <FieldLabel htmlFor={field.name}>
-                                            Full Name
+                                            Title
+                                        </FieldLabel>
+                                        <Select value={field.state.value} onValueChange={field.handleChange}>
+                                            <SelectTrigger id={field.name}><SelectValue placeholder="Select title" /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Mr">Mr</SelectItem>
+                                                <SelectItem value="Mrs">Mrs</SelectItem>
+                                                <SelectItem value="Ms">Ms</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {isInvalid && error && (
+                                            <FieldError errors={[error]} />
+                                        )}
+                                    </Field>
+                                )
+                            }}
+                        </form.Field>
+                        <form.Field name="firstName">
+                            {(field) => {
+                                const isInvalid =
+                                    field.state.meta.isTouched &&
+                                    !field.state.meta.isValid
+                                const error = field.state.meta.errors?.[0]
+
+                                return (
+                                    <Field data-invalid={isInvalid}>
+                                        <FieldLabel htmlFor={field.name}>
+                                            First Name
                                         </FieldLabel>
                                         <Input
                                             id={field.name}
@@ -101,7 +144,37 @@ export function SignupFirstStep({ onNext }: { onNext: () => void }) {
                                             onChange={(e) =>
                                                 field.handleChange(e.target.value)
                                             }
-                                            placeholder="Enter your full name"
+                                            placeholder="Enter your first name"
+                                            aria-invalid={isInvalid}
+                                        />
+                                        {isInvalid && error && (
+                                            <FieldError errors={[error]} />
+                                        )}
+                                    </Field>
+                                )
+                            }}
+                        </form.Field>
+
+                        <form.Field name="lastName">
+                            {(field) => {
+                                const isInvalid =
+                                    field.state.meta.isTouched &&
+                                    !field.state.meta.isValid
+                                const error = field.state.meta.errors?.[0]
+
+                                return (
+                                    <Field data-invalid={isInvalid}>
+                                        <FieldLabel htmlFor={field.name}>
+                                            Last Name
+                                        </FieldLabel>
+                                        <Input
+                                            id={field.name}
+                                            value={field.state.value}
+                                            onBlur={field.handleBlur}
+                                            onChange={(e) =>
+                                                field.handleChange(e.target.value)
+                                            }
+                                            placeholder="Enter your last name"
                                             aria-invalid={isInvalid}
                                         />
                                         {isInvalid && error && (
@@ -154,23 +227,10 @@ export function SignupFirstStep({ onNext }: { onNext: () => void }) {
                                         <FieldLabel htmlFor={field.name}>
                                             Phone Number
                                         </FieldLabel>
-                                        <Input
-                                            id={field.name}
-                                            type="number"
+                                        <PhoneInputComponent
                                             value={field.state.value}
-                                            onBlur={field.handleBlur}
-                                            onChange={(e) =>
-                                                field.handleChange(e.target.value)
-                                            }
-                                            onKeyDown={(e) => {
-                                                if (
-                                                    ["e", "E", "-", ".", "ArrowUp", "ArrowDown"].includes(e.key)
-                                                )
-                                                    e.preventDefault()
-                                            }}
+                                            onChange={(value) => field.handleChange(value)}
                                             placeholder="Enter your phone number"
-                                            aria-invalid={isInvalid}
-                                            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         />
                                         {isInvalid && error && (
                                             <FieldError errors={[error]} />

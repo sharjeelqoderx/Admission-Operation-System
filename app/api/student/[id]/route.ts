@@ -119,7 +119,8 @@ export async function PATCH(
         const academic = academicRaw ? JSON.parse(academicRaw) : []
 
         const data = {
-            full_name: getString("full_name"),
+            first_name: getString("first_name"),
+            last_name: getString("last_name"),
             email: getString("email"),
             phone: getString("phone"),
             dob: getString("dob"),
@@ -145,10 +146,13 @@ export async function PATCH(
             ? await (await import("@/lib/supabase/upload-public-image")).uploadPublicImage({ supabase, bucket: "student-admission", userId: `${id}/passport`, file: data.passport_file_url })
             : null
 
+        const fullName = data.first_name && data.last_name ? `${data.first_name} ${data.last_name}` : undefined
         const { error: profileError } = await supabase
             .from("profile")
             .update({
-                name: data.full_name,
+                ...(fullName ? { name: fullName } : {}),
+                ...(data.first_name ? { first_name: data.first_name } : {}),
+                ...(data.last_name ? { last_name: data.last_name } : {}),
                 email: data.email,
                 phone: data.phone,
                 date_of_birth: data.dob,

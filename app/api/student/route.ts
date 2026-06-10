@@ -165,7 +165,8 @@ export async function POST(req: NextRequest) {
         const academic_background = academicRaw ? JSON.parse(academicRaw) : []
 
         const validatedData = StudentFormSchema.parse({
-            full_name: getString("full_name"),
+            first_name: getString("first_name"),
+            last_name: getString("last_name"),
             email: getString("email"),
             phone: getString("phone"),
             dob: getString("dob"),
@@ -222,13 +223,16 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: msg }, { status: 409 })
         }
 
+        const fullName = `${validatedData.first_name} ${validatedData.last_name}`
         const { data: authData, error: createUserError } =
             await supabase.auth.signUp({
                 email: validatedData.email,
                 password: "student@123",
                 options: {
                     data: {
-                        full_name: validatedData.full_name,
+                        full_name: fullName,
+                        first_name: validatedData.first_name,
+                        last_name: validatedData.last_name,
                         role: "STUDENT",
                     },
                 },
@@ -268,7 +272,9 @@ export async function POST(req: NextRequest) {
             .from("profile")
             .upsert({
                 id: newUserId,
-                name: validatedData.full_name,
+                name: fullName,
+                first_name: validatedData.first_name,
+                last_name: validatedData.last_name,
                 email: validatedData.email,
                 phone: validatedData.phone || null,
                 date_of_birth: validatedData.dob || null,

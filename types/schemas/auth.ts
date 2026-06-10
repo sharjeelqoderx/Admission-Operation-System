@@ -18,7 +18,7 @@ const phone = z
     .string()
     .trim()
     .min(1, "Phone is required")
-    .regex(/^\+?\d{10,15}$/, "Invalid phone number");
+    .regex(/^\+?[\d\s\-\(\)]{8,30}$/, "Invalid phone number");
 
 const password = z
     .string()
@@ -44,12 +44,19 @@ export const loginSchema = z.object({
 ========================= */
 
 export const signupSchema = z.object({
-    fullName: z
+    title: z.string().default(""),
+    firstName: z
         .string()
         .trim()
-        .min(1, "Name is Required")
-        .min(2, "Name is Too Short")
-        .regex(/^[a-zA-Z\s]+$/, "Only letters allowed"),
+        .min(1, "First Name is Required")
+        .min(2, "First Name is Too Short")
+        .regex(/^[a-zA-Z]+$/, "Only letters allowed"),
+    lastName: z
+        .string()
+        .trim()
+        .min(1, "Last Name is Required")
+        .min(2, "Last Name is Too Short")
+        .regex(/^[a-zA-Z]+$/, "Only letters allowed"),
     email,
     phone,
     password,

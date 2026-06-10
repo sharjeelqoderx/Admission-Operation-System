@@ -7,6 +7,7 @@ import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInputComponent } from "@/components/ui/phone-input"
 import { Field, FieldLabel, FieldError } from "@/components/ui/field"
 import { PageLoader } from "@/components/shared/page-loader"
 import { ErrorView } from "@/components/shared/error-view"
@@ -49,6 +50,9 @@ import {
 
 type MeUser = {
     fullName?: string
+    firstName?: string
+    lastName?: string
+    title?: string
     phone?: string
     avatarUrl?: string | null
     profile?: Record<string, string | undefined | null>
@@ -79,6 +83,9 @@ type MeUser = {
 
 function getProfileFormValues(user?: MeUser | null) {
     return {
+        title: user?.title ?? "",
+        firstName: user?.firstName ?? "",
+        lastName: user?.lastName ?? "",
         fullName: user?.fullName ?? "",
         phone: user?.phone ?? "",
         date_of_birth: user?.profile?.dateOfBirth ?? "",
@@ -128,6 +135,9 @@ function buildStudentProfileFormData(
     extra?: { address?: string; zip_code?: string }
 ) {
     const fd = new FormData()
+    fd.append("title", String(value.title ?? ""))
+    fd.append("firstName", String(value.firstName ?? ""))
+    fd.append("lastName", String(value.lastName ?? ""))
     fd.append("fullName", String(value.fullName ?? ""))
     fd.append("phone", String(value.phone ?? ""))
     fd.append("dob", String(value.date_of_birth ?? ""))
@@ -451,15 +461,58 @@ export default function ProfilePage() {
                         </div>
  
                         <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 lg:gap-y-6">
-                            <form.Field name="fullName">
+                            <form.Field name="title">
                                 {(field) => (
-                                    <F field={field} label="Full Name">
+                                    <F field={field} label="Title">
+                                        {isEditingBasic ? (
+                                            <Select
+                                                value={field.state.value}
+                                                onValueChange={(v) => field.handleChange(v)}
+                                            >
+                                                <SelectTrigger className="h-12 bg-white/50 border-white/20"><SelectValue placeholder="Select Title" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Mr">Mr</SelectItem>
+                                                    <SelectItem value="Mrs">Mrs</SelectItem>
+                                                    <SelectItem value="Ms">Ms</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        ) : (
+                                            <div className="p-3 bg-white/20 rounded-xl border border-white/20 min-h-12 flex items-center shadow-sm">
+                                                <Typography className="text-gray-800 font-semibold">{field.state.value || "N/A"}</Typography>
+                                            </div>
+                                        )}
+                                    </F>
+                                )}
+                            </form.Field>
+                            <form.Field name="firstName">
+                                {(field) => (
+                                    <F field={field} label="First Name">
                                         {isEditingBasic ? (
                                             <Input
                                                 value={field.state.value}
                                                 onBlur={field.handleBlur}
                                                 onChange={(e) => field.handleChange(e.target.value)}
-                                                placeholder="Enter your full name"
+                                                placeholder="Enter your first name"
+                                                className="h-12 bg-white/50 border-white/20 focus:bg-white"
+                                            />
+                                        ) : (
+                                            <div className="p-3 bg-white/20 rounded-xl border border-white/20 min-h-12 flex items-center shadow-sm">
+                                                <Typography className="text-gray-800 font-semibold">{field.state.value || "N/A"}</Typography>
+                                            </div>
+                                        )}
+                                    </F>
+                                )}
+                            </form.Field>
+
+                            <form.Field name="lastName">
+                                {(field) => (
+                                    <F field={field} label="Last Name">
+                                        {isEditingBasic ? (
+                                            <Input
+                                                value={field.state.value}
+                                                onBlur={field.handleBlur}
+                                                onChange={(e) => field.handleChange(e.target.value)}
+                                                placeholder="Enter your last name"
                                                 className="h-12 bg-white/50 border-white/20 focus:bg-white"
                                             />
                                         ) : (
@@ -482,12 +535,10 @@ export default function ProfilePage() {
                                 {(field) => (
                                     <F field={field} label="Phone Number">
                                         {isEditingBasic ? (
-                                            <Input
+                                            <PhoneInputComponent
                                                 value={field.state.value}
-                                                onBlur={field.handleBlur}
-                                                onChange={(e) => field.handleChange(e.target.value)}
+                                                onChange={(value) => field.handleChange(value)}
                                                 placeholder="Enter your phone number"
-                                                className="h-12 bg-white/50 border-white/20 focus:bg-white"
                                             />
                                         ) : (
                                             <div className="p-3 bg-white/20 rounded-xl border border-white/20 min-h-12 flex items-center shadow-sm">
@@ -709,7 +760,11 @@ export default function ProfilePage() {
                                 {(field) => (
                                     <F field={field} label="Guardian Phone">
                                         {isEditingStudentDetails ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Guardian Phone" />
+                                            <PhoneInputComponent
+                                                value={field.state.value}
+                                                onChange={(value) => field.handleChange(value)}
+                                                placeholder="Enter your Guardian Phone"
+                                            />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
                                                 <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>

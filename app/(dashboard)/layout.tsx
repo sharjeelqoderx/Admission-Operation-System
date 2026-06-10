@@ -242,7 +242,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         })}
       </Sidebar>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col">
         <Navbar
           userName={currentUser?.fullName ?? 'John Doe'}
           userRole={currentUser?.role ?? 'STUDENT'}
@@ -252,7 +252,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           isSidebarOpen={sidebarOpen}
         />
 
-        <main className="flex-1 overflow-y-auto relative">
+        <main className="flex-1 relative overflow-y-auto">
           {/* Fixed Background Layer */}
           <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
             <div

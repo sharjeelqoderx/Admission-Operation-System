@@ -9,6 +9,7 @@ import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { PhoneInputComponent } from "@/components/ui/phone-input"
 import {
     Select,
     SelectContent,
@@ -71,7 +72,8 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
 
     const form = useForm({
         defaultValues: {
-            full_name: profile?.name || "",
+            first_name: profile?.first_name || "",
+            last_name: profile?.last_name || "",
             email: profile?.email || "",
             phone: profile?.phone || "",
             password: "",
@@ -91,7 +93,8 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
         },
         onSubmit: async ({ value }) => {
             const fd = new FormData()
-            fd.set("full_name", value.full_name)
+            fd.set("first_name", value.first_name)
+            fd.set("last_name", value.last_name)
             fd.set("email", value.email)
             fd.set("phone", value.phone)
             if (value.password) fd.set("password", value.password)
@@ -130,10 +133,17 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
                                 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
-                                    <form.Field name="full_name">
+                                    <form.Field name="first_name">
                                         {(field) => (
-                                            <F field={field} label="Full Name">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter full name" className="h-12 bg-white border-none rounded-sm shadow-sm focus:ring-1 focus:ring-purple-500 transition-all text-sm" />
+                                            <F field={field} label="First Name">
+                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter first name" className="h-12 bg-white border-none rounded-sm shadow-sm focus:ring-1 focus:ring-purple-500 transition-all text-sm" />
+                                            </F>
+                                        )}
+                                    </form.Field>
+                                    <form.Field name="last_name">
+                                        {(field) => (
+                                            <F field={field} label="Last Name">
+                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter last name" className="h-12 bg-white border-none rounded-sm shadow-sm focus:ring-1 focus:ring-purple-500 transition-all text-sm" />
                                             </F>
                                         )}
                                     </form.Field>
@@ -149,7 +159,11 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                     <form.Field name="phone">
                                         {(field) => (
                                             <F field={field} label="Phone">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter phone number" className="h-12 bg-white border-none rounded-sm shadow-sm focus:ring-1 focus:ring-purple-500 transition-all text-sm" />
+                                                <PhoneInputComponent
+                                                    value={field.state.value}
+                                                    onChange={(value) => field.handleChange(value)}
+                                                    placeholder="Enter phone number"
+                                                />
                                             </F>
                                         )}
                                     </form.Field>
@@ -194,7 +208,11 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                 <form.Field name="guardian_phone">
                                     {(field) => (
                                         <F field={field} label="Contact Number">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter phone number" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                            <PhoneInputComponent
+                                                value={field.state.value}
+                                                onChange={(value) => field.handleChange(value)}
+                                                placeholder="Enter phone number"
+                                            />
                                         </F>
                                     )}
                                 </form.Field>
@@ -264,7 +282,11 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                 <form.Field name="phone">
                                     {(field) => (
                                         <F field={field} label="Parent/Guardian Phone">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="+123-456-7890" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
+                                            <PhoneInputComponent
+                                                value={field.state.value}
+                                                onChange={(value) => field.handleChange(value)}
+                                                placeholder="+123-456-7890"
+                                            />
                                         </F>
                                     )}
                                 </form.Field>

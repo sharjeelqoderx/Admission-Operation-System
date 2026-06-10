@@ -10,6 +10,7 @@ import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { PhoneInputComponent } from "@/components/ui/phone-input"
 import {
     Select,
     SelectContent,
@@ -125,7 +126,8 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
 
     const form = useForm({
         defaultValues: {
-            full_name: defaultData?.name ?? "",
+            first_name: defaultData?.name?.split(' ')[0] ?? "",
+            last_name: defaultData?.name?.split(' ').slice(1).join(' ') ?? "",
             email: defaultData?.email ?? "",
             phone: defaultData?.phone ?? "",
             dob: defaultData?.date_of_birth ?? "",
@@ -181,7 +183,8 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
 
         onSubmit: async ({ value }) => {
             const fd = new FormData()
-            fd.set("full_name", value.full_name)
+            fd.set("first_name", value.first_name)
+            fd.set("last_name", value.last_name)
             fd.set("email", value.email)
             fd.set("phone", value.phone)
             fd.set("dob", value.dob)
@@ -246,12 +249,20 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
 
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                                {/* Inputs: Full Name, Email, Phone */}
+                                {/* Inputs: First Name, Last Name, Email, Phone */}
                                 <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <form.Field name="full_name">
+                                    <form.Field name="first_name">
                                         {(field) => (
-                                            <F field={field} label="Full Name">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter full name" />
+                                            <F field={field} label="First Name">
+                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter first name" />
+                                            </F>
+                                        )}
+                                    </form.Field>
+
+                                    <form.Field name="last_name">
+                                        {(field) => (
+                                            <F field={field} label="Last Name">
+                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter last name" />
                                             </F>
                                         )}
                                     </form.Field>
@@ -268,7 +279,11 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                         <form.Field name="phone">
                                             {(field) => (
                                                 <F field={field} label="Phone">
-                                                    <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter phone number" />
+                                                    <PhoneInputComponent
+                                                        value={field.state.value}
+                                                        onChange={(value) => field.handleChange(value)}
+                                                        placeholder="Enter phone number"
+                                                    />
                                                 </F>
                                             )}
                                         </form.Field>
@@ -307,7 +322,11 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 <form.Field name="guardian_phone">
                                     {(field) => (
                                         <F field={field} label="Parent/Guardian Phone">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter phone number" />
+                                            <PhoneInputComponent
+                                                value={field.state.value}
+                                                onChange={(value) => field.handleChange(value)}
+                                                placeholder="Enter phone number"
+                                            />
                                         </F>
                                     )}
                                 </form.Field>
