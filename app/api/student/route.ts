@@ -85,6 +85,43 @@ export async function GET(req: NextRequest) {
             // Apply pagination
             const start = (page - 1) * limit
             students = students.slice(start, start + limit)
+
+            if (students.length > 0) {
+                const { count: totalDocumentTypes } = await supabase
+                    .from("document_type")
+                    .select("id", { count: "exact", head: true })
+
+                const profileIds = students.map((s) => s.profile_id)
+
+                const { data: documents } = await supabase
+                    .from("document")
+                    .select("profile_id, document_type_id")
+                    .in("profile_id", profileIds)
+                    .not("document_type_id", "is", null)
+
+                const uploadedByProfile = new Map<string, Set<string>>()
+                for (const doc of documents ?? []) {
+                    if (!doc.document_type_id) continue
+                    const existing = uploadedByProfile.get(doc.profile_id) ?? new Set<string>()
+                    existing.add(doc.document_type_id)
+                    uploadedByProfile.set(doc.profile_id, existing)
+                }
+
+                const total = totalDocumentTypes ?? 0
+
+                students = students.map((s) => {
+                    const documentsUploadedCount = uploadedByProfile.get(s.profile_id)?.size ?? 0
+                    const documentUploadPercentage =
+                        total > 0 ? Math.round((documentsUploadedCount / total) * 100) : 0
+
+                    return {
+                        ...s,
+                        documents_uploaded_count: documentsUploadedCount,
+                        total_document_types: total,
+                        document_upload_percentage: documentUploadPercentage,
+                    }
+                })
+            }
         }
 
         if (error) {

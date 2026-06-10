@@ -14,12 +14,12 @@ export function Sidebar({ children, className, isOpen = true }: SidebarProps) {
     return (
         <aside
             className={cn(
-                'border-r border-border h-screen flex flex-col relative overflow-hidden',
+                'border-r border-border border-r-1 border-r-brand-byzantine/30 h-screen flex flex-col relative overflow-hidden',
                 'transition-all duration-300 ease-in-out',
                 'md:w-64 md:static md:translate-x-0',
                 'fixed inset-y-0 left-0 z-50 w-64',
                 isOpen ? 'translate-x-0' : '-translate-x-full',
-                'bg-[#e8e0fe]',
+                'bg-brand-byzantine/10',
                 className
             )}
         >
