@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input"
 import { PhoneInputComponent } from "@/components/ui/phone-input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Typography } from "@/components/shared/Typography"
-import { signupSchema } from "@/types/schemas/auth"
 import { useAuth } from "@/hooks/useAuth"
 import { useQueryClient } from "@tanstack/react-query"
 import { clearSessionQueryCache } from "@/lib/query/session-cache"
@@ -30,7 +29,7 @@ const signupFirstStepSchema = z.object({
 })
 
 
-export function SignupFirstStep() {
+export function SignupFirstStep({ onNext }: { onNext: () => void }) {
     const router = useRouter()
     const searchParams = useSearchParams()
     const [showPassword, setShowPassword] = useState(false)
