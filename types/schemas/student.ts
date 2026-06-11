@@ -108,6 +108,8 @@ export const StudentFormSchema = z.object({
 
     avatar_url: optionalUploadFileSchema,
     passport_file_url: optionalUploadFileSchema,
+    cv_file: optionalUploadFileSchema,
+    resume_file: optionalUploadFileSchema,
 })
 
 export type StudentInput = z.infer<typeof StudentFormSchema>

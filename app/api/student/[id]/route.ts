@@ -133,6 +133,8 @@ export async function PATCH(
             guardian_phone: getString("guardian_phone"),
             avatar_url: getFile("avatar_url"),
             passport_file_url: getFile("passport_file_url"),
+            cv_file: getFile("cv_file"),
+            resume_file: getFile("resume_file"),
             academic,
         }
 
@@ -235,6 +237,62 @@ export async function PATCH(
                 if (eduError) {
                     console.error(eduError)
                     return NextResponse.json({ error: "Education update failed" }, { status: 400 })
+                }
+            }
+        }
+
+        // 4. Upsert CV + Resume documents if provided
+        const docFilesToUpsert = [
+            { code: "CV", file: data.cv_file },
+            { code: "RESUME", file: data.resume_file },
+        ].filter((d): d is { code: string; file: File } => d.file instanceof File)
+
+        if (docFilesToUpsert.length > 0) {
+            const { data: docTypes } = await supabase
+                .from("document_type")
+                .select("id, code")
+                .in("code", docFilesToUpsert.map((d) => d.code))
+
+            for (const { code, file } of docFilesToUpsert) {
+                const docType = (docTypes ?? []).find((d: any) => d.code === code)
+                if (!docType) continue
+
+                const { publicUrl } = await (await import("@/lib/supabase/upload-public-image")).uploadPublicImage({
+                    supabase,
+                    bucket: "student-admission",
+                    userId: `${id}/${code.toLowerCase()}`,
+                    file,
+                })
+
+                // Delete existing and re-insert
+                await supabase
+                    .from("document")
+                    .delete()
+                    .eq("profile_id", id)
+                    .eq("document_type_id", docType.id)
+
+                const { data: docRecord } = await supabase
+                    .from("document")
+                    .insert({
+                        profile_id: id,
+                        uploaded_by_profile_id: user.id,
+                        document_type_id: docType.id,
+                    })
+                    .select()
+                    .single()
+
+                if (docRecord) {
+                    await supabase.from("document_files").insert({
+                        document_id: docRecord.id,
+                        file_url: publicUrl,
+                        type: "FRONT",
+                    })
+                    await supabase.from("document_review").insert({
+                        document_id: docRecord.id,
+                        reviewed_by_profile_id: null,
+                        status: "PENDING",
+                        feedback: null,
+                    })
                 }
             }
         }

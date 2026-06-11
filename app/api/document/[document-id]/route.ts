@@ -29,3 +29,29 @@ export async function GET(
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
 }
+
+export async function PATCH(
+    req: NextRequest,
+    { params }: { params: Promise<{ "document-id": string }> }
+) {
+    try {
+        const supabase = await createSupabaseServerClient()
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+        const { "document-id": documentId } = await params
+        const { note } = await req.json()
+
+        const { error } = await supabase
+            .from("document")
+            .update({ note: note ?? null })
+            .eq("id", documentId)
+
+        if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+        return NextResponse.json({ message: "Note updated" }, { status: 200 })
+    } catch (e) {
+        console.error(e)
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    }
+}

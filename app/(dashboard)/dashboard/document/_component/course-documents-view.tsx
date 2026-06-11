@@ -15,7 +15,6 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from "@/components/ui/accordion"
-import ImageUploadCard from "@/components/shared/image-upload-card"
 import { cn } from "@/lib/utils"
 import { formatStudyMode } from "@/lib/utils/program"
 import {
@@ -125,6 +124,93 @@ function entryToFiles(entry: PendingEntry): File[] {
     }
 
     return files
+}
+
+function NotePopover({ note, documentId, onSave }: { note: string; documentId?: string; onSave: (note: string) => void }) {
+    const [open, setOpen] = useState(false)
+    const [draft, setDraft] = useState(note)
+    const [saving, setSaving] = useState(false)
+
+    const handleOpenChange = (v: boolean) => {
+        if (v) setDraft(note)
+        setOpen(v)
+    }
+
+    const handleSave = async () => {
+        if (documentId) {
+            setSaving(true)
+            await fetch(`/api/document/${documentId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ note: draft }),
+            })
+            setSaving(false)
+        }
+        onSave(draft)
+        setOpen(false)
+    }
+
+    return (
+        <div className="flex items-center gap-2">
+            {note && (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button
+                                type="button"
+                                className="size-9 rounded-lg border border-amber-200 bg-amber-50 flex items-center justify-center"
+                            >
+                                <AlertCircle className="size-4 text-amber-600" />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[260px]">
+                            <p className="text-sm whitespace-pre-wrap">{note}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )}
+
+            <Popover open={open} onOpenChange={handleOpenChange}>
+                <PopoverTrigger asChild>
+                    {note ? (
+                        <button
+                            type="button"
+                            className="size-9 rounded-lg border border-gray-200 flex items-center justify-center hover:border-brand-byzantine transition-colors"
+                        >
+                            <Pencil className="size-4 text-gray-600" />
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            className="size-9 rounded-lg border border-dashed border-gray-300 flex items-center justify-center hover:border-brand-byzantine transition-colors"
+                        >
+                            <Plus className="size-4 text-gray-600" />
+                        </button>
+                    )}
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[280px] space-y-3">
+                    <Typography font="text" className="font-semibold">
+                        {note ? "Edit Note" : "Add Note"}
+                    </Typography>
+                    <textarea
+                        autoFocus
+                        placeholder="Write note..."
+                        className="w-full min-h-[100px] rounded-lg border border-gray-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-byzantine resize-none"
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                    />
+                    <div className="flex justify-end gap-2">
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>
+                            Cancel
+                        </Button>
+                        <Button type="button" size="sm" className="bg-brand-byzantine hover:bg-brand-byzantine/90" onClick={handleSave} disabled={saving}>
+                            {saving ? "Saving..." : "Save"}
+                        </Button>
+                    </div>
+                </PopoverContent>
+            </Popover>
+        </div>
+    )
 }
 
 type DegreeAccordionItemProps = {
@@ -466,35 +552,39 @@ const DegreeAccordionItem = memo(function DegreeAccordionItem({
 
                                                             <div className="flex flex-col">
 
-                                                                <span className="text-sm font-medium text-gray-700">
+                                                                {entry.front ? (
+                                                                    <>
+                                                                        <span className="text-sm font-medium text-emerald-600">
+                                                                            Selected: {entry.front.name}
+                                                                        </span>
 
-                                                                    {entry.front
-                                                                        ? entry.front.name
-                                                                        : uploadedFrontUrl
-                                                                            ? "File uploaded"
-                                                                            : "No file selected"}
+                                                                        <span className="text-xs text-gray-500">
+                                                                            {(entry.front.size / 1024 / 1024).toFixed(2)} MB
+                                                                        </span>
+                                                                    </>
+                                                                ) : uploaded?.files?.[0] ? (
+                                                                    <>
+                                                                        <span className="text-sm font-medium text-blue-600">
+                                                                            Uploaded Document
+                                                                        </span>
 
-                                                                </span>
-
-                                                                {entry.front && (
-
-                                                                    <span className="text-xs text-gray-500">
-
-                                                                        {(
-                                                                            entry.front.size /
-                                                                            1024 /
-                                                                            1024
-                                                                        ).toFixed(2)}{" "}
-                                                                        MB
-
+                                                                        <a
+                                                                            href={uploaded.files[0].file_url}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="text-xs text-brand-byzantine underline"
+                                                                        >
+                                                                            View File
+                                                                        </a>
+                                                                    </>
+                                                                ) : (
+                                                                    <span className="text-sm text-gray-500">
+                                                                        No file selected
                                                                     </span>
-
                                                                 )}
 
                                                             </div>
-
                                                         </div>
-
                                                     </td>
 
                                                     {/* Status */}
@@ -538,140 +628,17 @@ const DegreeAccordionItem = memo(function DegreeAccordionItem({
 
                                                         <div className="flex items-center">
 
-                                                            {/* ADD NOTE */}
-
-
-                                                            {!entry.note && (
-
-                                                                <Popover>
-
-                                                                    <PopoverTrigger asChild>
-
-                                                                        <button
-                                                                            type="button"
-                                                                            className="size-9 rounded-lg border border-dashed border-gray-300 flex items-center justify-center hover:border-brand-byzantine transition-colors"
-                                                                        >
-                                                                            <Plus className="size-4 text-gray-600" />
-                                                                        </button>
-
-                                                                    </PopoverTrigger>
-
-                                                                    <PopoverContent
-                                                                        align="start"
-                                                                        className="w-[220px] space-y-3"
-                                                                    >
-
-                                                                        <Typography
-                                                                            font="text"
-                                                                            className="font-semibold"
-                                                                        >
-                                                                            Add Note
-                                                                        </Typography>
-
-                                                                        <textarea
-                                                                            placeholder="Write note..."
-                                                                            className="w-full rounded-lg border border-gray-200 p-3 text-sm focus:outline-none focus:ring-1 focus:ring-brand-byzantine"
-                                                                            value={entry.note}
-                                                                            onChange={(e) =>
-                                                                                onPendingChange(
-                                                                                    requirement.document_type_id,
-                                                                                    {
-                                                                                        ...entry,
-                                                                                        note: e.target.value,
-                                                                                    }
-                                                                                )
-                                                                            }
-                                                                        />
-
-                                                                    </PopoverContent>
-
-                                                                </Popover>
-                                                            )}
-
-                                                            {/* VIEW / EDIT NOTE */}
-
-                                                            {entry.note && (
-
-                                                                <div className="flex items-center gap-2">
-
-                                                                    {/* VIEW */}
-
-                                                                    <TooltipProvider>
-
-                                                                        <Tooltip>
-
-                                                                            <TooltipTrigger asChild>
-
-                                                                                <button
-                                                                                    type="button"
-                                                                                    className="size-9 rounded-lg border border-amber-200 bg-amber-50 flex items-center justify-center"
-                                                                                >
-                                                                                    <AlertCircle className="size-4 text-amber-600" />
-                                                                                </button>
-
-                                                                            </TooltipTrigger>
-
-                                                                            <TooltipContent
-                                                                                side="top"
-                                                                                className="max-w-[260px]"
-                                                                            >
-                                                                                <p className="text-sm whitespace-pre-wrap">
-                                                                                    {entry.note}
-                                                                                </p>
-                                                                            </TooltipContent>
-
-                                                                        </Tooltip>
-
-                                                                    </TooltipProvider>
-
-                                                                    {/* EDIT */}
-
-                                                                    <Popover>
-
-                                                                        <PopoverTrigger asChild>
-
-                                                                            <button
-                                                                                type="button"
-                                                                                className="size-9 rounded-lg border border-gray-200 flex items-center justify-center hover:border-brand-byzantine transition-colors"
-                                                                            >
-                                                                                <Pencil className="size-4 text-gray-600" />
-                                                                            </button>
-
-                                                                        </PopoverTrigger>
-
-                                                                        <PopoverContent
-                                                                            align="start"
-                                                                            className="w-[320px] space-y-3"
-                                                                        >
-
-                                                                            <Typography
-                                                                                font="text"
-                                                                                className="font-semibold"
-                                                                            >
-                                                                                Edit Note
-                                                                            </Typography>
-
-                                                                            <textarea
-                                                                                placeholder="Write note..."
-                                                                                className="w-full min-h-[120px] rounded-lg border border-gray-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-byzantine"
-                                                                                value={entry.note}
-                                                                                onChange={(e) =>
-                                                                                    onPendingChange(
-                                                                                        requirement.document_type_id,
-                                                                                        {
-                                                                                            ...entry,
-                                                                                            note: e.target.value,
-                                                                                        }
-                                                                                    )
-                                                                                }
-                                                                            />
-
-                                                                        </PopoverContent>
-
-                                                                    </Popover>
-
-                                                                </div>
-                                                            )}
+                                                            {/* ADD / EDIT NOTE */}
+                                                            <NotePopover
+                                                                note={entry.note}
+                                                                documentId={uploaded?.document_id}
+                                                                onSave={(note) =>
+                                                                    onPendingChange(
+                                                                        requirement.document_type_id,
+                                                                        { ...entry, note }
+                                                                    )
+                                                                }
+                                                            />
 
                                                         </div>
 
@@ -763,26 +730,10 @@ export function CourseDocumentsView({
             documentTypeId: string,
             entry: PendingEntry
         ) => {
-
-            setPendingFiles((current) => {
-
-                if (!hasPendingFiles(entry)) {
-
-                    const next = { ...current }
-
-                    delete next[
-                        getPendingKey(documentTypeId)
-                    ]
-
-                    return next
-                }
-
-                return {
-                    ...current,
-                    [getPendingKey(documentTypeId)]: entry,
-                }
-            })
-
+            setPendingFiles((current) => ({
+                ...current,
+                [getPendingKey(documentTypeId)]: entry,
+            }))
         },
         []
     )

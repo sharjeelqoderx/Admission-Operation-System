@@ -20,6 +20,7 @@ export type UploadedDocumentSummary = {
     status: string
     files: Array<{ file_url: string; type: string | null }>
     created_at: string
+    updated_at: string | null
 }
 
 export type CourseRequiredDocument = {

@@ -180,6 +180,8 @@ export async function POST(req: NextRequest) {
             avatar_url: getFile("avatar_url"),
             passport_file_url: getFile("passport_file_url"),
             academic_background,
+            cv_file: getFile("cv_file"),
+            resume_file: getFile("resume_file"),
         })
 
         const { data: meProfile } = await supabase
@@ -396,6 +398,8 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        /* ---------------- CV + RESUME DOCUMENTS — handled separately ---------------- */
+
         /* ---------------- SUCCESS ---------------- */
         return NextResponse.json(
             {
@@ -405,6 +409,7 @@ export async function POST(req: NextRequest) {
             { status: 201 }
         )
     } catch (e: any) {
+        console.error("[POST /api/student] error:", e?.message ?? e)
         if (e?.name === "ZodError") {
             return NextResponse.json(
                 { error: "Validation failed", details: e.errors },
@@ -413,7 +418,7 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json(
-            { error: "Internal Server Error" },
+            { error: e?.message ?? "Internal Server Error" },
             { status: 500 }
         )
     }
