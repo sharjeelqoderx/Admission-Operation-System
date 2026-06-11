@@ -4,7 +4,6 @@
 import React, { useState, useEffect, useRef } from "react"
 import PhoneInput from "react-phone-input-2"
 import "react-phone-input-2/lib/style.css"
-import { createPortal } from "react-dom"
 
 interface PhoneInputProps {
   value: string
@@ -39,7 +38,7 @@ export function PhoneInputComponent({
           height: "50px",
           border: "none",
           borderRadius: "0.125rem",
-          paddingLeft: "60px",
+          // paddingLeft: "60px",
           backgroundColor: "#F3F4F6",
           color: "#1f2937",
           fontSize: "0.875rem",
@@ -58,15 +57,16 @@ export function PhoneInputComponent({
           zIndex: 9999999999,
           maxHeight: "300px",
           overflowY: "auto",
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)",
+          padding: "0px 6px",
+          overflowX: "hidden",
+          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)",
           borderRadius: "0.5rem",
-          position: "fixed" as const,
         }}
         enableSearch
         searchStyle={{
           width: "100%",
           height: "40px",
-          padding: "8px",
+          marginLeft: "0px",
           borderBottom: "1px solid #E5E7EB",
         }}
         searchPlaceholder="Search country"

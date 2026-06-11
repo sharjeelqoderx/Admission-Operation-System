@@ -37,8 +37,8 @@ function getFieldState(field: {
         raw == null
             ? undefined
             : typeof raw === "string"
-              ? raw
-              : (raw as { message?: string }).message
+                ? raw
+                : (raw as { message?: string }).message
     return { isInvalid, error }
 }
 
@@ -156,14 +156,14 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 : "",
                         obtained_marks:
                             gradeType === "percentage" &&
-                            e.obtained_marks != null &&
-                            e.obtained_marks !== ""
+                                e.obtained_marks != null &&
+                                e.obtained_marks !== ""
                                 ? String(e.obtained_marks)
                                 : "",
                         total_marks:
                             gradeType === "percentage" &&
-                            e.total_marks != null &&
-                            e.total_marks !== ""
+                                e.total_marks != null &&
+                                e.total_marks !== ""
                                 ? String(e.total_marks)
                                 : "",
                     }
@@ -275,7 +275,6 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                         )}
                                     </form.Field>
 
-                                    <div className="sm:col-span-2">
                                         <form.Field name="phone">
                                             {(field) => (
                                                 <F field={field} label="Phone">
@@ -287,7 +286,6 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                 </F>
                                             )}
                                         </form.Field>
-                                    </div>
                                 </div>
 
                                 {/* Avatar Upload */}
@@ -404,7 +402,6 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                     )}
                                 </form.Field>
 
-                                <div className="col-span-1 sm:col-span-1 lg:col-span-2">
                                     <form.Field name="nationality">
                                         {(field) => (
                                             <F field={field} label="Nationality">
@@ -418,7 +415,6 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                             </F>
                                         )}
                                     </form.Field>
-                                </div>
 
                                 <div className="col-span-1 sm:col-span-2 lg:col-span-1">
                                     <form.Field name="passport_file_url">
