@@ -192,7 +192,6 @@ export async function POST(req: NextRequest) {
                 profile_id: validated.student_id,
                 uploaded_by_profile_id: user.id,
                 document_type_id: validated.document_type_id,
-                note: (formData.get("note") as string) || null,
             })
             .select()
             .single()

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
-import { useInfiniteQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -10,6 +10,7 @@ import { Search, SlidersHorizontal, AlertCircle } from "lucide-react"
 import { ProgramCard, InfiniteLoader } from "./_component/ProgramCard"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useLevels } from "@/hooks/useLevels"
+import { getLevelPriority } from "@/lib/utils/levels"
 import { Button } from "@/components/ui/button"
 import { PageLoader } from "@/components/shared/page-loader"
 import type { ProgramListResponse } from "@/types/schemas/program"
@@ -25,6 +26,28 @@ export default function ProgramDashboard() {
 
     const [localSearch, setLocalSearch] = useState(urlSearch)
     const debouncedSearch = useDebounce(localSearch, 600)
+
+    // Fetch user
+    const { data: user } = useQuery({
+        queryKey: ["me"],
+        queryFn: async () => {
+            const res = await fetch("/api/me")
+            if (!res.ok) throw new Error("Failed to fetch user")
+            return res.json()
+        },
+    })
+
+    // Fetch student details if user is student
+    const { data: studentDetails } = useQuery({
+        queryKey: ["student", user?.data?.id],
+        queryFn: async () => {
+            if (!user?.data?.id) return null
+            const res = await fetch(`/api/student/${user.data.id}`)
+            if (!res.ok) throw new Error("Failed to fetch student")
+            return res.json()
+        },
+        enabled: !!user?.data?.id && user?.data?.role === "STUDENT",
+    })
 
     const { data: levels = [], isLoading: levelsLoading } = useLevels()
 
@@ -95,10 +118,35 @@ export default function ProgramDashboard() {
         router.push(`${pathname}?${params.toString()}`)
     }
 
-    const allPrograms = useMemo(
-        () => data?.pages.flatMap((page) => page.data) ?? [],
-        [data]
-    )
+    const allPrograms = useMemo(() => {
+        let programs = data?.pages.flatMap((page) => page.data) ?? [];
+
+        if (user?.data?.role === "STUDENT") {
+            // Find highest level priority from student's education
+            let highestLevelPriority = 0;
+            if (studentDetails?.data?.education && Array.isArray(studentDetails.data.education)) {
+                for (const edu of studentDetails.data.education) {
+                    if (edu?.qualification_degree?.level?.name) {
+                        const levelPriority = getLevelPriority(edu.qualification_degree.level.name);
+                        if (levelPriority > highestLevelPriority) {
+                            highestLevelPriority = levelPriority;
+                        }
+                    }
+                }
+            }
+
+            if (highestLevelPriority > 0) {
+                // Filter courses where course's level is higher than highestLevelPriority
+                programs = programs.filter((course) => {
+                    const courseLevelName = course?.degree?.level?.name;
+                    const courseLevelPriority = getLevelPriority(courseLevelName);
+                    return courseLevelPriority > highestLevelPriority;
+                });
+            }
+        }
+
+        return programs;
+    }, [data, user, studentDetails])
 
     const isPageLoading = levelsLoading || isLoading || (isFetching && !isFetchingNextPage)
 

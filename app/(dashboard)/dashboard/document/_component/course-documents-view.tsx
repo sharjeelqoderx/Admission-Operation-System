@@ -21,6 +21,7 @@ import {
     useCourseDocumentBundles,
     useSaveDegreeDocuments,
 } from "@/hooks/useCourseDocumentBundles"
+import { useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/hooks/useAuth"
 import type {
     DegreeDocumentBundle,
@@ -126,7 +127,7 @@ function entryToFiles(entry: PendingEntry): File[] {
     return files
 }
 
-function NotePopover({ note, documentId, onSave }: { note: string; documentId?: string; onSave: (note: string) => void }) {
+function NotePopover({ note, documentId, onSave, isDisabled }: { note: string; documentId?: string; onSave: (note: string) => void; isDisabled?: boolean }) {
     const [open, setOpen] = useState(false)
     const [draft, setDraft] = useState(note)
     const [saving, setSaving] = useState(false)
@@ -142,7 +143,7 @@ function NotePopover({ note, documentId, onSave }: { note: string; documentId?: 
             await fetch(`/api/document/${documentId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ note: draft }),
+                body: JSON.stringify({ comment: draft }),
             })
             setSaving(false)
         }
@@ -175,14 +176,16 @@ function NotePopover({ note, documentId, onSave }: { note: string; documentId?: 
                     {note ? (
                         <button
                             type="button"
-                            className="size-9 rounded-lg border border-gray-200 flex items-center justify-center hover:border-brand-byzantine transition-colors"
+                            className="size-9 rounded-lg border border-gray-200 flex items-center justify-center hover:border-brand-byzantine transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isDisabled}
                         >
                             <Pencil className="size-4 text-gray-600" />
                         </button>
                     ) : (
                         <button
                             type="button"
-                            className="size-9 rounded-lg border border-dashed border-gray-300 flex items-center justify-center hover:border-brand-byzantine transition-colors"
+                            className="size-9 rounded-lg border border-dashed border-gray-300 flex items-center justify-center hover:border-brand-byzantine transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isDisabled}
                         >
                             <Plus className="size-4 text-gray-600" />
                         </button>
@@ -220,55 +223,24 @@ type DegreeAccordionItemProps = {
         documentTypeId: string,
         entry: PendingEntry
     ) => void
-
-    onSave: (
+    profileId: string
+    isSaving: Record<string, boolean>
+    onSaveRow: (
         degreeId: string,
-        uploads: Array<{
-            document_type_id: string
-            files: File[]
-            note: string
-        }>
+        documentTypeId: string,
+        files: File[],
+        note: string
     ) => void
-
-    isSaving: boolean
-    savingDegreeId: string | null
 }
 
 const DegreeAccordionItem = memo(function DegreeAccordionItem({
     bundle,
     pendingFiles,
     onPendingChange,
-    onSave,
+    profileId,
     isSaving,
-    savingDegreeId,
+    onSaveRow,
 }: DegreeAccordionItemProps) {
-
-    const pendingUploads = useMemo(
-        () =>
-            bundle.required_documents
-                .map((requirement) => {
-                    const entry = getPendingEntry(
-                        pendingFiles,
-                        requirement.document_type_id
-                    )
-
-                    return {
-                        document_type_id:
-                            requirement.document_type_id,
-
-                        files: entryToFiles(entry),
-
-                        note: entry.note,
-                    }
-                })
-                .filter((item) => item.files.length > 0),
-
-        [bundle.required_documents, pendingFiles]
-    )
-
-    const handleSave = useCallback(() => {
-        onSave(bundle.degree.id, pendingUploads)
-    }, [bundle.degree.id, onSave, pendingUploads])
 
     return (
         <AccordionItem value={bundle.degree.id}>
@@ -410,10 +382,6 @@ const DegreeAccordionItem = memo(function DegreeAccordionItem({
                                         </th>
 
                                         <th className="text-left p-4 text-sm font-semibold text-gray-700">
-                                            Required
-                                        </th>
-
-                                        <th className="text-left p-4 text-sm font-semibold text-gray-700">
                                             Upload File
                                         </th>
 
@@ -423,6 +391,10 @@ const DegreeAccordionItem = memo(function DegreeAccordionItem({
 
                                         <th className="text-left p-4 text-sm font-semibold text-gray-700">
                                             Note
+                                        </th>
+
+                                        <th className="text-left p-4 text-sm font-semibold text-gray-700">
+                                            Actions
                                         </th>
 
                                     </tr>
@@ -453,111 +425,58 @@ const DegreeAccordionItem = memo(function DegreeAccordionItem({
                                             )
 
                                             return (
-
                                                 <tr
-                                                    key={
-                                                        requirement.requirement_id
-                                                    }
+                                                    key={requirement.requirement_id}
                                                     className="border-b align-top"
                                                 >
-
                                                     {/* Last Updated */}
                                                     <td className="p-4 text-sm text-gray-500 whitespace-nowrap">
                                                         {uploaded?.updated_at
-                                                            ? new Date(
-                                                                uploaded.updated_at
-                                                            ).toLocaleDateString()
+                                                            ? new Date(uploaded.updated_at).toLocaleDateString()
                                                             : "-"}
-
                                                     </td>
-
                                                     {/* Document Name */}
                                                     <td className="p-4 min-w-[240px]">
                                                         <div className="space-y-1">
                                                             <div className="flex items-center gap-2">
                                                                 <FileText className="size-4 text-brand-byzantine" />
-                                                                <Typography
-                                                                    font="text"
-                                                                    className="font-semibold text-gray-900"
-                                                                >
-                                                                    {
-                                                                        requirement.name
-                                                                    }
+                                                                <Typography font="text" className="font-semibold text-gray-900">
+                                                                    {requirement.name}
                                                                 </Typography>
-
                                                             </div>
-
                                                             {requirement.description && (
-
-                                                                <Typography
-                                                                    font="small"
-                                                                    className="text-gray-500"
-                                                                >
-                                                                    {
-                                                                        requirement.description
-                                                                    }
+                                                                <Typography font="small" className="text-gray-500">
+                                                                    {requirement.description}
                                                                 </Typography>
-
                                                             )}
-
                                                         </div>
-
                                                     </td>
-
-                                                    {/* Required */}
-
-                                                    <td className="p-4">
-
-                                                        <Badge
-                                                            variant="outline"
-                                                            className="border-amber-300 text-amber-700"
-                                                        >
-                                                            Required
-                                                        </Badge>
-
-                                                    </td>
-
                                                     {/* Upload */}
-
                                                     <td className="p-4 min-w-[320px]">
-
                                                         <div className="flex items-center gap-3">
-
                                                             <label
                                                                 htmlFor={`upload-${requirement.document_type_id}`}
-                                                                className="size-10 rounded-lg border border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-brand-byzantine transition-colors"
+                                                                className={`size-10 rounded-lg border border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-brand-byzantine transition-colors ${(uploaded?.status === "APPROVED" || uploaded?.status === "VERIFIED") ? "opacity-50 cursor-not-allowed" : ""}`}
                                                             >
                                                                 <Upload className="size-4 text-gray-600" />
                                                             </label>
-
                                                             <input
                                                                 id={`upload-${requirement.document_type_id}`}
                                                                 type="file"
                                                                 className="hidden"
                                                                 accept="image/*,application/pdf,.doc,.docx"
+                                                                disabled={uploaded?.status === "APPROVED" || uploaded?.status === "VERIFIED"}
                                                                 onChange={(e) => {
-
-                                                                    const file =
-                                                                        e.target.files?.[0] ?? null
-
-                                                                    onPendingChange(
-                                                                        requirement.document_type_id,
-                                                                        {
-                                                                            ...entry,
-                                                                            front: file,
-                                                                        }
-                                                                    )
+                                                                    const file = e.target.files?.[0] ?? null
+                                                                    onPendingChange(requirement.document_type_id, { ...entry, front: file })
                                                                 }}
                                                             />
-
                                                             <div className="flex flex-col">
-
                                                                 {entry.front ? (
                                                                     <>
                                                                         <span className="text-sm font-medium text-emerald-600">
                                                                             Selected: {entry.front.name}
                                                                         </span>
-
                                                                         <span className="text-xs text-gray-500">
                                                                             {(entry.front.size / 1024 / 1024).toFixed(2)} MB
                                                                         </span>
@@ -567,7 +486,6 @@ const DegreeAccordionItem = memo(function DegreeAccordionItem({
                                                                         <span className="text-sm font-medium text-blue-600">
                                                                             Uploaded Document
                                                                         </span>
-
                                                                         <a
                                                                             href={uploaded.files[0].file_url}
                                                                             target="_blank"
@@ -582,69 +500,52 @@ const DegreeAccordionItem = memo(function DegreeAccordionItem({
                                                                         No file selected
                                                                     </span>
                                                                 )}
-
                                                             </div>
                                                         </div>
                                                     </td>
-
                                                     {/* Status */}
-
                                                     <td className="p-4">
-
                                                         {uploaded ? (
-
                                                             <Badge
                                                                 variant="outline"
                                                                 className={cn(
                                                                     "text-[10px] uppercase tracking-wide",
-                                                                    getDocumentStatusBadgeClass(
-                                                                        uploaded.status
-                                                                    )
+                                                                    getDocumentStatusBadgeClass(uploaded.status)
                                                                 )}
                                                             >
-                                                                {formatDocumentStatus(
-                                                                    uploaded.status
-                                                                )}
+                                                                {formatDocumentStatus(uploaded.status)}
                                                             </Badge>
-
                                                         ) : (
-
-                                                            <Badge
-                                                                variant="secondary"
-                                                                className="text-xs"
-                                                            >
-                                                                {hasFile
-                                                                    ? "Ready"
-                                                                    : "Pending"}
+                                                            <Badge variant="secondary" className="text-xs">
+                                                                {hasFile ? "Ready" : "Pending"}
                                                             </Badge>
-
                                                         )}
-
                                                     </td>
-
                                                     {/* Note */}
-
                                                     <td className="p-4 min-w-[120px]">
-
                                                         <div className="flex items-center">
-
-                                                            {/* ADD / EDIT NOTE */}
                                                             <NotePopover
                                                                 note={entry.note}
                                                                 documentId={uploaded?.document_id}
-                                                                onSave={(note) =>
-                                                                    onPendingChange(
-                                                                        requirement.document_type_id,
-                                                                        { ...entry, note }
-                                                                    )
-                                                                }
+                                                                onSave={(note) => onPendingChange(requirement.document_type_id, { ...entry, note })}
+                                                                isDisabled={uploaded?.status === "APPROVED" || uploaded?.status === "VERIFIED"}
                                                             />
-
                                                         </div>
-
                                                     </td>
-
-
+                                                    {/* Actions */}
+                                                    <td className="p-4">
+                                                        {entry.front && (
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                className="bg-brand-byzantine hover:bg-brand-byzantine/90"
+                                                                disabled={isSaving[requirement.document_type_id]}
+                                                                onClick={() => onSaveRow(bundle.degree.id, requirement.document_type_id, entryToFiles(entry), entry.note)}
+                                                            >
+                                                                {isSaving[requirement.document_type_id] ? "Saving..." : "Save"}
+                                                            </Button>
+                                                        )}
+                                                    </td>
                                                 </tr>
                                             )
                                         }
@@ -658,32 +559,6 @@ const DegreeAccordionItem = memo(function DegreeAccordionItem({
                     )}
 
                 </div>
-
-                {bundle.required_documents.length > 0 && (
-
-                    <div className="flex justify-end pt-2">
-
-                        <Button
-                            type="button"
-                            className="bg-brand-byzantine hover:bg-brand-byzantine/90 gap-2"
-                            disabled={
-                                pendingUploads.length === 0 ||
-                                isSaving
-                            }
-                            onClick={handleSave}
-                        >
-                            <Upload className="size-4" />
-
-                            {isSaving &&
-                                savingDegreeId === bundle.degree.id
-                                ? "Saving..."
-                                : "Save Documents"}
-
-                        </Button>
-
-                    </div>
-
-                )}
 
             </AccordionContent>
         </AccordionItem>
@@ -704,6 +579,7 @@ export function CourseDocumentsView({
 
     const { me } = useAuth()
     const { data: user, isLoading: userLoading } = me
+    const queryClient = useQueryClient()
 
     const resolvedProfileId = profileId ?? user?.id
 
@@ -719,8 +595,8 @@ export function CourseDocumentsView({
     const [pendingFiles, setPendingFiles] =
         useState<PendingFilesMap>({})
 
-    const [savingDegreeId, setSavingDegreeId] =
-        useState<string | null>(null)
+    const [isSaving, setIsSaving] =
+        useState<Record<string, boolean>>({})
 
     const [saveError, setSaveError] =
         useState<string | null>(null)
@@ -738,61 +614,52 @@ export function CourseDocumentsView({
         []
     )
 
-    const handleSaveDegree = useCallback(
+    const handleSaveRow = useCallback(
         async (
             degreeId: string,
-            uploads: Array<{
-                document_type_id: string
-                files: File[]
-                note: string
-            }>
+            documentTypeId: string,
+            files: File[],
+            note: string
         ) => {
-
-            if (!data?.profile_id || uploads.length === 0)
+            if (!data?.profile_id || files.length === 0)
                 return
 
             setSaveError(null)
-
-            setSavingDegreeId(degreeId)
+            setIsSaving(current => ({ ...current, [documentTypeId]: true }))
 
             try {
+                const fd = new FormData()
+                fd.set("student_id", data.profile_id)
+                fd.set("document_type_id", documentTypeId)
+                files.forEach(file => fd.append("files", file))
 
-                await saveMutation.mutateAsync({
-                    profile_id: data.profile_id,
-                    uploads,
-                })
+                const res = await fetch("/api/document", { method: "POST", body: fd })
+                if (!res.ok) {
+                    const json = await res.json()
+                    throw new Error(json.error ?? "Failed to save document")
+                }
 
-                setPendingFiles((current) => {
-
+                setPendingFiles(current => {
                     const next = { ...current }
-
-                    uploads.forEach((upload) => {
-                        delete next[
-                            getPendingKey(
-                                upload.document_type_id
-                            )
-                        ]
-                    })
-
+                    delete next[documentTypeId]
                     return next
                 })
 
-            } catch (e) {
+                // Invalidate queries to refresh data
+                await queryClient.invalidateQueries({ queryKey: ["course-document-bundles"] })
+                await queryClient.invalidateQueries({ queryKey: ["documents"] })
 
+            } catch (e) {
                 setSaveError(
                     e instanceof Error
                         ? e.message
                         : "Failed to save documents"
                 )
-
             } finally {
-
-                setSavingDegreeId(null)
-
+                setIsSaving(current => ({ ...current, [documentTypeId]: false }))
             }
-
         },
-        [data?.profile_id, saveMutation]
+        [data?.profile_id, queryClient]
     )
 
     if ((!profileId && userLoading) || isLoading) {
@@ -894,16 +761,10 @@ export function CourseDocumentsView({
                                 key={bundle.degree.id}
                                 bundle={bundle}
                                 pendingFiles={pendingFiles}
-                                onPendingChange={
-                                    handlePendingChange
-                                }
-                                onSave={handleSaveDegree}
-                                isSaving={
-                                    saveMutation.isPending
-                                }
-                                savingDegreeId={
-                                    savingDegreeId
-                                }
+                                onPendingChange={handlePendingChange}
+                                profileId={data?.profile_id || ""}
+                                isSaving={isSaving}
+                                onSaveRow={handleSaveRow}
                             />
 
                         ))}

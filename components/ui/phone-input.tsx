@@ -3,6 +3,7 @@
 
 import PhoneInput from "react-phone-input-2"
 import "react-phone-input-2/lib/style.css"
+import { useEffect } from "react"
 
 interface PhoneInputProps {
     value: string
@@ -18,6 +19,32 @@ export function PhoneInputComponent({
     placeholder,
     disabled,
 }: PhoneInputProps) {
+    // Override react-phone-input-2 styles to match our design
+    useEffect(() => {
+        const style = document.createElement('style')
+        style.innerHTML = `
+            .react-tel-input {
+                width: 100% !important;
+            }
+            .react-tel-input .flag-dropdown {
+                border: 1px solid #e5e7eb !important;
+                background-color: #f8f9fc !important;
+                border-radius: 0.25rem 0 0 0.25rem !important;
+                height: 50px !important;
+                width: 55px !important;
+            }
+            .react-tel-input .form-control {
+                height: 50px !important;
+                border: 1px solid #e5e7eb !important;
+                background-color: #f8f9fc !important;
+                border-radius: 0 0.25rem 0.25rem 0 !important;
+                padding-left: 62px !important;
+            }
+        `
+        document.head.appendChild(style)
+        return () => style.remove()
+    }, [])
+
     const phoneInputProps = {
         country: "us",
         value,
@@ -26,8 +53,6 @@ export function PhoneInputComponent({
         disabled,
         searchable: true,
         searchPlaceholder: "Search",
-        inputClass: "h-12 w-full rounded-lg border border-gray-200 bg-white px-3 text-gray-900 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20",
-        buttonClass: "h-12 border border-gray-200 border-r-0 rounded-l-lg bg-gray-50",
         enableAreaCodes: false,
         enableTerritories: false,
     } as any
@@ -38,3 +63,4 @@ export function PhoneInputComponent({
         </div>
     )
 }
+

@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useCallback } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useForm } from "@tanstack/react-form"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useForm, useStore } from "@tanstack/react-form"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { StudentFormSchema, type StudentInput } from "@/types/schemas/student"
 import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
@@ -21,9 +21,24 @@ import {
 import ImageUploadCard from "./shared/image-upload-card"
 import { DatePicker } from "@/components/shared/date-picker"
 import { CountrySelect } from "@/components/shared/country-select"
-import { Building, ChevronDown, School, FileUp } from "lucide-react"
+import { Building, ChevronDown, School, FileUp, FileText, CheckSquare, Square, Plus, Loader2 } from "lucide-react"
 import { resolveGradeType, type GradeType } from "@/types/schemas/academic"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
+import { toast } from "sonner"
+import { FilePreview } from "./shared/FilePreview"
+import { cn } from "@/lib/utils"
+import { useLevels } from "@/hooks/useLevels"
+import type { CourseProgram } from "@/types/schemas/program"
+import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { UserRole } from "@/types"
 
 function getFieldState(field: {
     state: { meta: { isTouched: boolean; isValid: boolean; errors?: unknown[] } }
@@ -95,44 +110,690 @@ type Props = {
     defaultData?: StudentData
 }
 
+type Document = {
+    id: string;
+    name: string;
+    document_type_id: string;
+    document_type?: { id: string; name: string };
+    created_at: string;
+    document_files?: { file_url: string }[];
+};
+
+function SupportingDocumentUploadModal({
+    open,
+    onOpenChange,
+    studentId,
+    documentType,
+    onUploaded,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    studentId: string;
+    documentType: { id: string; name: string } | null;
+    onUploaded: (documentId: string) => void;
+}) {
+    const [frontFile, setFrontFile] = useState<File | null>(null);
+    const [backFile, setBackFile] = useState<File | null>(null);
+    const queryClient = useQueryClient();
+
+    const uploadMutation = useMutation({
+        mutationFn: async () => {
+            if (!studentId || !documentType?.id || !frontFile) {
+                throw new Error("Please upload the front side file");
+            }
+
+            const formData = new FormData();
+            formData.set("student_id", studentId);
+            formData.set("document_type_id", documentType.id);
+            formData.append("files", frontFile);
+            if (backFile) {
+                formData.append("files", backFile);
+            }
+
+            const res = await fetch("/api/document", { method: "POST", body: formData });
+            const json = await res.json();
+            if (!res.ok) {
+                throw new Error(json.error ?? "Failed to upload document");
+            }
+
+            return json.data as { id: string };
+        },
+        onSuccess: (data) => {
+            toast.success("Document uploaded successfully");
+            queryClient.invalidateQueries({ queryKey: ["student-documents"], exact: false });
+            queryClient.invalidateQueries({ queryKey: ["documents"] });
+            onUploaded(data.id);
+            setFrontFile(null);
+            setBackFile(null);
+            onOpenChange(false);
+        },
+        onError: (error: Error) => {
+            toast.error(error.message);
+        },
+    });
+
+    const handleOpenChange = useCallback(
+        (nextOpen: boolean) => {
+            if (uploadMutation.isPending) return;
+            if (!nextOpen) {
+                setFrontFile(null);
+                setBackFile(null);
+            }
+            onOpenChange(nextOpen);
+        },
+        [onOpenChange, uploadMutation.isPending]
+    );
+
+    return (
+        <Dialog open={open} onOpenChange={handleOpenChange}>
+            <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>
+                        Upload {documentType?.name ?? "Document"}
+                    </DialogTitle>
+                    <DialogDescription>
+                        Add the required file for this document type.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+                    <div className="space-y-2">
+                        <Typography font="small" className="text-gray-400 uppercase tracking-widest">
+                            Front Side
+                        </Typography>
+                        <ImageUploadCard
+                            value={frontFile}
+                            onChange={setFrontFile}
+                            message="Front File"
+                            accept="image/*,application/pdf,.doc,.docx"
+                            className={cn(
+                                "min-h-[160px] border-2 border-transparent hover:border-brand-byzantine bg-gray-50/50 hover:bg-gray-100/50 transition-all"
+                            )}
+                            emptyIcon={<Plus size={32} className="text-gray-300" />}
+                        />
+                    </div>
+
+                    <div className={cn("space-y-2 transition-opacity", !frontFile && "opacity-50")}>
+                        <Typography font="small" className="text-gray-400 uppercase tracking-widest">
+                            Back Side (Optional)
+                        </Typography>
+                        <ImageUploadCard
+                            value={backFile}
+                            onChange={(file) => {
+                                if (!frontFile && file) return;
+                                setBackFile(file);
+                            }}
+                            message="Back File"
+                            accept="image/*,application/pdf,.doc,.docx"
+                            disabled={!frontFile}
+                            className={cn(
+                                "min-h-[160px] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 hover:border-brand-byzantine/30 transition-all",
+                                !frontFile && "cursor-not-allowed pointer-events-none"
+                            )}
+                            emptyIcon={<Plus size={32} className="text-gray-300" />}
+                        />
+                    </div>
+                </div>
+
+                {uploadMutation.error instanceof Error && (
+                    <ErrorView message={uploadMutation.error.message} />
+                )}
+
+                <DialogFooter className="gap-2 sm:gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleOpenChange(false)}
+                        disabled={uploadMutation.isPending}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        onClick={() => uploadMutation.mutate()}
+                        disabled={!frontFile || uploadMutation.isPending}
+                        className="bg-brand-byzantine hover:bg-brand-byzantine/90"
+                    >
+                        {uploadMutation.isPending ? (
+                            <>
+                                <Loader2 className="size-4 animate-spin" />
+                                Uploading...
+                            </>
+                        ) : (
+                            "Upload Document"
+                        )}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function SupportingDocumentsSection({
+    documents,
+    requiredDocTypes,
+    selectedCourseId,
+    selectedStudentId,
+    refetchDocuments,
+    selectedDocumentIds,
+    onDocumentSelect,
+    isDocumentsLoading,
+    pendingFiles,
+    setPendingFiles,
+    isUploading,
+}: {
+    documents: Document[];
+    requiredDocTypes: { id: string; name: string }[];
+    selectedCourseId: string;
+    selectedStudentId: string;
+    refetchDocuments: () => Promise<unknown>;
+    selectedDocumentIds: string[];
+    onDocumentSelect: (docIds: string[]) => void;
+    isDocumentsLoading?: boolean;
+    pendingFiles: Record<string, { front: File | null; back: File | null }>;
+    setPendingFiles: React.Dispatch<React.SetStateAction<Record<string, { front: File | null; back: File | null }>>>;
+    isUploading: Record<string, boolean>;
+}) {
+    const [localUploadModalOpen, setLocalUploadModalOpen] = useState(false);
+    const [activeDocumentType, setActiveDocumentType] = useState<{ id: string; name: string } | null>(null);
+    const [tempFront, setTempFront] = useState<File | null>(null);
+    const [tempBack, setTempBack] = useState<File | null>(null);
+
+    const openLocalUploadModal = useCallback((documentType: { id: string; name: string }) => {
+        setActiveDocumentType(documentType);
+        setTempFront(pendingFiles[documentType.id]?.front || null);
+        setTempBack(pendingFiles[documentType.id]?.back || null);
+        setLocalUploadModalOpen(true);
+    }, [pendingFiles]);
+
+    const handleLocalUploadSave = useCallback(() => {
+        if (activeDocumentType) {
+            setPendingFiles((prev) => ({
+                ...prev,
+                [activeDocumentType.id]: { front: tempFront, back: tempBack }
+            }));
+        }
+        setLocalUploadModalOpen(false);
+        setTempFront(null);
+        setTempBack(null);
+    }, [activeDocumentType, tempFront, tempBack, setPendingFiles]);
+
+    const handleDocumentUploaded = useCallback(
+        async (documentId: string) => {
+            await refetchDocuments();
+            onDocumentSelect([...selectedDocumentIds, documentId]);
+        },
+        [selectedDocumentIds, refetchDocuments, onDocumentSelect]
+    );
+
+    if (!selectedCourseId) {
+        return (
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-4">
+                    <FileText className="size-5 text-blue-600" />
+                    <Typography as="h3" font="title" className="text-brand-secondary">Supporting Documents</Typography>
+                </div>
+                <div className="py-10 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                    <Typography as="p" className="text-sm font-medium text-gray-500">
+                        Select a course above to view required supporting documents.
+                    </Typography>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <>
+            {/* Modal for pending files (before student created) */}
+            {!selectedStudentId && activeDocumentType && (
+                <Dialog open={localUploadModalOpen} onOpenChange={setLocalUploadModalOpen}>
+                    <DialogContent className="sm:max-w-xl">
+                        <DialogHeader>
+                            <DialogTitle>
+                                Upload {activeDocumentType.name}
+                            </DialogTitle>
+                            <DialogDescription>
+                                Add the required file for this document type.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+                            <div className="space-y-2">
+                                <Typography font="small" className="text-gray-400 uppercase tracking-widest">
+                                    Front Side
+                                </Typography>
+                                <ImageUploadCard
+                                    value={tempFront}
+                                    onChange={setTempFront}
+                                    message="Front File"
+                                    accept="image/*,application/pdf,.doc,.docx"
+                                    className={cn(
+                                        "min-h-[160px] border-2 border-transparent hover:border-brand-byzantine bg-gray-50/50 hover:bg-gray-100/50 transition-all"
+                                    )}
+                                    emptyIcon={<Plus size={32} className="text-gray-300" />}
+                                />
+                            </div>
+
+                            <div className={cn("space-y-2 transition-opacity", !tempFront && "opacity-50")}>
+                                <Typography font="small" className="text-gray-400 uppercase tracking-widest">
+                                    Back Side (Optional)
+                                </Typography>
+                                <ImageUploadCard
+                                    value={tempBack}
+                                    onChange={(file) => {
+                                        if (!tempFront && file) return;
+                                        setTempBack(file);
+                                    }}
+                                    message="Back File"
+                                    accept="image/*,application/pdf,.doc,.docx"
+                                    disabled={!tempFront}
+                                    className={cn(
+                                        "min-h-[160px] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 hover:border-brand-byzantine/30 transition-all",
+                                        !tempFront && "cursor-not-allowed pointer-events-none"
+                                    )}
+                                    emptyIcon={<Plus size={32} className="text-gray-300" />}
+                                />
+                            </div>
+                        </div>
+
+                        <DialogFooter className="gap-2 sm:gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setLocalUploadModalOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={handleLocalUploadSave}
+                                disabled={!tempFront}
+                                className="bg-brand-byzantine hover:bg-brand-byzantine/90"
+                            >
+                                Save Files
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
+
+            {/* Modal for uploading to server (after student created) */}
+            {selectedStudentId && (
+                <SupportingDocumentUploadModal
+                    open={localUploadModalOpen}
+                    onOpenChange={setLocalUploadModalOpen}
+                    studentId={selectedStudentId}
+                    documentType={activeDocumentType}
+                    onUploaded={handleDocumentUploaded}
+                />
+            )}
+
+            <div className="bg-white rounded-2xl p-6 space-y-6 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <FileText className="size-5 text-blue-600" />
+                        <Typography as="h3" font="title" className="text-brand-secondary">Supporting Documents</Typography>
+                    </div>
+                </div>
+
+                {isDocumentsLoading ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />
+                        ))}
+                    </div>
+                ) : requiredDocTypes.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {requiredDocTypes.map((rt) => {
+                            const doc = documents.find(d => (d.document_type?.id ?? d.document_type_id) === rt.id);
+                            const isChecked = doc ? selectedDocumentIds.includes(doc.id) : false;
+                            const hasPending = pendingFiles[rt.id]?.front;
+                            if (isUploading[rt.id]) {
+                                return (
+                                    <div
+                                        key={rt.id}
+                                        className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border-2 border-purple-400 bg-purple-50/30 shadow-md cursor-not-allowed group"
+                                    >
+                                        <div className="absolute top-3 left-3 z-10">
+                                            <Loader2 className="size-4 text-purple-500 animate-spin" />
+                                        </div>
+                                        <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                            <Loader2 className="size-10 text-purple-500 animate-spin" />
+                                        </div>
+                                        <div>
+                                            <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{rt.name}</Typography>
+                                            <Typography as="p" className="text-[8px] font-bold tracking-widest text-purple-600 uppercase mt-1">
+                                                Uploading...
+                                            </Typography>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            if (doc) {
+                                return (
+                                    <div
+                                        key={rt.id}
+                                        onClick={() => {
+                                            const next = selectedDocumentIds.includes(doc.id)
+                                                ? selectedDocumentIds.filter((id: string) => id !== doc.id)
+                                                : [...selectedDocumentIds, doc.id];
+                                            onDocumentSelect(next);
+                                        }}
+                                        className={cn(
+                                            "bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border transition-all cursor-pointer group",
+                                            isChecked ? "border-green-500 bg-green-50/30 shadow-md" : "border-gray-100 hover:border-gray-300"
+                                        )}
+                                    >
+                                        <div className="absolute top-3 left-3 z-10">
+                                            {isChecked
+                                                ? <CheckSquare className="size-4 text-green-500 fill-green-50" />
+                                                : <Square className="size-4 text-brand-secondary/20 group-hover:text-brand-secondary/40" />}
+                                        </div>
+                                        <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                            {doc.document_files?.[0]?.file_url ? (
+                                                <FilePreview
+                                                    url={doc.document_files[0].file_url}
+                                                    name={rt.name}
+                                                    showActions={false}
+                                                    className="border-none shadow-none size-full"
+                                                />
+                                            ) : (
+                                                <FileText className={cn("size-10", isChecked ? "text-green-500" : "text-gray-300")} />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{rt.name}</Typography>
+                                            <Typography as="p" className="text-[8px] font-bold tracking-widest text-gray-500 uppercase mt-1">
+                                                {new Date(doc.created_at).toLocaleDateString()}
+                                            </Typography>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            if (hasPending && !selectedStudentId) {
+                                return (
+                                    <div
+                                        key={rt.id}
+                                        className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border-2 border-yellow-400 bg-yellow-50/30 shadow-md cursor-pointer group"
+                                        onClick={() => openLocalUploadModal(rt)}
+                                    >
+                                        <div className="absolute top-3 left-3 z-10">
+                                            <Square className="size-4 text-brand-secondary/20 group-hover:text-brand-secondary/40" />
+                                        </div>
+                                        <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                            <FileText className="size-10 text-yellow-500" />
+                                        </div>
+                                        <div>
+                                            <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{rt.name}</Typography>
+                                            <Typography as="p" className="text-[8px] font-bold tracking-widest text-yellow-600 uppercase mt-1">
+                                                Pending
+                                            </Typography>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return (
+                                <button
+                                    key={rt.id}
+                                    type="button"
+                                    onClick={() => {
+                                        if (selectedStudentId) {
+                                            openLocalUploadModal(rt);
+                                        } else {
+                                            openLocalUploadModal(rt);
+                                        }
+                                    }}
+                                    className="bg-red-50/50 rounded-xl p-3 space-y-3 relative border-2 border-dashed border-red-200 flex flex-col items-center justify-center gap-2 min-h-[140px] hover:bg-red-50 hover:border-red-300 transition-all group w-full"
+                                >
+                                    <div className="size-10 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                                        <FileText className="size-5 text-red-400" />
+                                    </div>
+                                    <div className="text-center">
+                                        <Typography as="p" className="text-[11px] font-bold text-red-600 truncate">{rt.name}</Typography>
+                                        <Typography as="p" className="text-[9px] text-red-400 mt-0.5">Click to upload</Typography>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                ) : documents.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {documents.map((doc) => {
+                            const isChecked = selectedDocumentIds.includes(doc.id);
+                            const label = doc.document_type?.name ?? "Document";
+                            return (
+                                <div
+                                    key={doc.id}
+                                    onClick={() => {
+                                        const next = selectedDocumentIds.includes(doc.id)
+                                            ? selectedDocumentIds.filter((id: string) => id !== doc.id)
+                                            : [...selectedDocumentIds, doc.id];
+                                        onDocumentSelect(next);
+                                    }}
+                                    className={cn(
+                                        "bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border transition-all cursor-pointer group",
+                                        isChecked ? "border-green-500 bg-green-50/30 shadow-md" : "border-gray-100 hover:border-gray-300"
+                                    )}
+                                >
+                                    <div className="absolute top-3 left-3 z-10">
+                                        {isChecked
+                                            ? <CheckSquare className="size-4 text-green-500 fill-green-50" />
+                                            : <Square className="size-4 text-brand-secondary/20 group-hover:text-brand-secondary/40" />}
+                                    </div>
+                                    <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                        {doc.document_files?.[0]?.file_url ? (
+                                            <FilePreview
+                                                url={doc.document_files[0].file_url}
+                                                name={label}
+                                                showActions={false}
+                                                className="border-none shadow-none size-full"
+                                            />
+                                        ) : (
+                                            <FileText className={cn("size-10", isChecked ? "text-green-500" : "text-gray-300")} />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{label}</Typography>
+                                        <Typography as="p" className="text-[8px] font-bold tracking-widest text-gray-500 uppercase mt-1">
+                                            {new Date(doc.created_at).toLocaleDateString()}
+                                        </Typography>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="col-span-full py-12 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center gap-4">
+                        <FileText className="size-6 text-gray-400" />
+                        <Typography as="p" className="text-sm font-bold text-gray-900">No documents uploaded yet</Typography>
+                        <Typography as="p" className="text-xs text-gray-500">Upload required documents using the cards above.</Typography>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+}
+
 export function StudentForm({ mode, studentId, defaultData }: Props) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const { data: degrees = [], isLoading: loadingDegrees } = useDegrees()
 
+    const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+    const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+    const [createdStudentId, setCreatedStudentId] = useState<string | null>(null);
+    const [documents, setDocuments] = useState<Document[]>([]);
+    const [isDocumentsLoading, setIsDocumentsLoading] = useState(false);
+    const [pendingFiles, setPendingFiles] = useState<Record<string, { front: File | null; back: File | null }>>({});
+    const [isUploading, setIsUploading] = useState<Record<string, boolean>>({});
+
+    const { data: user } = useQuery({
+        queryKey: ["me"],
+        queryFn: async () => {
+            const res = await fetch("/api/me");
+            if (!res.ok) throw new Error("Failed to fetch profile");
+            const json = await res.json();
+            return json.data;
+        },
+    });
+
+    const { data: programsResponse } = useQuery({
+        queryKey: ["programs"],
+        queryFn: async () => {
+            const res = await fetch("/api/program?limit=50");
+            if (!res.ok) throw new Error("Failed to fetch courses");
+            return res.json();
+        }
+    });
+    const courses: CourseProgram[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
+    const { data: levels = [] } = useLevels();
+
+    const { data: programDetailResponse } = useQuery({
+        queryKey: ["course-detail", selectedCourseId],
+        queryFn: async () => {
+            if (!selectedCourseId) return null;
+            const res = await fetch(`/api/program/${selectedCourseId}`);
+            if (!res.ok) throw new Error("Failed to fetch course details");
+            return res.json();
+        },
+        enabled: !!selectedCourseId,
+    });
+
+    const requiredDocTypes: { id: string; name: string }[] = useMemo(() => {
+        const fromCourse = (
+            programDetailResponse?.data?.degree?.requirements ?? []
+        )
+            .map((r: { document_type?: { id: string; name: string } }) => r.document_type)
+            .filter((t: { id: string; name: string } | undefined): t is { id: string; name: string } => Boolean(t?.id));
+
+        if (fromCourse.length > 0) return fromCourse;
+
+        return documents.reduce<{ id: string; name: string }[]>((acc, d) => {
+            const typeId = d.document_type?.id ?? d.document_type_id;
+            const typeName = d.document_type?.name ?? "Document";
+            if (typeId && !acc.find(x => x.id === typeId)) {
+                acc.push({ id: typeId, name: typeName });
+            }
+            return acc;
+        }, []);
+    }, [programDetailResponse, documents]);
+
+    const refetchDocuments = useCallback(async () => {
+        if (!createdStudentId) return;
+        setIsDocumentsLoading(true);
+        try {
+            const params = new URLSearchParams();
+            if (selectedCourseId) params.set("course_id", selectedCourseId);
+            const res = await fetch(`/api/document/student/${createdStudentId}?${params.toString()}`);
+            if (!res.ok) throw new Error("Failed to fetch documents");
+            const json = await res.json();
+            setDocuments(Array.isArray(json?.data) ? json.data : []);
+        } finally {
+            setIsDocumentsLoading(false);
+        }
+    }, [createdStudentId, selectedCourseId]);
+
+    // Refetch documents when student is created
+    useEffect(() => {
+        if (createdStudentId) {
+            refetchDocuments();
+        }
+    }, [createdStudentId, refetchDocuments]);
+
     const mutation = useMutation({
-        mutationFn: async (fd: FormData) => {
-            const url = mode === "edit" ? `/api/student/${studentId}` : "/api/student"
-            const method = mode === "edit" ? "PATCH" : "POST"
+        mutationFn: async ({
+            studentFormData,
+            selectedCourseId,
+            pendingFiles,
+            requiredDocTypes,
+            courses,
+            levels
+        }: {
+            studentFormData: FormData,
+            selectedCourseId: string,
+            pendingFiles: Record<string, { front: File | null; back: File | null }>,
+            requiredDocTypes: { id: string; name: string }[],
+            courses: CourseProgram[],
+            levels: any[]
+        }) => {
+            // Step 1: Create student
+            const studentRes = await fetch("/api/student", { method: "POST", body: studentFormData });
+            const studentJson = await studentRes.json();
+            if (!studentRes.ok) throw new Error(studentJson?.error ?? "Failed to create student");
+            const newStudentProfileId = studentJson.data.id;
+            setCreatedStudentId(newStudentProfileId);
 
-            // Strip cv/resume from student payload
-            const cvFile = fd.get("cv_file") as File | null
-            const resumeFile = fd.get("resume_file") as File | null
-            fd.delete("cv_file")
-            fd.delete("resume_file")
+            const uploadedDocIds: string[] = [];
 
-            const res = await fetch(url, { method, body: fd })
-            const json = await res.json()
-            if (!res.ok) throw new Error(json?.error ?? "Something went wrong")
+            // Step 2: Upload pending files
+            for (const [docTypeId, files] of Object.entries(pendingFiles)) {
+                if (files.front) {
+                    // Mark this document type as uploading
+                    setIsUploading(prev => ({ ...prev, [docTypeId]: true }));
 
-            // Upload CV/Resume separately after student is created
-            if (mode === "create" && json?.data?.id) {
-                const studentProfileId = json.data.id
-                if (cvFile instanceof File || resumeFile instanceof File) {
-                    const docFd = new FormData()
-                    if (cvFile instanceof File) docFd.set("cv_file", cvFile)
-                    if (resumeFile instanceof File) docFd.set("resume_file", resumeFile)
-                    await fetch(`/api/document/student/${studentProfileId}`, { method: "POST", body: docFd })
+                    const formData = new FormData();
+                    formData.set("student_id", newStudentProfileId);
+                    formData.set("document_type_id", docTypeId);
+                    formData.append("files", files.front);
+                    if (files.back) {
+                        formData.append("files", files.back);
+                    }
+
+                    const res = await fetch("/api/document", { method: "POST", body: formData });
+                    const json = await res.json();
+                    if (!res.ok) {
+                        throw new Error(json.error ?? "Failed to upload document");
+                    }
+                    uploadedDocIds.push(json.data.id);
+
+                    // Mark this document type as not uploading anymore
+                    setIsUploading(prev => ({ ...prev, [docTypeId]: false }));
+                    // Remove from pendingFiles
+                    setPendingFiles(prev => {
+                        const next = { ...prev };
+                        delete next[docTypeId];
+                        return next;
+                    });
+                    // Refresh documents list
+                    await refetchDocuments();
                 }
             }
 
-            return json
+            // Step 3: If course selected, create application
+            if (selectedCourseId) {
+                let universityId = "";
+                const course = courses.find(c => c.id === selectedCourseId);
+                if (course) {
+                    const levelId = course.degree?.level_id;
+                    universityId = levels.find((level) => level.id === levelId)?.university_id ?? "";
+                }
+
+                // Use course's intake date or today's date, and set all declarations to true
+                const today = new Date().toISOString().split('T')[0];
+                const appRes = await fetch("/api/application", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        profile_id: newStudentProfileId,
+                        course_id: selectedCourseId,
+                        university_id: universityId,
+                        document_ids: uploadedDocIds,
+                        intake_date: course?.degree?.intake_date ?? today,
+                        declarations: [true, true, true],
+                    })
+                });
+                const appJson = await appRes.json();
+                if (!appRes.ok) throw new Error(appJson?.error ?? "Failed to create application");
+            }
+
+            return studentJson;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["students"] })
-            if (mode === "edit") queryClient.invalidateQueries({ queryKey: ["students", studentId] })
-            router.push(mode === "edit" ? `/dashboard/student/${studentId}` : "/dashboard/student")
-            router.refresh()
+            queryClient.invalidateQueries({ queryKey: ["students"] });
+            queryClient.invalidateQueries({ queryKey: ["applications"] });
+            toast.success("Student and application created successfully!");
+            router.push("/dashboard/application");
+            router.refresh();
         },
     })
 
@@ -225,7 +886,44 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
             if (value.cv_file instanceof File) fd.set("cv_file", value.cv_file)
             if (value.resume_file instanceof File) fd.set("resume_file", value.resume_file)
 
-            await mutation.mutateAsync(fd)
+            if (mode === "create" && user?.role === "AGENT") {
+                await mutation.mutateAsync({
+                    studentFormData: fd,
+                    selectedCourseId,
+                    pendingFiles,
+                    requiredDocTypes,
+                    courses,
+                    levels
+                })
+            } else {
+                // Original flow for edit mode or non-agent
+                const url = mode === "edit" ? `/api/student/${studentId}` : "/api/student"
+                const method = mode === "edit" ? "PATCH" : "POST"
+
+                const cvFile = fd.get("cv_file") as File | null
+                const resumeFile = fd.get("resume_file") as File | null
+                fd.delete("cv_file")
+                fd.delete("resume_file")
+
+                const res = await fetch(url, { method, body: fd })
+                const json = await res.json()
+                if (!res.ok) throw new Error(json?.error ?? "Something went wrong")
+
+                if (mode === "create" && json?.data?.id) {
+                    const studentProfileId = json.data.id
+                    if (cvFile instanceof File || resumeFile instanceof File) {
+                        const docFd = new FormData()
+                        if (cvFile instanceof File) docFd.set("cv_file", cvFile)
+                        if (resumeFile instanceof File) docFd.set("resume_file", resumeFile)
+                        await fetch(`/api/document/student/${studentProfileId}`, { method: "POST", body: docFd })
+                    }
+                }
+
+                queryClient.invalidateQueries({ queryKey: ["students"] })
+                if (mode === "edit") queryClient.invalidateQueries({ queryKey: ["students", studentId] })
+                router.push(mode === "edit" ? `/dashboard/student/${studentId}` : "/dashboard/student")
+                router.refresh()
+            }
         },
     })
 
@@ -733,6 +1431,61 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                             </div> */}
                         </div>
 
+                        {/* ── Section: Course Selection & Documents (Only for Agent Create) ── */}
+                        {mode === "create" && user?.role === "AGENT" && (
+                            <>
+                                {/* Course Selection */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-2">
+                                        <School className="size-5 text-gray-700" strokeWidth={2.5} />
+                                        <Typography as="h3" font="text-xl" className="text-gray-900 tracking-tight">Select Course (Optional)</Typography>
+                                    </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Select
+                                                value={selectedCourseId}
+                                                onValueChange={(val) => {
+                                                    setSelectedCourseId(val);
+                                                    setSelectedDocumentIds([]);
+                                                    if (createdStudentId) {
+                                                        refetchDocuments();
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger className="h-12">
+                                                    <SelectValue placeholder="Select a course" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {courses.map((course) => (
+                                                        <SelectItem key={course.id} value={course.id}>
+                                                            {course.name} - {formatProgramDate(course.deadline_date)}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Supporting Documents */}
+                                {selectedCourseId && (
+                                    <SupportingDocumentsSection
+                                        documents={documents}
+                                        requiredDocTypes={requiredDocTypes}
+                                        selectedCourseId={selectedCourseId}
+                                        selectedStudentId={createdStudentId || ""}
+                                        refetchDocuments={refetchDocuments}
+                                        selectedDocumentIds={selectedDocumentIds}
+                                        onDocumentSelect={setSelectedDocumentIds}
+                                        isDocumentsLoading={isDocumentsLoading}
+                                        pendingFiles={pendingFiles}
+                                        setPendingFiles={setPendingFiles}
+                                        isUploading={isUploading}
+                                    />
+                                )}
+                            </>
+                        )}
+
                         {apiError && (
                             <div className="space-y-3">
                                 <ErrorView message={apiError} />
@@ -747,7 +1500,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                         className="w-full sm:w-auto sm:min-w-[200px] h-12 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white rounded-sm text-sm font-bold transition-all"
                                         disabled={isSubmitting || mutation.isPending}
                                     >
-                                        {mutation.isPending ? "Processing..." : mode === "edit" ? "Update Student" : "Register"}
+                                        {mutation.isPending ? "Processing..." : selectedCourseId ? "Create Student & Application" : mode === "edit" ? "Update Student" : "Register"}
                                     </Button>
                                 )}
                             </form.Subscribe>

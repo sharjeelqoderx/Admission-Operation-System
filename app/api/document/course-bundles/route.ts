@@ -16,7 +16,6 @@ import type { CourseDegree, CourseProgram } from "@/types/schemas/program"
 type DocumentRow = {
     id: string
     document_type_id: string | null
-    note: string | null
     created_at: string
     updated_at: string | null
     document_review: Array<{ status: string; created_at: string }> | null
@@ -27,7 +26,7 @@ function mapUploadedDocument(doc: DocumentRow): UploadedDocumentSummary {
     return {
         document_id: doc.id,
         status: doc.document_review?.[0]?.status ?? "PENDING",
-        note: doc.note ?? null,
+        note: null,
         files: (doc.document_files ?? []).map((file) => ({
             file_url: file.file_url,
             type: file.type,
@@ -148,7 +147,6 @@ export async function GET(req: NextRequest) {
             .select(`
                 id,
                 document_type_id,
-                note,
                 created_at,
                 updated_at,
                 document_review(status, created_at),

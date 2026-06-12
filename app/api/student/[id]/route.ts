@@ -57,18 +57,40 @@ export async function GET(
                 location: string | null
                 language_of_study: string | null
                 duration: string | null
+                level_id: string | null
+                level?: { id: string; name: string } | null
             }
         >()
 
         if (qualificationIds.length > 0) {
             const { data: qualificationDegrees } = await supabase
                 .from("degree")
-                .select("id, name, credits, location, language_of_study, duration")
+                .select("id, name, credits, location, language_of_study, duration, level_id")
                 .in("id", qualificationIds)
 
+            // Get levels for degrees that have level_id
+            const levelIds = (qualificationDegrees ?? [])
+                .map((d) => d.level_id)
+                .filter((id): id is string => Boolean(id));
+
+            let levelById = new Map<string, { id: string; name: string }>();
+            if (levelIds.length > 0) {
+                const { data: levels } = await supabase
+                    .from("levels")
+                    .select("id, name")
+                    .in("id", levelIds);
+                levelById = new Map((levels ?? []).map((level) => [level.id, level]));
+            }
+
             qualificationDegreeById = new Map(
-                (qualificationDegrees ?? []).map((degree) => [degree.id, degree])
-            )
+                (qualificationDegrees ?? []).map((degree) => [
+                    degree.id,
+                    {
+                        ...degree,
+                        level: degree.level_id ? levelById.get(degree.level_id) ?? null : null,
+                    },
+                ])
+            );
         }
 
         const enrichedEducation = (education ?? []).map((row) => ({
@@ -76,7 +98,7 @@ export async function GET(
             qualification_degree: row.qualification
                 ? qualificationDegreeById.get(row.qualification) ?? null
                 : null,
-        }))
+        }));
 
         return NextResponse.json(
             {
