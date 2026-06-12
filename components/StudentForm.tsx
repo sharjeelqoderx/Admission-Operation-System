@@ -37,8 +37,8 @@ function getFieldState(field: {
         raw == null
             ? undefined
             : typeof raw === "string"
-              ? raw
-              : (raw as { message?: string }).message
+                ? raw
+                : (raw as { message?: string }).message
     return { isInvalid, error }
 }
 
@@ -104,9 +104,28 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
         mutationFn: async (fd: FormData) => {
             const url = mode === "edit" ? `/api/student/${studentId}` : "/api/student"
             const method = mode === "edit" ? "PATCH" : "POST"
+
+            // Strip cv/resume from student payload
+            const cvFile = fd.get("cv_file") as File | null
+            const resumeFile = fd.get("resume_file") as File | null
+            fd.delete("cv_file")
+            fd.delete("resume_file")
+
             const res = await fetch(url, { method, body: fd })
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error ?? "Something went wrong")
+
+            // Upload CV/Resume separately after student is created
+            if (mode === "create" && json?.data?.id) {
+                const studentProfileId = json.data.id
+                if (cvFile instanceof File || resumeFile instanceof File) {
+                    const docFd = new FormData()
+                    if (cvFile instanceof File) docFd.set("cv_file", cvFile)
+                    if (resumeFile instanceof File) docFd.set("resume_file", resumeFile)
+                    await fetch(`/api/document/student/${studentProfileId}`, { method: "POST", body: docFd })
+                }
+            }
+
             return json
         },
         onSuccess: () => {
@@ -144,6 +163,8 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
             guardian_phone: defaultData?.student?.guardian_phone ?? "",
             avatar_url: undefined as File | undefined,
             passport_file_url: undefined as File | undefined,
+            cv_file: undefined as File | undefined,
+            resume_file: undefined as File | undefined,
             academic_background: eduList?.length
                 ? eduList.map((e) => {
                     const gradeType = resolveGradeType(e)
@@ -158,14 +179,14 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 : "",
                         obtained_marks:
                             gradeType === "percentage" &&
-                            e.obtained_marks != null &&
-                            e.obtained_marks !== ""
+                                e.obtained_marks != null &&
+                                e.obtained_marks !== ""
                                 ? String(e.obtained_marks)
                                 : "",
                         total_marks:
                             gradeType === "percentage" &&
-                            e.total_marks != null &&
-                            e.total_marks !== ""
+                                e.total_marks != null &&
+                                e.total_marks !== ""
                                 ? String(e.total_marks)
                                 : "",
                     }
@@ -201,6 +222,8 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
             fd.set("academic_background", JSON.stringify(value.academic_background))
             if (value.avatar_url instanceof File) fd.set("avatar_url", value.avatar_url)
             if (value.passport_file_url instanceof File) fd.set("passport_file_url", value.passport_file_url)
+            if (value.cv_file instanceof File) fd.set("cv_file", value.cv_file)
+            if (value.resume_file instanceof File) fd.set("resume_file", value.resume_file)
 
             await mutation.mutateAsync(fd)
         },
@@ -298,7 +321,6 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                         )}
                                     </form.Field>
 
-                                    <div className="sm:col-span-2">
                                         <form.Field name="phone">
                                             {(field) => (
                                                 <F field={field} label="Phone">
@@ -310,7 +332,6 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                 </F>
                                             )}
                                         </form.Field>
-                                    </div>
                                 </div>
 
                                 {/* Avatar Upload */}
@@ -427,7 +448,6 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                     )}
                                 </form.Field>
 
-                                <div className="col-span-1 sm:col-span-1 lg:col-span-2">
                                     <form.Field name="nationality">
                                         {(field) => (
                                             <F field={field} label="Nationality">
@@ -441,7 +461,6 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                             </F>
                                         )}
                                     </form.Field>
-                                </div>
 
                                 <div className="col-span-1 sm:col-span-2 lg:col-span-1">
                                     <form.Field name="passport_file_url">
@@ -459,6 +478,40 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                         )}
                                     </form.Field>
                                 </div>
+
+                                <form.Field name="cv_file">
+                                    {(field) => (
+                                        <F field={field} label="CV (Required)">
+                                            <Input
+                                                id="cv_file"
+                                                type="file"
+                                                accept=".pdf,.doc,.docx"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0]
+                                                    if (file) field.handleChange(file as unknown as File)
+                                                }}
+                                                className="h-12"
+                                            />
+                                        </F>
+                                    )}
+                                </form.Field>
+
+                                <form.Field name="resume_file">
+                                    {(field) => (
+                                        <F field={field} label="Resume (Required)">
+                                            <Input
+                                                id="resume_file"
+                                                type="file"
+                                                accept=".pdf,.doc,.docx"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0]
+                                                    if (file) field.handleChange(file as unknown as File)
+                                                }}
+                                                className="h-12"
+                                            />
+                                        </F>
+                                    )}
+                                </form.Field>
                             </div>
                         </div>
 

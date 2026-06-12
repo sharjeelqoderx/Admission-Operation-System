@@ -36,10 +36,10 @@ export const ProgramCard = memo(function ProgramCard({ course }: ProgramCardProp
                 isCentered={false}
                 blurAmount="backdrop-blur-xl"
                 blendColorClass="bg-white/10"
-                className="hover:bg-brand-blue/5 transition-all group overflow-hidden"
-                childClass="p-6 flex! flex-col md:flex-row gap-6 relative"
+                className="p-0! hover:bg-brand-blue/5 transition-all group overflow-hidden"
+                childClass="p-4! flex! flex-col lg:flex-row gap-6 relative"
             >
-                <div className="flex-1 space-y-4">
+                <div className="flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                         <Typography font="small" className="text-gray-800 uppercase tracking-tight flex items-center gap-1">
                             <Layers size={12} className="text-brand-byzantine" />
@@ -60,35 +60,37 @@ export const ProgramCard = memo(function ProgramCard({ course }: ProgramCardProp
                         <Typography as="h2" font="title" className="text-gray-900 transition-colors leading-tight">
                             {course.name}
                         </Typography>
-                        <Typography as="h3" font="sub-text" className="text-gray-600 mt-1">
-                            {degree?.name ?? "FHM University Program"}
-                        </Typography>
-                        <Typography font="small" className="text-gray-500 mt-1">
-                            FHM University
-                        </Typography>
+                        <div className="relative -top-1">
+                            <Typography as="h3" font="small" className="text-gray-600 mt-1 font-normal relative top-1">
+                                {degree?.name ?? "FHM University Program"}
+                            </Typography>
+                            <Typography font="small" className="text-gray-500 mt-1">
+                                FHM University
+                            </Typography>
+                        </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <div className="flex items-center gap-1.5 rounded-lg">
                             <MapPin className="size-4" />
                             <Typography font="small" className="text-gray-900">
                                 {degree?.location ?? "N/A"}
                             </Typography>
                         </div>
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg">
+                        <div className="flex items-center gap-1.5 rounded-lg">
                             <Clock className="size-4" />
                             <Typography font="small" className="text-gray-900">
                                 {degree?.duration ?? formatStudyMode(degree?.study_mode)}
                             </Typography>
                         </div>
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg">
+                        <div className="flex items-center gap-1.5 rounded-lg">
                             <Globe className="size-4" />
                             <Typography font="small" className="text-gray-900">
                                 {degree?.language_of_study ?? "N/A"}
                             </Typography>
                         </div>
                         {degree?.credits != null && (
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg">
+                            <div className="flex items-center gap-1.5 rounded-lg">
                                 <GraduationCap className="size-4" />
                                 <Typography font="small" className="text-gray-900">
                                     {`${degree.credits} ECTS`}
@@ -115,20 +117,20 @@ export const ProgramCard = memo(function ProgramCard({ course }: ProgramCardProp
                 </div>
 
                 <div className="flex flex-col items-end justify-between gap-6 min-w-[200px]">
-                    <div className="flex flex-col items-end gap-3 w-full">
-                        <div className="bg-[#e8f0fe] text-[#1967d2] px-4 py-2 rounded-xl border border-[#1967d2]/10 w-full text-center">
-                            <Typography font="small" className="font-extrabold uppercase tracking-wide">
+                    <div className="flex flex-wrap lg:flex-col items-end gap-3 w-full">
+                        <div className="bg-brand-blue/10 text-brand-blue px-2 py-1 rounded-xl border border-brand-blue/10 text-center">
+                            <Typography font="small" className="font-semibold tracking-wide">
                                 {`Tuition Fees: ${degree?.fees ?? "Contact University"}`}
                             </Typography>
                         </div>
-                        <div className="bg-[#e6f4ea] text-[#1e8e3e] px-4 py-2 rounded-xl border border-[#1e8e3e]/10 w-full text-center">
-                            <Typography font="small" className="font-extrabold uppercase tracking-wide">
+                        <div className="bg-brand-success/10 text-brand-success px-2 py-1 rounded-xl border border-brand-success/10 text-center">
+                            <Typography font="small" className="font-semibold tracking-wide">
                                 {`Available Seats: ${seats}`}
                             </Typography>
                         </div>
                         {degree?.study_mode && (
-                            <div className="bg-[#f3e8ff] text-[#7e22ce] px-4 py-2 rounded-xl border border-[#7e22ce]/10 w-full text-center">
-                                <Typography font="small" className="font-extrabold uppercase tracking-wide">
+                            <div className="bg-brand-byzantine/10 text-brand-byzantine px-2 py-1 rounded-xl border border-brand-byzantine/10 text-center">
+                                <Typography font="small" className="font-semibold tracking-wide">
                                     {formatStudyMode(degree.study_mode)}
                                 </Typography>
                             </div>
@@ -136,7 +138,7 @@ export const ProgramCard = memo(function ProgramCard({ course }: ProgramCardProp
                     </div>
 
                     <Link href={`/dashboard/application/new?course_id=${course.id}`} className="w-full">
-                        <Button className="w-full hover:bg-brand-byzantine/80 text-white h-12 px-10 text-[14px] font-bold transition-all active:scale-95">
+                        <Button size={"lg"} className="w-full text-sm hover:bg-brand-byzantine/80 text-white transition-all active:scale-95">
                             Apply Now
                         </Button>
                     </Link>

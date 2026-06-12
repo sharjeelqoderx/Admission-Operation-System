@@ -36,11 +36,13 @@ async function uploadDocument(payload: {
     profile_id: string
     document_type_id: string
     files: File[]
+    note?: string
 }) {
     const fd = new FormData()
     fd.set("student_id", payload.profile_id)
     fd.set("document_type_id", payload.document_type_id)
     payload.files.forEach((file) => fd.append("files", file))
+    if (payload.note) fd.set("note", payload.note)
 
     const res = await fetch("/api/document", { method: "POST", body: fd })
     const json = await res.json()
@@ -68,6 +70,7 @@ export function useSaveDegreeDocuments() {
                     profile_id: payload.profile_id,
                     document_type_id: upload.document_type_id,
                     files: upload.files,
+                    note: upload.note,
                 })
             }
         },

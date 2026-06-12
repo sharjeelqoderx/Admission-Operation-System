@@ -225,6 +225,6 @@
 }
 
 /* Ensure no parent clips dropdown */
-.overflow-visible * {
-  overflow: visible !important;
+.search-emoji {
+  display: none;
 }

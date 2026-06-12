@@ -91,6 +91,8 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
             gpa: edu?.cumulative_gpa?.toString() || edu?.gpa?.toString() || "",
             avatar_url: undefined as unknown as File,
             passport_file_url: undefined as unknown as File,
+            cv_file: undefined as File | undefined,
+            resume_file: undefined as File | undefined,
         },
         onSubmit: async ({ value }) => {
             const fd = new FormData()
@@ -113,6 +115,8 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
             fd.set("gpa", value.gpa)
             if (value.avatar_url) fd.set("avatar_url", value.avatar_url)
             if (value.passport_file_url) fd.set("passport_file_url", value.passport_file_url)
+            if (value.cv_file) fd.set("cv_file", value.cv_file)
+            if (value.resume_file) fd.set("resume_file", value.resume_file)
 
             await editStudent.mutateAsync({ id, data: fd as any })
             router.push(`/dashboard/student/${id}`)
@@ -343,6 +347,42 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                         )}
                                     </form.Field>
                                 </div>
+
+                                <form.Field name="cv_file">
+                                    {(field) => (
+                                        <Field>
+                                            <FieldLabel>CV</FieldLabel>
+                                            <Input
+                                                id="cv_file"
+                                                type="file"
+                                                accept=".pdf,.doc,.docx"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0]
+                                                    if (file) field.handleChange(file)
+                                                }}
+                                                className="h-12 bg-white border-none rounded-sm shadow-sm text-sm"
+                                            />
+                                        </Field>
+                                    )}
+                                </form.Field>
+
+                                <form.Field name="resume_file">
+                                    {(field) => (
+                                        <Field>
+                                            <FieldLabel>Resume</FieldLabel>
+                                            <Input
+                                                id="resume_file"
+                                                type="file"
+                                                accept=".pdf,.doc,.docx"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0]
+                                                    if (file) field.handleChange(file)
+                                                }}
+                                                className="h-12 bg-white border-none rounded-sm shadow-sm text-sm"
+                                            />
+                                        </Field>
+                                    )}
+                                </form.Field>
                             </div>
                         </div>
 
