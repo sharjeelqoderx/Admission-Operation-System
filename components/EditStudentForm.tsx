@@ -72,6 +72,7 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
 
     const form = useForm({
         defaultValues: {
+            title: profile?.title || "",
             first_name: profile?.first_name || "",
             last_name: profile?.last_name || "",
             email: profile?.email || "",
@@ -93,6 +94,7 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
         },
         onSubmit: async ({ value }) => {
             const fd = new FormData()
+            if (value.title) fd.set("title", value.title)
             fd.set("first_name", value.first_name)
             fd.set("last_name", value.last_name)
             fd.set("email", value.email)
@@ -120,7 +122,7 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
 
     return (
         <div className="space-y-8">
-            <div className="bg-white/5 p-8 relative overflow-hidden">
+            <div className="bg-white/5 p-8 relative overflow-visible">
                 <form id="edit-student-form" onSubmit={(e) => { e.preventDefault(); form.handleSubmit() }} className="space-y-12 relative z-10">
                     <FieldGroup className="space-y-10">
 
@@ -133,6 +135,26 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
                                 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+                                    <div className="md:col-span-2">
+                                        <form.Field name="title">
+                                            {(field) => (
+                                                <F field={field} label="Title">
+                                                    <Select
+                                                        value={field.state.value}
+                                                        onValueChange={(v) => field.handleChange(v)}
+                                                    >
+                                                        <SelectTrigger id={field.name} className="h-12 bg-white border-none rounded-sm shadow-sm text-sm"><SelectValue placeholder="Select Title" /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Mr">Mr</SelectItem>
+                                                            <SelectItem value="Mrs">Mrs</SelectItem>
+                                                            <SelectItem value="Ms">Ms</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </F>
+                                            )}
+                                        </form.Field>
+                                    </div>
+
                                     <form.Field name="first_name">
                                         {(field) => (
                                             <F field={field} label="First Name">

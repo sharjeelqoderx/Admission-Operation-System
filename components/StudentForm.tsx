@@ -54,6 +54,7 @@ function F({ field, label, children }: { field: any; label: string; children: Re
 }
 
 type StudentData = {
+    title?: string | null
     name?: string | null
     email?: string | null
     phone?: string | null
@@ -126,6 +127,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
 
     const form = useForm({
         defaultValues: {
+            title: defaultData?.title ?? "",
             first_name: defaultData?.name?.split(' ')[0] ?? "",
             last_name: defaultData?.name?.split(' ').slice(1).join(' ') ?? "",
             email: defaultData?.email ?? "",
@@ -183,6 +185,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
 
         onSubmit: async ({ value }) => {
             const fd = new FormData()
+            if (value.title) fd.set("title", value.title)
             fd.set("first_name", value.first_name)
             fd.set("last_name", value.last_name)
             fd.set("email", value.email)
@@ -235,7 +238,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
 
     return (
         <div className="space-y-8">
-            <div className="bg-white/5 p-8 relative overflow-hidden">
+            <div className="bg-white/5 p-8 relative overflow-visible">
 
                 <form id="student-form" onSubmit={handleFormSubmit} className="space-y-12 relative z-10">
                     <FieldGroup className="space-y-10">
@@ -251,6 +254,26 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                                 {/* Inputs: First Name, Last Name, Email, Phone */}
                                 <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                    <div className="sm:col-span-2">
+                                        <form.Field name="title">
+                                            {(field) => (
+                                                <F field={field} label="Title">
+                                                    <Select
+                                                        value={field.state.value}
+                                                        onValueChange={(v) => field.handleChange(v)}
+                                                    >
+                                                        <SelectTrigger id={field.name} className="h-12"><SelectValue placeholder="Select Title" /></SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Mr">Mr</SelectItem>
+                                                            <SelectItem value="Mrs">Mrs</SelectItem>
+                                                            <SelectItem value="Ms">Ms</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </F>
+                                            )}
+                                        </form.Field>
+                                    </div>
+
                                     <form.Field name="first_name">
                                         {(field) => (
                                             <F field={field} label="First Name">

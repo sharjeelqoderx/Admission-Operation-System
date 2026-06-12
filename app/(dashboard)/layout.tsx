@@ -59,7 +59,7 @@ const sidebarRoutes = [
         label: 'View Student',
         href: '/dashboard/student',
         icon: Eye,
-        allowFor: [Role.AGENT],
+        allowFor: [Role.AGENT, Role.UNIVERSITY],
       },
     ],
   },
@@ -252,7 +252,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           isSidebarOpen={sidebarOpen}
         />
 
-        <main className="flex-1 relative overflow-y-auto">
+        <main className="flex-1 relative overflow-y-auto overflow-x-auto">
           {/* Fixed Background Layer */}
           <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
             <div

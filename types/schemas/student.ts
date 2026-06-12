@@ -91,6 +91,7 @@ export const academicRecordSchema = z
     })
 
 export const StudentFormSchema = z.object({
+    title: z.string().optional(),
     first_name: z.string().min(2, "First name is required"),
     last_name: z.string().min(2, "Last name is required"),
     email: z.string().email("Valid email is required"),

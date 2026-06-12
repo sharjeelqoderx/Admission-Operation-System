@@ -119,6 +119,7 @@ export async function PATCH(
         const academic = academicRaw ? JSON.parse(academicRaw) : []
 
         const data = {
+            title: getString("title"),
             first_name: getString("first_name"),
             last_name: getString("last_name"),
             email: getString("email"),
@@ -151,6 +152,7 @@ export async function PATCH(
             .from("profile")
             .update({
                 ...(fullName ? { name: fullName } : {}),
+                ...(data.title ? { title: data.title } : {}),
                 ...(data.first_name ? { first_name: data.first_name } : {}),
                 ...(data.last_name ? { last_name: data.last_name } : {}),
                 email: data.email,

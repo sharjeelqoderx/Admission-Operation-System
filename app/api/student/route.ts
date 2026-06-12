@@ -165,6 +165,7 @@ export async function POST(req: NextRequest) {
         const academic_background = academicRaw ? JSON.parse(academicRaw) : []
 
         const validatedData = StudentFormSchema.parse({
+            title: getString("title") || undefined,
             first_name: getString("first_name"),
             last_name: getString("last_name"),
             email: getString("email"),
@@ -230,6 +231,7 @@ export async function POST(req: NextRequest) {
                 password: "student@123",
                 options: {
                     data: {
+                        title: validatedData.title || "",
                         full_name: fullName,
                         first_name: validatedData.first_name,
                         last_name: validatedData.last_name,
@@ -273,6 +275,7 @@ export async function POST(req: NextRequest) {
             .upsert({
                 id: newUserId,
                 name: fullName,
+                title: validatedData.title || null,
                 first_name: validatedData.first_name,
                 last_name: validatedData.last_name,
                 email: validatedData.email,

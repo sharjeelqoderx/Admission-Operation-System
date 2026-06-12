@@ -156,8 +156,8 @@ export const StudentTable = React.memo(function StudentTable({
             childClass="p-0!"
             className="rounded-lg p-0"
         >
-            <div className="overflow-x-auto rounded-xl">
-                <Table className="w-full text-left border-collapse min-w-[1200px]">
+            <div className="w-full overflow-x-scroll rounded-xl max-w-full pb-2">
+                <Table className="w-full text-left border-collapse min-w-[1600px]">
                     <TableHeader className="sticky top-0 z-10">
                         <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">

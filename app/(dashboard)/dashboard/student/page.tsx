@@ -264,13 +264,16 @@ export default function Page() {
     }
 
     return (
-        <main className="relative overflow-x-hidden">
-            <StatsDashboard
-                stats={statsQuery.data}
-                statsLoading={statsQuery.isLoading}
-            />
-
-            <StudentListSection />
+        <main className="relative">
+            <div className="max-w-[1400px] mx-auto">
+                <StatsDashboard
+                    stats={statsQuery.data}
+                    statsLoading={statsQuery.isLoading}
+                />
+            </div>
+            <div className="-mx-4 sm:-mx-6 px-4 sm:px-6">
+                <StudentListSection />
+            </div>
         </main>
     )
 }
