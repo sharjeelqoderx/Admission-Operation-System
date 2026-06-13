@@ -4,6 +4,7 @@ import { useForm } from "@tanstack/react-form"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInputComponent } from "@/components/ui/phone-input"
 import {
     Select,
     SelectContent,
@@ -222,17 +223,10 @@ function Step1Form({
                             isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
                             error={field.state.meta.errors?.[0]}
                         >
-                            <Input
-                                type="number"
+                            <PhoneInputComponent
                                 value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (["e", "E", "-", ".", "ArrowUp", "ArrowDown"].includes(e.key)) {
-                                        e.preventDefault()
-                                    }
-                                }}
+                                onChange={(value) => field.handleChange(value)}
                                 placeholder="Enter phone number"
-                                className="w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                         </F>
                     )}

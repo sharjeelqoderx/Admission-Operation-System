@@ -50,7 +50,7 @@ type Defaults = {
     }>
 }
 
-function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack: () => void }) {
+function Step3Form({ defaultValues, onBack, onNext, onSkip }: { defaultValues: Defaults; onBack: () => void; onNext: () => void; onSkip: () => void }) {
     const router = useRouter()
     const { me, experience: saveExperience } = useAuth()
     const { data: meData } = me
@@ -73,7 +73,7 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
                     responsibility: exp.responsibilities
                 })) || []) : []
             })
-            router.push("/dashboard")
+            onNext()
         },
     })
 
@@ -237,17 +237,19 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
                 </Typography>
             )}
 
-            <div className="flex flex-wrap gap-3 mt-8">
-                <Button type="button" variant="outline" className="flex-1 min-w-[200px]" onClick={onBack}>
+            <div className="flex flex-col sm:flex-row gap-3 mt-8">
+                <Button type="button" variant="outline" className="w-full sm:w-auto sm:flex-1" onClick={onBack}>
                     Back
                 </Button>
-
+                <Button type="button" variant="outline" className="w-full sm:w-auto sm:flex-1" onClick={onSkip}>
+                    Skip
+                </Button>
                 <Button
                     type="submit"
-                    className="flex-1 min-w-[200px]"
+                    className="w-full sm:w-auto sm:flex-1 capitalize"
                     disabled={saveExperience.isPending}
                 >
-                    {saveExperience.isPending ? "Saving..." : "Submit"}
+                    {saveExperience.isPending ? "Saving..." : "Continue"}
                 </Button>
             </div>
 
@@ -255,7 +257,7 @@ function Step3Form({ defaultValues, onBack }: { defaultValues: Defaults; onBack:
     )
 }
 
-export function Step3Work({ onBack }: { onBack: () => void }) {
+export function Step3Work({ onBack, onNext, onSkip }: { onBack: () => void; onNext: () => void; onSkip: () => void }) {
     const { me } = useAuth()
     const { data: meData, isLoading } = me
 
@@ -284,5 +286,5 @@ export function Step3Work({ onBack }: { onBack: () => void }) {
         experiences,
     }
 
-    return <Step3Form key={JSON.stringify(defaults)} defaultValues={defaults} onBack={onBack} />
+    return <Step3Form key={JSON.stringify(defaults)} defaultValues={defaults} onBack={onBack} onNext={onNext} onSkip={onSkip} />
 }

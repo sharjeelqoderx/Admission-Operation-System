@@ -37,6 +37,7 @@ interface FileDropZoneProps {
     onFilesAdded: (files: File[]) => void
     accept?: string
     multiple?: boolean
+    defaultBackgroundImage?: string
 }
 
 interface DragDropCardProps {
@@ -47,6 +48,7 @@ interface DragDropCardProps {
     onChange?: (files: UploadedFile[]) => void
     className?: string
     existingFile?: { url: string; name?: string } | null
+    defaultBackgroundImage?: string
 }
 
 function isImageUrl(url: string) {
@@ -134,7 +136,7 @@ function DraggableFile({ item, onRemove }: DraggableFileProps) {
 }
 
 // ─── Drop Zone ────────────────────────────────────────────────
-function FileDropZone({ onFilesAdded, accept, multiple }: FileDropZoneProps) {
+function FileDropZone({ onFilesAdded, accept, multiple, defaultBackgroundImage }: FileDropZoneProps) {
     const [isDragOver, setIsDragOver] = useState(false)
     const [error, setError] = useState("")
     const inputRef = useRef<HTMLInputElement>(null)
@@ -175,31 +177,44 @@ function FileDropZone({ onFilesAdded, accept, multiple }: FileDropZoneProps) {
             onDrop={handleDrop}
             onClick={() => inputRef.current?.click()}
             className={cn(
-                "flex flex-col items-center border-border bg-muted/30 justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 text-center cursor-pointer transition-colors",
+                "flex flex-col items-center border-border justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 text-center cursor-pointer transition-colors relative overflow-hidden min-h-[280px]",
                 isDragOver || isOver
                     ? "border-primary bg-brand-input/5"
                     : "border-border hover:border-primary/50 hover:bg-brand-input/30"
             )}
         >
-            <div className={cn(
-                "flex size-12 items-center justify-center rounded-full transition-colors",
-                isDragOver || isOver ? "bg-brand-input/10" : "bg-muted"
-            )}>
-                <UploadCloudIcon className={cn("size-6", isDragOver || isOver ? "text-primary" : "text-muted-foreground")} />
-            </div>
+            {/* Default Background Image */}
+            {defaultBackgroundImage && (
+                <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-white p-2">
+                    <img
+                        src={defaultBackgroundImage}
+                        alt="Default"
+                        className="w-full h-full object-contain opacity-100"
+                    />
+                </div>
+            )}
+            
+            <div className="relative z-10 flex flex-col items-center justify-center px-4 py-2">
+                <div className={cn(
+                    "flex size-12 items-center justify-center rounded-full transition-colors bg-background/90 backdrop-blur-sm",
+                    isDragOver || isOver ? "bg-brand-input/20" : "bg-muted/90"
+                )}>
+                    <UploadCloudIcon className={cn("size-6", isDragOver || isOver ? "text-primary" : "text-muted-foreground")} />
+                </div>
 
-            <div>
-                <p className="text-sm font-medium">
-                    Drag & drop files here, or{" "}
-                    <span className="text-primary underline underline-offset-2">browse</span>
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                    {accept ? `Accepted: ${accept}` : "Any file type"} · Max {MAX_FILE_SIZE_MB}MB
-                    {multiple ? " · Multiple files allowed" : ""}
-                </p>
-            </div>
+                <div className="mt-3 text-center">
+                    <p className="text-sm font-medium text-foreground bg-background/70 px-3 py-1 rounded-lg">
+                        Drag & drop files here, or{" "}
+                        <span className="text-primary underline underline-offset-2">browse</span>
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground bg-background/70 px-3 py-1 rounded-lg">
+                        {accept ? `Accepted: ${accept}` : "Any file type"} · Max {MAX_FILE_SIZE_MB}MB
+                        {multiple ? " · Multiple files allowed" : ""}
+                    </p>
+                </div>
 
-            {error && <p className="text-xs text-destructive">{error}</p>}
+                {error && <p className="text-xs text-destructive mt-2 bg-background/70 px-3 py-1 rounded-lg">{error}</p>}
+            </div>
 
             <input
                 ref={inputRef}
@@ -222,6 +237,7 @@ export function DragDropCard({
     onChange,
     className,
     existingFile,
+    defaultBackgroundImage,
 }: DragDropCardProps) {
     const [files, setFiles] = useState<UploadedFile[]>([])
     const [activeId, setActiveId] = useState<string | null>(null)
@@ -277,6 +293,7 @@ export function DragDropCard({
                         onFilesAdded={addFiles}
                         accept={accept}
                         multiple={multiple}
+                        defaultBackgroundImage={defaultBackgroundImage}
                     />
 
                     {showExistingFile && (

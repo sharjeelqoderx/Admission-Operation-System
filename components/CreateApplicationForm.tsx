@@ -36,6 +36,7 @@ import { useForm, useStore } from "@tanstack/react-form";
 import { CreateApplicationSchema, type CreateApplicationInput } from "@/types/schemas/application";
 import type { CourseProgram } from "@/types/schemas/program";
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program";
+import { getLevelPriority } from "@/lib/utils/levels";
 import { useLevels } from "@/hooks/useLevels";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { ErrorView } from "@/components/shared/error-view";
@@ -47,6 +48,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { UserRole } from "@/types";
 
 
 type Student = {
@@ -68,6 +70,11 @@ type Student = {
         state?: string | null;
         city?: string | null;
     } | null;
+    education?: Array<{
+        qualification_degree?: {
+            level?: { name: string } | null;
+        } | null;
+    }>;
 };
 
 type Document = {
@@ -266,7 +273,33 @@ export function CreateApplicationForm() {
             return res.json();
         }
     });
-    const courses: CourseProgram[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
+    let courses: CourseProgram[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
+
+    // Filter courses based on student's highest degree (if user is student or we have selected a student)
+    if (user?.role === "STUDENT" || (studentDetails && user?.role === "AGENT")) {
+        // Find the highest level from student's education
+        let highestLevelPriority = 0;
+
+        if (studentDetails?.education && Array.isArray(studentDetails.education)) {
+            for (const edu of studentDetails.education) {
+                if (edu?.qualification_degree?.level?.name) {
+                    const levelPriority = getLevelPriority(edu.qualification_degree.level.name);
+                    if (levelPriority > highestLevelPriority) {
+                        highestLevelPriority = levelPriority;
+                    }
+                }
+            }
+        }
+
+        if (highestLevelPriority > 0) {
+            // Filter courses where course's level priority is higher than highestLevelPriority
+            courses = courses.filter((course) => {
+                const courseLevelName = course?.degree?.level?.name;
+                const courseLevelPriority = getLevelPriority(courseLevelName);
+                return courseLevelPriority > highestLevelPriority;
+            });
+        }
+    }
     const { data: levels = [] } = useLevels();
 
     const { data: programDetailResponse } = useQuery({
@@ -340,10 +373,10 @@ export function CreateApplicationForm() {
             requiredDocTypes.length > 0
                 ? requiredDocTypes
                 : documents
-                      .map((d) => ({
-                          id: d.document_type?.id ?? d.document_type_id,
-                      }))
-                      .filter((t): t is { id: string } => Boolean(t.id));
+                    .map((d) => ({
+                        id: d.document_type?.id ?? d.document_type_id,
+                    }))
+                    .filter((t): t is { id: string } => Boolean(t.id));
 
         const toAdd = typesToMatch
             .filter((t) => !selectedTypeIds.has(t.id))
@@ -363,15 +396,32 @@ export function CreateApplicationForm() {
     const handleNextStep = async () => {
         if (step === 1) {
             setIsStep1Attempted(true);
+
             const studentId = form.getFieldValue("profile_id");
 
+            // Agent must select student first
             if (!studentId) {
+                toast.error("Please select a student first.");
                 return;
             }
 
+            // If course_id comes from params and course exists
+            // then skip Step 2 and go directly to Step 3
+            const hasValidCourse =
+                courseIdParam &&
+                courses.some((course) => course.id === courseIdParam);
+
+            if (hasValidCourse) {
+                setStep(3);
+                return;
+            }
+
+            // Normal flow
             setStep(2);
+
         } else if (step === 2) {
             setIsStep2Attempted(true);
+
             const courseId = form.getFieldValue("course_id");
             const studentId = form.getFieldValue("profile_id");
             const documentIds = form.getFieldValue("document_ids");
@@ -391,9 +441,17 @@ export function CreateApplicationForm() {
                 const studentDocTypeIds = documents
                     .filter(d => documentIds.includes(d.id))
                     .map((d) => d.document_type?.id ?? d.document_type_id);
-                const missingTypes = requiredDocTypes.filter(rt => !studentDocTypeIds.includes(rt.id));
+
+                const missingTypes = requiredDocTypes.filter(
+                    rt => !studentDocTypeIds.includes(rt.id)
+                );
+
                 if (missingTypes.length > 0) {
-                    toast.error(`Missing required documents: ${missingTypes.map(m => m.name).join(", ")}`);
+                    toast.error(
+                        `Missing required documents: ${missingTypes
+                            .map(m => m.name)
+                            .join(", ")}`
+                    );
                     return;
                 }
             }
@@ -402,22 +460,42 @@ export function CreateApplicationForm() {
             try {
                 setIsCheckingDuplicate(true);
                 setDuplicateError(null);
-                const res = await fetch(`/api/application?student_id=${studentId}`);
+
+                const res = await fetch(
+                    `/api/application?student_id=${studentId}`
+                );
+
                 if (res.ok) {
                     const json = await res.json();
-                    const existing = (json.data || []).find((app: any) => 
-                        app.course?.id === courseId && app.status !== "REJECTED"
+
+                    const existing = (json.data || []).find(
+                        (app: any) =>
+                            app.course?.id === courseId &&
+                            app.status !== "REJECTED"
                     );
+
                     if (existing) {
-                        setDuplicateError("Application is already created for this course");
-                        toast.error("Application is already created for this course");
+                        setDuplicateError(
+                            "Application is already created for this course"
+                        );
+
+                        toast.error(
+                            "Application is already created for this course"
+                        );
+
                         setIsCheckingDuplicate(false);
                         return;
                     }
                 }
+
                 setIsCheckingDuplicate(false);
+
             } catch (err) {
-                console.error("Failed to check existing applications", err);
+                console.error(
+                    "Failed to check existing applications",
+                    err
+                );
+
                 setIsCheckingDuplicate(false);
             }
 
@@ -425,6 +503,16 @@ export function CreateApplicationForm() {
         }
     };
 
+    useEffect(() => {
+        // Only for STUDENT role
+        if (
+            user?.role === "STUDENT" &&
+            courseIdParam &&
+            courses.some((course) => course.id === courseIdParam)
+        ) {
+            setStep(3);
+        }
+    }, [user, courseIdParam, courses]);
     return (
         <div className="space-y-8 pb-20">
             {/* Header */}
@@ -446,25 +534,30 @@ export function CreateApplicationForm() {
                     style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}
                 />
 
-                <div className="flex flex-col items-center gap-3">
-                    <div className={cn(
-                        "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
-                        step >= 1 ? "bg-brand-secondary text-white" : "bg-[#e2e8f0] text-gray-500"
-                    )}>
-                        1
+                {courseIdParam && user?.role !== UserRole.STUDENT && (
+                    <div className="flex flex-col items-center gap-3">
+                        <div className={cn(
+                            "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
+                            step >= 1 ? "bg-brand-secondary text-white" : "bg-[#e2e8f0] text-gray-500"
+                        )}>
+                            1
+                        </div>
+                        <span className="text-[10px] font-bold tracking-widest text-brand-secondary uppercase">Student Profile</span>
                     </div>
-                    <span className="text-[10px] font-bold tracking-widest text-brand-secondary uppercase">Student Profile</span>
-                </div>
+                )}
 
-                <div className="flex flex-col items-center gap-3">
-                    <div className={cn(
-                        "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
-                        step >= 2 ? "bg-brand-secondary text-white" : "bg-[#e2e8f0] text-gray-500"
-                    )}>
-                        2
+                {!courseIdParam && (
+
+                    <div className="flex flex-col items-center gap-3">
+                        <div className={cn(
+                            "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
+                            step >= 2 ? "bg-brand-secondary text-white" : "bg-[#e2e8f0] text-gray-500"
+                        )}>
+                            2
+                        </div>
+                        <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Course Selection</span>
                     </div>
-                    <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Course Selection</span>
-                </div>
+                )}
 
                 <div className="flex flex-col items-center gap-3">
                     <div className={cn(
@@ -520,7 +613,10 @@ export function CreateApplicationForm() {
                         studentDetails={studentDetails}
                         allDocuments={documents}
                         courses={courses}
-                        onBack={() => setStep(2)}
+                        onBack={() => {
+                            if (courseIdParam) return setStep(1)
+                            setStep(2)
+                        }}
                         isSubmitting={createApplication.isPending}
                         error={createApplication.error?.message}
                     />
@@ -829,31 +925,95 @@ function SupportingDocumentsSection({
             />
 
             <div className="bg-white rounded-2xl p-6 space-y-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <FileText className="size-5 text-blue-600" />
-                    <Typography as="h3" font="title" className="text-brand-secondary">Supporting Documents</Typography>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <FileText className="size-5 text-blue-600" />
+                        <Typography as="h3" font="title" className="text-brand-secondary">Supporting Documents</Typography>
+                    </div>
                 </div>
-            </div>
 
-            <form.Field name="document_ids">
-                {(field: any) => (
-                    <div className="space-y-2">
-                        {isDocumentsLoading ? (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {[1, 2, 3, 4].map(i => (
-                                    <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />
-                                ))}
-                            </div>
-                        ) : requiredDocTypes.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {requiredDocTypes.map((rt) => {
-                                    const doc = documents.find(d => (d.document_type?.id ?? d.document_type_id) === rt.id);
-                                    const isChecked = doc ? field.state.value?.includes(doc.id) : false;
-                                    if (doc) {
+                <form.Field name="document_ids">
+                    {(field: any) => (
+                        <div className="space-y-2">
+                            {isDocumentsLoading ? (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {[1, 2, 3, 4].map(i => (
+                                        <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />
+                                    ))}
+                                </div>
+                            ) : requiredDocTypes.length > 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {requiredDocTypes.map((rt) => {
+                                        const doc = documents.find(d => (d.document_type?.id ?? d.document_type_id) === rt.id);
+                                        const isChecked = doc ? field.state.value?.includes(doc.id) : false;
+                                        if (doc) {
+                                            return (
+                                                <div
+                                                    key={rt.id}
+                                                    onClick={() => {
+                                                        const current = field.state.value || [];
+                                                        const next = current.includes(doc.id)
+                                                            ? current.filter((id: string) => id !== doc.id)
+                                                            : [...current, doc.id];
+                                                        field.handleChange(next);
+                                                    }}
+                                                    className={cn(
+                                                        "bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border transition-all cursor-pointer group",
+                                                        isChecked ? "border-green-500 bg-green-50/30 shadow-md" : "border-gray-100 hover:border-gray-300"
+                                                    )}
+                                                >
+                                                    <div className="absolute top-3 left-3 z-10">
+                                                        {isChecked
+                                                            ? <CheckSquare className="size-4 text-green-500 fill-green-50" />
+                                                            : <Square className="size-4 text-brand-secondary/20 group-hover:text-brand-secondary/40" />}
+                                                    </div>
+                                                    <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                                        {doc.document_files?.[0]?.file_url ? (
+                                                            <FilePreview
+                                                                url={doc.document_files[0].file_url}
+                                                                name={rt.name}
+                                                                showActions={false}
+                                                                className="border-none shadow-none size-full"
+                                                            />
+                                                        ) : (
+                                                            <FileText className={cn("size-10", isChecked ? "text-green-500" : "text-gray-300")} />
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{rt.name}</Typography>
+                                                        <Typography as="p" className="text-[8px] font-bold tracking-widest text-gray-500 uppercase mt-1">
+                                                            {new Date(doc.created_at).toLocaleDateString()}
+                                                        </Typography>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return (
+                                            <button
+                                                key={rt.id}
+                                                type="button"
+                                                onClick={() => openUploadModal(rt)}
+                                                className="bg-red-50/50 rounded-xl p-3 space-y-3 relative border-2 border-dashed border-red-200 flex flex-col items-center justify-center gap-2 min-h-[140px] hover:bg-red-50 hover:border-red-300 transition-all group w-full"
+                                            >
+                                                <div className="size-10 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                                                    <FileText className="size-5 text-red-400" />
+                                                </div>
+                                                <div className="text-center">
+                                                    <Typography as="p" className="text-[11px] font-bold text-red-600 truncate">{rt.name}</Typography>
+                                                    <Typography as="p" className="text-[9px] text-red-400 mt-0.5">Click to upload</Typography>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ) : documents.length > 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {documents.map((doc) => {
+                                        const isChecked = field.state.value?.includes(doc.id);
+                                        const label = doc.document_type?.name ?? "Document";
                                         return (
                                             <div
-                                                key={rt.id}
+                                                key={doc.id}
                                                 onClick={() => {
                                                     const current = field.state.value || [];
                                                     const next = current.includes(doc.id)
@@ -875,7 +1035,7 @@ function SupportingDocumentsSection({
                                                     {doc.document_files?.[0]?.file_url ? (
                                                         <FilePreview
                                                             url={doc.document_files[0].file_url}
-                                                            name={rt.name}
+                                                            name={label}
                                                             showActions={false}
                                                             className="border-none shadow-none size-full"
                                                         />
@@ -884,93 +1044,29 @@ function SupportingDocumentsSection({
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{rt.name}</Typography>
+                                                    <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{label}</Typography>
                                                     <Typography as="p" className="text-[8px] font-bold tracking-widest text-gray-500 uppercase mt-1">
                                                         {new Date(doc.created_at).toLocaleDateString()}
                                                     </Typography>
                                                 </div>
                                             </div>
                                         );
-                                    }
-                                    return (
-                                        <button
-                                            key={rt.id}
-                                            type="button"
-                                            onClick={() => openUploadModal(rt)}
-                                            className="bg-red-50/50 rounded-xl p-3 space-y-3 relative border-2 border-dashed border-red-200 flex flex-col items-center justify-center gap-2 min-h-[140px] hover:bg-red-50 hover:border-red-300 transition-all group w-full"
-                                        >
-                                            <div className="size-10 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                                                <FileText className="size-5 text-red-400" />
-                                            </div>
-                                            <div className="text-center">
-                                                <Typography as="p" className="text-[11px] font-bold text-red-600 truncate">{rt.name}</Typography>
-                                                <Typography as="p" className="text-[9px] text-red-400 mt-0.5">Click to upload</Typography>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        ) : documents.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {documents.map((doc) => {
-                                    const isChecked = field.state.value?.includes(doc.id);
-                                    const label = doc.document_type?.name ?? "Document";
-                                    return (
-                                        <div
-                                            key={doc.id}
-                                            onClick={() => {
-                                                const current = field.state.value || [];
-                                                const next = current.includes(doc.id)
-                                                    ? current.filter((id: string) => id !== doc.id)
-                                                    : [...current, doc.id];
-                                                field.handleChange(next);
-                                            }}
-                                            className={cn(
-                                                "bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border transition-all cursor-pointer group",
-                                                isChecked ? "border-green-500 bg-green-50/30 shadow-md" : "border-gray-100 hover:border-gray-300"
-                                            )}
-                                        >
-                                            <div className="absolute top-3 left-3 z-10">
-                                                {isChecked
-                                                    ? <CheckSquare className="size-4 text-green-500 fill-green-50" />
-                                                    : <Square className="size-4 text-brand-secondary/20 group-hover:text-brand-secondary/40" />}
-                                            </div>
-                                            <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                                {doc.document_files?.[0]?.file_url ? (
-                                                    <FilePreview
-                                                        url={doc.document_files[0].file_url}
-                                                        name={label}
-                                                        showActions={false}
-                                                        className="border-none shadow-none size-full"
-                                                    />
-                                                ) : (
-                                                    <FileText className={cn("size-10", isChecked ? "text-green-500" : "text-gray-300")} />
-                                                )}
-                                            </div>
-                                            <div>
-                                                <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{label}</Typography>
-                                                <Typography as="p" className="text-[8px] font-bold tracking-widest text-gray-500 uppercase mt-1">
-                                                    {new Date(doc.created_at).toLocaleDateString()}
-                                                </Typography>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <div className="col-span-full py-12 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center gap-4">
-                                <FileText className="size-6 text-gray-400" />
-                                <Typography as="p" className="text-sm font-bold text-gray-900">No documents uploaded yet</Typography>
-                                <Typography as="p" className="text-xs text-gray-500">Upload required documents using the cards above.</Typography>
-                            </div>
-                        )}
-                        {isStepAttempted && (!field.state.value || field.state.value.length === 0) && (
-                            <p className="text-[10px] text-red-500 font-medium mt-2">Please select at least one document</p>
-                        )}
-                    </div>
-                )}
-            </form.Field>
-        </div>
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="col-span-full py-12 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center gap-4">
+                                    <FileText className="size-6 text-gray-400" />
+                                    <Typography as="p" className="text-sm font-bold text-gray-900">No documents uploaded yet</Typography>
+                                    <Typography as="p" className="text-xs text-gray-500">Upload required documents using the cards above.</Typography>
+                                </div>
+                            )}
+                            {isStepAttempted && (!field.state.value || field.state.value.length === 0) && (
+                                <p className="text-[10px] text-red-500 font-medium mt-2">Please select at least one document</p>
+                            )}
+                        </div>
+                    )}
+                </form.Field>
+            </div>
         </>
     );
 }
@@ -1333,17 +1429,17 @@ function Step3({ form, studentDetails, allDocuments, courses, onBack, isSubmitti
 
                     <div className="space-y-4">
                         <div className="overflow-hidden">
-                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Full Name</Typography>
-                            <Typography as="p" font="title" className="text-gray-900 mt-0.5 truncate">{studentDetails?.name}</Typography>
+                            <Typography as="p" font="small" className="font-semibold text-gray-400 uppercase tracking-widest">Full Name</Typography>
+                            <Typography as="p" font="text" className="text-gray-900 mt-0.5 truncate font-bold">{studentDetails?.name}</Typography>
                         </div>
                         <div className="overflow-hidden">
-                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Email Address</Typography>
-                            <Typography as="p" font="title" className="text-gray-900 mt-0.5 truncate">{studentDetails?.email}</Typography>
+                            <Typography as="p" font="small" className="font-semibold text-gray-400 uppercase tracking-widest">Email Address</Typography>
+                            <Typography as="p" font="text" className="text-gray-900 mt-0.5 truncate font-bold">{studentDetails?.email}</Typography>
                         </div>
 
                         <div>
-                            <Typography as="p" font="small" className="text-gray-400 uppercase tracking-widest">Nationality</Typography>
-                            <Typography as="p" font="title" className="text-gray-900 mt-0.5">{studentDetails?.student?.nationality || "-"}</Typography>
+                            <Typography as="p" font="small" className="font-semibold text-gray-400 uppercase tracking-widest">Nationality</Typography>
+                            <Typography as="p" font="text" className="text-gray-900 mt-0.5 font-bold">{studentDetails?.student?.nationality || "-"}</Typography>
                         </div>
 
                     </div>

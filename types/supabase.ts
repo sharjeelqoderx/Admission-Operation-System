@@ -17,8 +17,10 @@ export type Database = {
       agent: {
         Row: {
           address: string | null
+          agency_name: string | null
           city: string | null
-          contact_person_name: string | null
+          contact_person_first_name: string | null
+          contact_person_last_name: string | null
           country: string | null
           created_at: string
           experience_years: number | null
@@ -32,8 +34,10 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          agency_name?: string | null
           city?: string | null
-          contact_person_name?: string | null
+          contact_person_first_name?: string | null
+          contact_person_last_name?: string | null
           country?: string | null
           created_at?: string
           experience_years?: number | null
@@ -47,8 +51,10 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          agency_name?: string | null
           city?: string | null
-          contact_person_name?: string | null
+          contact_person_first_name?: string | null
+          contact_person_last_name?: string | null
           country?: string | null
           created_at?: string
           experience_years?: number | null
@@ -441,7 +447,7 @@ export type Database = {
           duration: string | null
           fees: string | null
           id: string
-          intake_date: string | null
+          intake_date: Database["public"]["Enums"]["intake_season_enum"] | null
           language_of_study: string | null
           level_id: string | null
           location: string | null
@@ -453,7 +459,7 @@ export type Database = {
           duration?: string | null
           fees?: string | null
           id?: string
-          intake_date?: string | null
+          intake_date?: Database["public"]["Enums"]["intake_season_enum"] | null
           language_of_study?: string | null
           level_id?: string | null
           location?: string | null
@@ -465,7 +471,7 @@ export type Database = {
           duration?: string | null
           fees?: string | null
           id?: string
-          intake_date?: string | null
+          intake_date?: Database["public"]["Enums"]["intake_season_enum"] | null
           language_of_study?: string | null
           level_id?: string | null
           location?: string | null
@@ -526,6 +532,7 @@ export type Database = {
           created_at: string
           document_type_id: string | null
           id: string
+          note: string | null
           profile_id: string
           updated_at: string
           uploaded_by_profile_id: string | null
@@ -534,6 +541,7 @@ export type Database = {
           created_at?: string
           document_type_id?: string | null
           id?: string
+          note?: string | null
           profile_id: string
           updated_at?: string
           uploaded_by_profile_id?: string | null
@@ -542,6 +550,7 @@ export type Database = {
           created_at?: string
           document_type_id?: string | null
           id?: string
+          note?: string | null
           profile_id?: string
           updated_at?: string
           uploaded_by_profile_id?: string | null
@@ -1037,12 +1046,14 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           email: string | null
+          first_name: string | null
           gender: Database["public"]["Enums"]["gender_enum"] | null
           id: string
-          name: string | null
+          last_name: string | null
           phone: string | null
           role: Database["public"]["Enums"]["role_enum"]
           signature: string | null
+          title: string | null
           updated_at: string
         }
         Insert: {
@@ -1050,12 +1061,14 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
+          first_name?: string | null
           gender?: Database["public"]["Enums"]["gender_enum"] | null
           id: string
-          name?: string | null
+          last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["role_enum"]
           signature?: string | null
+          title?: string | null
           updated_at?: string
         }
         Update: {
@@ -1063,12 +1076,14 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
+          first_name?: string | null
           gender?: Database["public"]["Enums"]["gender_enum"] | null
           id?: string
-          name?: string | null
+          last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["role_enum"]
           signature?: string | null
+          title?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1180,6 +1195,7 @@ export type Database = {
       student: {
         Row: {
           address: string | null
+          aps_requirement: boolean
           city: string | null
           country: string | null
           created_at: string
@@ -1197,6 +1213,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          aps_requirement?: boolean
           city?: string | null
           country?: string | null
           created_at?: string
@@ -1214,6 +1231,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          aps_requirement?: boolean
           city?: string | null
           country?: string | null
           created_at?: string
@@ -1363,6 +1381,7 @@ export type Database = {
         | "ACTION_REQUIRED"
       education_level_enum: "SCHOOL" | "COLLEGE" | "DIPLOMA" | "UNIVERSITY"
       gender_enum: "MALE" | "FEMALE"
+      intake_season_enum: "summer" | "winter"
       offer_status_enum: "PENDING" | "ACCEPTED" | "REJECTED"
       payment_status_enum: "PENDING" | "CONFIRMED" | "FAILED"
       program_status_enum: "ACTIVE" | "INACTIVE"
@@ -1508,6 +1527,7 @@ export const Constants = {
       ],
       education_level_enum: ["SCHOOL", "COLLEGE", "DIPLOMA", "UNIVERSITY"],
       gender_enum: ["MALE", "FEMALE"],
+      intake_season_enum: ["summer", "winter"],
       offer_status_enum: ["PENDING", "ACCEPTED", "REJECTED"],
       payment_status_enum: ["PENDING", "CONFIRMED", "FAILED"],
       program_status_enum: ["ACTIVE", "INACTIVE"],

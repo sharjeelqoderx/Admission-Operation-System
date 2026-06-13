@@ -19,8 +19,11 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
 import {
+    ApplicationsListTable,
+    DocumentVaultCell,
     type ApplicationRow,
 } from "@/app/(dashboard)/dashboard/application/_component/ApplicationsListTable"
+import { ApplicationStatus } from "@/components/shared/StatusBadge"
 import { type OfferRow } from "@/app/(dashboard)/dashboard/offer/_component/OfferTable"
 import type { CourseProgram } from "@/types/schemas/program"
 import { deriveProgramCategory } from "@/lib/utils/program"
@@ -208,37 +211,63 @@ export function StudentDashboard() {
                             ) : recentApplications.length > 0 ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {recentApplications.map((app) => (
-                                        <Link href={`/dashboard/application/${app.id}`} key={app.id}>
-                                            <div className="dashboard-panel group hover:shadow-md hover:bg-brand-secondary/5 transition-all p-5">
-                                                <div className="flex justify-between items-start mb-4 gap-3">
-                                                    <div className="space-y-1 truncate flex-1">
-                                                        <Typography as="span" className="font-bold text-sm text-gray-900 truncate block group-hover:text-brand-byzantine transition-colors">
-                                                            {app.course?.name ?? "Application"}
-                                                        </Typography>
-                                                        {app.course?.degree?.name && (
-                                                            <Typography as="span" className="text-[10px] text-gray-500 font-medium truncate block">
-                                                                {app.course.degree.name}
-                                                            </Typography>
-                                                        )}
-                                                        <Typography as="span" className="text-[10px] text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1.5">
-                                                            <Calendar className="size-3" />
-                                                            {new Date(app.created_at).toLocaleDateString("en-US", {
-                                                                month: "short",
-                                                                day: "numeric",
-                                                                year: "numeric",
-                                                            })}
-                                                        </Typography>
-                                                    </div>
-                                                    <StatusBadge status={app.status} />
-                                                </div>
-                                                <div className="flex items-center justify-between pt-2 border-t border-brand-secondary/15">
-                                                    <Typography as="span" className="text-[10px] font-bold text-gray-400">
-                                                        View Details
+                                        <div
+                                            key={app.id}
+                                            className="dashboard-panel group hover:shadow-md hover:bg-brand-secondary/5 transition-all p-5"
+                                        >
+                                            <div className="flex justify-between items-start mb-4 gap-3">
+                                                <Link
+                                                    href={`/dashboard/application/${app.id}`}
+                                                    className="space-y-1 truncate flex-1 min-w-0"
+                                                >
+                                                    <Typography as="span" className="font-bold text-sm text-gray-900 truncate block group-hover:text-brand-byzantine transition-colors">
+                                                        {app.course?.name ?? "Application"}
                                                     </Typography>
-                                                    <ChevronRight className="size-4 text-gray-300 group-hover:text-brand-byzantine transition-colors" />
+                                                    {app.course?.degree?.name && (
+                                                        <Typography as="span" className="text-[10px] text-gray-500 font-medium truncate block">
+                                                            {app.course.degree.name}
+                                                        </Typography>
+                                                    )}
+                                                    <Typography as="span" className="text-[10px] text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1.5">
+                                                        <Calendar className="size-3" />
+                                                        {new Date(app.created_at).toLocaleDateString("en-US", {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                            year: "numeric",
+                                                        })}
+                                                    </Typography>
+                                                </Link>
+                                                <div className="flex flex-col gap-1.5 shrink-0">
+                                                    <StatusBadge status={app.status} />
+                                                    {app.offer_shared && (
+                                                        <StatusBadge
+                                                            status={ApplicationStatus.CONDITIONAL_LETTER_ISSUED}
+                                                        />
+                                                    )}
                                                 </div>
                                             </div>
-                                        </Link>
+
+                                            <div className="mb-4 pt-3 border-t border-brand-secondary/15">
+                                                <Typography as="p" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                                                    Document Vault
+                                                </Typography>
+                                                <DocumentVaultCell
+                                                    app={app}
+                                                    variant="student"
+                                                    fallbackStudentId={meData?.id}
+                                                />
+                                            </div>
+
+                                            <Link
+                                                href={`/dashboard/application/${app.id}`}
+                                                className="flex items-center justify-between pt-2 border-t border-brand-secondary/15 group/link"
+                                            >
+                                                <Typography as="span" className="text-[10px] font-bold text-gray-400 group-hover/link:text-brand-byzantine transition-colors">
+                                                    View Details
+                                                </Typography>
+                                                <ChevronRight className="size-4 text-gray-300 group-hover/link:text-brand-byzantine transition-colors" />
+                                            </Link>
+                                        </div>
                                     ))}
                                 </div>
                             ) : (

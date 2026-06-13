@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server"
+import { formatFullName } from "@/lib/utils/profile"
+import { requiresApsRequirement } from "@/lib/utils/aps"
 
 export async function GET(
     req: NextRequest,
@@ -48,33 +50,69 @@ export async function GET(
             ),
         ]
 
-        let qualificationDegreeById = new Map<
+        let qualificationById = new Map<
             string,
             {
                 id: string
                 name: string
-                credits: number | null
-                location: string | null
-                language_of_study: string | null
-                duration: string | null
+                credits?: number | null
+                location?: string | null
+                language_of_study?: string | null
+                duration?: string | null
+                level_id: string | null
+                level?: { id: string; name: string } | null
             }
         >()
 
         if (qualificationIds.length > 0) {
-            const { data: qualificationDegrees } = await supabase
-                .from("degree")
-                .select("id, name, credits, location, language_of_study, duration")
+            const { data: educationTypes } = await supabase
+                .from("education_type")
+                .select("id, name, level_id, linked_level:level_id(id, name)")
                 .in("id", qualificationIds)
 
-            qualificationDegreeById = new Map(
-                (qualificationDegrees ?? []).map((degree) => [degree.id, degree])
-            )
+            for (const row of educationTypes ?? []) {
+                const linkedLevel = (row.linked_level as unknown as { id: string; name: string } | null)
+                qualificationById.set(row.id, {
+                    id: row.id,
+                    name: row.name,
+                    level_id: row.level_id,
+                    level: linkedLevel ?? { id: row.id, name: row.name },
+                })
+            }
+
+            const unresolvedIds = qualificationIds.filter((id) => !qualificationById.has(id))
+            if (unresolvedIds.length > 0) {
+                const { data: qualificationDegrees } = await supabase
+                    .from("degree")
+                    .select("id, name, credits, location, language_of_study, duration, level_id")
+                    .in("id", unresolvedIds)
+
+                const levelIds = (qualificationDegrees ?? [])
+                    .map((d) => d.level_id)
+                    .filter((id): id is string => Boolean(id))
+
+                let levelById = new Map<string, { id: string; name: string }>()
+                if (levelIds.length > 0) {
+                    const { data: levels } = await supabase
+                        .from("levels")
+                        .select("id, name")
+                        .in("id", levelIds)
+                    levelById = new Map((levels ?? []).map((level) => [level.id, level]))
+                }
+
+                for (const degree of qualificationDegrees ?? []) {
+                    qualificationById.set(degree.id, {
+                        ...degree,
+                        level: degree.level_id ? levelById.get(degree.level_id) ?? null : null,
+                    })
+                }
+            }
         }
 
         const enrichedEducation = (education ?? []).map((row) => ({
             ...row,
             qualification_degree: row.qualification
-                ? qualificationDegreeById.get(row.qualification) ?? null
+                ? qualificationById.get(row.qualification) ?? null
                 : null,
         }))
 
@@ -82,6 +120,7 @@ export async function GET(
             {
                 data: {
                     ...profile,
+                    name: formatFullName(profile.first_name, profile.last_name),
                     student: student || null,
                     education: enrichedEducation,
                 },
@@ -119,7 +158,9 @@ export async function PATCH(
         const academic = academicRaw ? JSON.parse(academicRaw) : []
 
         const data = {
-            full_name: getString("full_name"),
+            title: getString("title"),
+            first_name: getString("first_name"),
+            last_name: getString("last_name"),
             email: getString("email"),
             phone: getString("phone"),
             dob: getString("dob"),
@@ -132,6 +173,8 @@ export async function PATCH(
             guardian_phone: getString("guardian_phone"),
             avatar_url: getFile("avatar_url"),
             passport_file_url: getFile("passport_file_url"),
+            cv_file: getFile("cv_file"),
+            resume_file: getFile("resume_file"),
             academic,
         }
 
@@ -148,7 +191,9 @@ export async function PATCH(
         const { error: profileError } = await supabase
             .from("profile")
             .update({
-                name: data.full_name,
+                ...(data.title ? { title: data.title } : {}),
+                ...(data.first_name ? { first_name: data.first_name } : {}),
+                ...(data.last_name ? { last_name: data.last_name } : {}),
                 email: data.email,
                 phone: data.phone,
                 date_of_birth: data.dob,
@@ -177,6 +222,9 @@ export async function PATCH(
                     guardian_email: data.guardian_email,
                     guardian_phone: data.guardian_phone,
                     ...(passportUpload ? { passport_file_url: passportUpload.publicUrl } : {}),
+                    ...(data.country !== undefined
+                        ? { aps_requirement: requiresApsRequirement(data.country) }
+                        : {}),
                 },
                 { onConflict: "profile_id" }
             )
@@ -231,6 +279,62 @@ export async function PATCH(
                 if (eduError) {
                     console.error(eduError)
                     return NextResponse.json({ error: "Education update failed" }, { status: 400 })
+                }
+            }
+        }
+
+        // 4. Upsert CV + Resume documents if provided
+        const docFilesToUpsert = [
+            { code: "CV", file: data.cv_file },
+            { code: "RESUME", file: data.resume_file },
+        ].filter((d): d is { code: string; file: File } => d.file instanceof File)
+
+        if (docFilesToUpsert.length > 0) {
+            const { data: docTypes } = await supabase
+                .from("document_type")
+                .select("id, code")
+                .in("code", docFilesToUpsert.map((d) => d.code))
+
+            for (const { code, file } of docFilesToUpsert) {
+                const docType = (docTypes ?? []).find((d: any) => d.code === code)
+                if (!docType) continue
+
+                const { publicUrl } = await (await import("@/lib/supabase/upload-public-image")).uploadPublicImage({
+                    supabase,
+                    bucket: "student-admission",
+                    userId: `${id}/${code.toLowerCase()}`,
+                    file,
+                })
+
+                // Delete existing and re-insert
+                await supabase
+                    .from("document")
+                    .delete()
+                    .eq("profile_id", id)
+                    .eq("document_type_id", docType.id)
+
+                const { data: docRecord } = await supabase
+                    .from("document")
+                    .insert({
+                        profile_id: id,
+                        uploaded_by_profile_id: user.id,
+                        document_type_id: docType.id,
+                    })
+                    .select()
+                    .single()
+
+                if (docRecord) {
+                    await supabase.from("document_files").insert({
+                        document_id: docRecord.id,
+                        file_url: publicUrl,
+                        type: "FRONT",
+                    })
+                    await supabase.from("document_review").insert({
+                        document_id: docRecord.id,
+                        reviewed_by_profile_id: null,
+                        status: "PENDING",
+                        feedback: null,
+                    })
                 }
             }
         }

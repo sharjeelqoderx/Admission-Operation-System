@@ -24,9 +24,12 @@ import {
     CheckCircle2,
     X,
     CreditCard,
-    ArrowRight
+    ArrowRight,
+    Copy,
+    Check
 } from "lucide-react"
 import { toast } from "sonner"
+import { useAuth } from "@/hooks/useAuth"
 import {
     formatIntakeDate,
     formatProgramDate,
@@ -36,6 +39,8 @@ import {
     buildDbBedingteZuLetterHtml,
     buildDbBedingteZuLetterParamsFromOffer,
     openDbBedingteZuLetterPreview,
+    LETTER_CONFIGS,
+    type LetterType,
 } from "@/components/shared/db-bedingte-zu/db-bedingte-zu"
 
 
@@ -144,6 +149,8 @@ export default function OfferDetailsPage() {
     const params = useParams()
     const router = useRouter()
     const offerId = params?.["offer-id"] as string
+    const { me } = useAuth()
+    const [copied, setCopied] = React.useState(false)
 
     const [isSignModalOpen, setIsSignModalOpen] = React.useState(false)
     const [isDrawing, setIsDrawing] = React.useState(false)
@@ -165,6 +172,23 @@ export default function OfferDetailsPage() {
         queryFn: fetchOffer,
         enabled: Boolean(offerId),
     })
+
+    const handleCopySignLink = useCallback(async () => {
+        if (!offer?.application?.student?.id) {
+            toast.error("Student data not available for this offer")
+            return
+        }
+        const signLink = `${window.location.origin}/sign?user_id=${offer.application.student.id}&offer_id=${offerId}`
+        try {
+            await navigator.clipboard.writeText(signLink)
+            setCopied(true)
+            toast.success("Sign link copied to clipboard!")
+            setTimeout(() => setCopied(false), 2000)
+        } catch (err) {
+            console.error("Failed to copy link:", err)
+            toast.error("Failed to copy link")
+        }
+    }, [offer, offerId])
 
     React.useEffect(() => {
         if (isSignModalOpen) {
@@ -321,12 +345,11 @@ export default function OfferDetailsPage() {
         setIsSignModalOpen(true)
     }, [])
 
-    const handleViewDbBedingteZuLetter = useCallback(() => {
+    const handleViewDbBedingteZuLetter = useCallback((letterType: LetterType) => {
         if (!offer) return
 
-        const html = buildDbBedingteZuLetterHtml(
-            buildDbBedingteZuLetterParamsFromOffer(offer, window.location.origin)
-        )
+        const params = buildDbBedingteZuLetterParamsFromOffer(offer, window.location.origin)
+        const html = buildDbBedingteZuLetterHtml({ ...params, letterType })
 
         const opened = openDbBedingteZuLetterPreview(html)
         if (!opened) {
@@ -334,14 +357,14 @@ export default function OfferDetailsPage() {
         }
     }, [offer])
 
-    const handleDownloadDbBedingteZuPDF = useCallback(async () => {
+    const handleDownloadDbBedingteZuPDF = useCallback(async (letterType: LetterType) => {
         if (typeof window === "undefined" || !offer) {
             toast.error("Offer data is not ready yet.")
             return
         }
 
         const offerSnapshot = offer
-        const pdfFileName = `db-bedingte-zu-${applicationRef}.pdf`
+        const pdfFileName = `db-bedingte-zu-${letterType}-${applicationRef}.pdf`
 
         setIsDownloadingConditionalLetter(true)
         const toastId = toast.loading("Generating conditional letter PDF...")
@@ -353,9 +376,8 @@ export default function OfferDetailsPage() {
             ])
 
             const origin = window.location.origin
-            const html = buildDbBedingteZuLetterHtml(
-                buildDbBedingteZuLetterParamsFromOffer(offerSnapshot, origin)
-            )
+            const params = buildDbBedingteZuLetterParamsFromOffer(offerSnapshot, origin)
+            const html = buildDbBedingteZuLetterHtml({ ...params, letterType })
 
             const iframe = document.createElement("iframe")
             iframe.style.position = "fixed"
@@ -728,14 +750,27 @@ export default function OfferDetailsPage() {
                     </div>
 
                     {canAcceptAndSign && (
-                        <Button
-                            type="button"
-                            className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
-                            onClick={openSignModal}
-                        >
-                            <FileCheck className="size-4" />
-                            Accept & Sign
-                        </Button>
+                        <>
+                            {me.data?.role === "AGENT" ? (
+                                <Button
+                                    type="button"
+                                    className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
+                                    onClick={handleCopySignLink}
+                                >
+                                    {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                                    {copied ? "Copied!" : "Copy Sign Link"}
+                                </Button>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
+                                    onClick={openSignModal}
+                                >
+                                    <FileCheck className="size-4" />
+                                    Accept & Sign
+                                </Button>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
@@ -813,27 +848,42 @@ export default function OfferDetailsPage() {
 
                     {isDbBedingteZuEnabled && (
                         <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6 space-y-4">
-                            <SectionHeader icon={FileCheck} title="DB-bedingte-zu Letter" />
+                            <SectionHeader icon={FileCheck} title="Conditional Admission Letters" />
                             <Typography font="sub-text" className="text-sm text-gray-600">
-                                View or download the conditional letter (3 pages).
+                                View or download any of the 9 conditional admission letters.
                             </Typography>
-                            <div className="flex flex-col sm:flex-row gap-2">
-                                <Button
-                                    variant="outline"
-                                    className="flex-1 rounded-xl gap-2 border-white/50 bg-white/30"
-                                    onClick={handleViewDbBedingteZuLetter}
-                                >
-                                    <Eye className="size-4" />
-                                    View
-                                </Button>
-                                <Button
-                                    className="flex-1 rounded-xl gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90"
-                                    onClick={handleDownloadDbBedingteZuPDF}
-                                    disabled={isDownloadingConditionalLetter}
-                                >
-                                    <Download className="size-4" />
-                                    Download
-                                </Button>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {Object.entries(LETTER_CONFIGS).map(([letterTypeKey, config]) => {
+                                    const letterType = letterTypeKey as LetterType
+                                    return (
+                                        <div
+                                            key={letterType}
+                                            className="flex flex-col gap-2 p-4 bg-white/30 border border-white/50 rounded-xl"
+                                        >
+                                            <Typography className="text-sm font-bold text-gray-800">
+                                                {config.courseNameEN}
+                                            </Typography>
+                                            <div className="flex flex-col sm:flex-row gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    className="flex-1 rounded-lg gap-1.5 border-white/50 bg-white/30 text-sm"
+                                                    onClick={() => handleViewDbBedingteZuLetter(letterType)}
+                                                >
+                                                    <Eye className="size-3.5" />
+                                                    View
+                                                </Button>
+                                                <Button
+                                                    className="flex-1 rounded-lg gap-1.5 bg-brand-byzantine hover:bg-brand-byzantine/90 text-sm"
+                                                    onClick={() => handleDownloadDbBedingteZuPDF(letterType)}
+                                                    disabled={isDownloadingConditionalLetter}
+                                                >
+                                                    <Download className="size-3.5" />
+                                                    Download
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </BluryCard>
                     )}

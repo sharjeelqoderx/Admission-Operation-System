@@ -7,7 +7,7 @@ export async function GET() {
 
         const { data, error } = await supabase
             .from("education_type")
-            .select("id, name, level")
+            .select("id, name, level, level_id, linked_level:level_id(id, name)")
             .order("level")
             .order("name")
 

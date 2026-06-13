@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 300">
+  <!-- Background -->
+  <rect width="500" height="300" fill="#ffffff"/>
+  
+  <!-- Top Section -->
+  <g transform="translate(20,10)">
+    <!-- Left Emblem -->
+    <g>
+      <circle cx="40" cy="40" r="30" fill="none" stroke="#888" stroke-width="2"/>
+      <circle cx="40" cy="40" r="20" fill="none" stroke="#888" stroke-width="2"/>
+      <circle cx="40" cy="40" r="10" fill="none" stroke="#888" stroke-width="2"/>
+      
+      <!-- Flag -->
+      <rect x="80" y="15" width="360" height="35" fill="#ffffff" stroke="#ddd"/>
+      <rect x="80" y="15" width="360" height="11" fill="#ff9933"/>
+      <rect x="80" y="39" width="360" height="11" fill="#ffffff"/>
+      <rect x="80" y="63" width="360" height="11" fill="#138808"/>
+      
+      <!-- Ashoka Chakra -->
+      <circle cx="260" cy="50" r="16" fill="none" stroke="#000080" stroke-width="2"/>
+    </g>
+  </g>
+
+  <!-- Details -->
+  <rect x="30" y="100" width="340" height="18" fill="#e5e7eb" rx="3"/>
+  <rect x="30" y="135" width="240" height="18" fill="#e5e7eb" rx="3"/>
+  <rect x="30" y="170" width="160" height="18" fill="#e5e7eb" rx="3"/>
+
+  <!-- Bottom Section -->
+  <text x="30" y="260" fill="#111827" font-size="20" font-family="Arial" font-weight="bold">XXXX XXXX XXXX</text>
+
+  <!-- Icons Section -->
+  <g transform="translate(30, 268)">
+    <!-- Phone Icon -->
+    <rect width="35" height="35" fill="none" stroke="#666" stroke-width="2" rx="3"/>
+    <rect x="12" y="8" width="11" height="18" rx="2" fill="none" stroke="#666" stroke-width="2"/>
+    <circle cx="17.5" cy="27" r="2.5" fill="#666"/>
+
+    <!-- Email Icon -->
+    <g transform="translate(50, 0)">
+      <rect width="35" height="35" fill="none" stroke="#666" stroke-width="2" rx="3"/>
+      <path d="M8,12 L17.5,22 L27,12 L27,27 L8,27 Z" fill="none" stroke="#666" stroke-width="2"/>
+    </g>
+
+    <!-- Line -->
+    <rect x="95" y="12" width="100" height="9" rx="2" fill="#e5e7eb"/>
+
+    <!-- Globe Icon -->
+    <g transform="translate(210, 0)">
+      <rect width="35" height="35" fill="none" stroke="#666" stroke-width="2" rx="3"/>
+      <circle cx="17.5" cy="17.5" r="10" fill="none" stroke="#666" stroke-width="2"/>
+      <line x1="7.5" y1="17.5" x2="27.5" y2="17.5" stroke="#666" stroke-width="2"/>
+      <line x1="17.5" y1="7.5" x2="17.5" y2="27.5" stroke="#666" stroke-width="2"/>
+    </g>
+
+    <!-- Line -->
+    <rect x="255" y="12" width="130" height="9" rx="2" fill="#e5e7eb"/>
+  </g>
+
+  <!-- Red Line -->
+  <rect x="25" y="245" width="450" height="3" fill="#dc2626"/>
+</svg>

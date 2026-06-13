@@ -17,6 +17,7 @@ type DocumentRow = {
     id: string
     document_type_id: string | null
     created_at: string
+    updated_at: string | null
     document_review: Array<{ status: string; created_at: string }> | null
     document_files: Array<{ file_url: string; type: string | null }> | null
 }
@@ -25,11 +26,13 @@ function mapUploadedDocument(doc: DocumentRow): UploadedDocumentSummary {
     return {
         document_id: doc.id,
         status: doc.document_review?.[0]?.status ?? "PENDING",
+        note: null,
         files: (doc.document_files ?? []).map((file) => ({
             file_url: file.file_url,
             type: file.type,
         })),
         created_at: doc.created_at,
+        updated_at: doc.updated_at ?? null,
     }
 }
 
@@ -145,6 +148,7 @@ export async function GET(req: NextRequest) {
                 id,
                 document_type_id,
                 created_at,
+                updated_at,
                 document_review(status, created_at),
                 document_files(file_url, type)
             `)

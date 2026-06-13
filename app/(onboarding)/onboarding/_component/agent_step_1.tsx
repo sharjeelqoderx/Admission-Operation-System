@@ -5,25 +5,76 @@ import { Loader2 } from "lucide-react"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { F, GENDERS } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
 import { CountrySelect } from "@/components/shared/country-select"
 import { PageLoader } from "@/components/shared/page-loader"
+import { Typography } from "@/components/shared/Typography"
 
-const schema = z.object({
-    agentName: z.string().trim().min(2, "Agent name is required"),
-    contactPersonName: z.string().trim().min(2, "Contact person name is required"),
-    gender: z.enum(["male", "female", "other"], { message: "Select gender" }),
-    primaryBaseCountry: z.string().trim().min(2, "Country is required"),
-    primaryBaseState: z.string().trim().min(2, "State is required"),
-    primaryBaseCity: z.string().trim().min(2, "City is required"),
-    website: z.string().trim().refine(v => v === "" || v.includes("."), "Enter a valid URL").or(z.literal("")),
-})
+const namePart = z
+    .string()
+    .trim()
+    .min(2, "Must be at least 2 characters")
+    .regex(/^[a-zA-Z]+$/, "Only letters allowed")
+
+const schema = z
+    .object({
+        agentFirstName: z.string().trim(),
+        agentLastName: z.string().trim(),
+        contactPersonFirstName: z.string().trim(),
+        contactPersonLastName: z.string().trim(),
+        sameAsAgentName: z.boolean(),
+        gender: z.enum(["male", "female", "other"], { message: "Select gender" }),
+        primaryBaseCountry: z.string().trim().min(2, "Country is required"),
+        primaryBaseState: z.string().trim().min(2, "State is required"),
+        primaryBaseCity: z.string().trim().min(2, "City is required"),
+        website: z.string().trim().refine(v => v === "" || v.includes("."), "Enter a valid URL").or(z.literal("")),
+    })
+    .superRefine((data, ctx) => {
+        const agentFirst = namePart.safeParse(data.agentFirstName)
+        if (!agentFirst.success) {
+            ctx.addIssue({
+                path: ["agentFirstName"],
+                code: "custom",
+                message: agentFirst.error.issues[0]?.message ?? "First name is required",
+            })
+        }
+        const agentLast = namePart.safeParse(data.agentLastName)
+        if (!agentLast.success) {
+            ctx.addIssue({
+                path: ["agentLastName"],
+                code: "custom",
+                message: agentLast.error.issues[0]?.message ?? "Last name is required",
+            })
+        }
+        if (!data.sameAsAgentName) {
+            const first = namePart.safeParse(data.contactPersonFirstName)
+            if (!first.success) {
+                ctx.addIssue({
+                    path: ["contactPersonFirstName"],
+                    code: "custom",
+                    message: first.error.issues[0]?.message ?? "First name is required",
+                })
+            }
+            const last = namePart.safeParse(data.contactPersonLastName)
+            if (!last.success) {
+                ctx.addIssue({
+                    path: ["contactPersonLastName"],
+                    code: "custom",
+                    message: last.error.issues[0]?.message ?? "Last name is required",
+                })
+            }
+        }
+    })
 
 type AgentStep1Values = {
-    agentName: string
-    contactPersonName: string
+    agentFirstName: string
+    agentLastName: string
+    contactPersonFirstName: string
+    contactPersonLastName: string
+    sameAsAgentName: boolean
     gender: string
     primaryBaseCountry: string
     primaryBaseState: string
@@ -62,9 +113,18 @@ function AgentStep1Form({
         defaultValues,
         validators: { onSubmit: schema },
         onSubmit: async ({ value }) => {
+            const contactFirst = value.sameAsAgentName
+                ? value.agentFirstName
+                : value.contactPersonFirstName
+            const contactLast = value.sameAsAgentName
+                ? value.agentLastName
+                : value.contactPersonLastName
+
             const fd = new FormData()
-            fd.append("agent_name", value.agentName)
-            fd.append("contact_person_name", value.contactPersonName)
+            fd.append("first_name", value.agentFirstName)
+            fd.append("last_name", value.agentLastName)
+            fd.append("contact_person_first_name", contactFirst)
+            fd.append("contact_person_last_name", contactLast)
             fd.append("gender", value.gender === "male" ? "MALE" : value.gender === "female" ? "FEMALE" : "")
             fd.append("country", value.primaryBaseCountry)
             fd.append("state", value.primaryBaseState)
@@ -75,27 +135,90 @@ function AgentStep1Form({
         },
     })
 
+    const applySameAsAgentName = (checked: boolean) => {
+        form.setFieldValue("sameAsAgentName", checked)
+        if (checked) {
+            form.setFieldValue("contactPersonFirstName", form.getFieldValue("agentFirstName"))
+            form.setFieldValue("contactPersonLastName", form.getFieldValue("agentLastName"))
+        }
+    }
+
     return (
         <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
 
-                <form.Field name="agentName">{(field) => {
+                <form.Field name="agentFirstName">{(field) => {
                     const { isInvalid, error } = getFieldState(field)
                     return (
-                    <F isInvalid={isInvalid} error={error} label="Agent Name">
-                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. Horizon Education Group" />
+                    <F isInvalid={isInvalid} error={error} label="Agent First Name">
+                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. John" />
                     </F>
                     )
                 }}</form.Field>
 
-                <form.Field name="contactPersonName">{(field) => {
+                <form.Field name="agentLastName">{(field) => {
                     const { isInvalid, error } = getFieldState(field)
                     return (
-                    <F isInvalid={isInvalid} error={error} label="Contact Person Name">
-                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. John Smith" />
+                    <F isInvalid={isInvalid} error={error} label="Agent Last Name">
+                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. Smith" />
                     </F>
                     )
                 }}</form.Field>
+
+                <div className="sm:col-span-2 space-y-4">
+                    <form.Field name="sameAsAgentName">{(field) => (
+                        <div className="flex items-center gap-3">
+                            <Checkbox
+                                id="same-as-agent-name"
+                                checked={field.state.value}
+                                onCheckedChange={(checked) => applySameAsAgentName(checked === true)}
+                            />
+                            <label htmlFor="same-as-agent-name" className="cursor-pointer">
+                                <Typography font="text" className="text-sm">
+                                    Same as above
+                                </Typography>
+                            </label>
+                        </div>
+                    )}</form.Field>
+
+                    <form.Subscribe selector={(s) => s.values.sameAsAgentName}>
+                        {(sameAsAgentName) => (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                                <form.Field name="contactPersonFirstName">{(field) => {
+                                    const { isInvalid, error } = getFieldState(field)
+                                    return (
+                                    <F isInvalid={isInvalid} error={error} label="Contact Person First Name">
+                                        <Input
+                                            id={field.name}
+                                            value={field.state.value}
+                                            onBlur={field.handleBlur}
+                                            onChange={e => field.handleChange(e.target.value)}
+                                            placeholder="e.g. John"
+                                            disabled={sameAsAgentName}
+                                        />
+                                    </F>
+                                    )
+                                }}</form.Field>
+
+                                <form.Field name="contactPersonLastName">{(field) => {
+                                    const { isInvalid, error } = getFieldState(field)
+                                    return (
+                                    <F isInvalid={isInvalid} error={error} label="Contact Person Last Name">
+                                        <Input
+                                            id={field.name}
+                                            value={field.state.value}
+                                            onBlur={field.handleBlur}
+                                            onChange={e => field.handleChange(e.target.value)}
+                                            placeholder="e.g. Smith"
+                                            disabled={sameAsAgentName}
+                                        />
+                                    </F>
+                                    )
+                                }}</form.Field>
+                            </div>
+                        )}
+                    </form.Subscribe>
+                </div>
 
                 <form.Field name="gender">{(field) => {
                     const { isInvalid, error } = getFieldState(field)
@@ -170,8 +293,12 @@ export function AgentStep1({ onNext }: { onNext: () => void; onSkip: () => void 
         return <PageLoader label="Preparing your profile..." />
     }
 
+    const agentFirstName = meData?.firstName ?? ""
+    const agentLastName = meData?.lastName ?? ""
+
     const agentProfile = meData?.profile as {
-        contact_person_name?: string
+        contact_person_first_name?: string
+        contact_person_last_name?: string
         country?: string
         state?: string
         city?: string
@@ -179,9 +306,20 @@ export function AgentStep1({ onNext }: { onNext: () => void; onSkip: () => void 
         gender?: string
     } | undefined
 
+    const storedFirst = agentProfile?.contact_person_first_name ?? ""
+    const storedLast = agentProfile?.contact_person_last_name ?? ""
+    const sameAsAgentName =
+        storedFirst === agentFirstName &&
+        storedLast === agentLastName &&
+        agentFirstName.length > 0 &&
+        agentLastName.length > 0
+
     const defaultValues: AgentStep1Values = {
-        agentName: meData?.fullName ?? "",
-        contactPersonName: agentProfile?.contact_person_name ?? "",
+        agentFirstName,
+        agentLastName,
+        contactPersonFirstName: storedFirst || agentFirstName,
+        contactPersonLastName: storedLast || agentLastName,
+        sameAsAgentName,
         gender: normalizeGender(agentProfile?.gender ?? meData?.profile?.gender),
         primaryBaseCountry: agentProfile?.country ?? meData?.profile?.country ?? "",
         primaryBaseState: agentProfile?.state ?? meData?.profile?.state ?? "",
