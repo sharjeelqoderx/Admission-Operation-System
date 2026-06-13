@@ -52,7 +52,6 @@ export async function POST(req: NextRequest) {
                 const title = data.title
                 const firstName = data.firstName
                 const lastName = data.lastName
-                const fullName = data.fullName || (firstName && lastName ? `${firstName} ${lastName}` : data.name)
                 const { error: profileError } = await supabase
                     .from("profile")
                     .update({
@@ -60,7 +59,6 @@ export async function POST(req: NextRequest) {
                         ...(title && { title: title }),
                         ...(firstName && { first_name: firstName }),
                         ...(lastName && { last_name: lastName }),
-                        ...(fullName && { name: fullName }),
                         phone: data.phone,
                         date_of_birth: validData.dob,
                         gender: validData.gender.toUpperCase(),
@@ -118,7 +116,6 @@ export async function POST(req: NextRequest) {
             const title = data.title
             const firstName = data.firstName
             const lastName = data.lastName
-            const fullName = data.fullName || (firstName && lastName ? `${firstName} ${lastName}` : data.name)
             const { error: profileError } = await supabase
                 .from("profile")
                 .update({
@@ -126,7 +123,6 @@ export async function POST(req: NextRequest) {
                     ...(title && { title: title }),
                     ...(firstName && { first_name: firstName }),
                     ...(lastName && { last_name: lastName }),
-                    ...(fullName && { name: fullName }),
                     phone: data.phone,
                     date_of_birth: data.date_of_birth,
                     gender: data.gender,
@@ -141,7 +137,8 @@ export async function POST(req: NextRequest) {
                 .from("agent")
                 .upsert({
                     profile_id: user.id,
-                    contact_person_name: data.contact_person_name,
+                    contact_person_first_name: data.contact_person_first_name,
+                    contact_person_last_name: data.contact_person_last_name,
                     nationality: data.nationality,
                     country: data.country,
                     state: data.state,
@@ -172,4 +169,8 @@ export async function POST(req: NextRequest) {
         console.error("[PROFILE API ERROR]", e)
         return err(e?.message ?? "Internal server error", 500)
     }
+}
+
+export async function PATCH(req: NextRequest) {
+    return POST(req)
 }

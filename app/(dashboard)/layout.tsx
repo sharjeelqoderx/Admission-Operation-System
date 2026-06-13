@@ -187,7 +187,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const routes = filterByRole(sidebarRoutes, role);
 
   return (
-    <div className="flex h-screen bg-transparent app-bg">
+    <div className="flex h-screen overflow-hidden bg-transparent app-bg">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -242,7 +242,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         })}
       </Sidebar>
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
         <Navbar
           userName={currentUser?.fullName ?? 'John Doe'}
           userRole={currentUser?.role ?? 'STUDENT'}
@@ -266,8 +266,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             />
           </div>
 
-          {/* Page Content */}
-          <div className="relative z-10 p-4 sm:p-6 max-w-[1400px] mx-auto w-full">
+          <div className="relative z-10 p-4 sm:p-6 max-w-[1400px] mx-auto w-full min-w-0">
             {children}
           </div>
         </main>

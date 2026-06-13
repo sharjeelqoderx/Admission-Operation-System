@@ -3,6 +3,7 @@ export const LEVEL_PRIORITY: Record<string, number> = {
   "matriculation": 1,
   "o levels": 1,
   "high school": 1,
+  "matric": 1,
   "intermediate": 2,
   "a levels": 2,
   "foundation": 3,
@@ -21,9 +22,25 @@ export const LEVEL_PRIORITY: Record<string, number> = {
   "mba": 7,
   "msc": 7,
   "ma": 7,
+  "mphil": 7,
   "phd": 8,
   "doctorate": 8,
 };
+
+export function filterCoursesAboveQualification<
+  T extends { degree?: { level?: { name?: string | null } | null } | null },
+>(
+  courses: T[],
+  qualificationLevelName?: string | null
+): T[] {
+  const highestPriority = getLevelPriority(qualificationLevelName);
+  if (highestPriority <= 0) return courses;
+
+  return courses.filter((course) => {
+    const courseLevelPriority = getLevelPriority(course.degree?.level?.name);
+    return courseLevelPriority > highestPriority;
+  });
+}
 
 export function getLevelPriority(levelName?: string | null): number {
   if (!levelName) return 0;

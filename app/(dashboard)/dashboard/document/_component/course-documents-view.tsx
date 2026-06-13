@@ -1,569 +1,15 @@
 
 "use client"
 
-import React, { memo, useCallback, useMemo, useState } from "react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { PageLoader } from "@/components/shared/page-loader"
 import { ErrorView } from "@/components/shared/error-view"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-} from "@/components/ui/accordion"
-import { cn } from "@/lib/utils"
-import { formatStudyMode } from "@/lib/utils/program"
-import {
-    useCourseDocumentBundles,
-    useSaveDegreeDocuments,
-} from "@/hooks/useCourseDocumentBundles"
-import { useQueryClient } from "@tanstack/react-query"
+import { useCourseDocumentBundles } from "@/hooks/useCourseDocumentBundles"
 import { useAuth } from "@/hooks/useAuth"
-import type {
-    DegreeDocumentBundle,
-} from "@/types/schemas/document"
-import {
-    Clock,
-    ChevronLeft,
-    FileText,
-    GraduationCap,
-    MapPin,
-    Upload,
-} from "lucide-react"
+import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
-
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip"
-
-import { AlertCircle, Pencil, Plus } from "lucide-react"
-
-type PendingEntry = {
-    front: File | null
-    note: string
-}
-
-type PendingFilesMap = Record<string, PendingEntry>
-
-function getPendingKey(documentTypeId: string) {
-    return documentTypeId
-}
-
-function getDegreeLevels(
-    degree: DegreeDocumentBundle["degree"]
-): Array<{ id: string; name: string }> {
-    if (degree.levels?.length) return degree.levels
-
-    if (degree.level?.id) {
-        return [
-            {
-                id: degree.level.id,
-                name: degree.level.name,
-            },
-        ]
-    }
-
-    return []
-}
-
-function getDocumentStatusBadgeClass(status: string) {
-    switch (status.toUpperCase()) {
-        case "VERIFIED":
-        case "APPROVED":
-            return "border-emerald-200 bg-emerald-50 text-emerald-700"
-
-        case "REJECTED":
-            return "border-red-200 bg-red-50 text-red-700"
-
-        case "ACTION_REQUIRED":
-        case "NEEDS_REVISION":
-            return "border-orange-200 bg-orange-50 text-orange-700"
-
-        case "PENDING":
-        default:
-            return "border-amber-200 bg-amber-50 text-amber-700"
-    }
-}
-
-function formatDocumentStatus(status: string) {
-    return status.replace(/_/g, " ")
-}
-
-function getPendingEntry(
-    map: PendingFilesMap,
-    documentTypeId: string
-): PendingEntry {
-    return (
-        map[getPendingKey(documentTypeId)] ?? {
-            front: null,
-            note: "",
-        }
-    )
-}
-
-function hasPendingFiles(entry: PendingEntry) {
-    return Boolean(entry.front)
-}
-
-function entryToFiles(entry: PendingEntry): File[] {
-    const files: File[] = []
-
-    if (entry.front) {
-        files.push(entry.front)
-    }
-
-    return files
-}
-
-function NotePopover({ note, documentId, onSave, isDisabled }: { note: string; documentId?: string; onSave: (note: string) => void; isDisabled?: boolean }) {
-    const [open, setOpen] = useState(false)
-    const [draft, setDraft] = useState(note)
-    const [saving, setSaving] = useState(false)
-
-    const handleOpenChange = (v: boolean) => {
-        if (v) setDraft(note)
-        setOpen(v)
-    }
-
-    const handleSave = async () => {
-        if (documentId) {
-            setSaving(true)
-            await fetch(`/api/document/${documentId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ comment: draft }),
-            })
-            setSaving(false)
-        }
-        onSave(draft)
-        setOpen(false)
-    }
-
-    return (
-        <div className="flex items-center gap-2">
-            {note && (
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <button
-                                type="button"
-                                className="size-9 rounded-lg border border-amber-200 bg-amber-50 flex items-center justify-center"
-                            >
-                                <AlertCircle className="size-4 text-amber-600" />
-                            </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[260px]">
-                            <p className="text-sm whitespace-pre-wrap">{note}</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            )}
-
-            <Popover open={open} onOpenChange={handleOpenChange}>
-                <PopoverTrigger asChild>
-                    {note ? (
-                        <button
-                            type="button"
-                            className="size-9 rounded-lg border border-gray-200 flex items-center justify-center hover:border-brand-byzantine transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={isDisabled}
-                        >
-                            <Pencil className="size-4 text-gray-600" />
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            className="size-9 rounded-lg border border-dashed border-gray-300 flex items-center justify-center hover:border-brand-byzantine transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={isDisabled}
-                        >
-                            <Plus className="size-4 text-gray-600" />
-                        </button>
-                    )}
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-[280px] space-y-3">
-                    <Typography font="text" className="font-semibold">
-                        {note ? "Edit Note" : "Add Note"}
-                    </Typography>
-                    <textarea
-                        autoFocus
-                        placeholder="Write note..."
-                        className="w-full min-h-[100px] rounded-lg border border-gray-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-byzantine resize-none"
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                    />
-                    <div className="flex justify-end gap-2">
-                        <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={saving}>
-                            Cancel
-                        </Button>
-                        <Button type="button" size="sm" className="bg-brand-byzantine hover:bg-brand-byzantine/90" onClick={handleSave} disabled={saving}>
-                            {saving ? "Saving..." : "Save"}
-                        </Button>
-                    </div>
-                </PopoverContent>
-            </Popover>
-        </div>
-    )
-}
-
-type DegreeAccordionItemProps = {
-    bundle: DegreeDocumentBundle
-    pendingFiles: PendingFilesMap
-    onPendingChange: (
-        documentTypeId: string,
-        entry: PendingEntry
-    ) => void
-    profileId: string
-    isSaving: Record<string, boolean>
-    onSaveRow: (
-        degreeId: string,
-        documentTypeId: string,
-        files: File[],
-        note: string
-    ) => void
-}
-
-const DegreeAccordionItem = memo(function DegreeAccordionItem({
-    bundle,
-    pendingFiles,
-    onPendingChange,
-    profileId,
-    isSaving,
-    onSaveRow,
-}: DegreeAccordionItemProps) {
-
-    return (
-        <AccordionItem value={bundle.degree.id}>
-
-            <AccordionTrigger className="hover:no-underline text-base font-normal">
-
-                <div className="flex flex-1 flex-col gap-3 pr-4 text-left">
-
-                    <div className="flex flex-wrap items-center gap-2">
-
-                        <GraduationCap className="size-5 text-brand-byzantine" />
-
-                        <Typography
-                            as="span"
-                            font="text-lg"
-                            className="text-gray-900 font-bold"
-                        >
-                            {bundle.degree.name}
-                        </Typography>
-
-                        {getDegreeLevels(bundle.degree).map((level) => (
-                            <Badge
-                                key={level.id}
-                                variant="outline"
-                                className="text-[10px] font-medium px-2 py-0 h-5"
-                            >
-                                {level.name}
-                            </Badge>
-                        ))}
-
-                    </div>
-
-                    <div className="flex flex-wrap gap-3">
-
-                        {bundle.degree.location && (
-                            <Typography
-                                as="span"
-                                font="small"
-                                className="flex items-center gap-1 text-gray-600 font-normal"
-                            >
-                                <MapPin className="size-3.5" />
-                                {bundle.degree.location}
-                            </Typography>
-                        )}
-
-                        {bundle.degree.duration && (
-                            <Typography
-                                as="span"
-                                font="small"
-                                className="flex items-center gap-1 text-gray-600 font-normal"
-                            >
-                                <Clock className="size-3.5" />
-                                {bundle.degree.duration}
-                            </Typography>
-                        )}
-
-                        {bundle.degree.study_mode && (
-                            <Typography
-                                as="span"
-                                font="small"
-                                className="text-gray-600 font-normal"
-                            >
-                                {formatStudyMode(bundle.degree.study_mode)}
-                            </Typography>
-                        )}
-
-                    </div>
-
-                    <div className="max-w-md">
-
-                        <div className="flex items-center justify-between gap-3">
-
-                            <Typography
-                                as="span"
-                                font="small"
-                                className="text-gray-600 font-normal"
-                            >
-                                {`${bundle.uploaded_count}/${bundle.total_required} documents uploaded`}
-                            </Typography>
-
-                            <Typography
-                                as="span"
-                                font="text"
-                                className="font-semibold text-brand-byzantine"
-                            >
-                                {`${bundle.completion_percentage}%`}
-                            </Typography>
-
-                        </div>
-
-                        <Progress
-                            value={bundle.completion_percentage}
-                            className="h-1"
-                        />
-
-                    </div>
-
-                </div>
-
-            </AccordionTrigger>
-
-            <AccordionContent className="space-y-6">
-
-                <div className="space-y-3">
-
-                    <Typography
-                        as="h3"
-                        font="text-lg"
-                        className="text-gray-800 font-bold"
-                    >
-                        Required documents
-                    </Typography>
-
-                    {bundle.required_documents.length === 0 ? (
-
-                        <Typography
-                            font="sub-text"
-                            className="text-gray-500"
-                        >
-                            No required documents configured for this degree.
-                        </Typography>
-
-                    ) : (
-
-                        <div className="overflow-x-auto rounded-2xl border border-gray-200">
-
-                            <table className="w-full min-w-[1200px]">
-
-                                <thead className="bg-gray-50 border-b">
-
-                                    <tr>
-
-                                        <th className="text-left p-4 text-sm font-semibold text-gray-700">
-                                            Last Updated
-                                        </th>
-
-                                        <th className="text-left p-4 text-sm font-semibold text-gray-700">
-                                            Document Name
-                                        </th>
-
-                                        <th className="text-left p-4 text-sm font-semibold text-gray-700">
-                                            Upload File
-                                        </th>
-
-                                        <th className="text-left p-4 text-sm font-semibold text-gray-700">
-                                            Status
-                                        </th>
-
-                                        <th className="text-left p-4 text-sm font-semibold text-gray-700">
-                                            Note
-                                        </th>
-
-                                        <th className="text-left p-4 text-sm font-semibold text-gray-700">
-                                            Actions
-                                        </th>
-
-                                    </tr>
-
-                                </thead>
-
-                                <tbody>
-
-                                    {bundle.required_documents.map(
-                                        (requirement) => {
-
-                                            const entry =
-                                                getPendingEntry(
-                                                    pendingFiles,
-                                                    requirement.document_type_id
-                                                )
-
-                                            const uploaded =
-                                                requirement.uploaded
-
-                                            const uploadedFrontUrl =
-                                                uploaded?.files?.[0]
-                                                    ?.file_url ?? null
-
-                                            const hasFile = Boolean(
-                                                entry.front ||
-                                                uploadedFrontUrl
-                                            )
-
-                                            return (
-                                                <tr
-                                                    key={requirement.requirement_id}
-                                                    className="border-b align-top"
-                                                >
-                                                    {/* Last Updated */}
-                                                    <td className="p-4 text-sm text-gray-500 whitespace-nowrap">
-                                                        {uploaded?.updated_at
-                                                            ? new Date(uploaded.updated_at).toLocaleDateString()
-                                                            : "-"}
-                                                    </td>
-                                                    {/* Document Name */}
-                                                    <td className="p-4 min-w-[240px]">
-                                                        <div className="space-y-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <FileText className="size-4 text-brand-byzantine" />
-                                                                <Typography font="text" className="font-semibold text-gray-900">
-                                                                    {requirement.name}
-                                                                </Typography>
-                                                            </div>
-                                                            {requirement.description && (
-                                                                <Typography font="small" className="text-gray-500">
-                                                                    {requirement.description}
-                                                                </Typography>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    {/* Upload */}
-                                                    <td className="p-4 min-w-[320px]">
-                                                        <div className="flex items-center gap-3">
-                                                            <label
-                                                                htmlFor={`upload-${requirement.document_type_id}`}
-                                                                className={`size-10 rounded-lg border border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-brand-byzantine transition-colors ${(uploaded?.status === "APPROVED" || uploaded?.status === "VERIFIED") ? "opacity-50 cursor-not-allowed" : ""}`}
-                                                            >
-                                                                <Upload className="size-4 text-gray-600" />
-                                                            </label>
-                                                            <input
-                                                                id={`upload-${requirement.document_type_id}`}
-                                                                type="file"
-                                                                className="hidden"
-                                                                accept="image/*,application/pdf,.doc,.docx"
-                                                                disabled={uploaded?.status === "APPROVED" || uploaded?.status === "VERIFIED"}
-                                                                onChange={(e) => {
-                                                                    const file = e.target.files?.[0] ?? null
-                                                                    onPendingChange(requirement.document_type_id, { ...entry, front: file })
-                                                                }}
-                                                            />
-                                                            <div className="flex flex-col">
-                                                                {entry.front ? (
-                                                                    <>
-                                                                        <span className="text-sm font-medium text-emerald-600">
-                                                                            Selected: {entry.front.name}
-                                                                        </span>
-                                                                        <span className="text-xs text-gray-500">
-                                                                            {(entry.front.size / 1024 / 1024).toFixed(2)} MB
-                                                                        </span>
-                                                                    </>
-                                                                ) : uploaded?.files?.[0] ? (
-                                                                    <>
-                                                                        <span className="text-sm font-medium text-blue-600">
-                                                                            Uploaded Document
-                                                                        </span>
-                                                                        <a
-                                                                            href={uploaded.files[0].file_url}
-                                                                            target="_blank"
-                                                                            rel="noreferrer"
-                                                                            className="text-xs text-brand-byzantine underline"
-                                                                        >
-                                                                            View File
-                                                                        </a>
-                                                                    </>
-                                                                ) : (
-                                                                    <span className="text-sm text-gray-500">
-                                                                        No file selected
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    {/* Status */}
-                                                    <td className="p-4">
-                                                        {uploaded ? (
-                                                            <Badge
-                                                                variant="outline"
-                                                                className={cn(
-                                                                    "text-[10px] uppercase tracking-wide",
-                                                                    getDocumentStatusBadgeClass(uploaded.status)
-                                                                )}
-                                                            >
-                                                                {formatDocumentStatus(uploaded.status)}
-                                                            </Badge>
-                                                        ) : (
-                                                            <Badge variant="secondary" className="text-xs">
-                                                                {hasFile ? "Ready" : "Pending"}
-                                                            </Badge>
-                                                        )}
-                                                    </td>
-                                                    {/* Note */}
-                                                    <td className="p-4 min-w-[120px]">
-                                                        <div className="flex items-center">
-                                                            <NotePopover
-                                                                note={entry.note}
-                                                                documentId={uploaded?.document_id}
-                                                                onSave={(note) => onPendingChange(requirement.document_type_id, { ...entry, note })}
-                                                                isDisabled={uploaded?.status === "APPROVED" || uploaded?.status === "VERIFIED"}
-                                                            />
-                                                        </div>
-                                                    </td>
-                                                    {/* Actions */}
-                                                    <td className="p-4">
-                                                        {entry.front && (
-                                                            <Button
-                                                                type="button"
-                                                                size="sm"
-                                                                className="bg-brand-byzantine hover:bg-brand-byzantine/90"
-                                                                disabled={isSaving[requirement.document_type_id]}
-                                                                onClick={() => onSaveRow(bundle.degree.id, requirement.document_type_id, entryToFiles(entry), entry.note)}
-                                                            >
-                                                                {isSaving[requirement.document_type_id] ? "Saving..." : "Save"}
-                                                            </Button>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            )
-                                        }
-                                    )}
-
-                                </tbody>
-
-                            </table>
-
-                        </div>
-                    )}
-
-                </div>
-
-            </AccordionContent>
-        </AccordionItem>
-    )
-})
+import { CourseBundlesTable } from "./course-bundles-table"
 
 type Props = {
     profileId?: string
@@ -576,10 +22,8 @@ export function CourseDocumentsView({
     studentName,
     showBack = false,
 }: Props = {}) {
-
     const { me } = useAuth()
     const { data: user, isLoading: userLoading } = me
-    const queryClient = useQueryClient()
 
     const resolvedProfileId = profileId ?? user?.id
 
@@ -590,82 +34,8 @@ export function CourseDocumentsView({
         error,
     } = useCourseDocumentBundles(resolvedProfileId)
 
-    const saveMutation = useSaveDegreeDocuments()
-
-    const [pendingFiles, setPendingFiles] =
-        useState<PendingFilesMap>({})
-
-    const [isSaving, setIsSaving] =
-        useState<Record<string, boolean>>({})
-
-    const [saveError, setSaveError] =
-        useState<string | null>(null)
-
-    const handlePendingChange = useCallback(
-        (
-            documentTypeId: string,
-            entry: PendingEntry
-        ) => {
-            setPendingFiles((current) => ({
-                ...current,
-                [getPendingKey(documentTypeId)]: entry,
-            }))
-        },
-        []
-    )
-
-    const handleSaveRow = useCallback(
-        async (
-            degreeId: string,
-            documentTypeId: string,
-            files: File[],
-            note: string
-        ) => {
-            if (!data?.profile_id || files.length === 0)
-                return
-
-            setSaveError(null)
-            setIsSaving(current => ({ ...current, [documentTypeId]: true }))
-
-            try {
-                const fd = new FormData()
-                fd.set("student_id", data.profile_id)
-                fd.set("document_type_id", documentTypeId)
-                files.forEach(file => fd.append("files", file))
-
-                const res = await fetch("/api/document", { method: "POST", body: fd })
-                if (!res.ok) {
-                    const json = await res.json()
-                    throw new Error(json.error ?? "Failed to save document")
-                }
-
-                setPendingFiles(current => {
-                    const next = { ...current }
-                    delete next[documentTypeId]
-                    return next
-                })
-
-                // Invalidate queries to refresh data
-                await queryClient.invalidateQueries({ queryKey: ["course-document-bundles"] })
-                await queryClient.invalidateQueries({ queryKey: ["documents"] })
-
-            } catch (e) {
-                setSaveError(
-                    e instanceof Error
-                        ? e.message
-                        : "Failed to save documents"
-                )
-            } finally {
-                setIsSaving(current => ({ ...current, [documentTypeId]: false }))
-            }
-        },
-        [data?.profile_id, queryClient]
-    )
-
     if ((!profileId && userLoading) || isLoading) {
-        return (
-            <PageLoader label="Loading course documents..." />
-        )
+        return <PageLoader label="Loading course documents..." />
     }
 
     if (isError) {
@@ -681,18 +51,16 @@ export function CourseDocumentsView({
     }
 
     const bundles = data?.degree_bundles ?? []
+    const listStudentId = resolvedProfileId ?? ""
 
     return (
         <div className="space-y-6">
-
             <BluryCard
                 isCentered={false}
                 childClass="space-y-2"
                 className="rounded-2xl"
             >
-
                 {showBack && (
-
                     <Link
                         href="/dashboard/document"
                         className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-brand-byzantine transition-colors mb-2"
@@ -700,7 +68,6 @@ export function CourseDocumentsView({
                         <ChevronLeft className="size-4" />
                         Back to students
                     </Link>
-
                 )}
 
                 <Typography
@@ -713,68 +80,20 @@ export function CourseDocumentsView({
                         : "Course Documents"}
                 </Typography>
 
-                <Typography
-                    as="p"
-                    font="sub-text"
-                    className="text-gray-600"
-                >
-                    Upload required documents for each degree.
+                <Typography as="p" font="sub-text" className="text-gray-600">
+                    Browse programs and upload required documents for each course.
                 </Typography>
-
             </BluryCard>
 
-            {saveError && (
-                <ErrorView message={saveError} />
-            )}
-
             {bundles.length === 0 ? (
-
-                <BluryCard
-                    isCentered={false}
-                    className="rounded-2xl"
-                >
-                    <Typography
-                        as="p"
-                        font="sub-text"
-                        className="text-gray-600"
-                    >
+                <BluryCard isCentered={false} className="rounded-2xl">
+                    <Typography as="p" font="sub-text" className="text-gray-600">
                         No courses with degree requirements found.
                     </Typography>
                 </BluryCard>
-
-            ) : (
-
-                <BluryCard
-                    isCentered={false}
-                    childClass="p-0!"
-                    className="p-4! py-4! rounded-2xl overflow-hidden"
-                >
-
-                    <Accordion
-                        type="multiple"
-                        className="w-full"
-                    >
-
-                        {bundles.map((bundle) => (
-
-                            <DegreeAccordionItem
-                                key={bundle.degree.id}
-                                bundle={bundle}
-                                pendingFiles={pendingFiles}
-                                onPendingChange={handlePendingChange}
-                                profileId={data?.profile_id || ""}
-                                isSaving={isSaving}
-                                onSaveRow={handleSaveRow}
-                            />
-
-                        ))}
-
-                    </Accordion>
-
-                </BluryCard>
-
-            )}
-
+            ) : listStudentId ? (
+                <CourseBundlesTable bundles={bundles} studentId={listStudentId} />
+            ) : null}
         </div>
     )
 }

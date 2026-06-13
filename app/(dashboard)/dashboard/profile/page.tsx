@@ -98,7 +98,8 @@ function getProfileFormValues(user?: MeUser | null) {
         zip_code: user?.profile?.zip_code ?? "",
         guardian_email: user?.profile?.guardian_email ?? "",
         guardian_phone: user?.profile?.guardian_phone ?? "",
-        contact_person_name: user?.profile?.contact_person_name ?? "",
+        contact_person_first_name: user?.profile?.contact_person_first_name ?? "",
+        contact_person_last_name: user?.profile?.contact_person_last_name ?? "",
         other_contact_number: user?.profile?.other_contact_number ?? "",
         website: user?.profile?.website ?? "",
         experience_years: user?.profile?.experience_years ?? "0",
@@ -1285,11 +1286,24 @@ export default function ProfilePage() {
                             <Typography font="title">Agent Information</Typography>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <form.Field name="contact_person_name">
+                            <form.Field name="contact_person_first_name">
                                 {(field) => (
-                                    <F field={field} label="Contact Person Name">
+                                    <F field={field} label="Contact Person First Name">
                                         {isEditing ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter Contact Person Name" />
+                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter first name" />
+                                        ) : (
+                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                            </div>
+                                        )}
+                                    </F>
+                                )}
+                            </form.Field>
+                            <form.Field name="contact_person_last_name">
+                                {(field) => (
+                                    <F field={field} label="Contact Person Last Name">
+                                        {isEditing ? (
+                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter last name" />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
                                                 <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>

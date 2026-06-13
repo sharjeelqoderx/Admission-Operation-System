@@ -7,7 +7,9 @@ export async function GET() {
 
         const { data, error } = await supabase
             .from("degree")
-            .select("id, name, credits, location, language_of_study, duration")
+            .select(
+                "id, name, credits, location, language_of_study, duration, level_id, level:level_id(id, name)"
+            )
             .order("name", { ascending: true })
 
         if (error) {

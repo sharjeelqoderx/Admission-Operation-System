@@ -20,12 +20,12 @@ import { z } from "zod"
 
 // Create a schema where title is required string (without default)
 const signupFirstStepSchema = z.object({
-  title: z.string(),
-  firstName: z.string().trim().min(1, "First Name is Required").min(2, "First Name is Too Short").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
-  lastName: z.string().trim().min(1, "Last Name is Required").min(2, "Last Name is Too Short").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
-  email: z.string().trim().min(1, "Email is required").max(254, "Email too long").email("Invalid email format").transform((val) => val.toLowerCase()),
-  phone: z.string().trim().min(1, "Phone is required").regex(/^\+?[\d\s\-\(\)]{8,30}$/, "Invalid phone number"),
-  password: z.string().min(1, "Password is required").min(8, "At least 8 characters").max(128, "Password too long").regex(/[A-Z]/, "Must contain uppercase").regex(/[a-z]/, "Must contain lowercase").regex(/[0-9]/, "Must contain number").regex(/[^A-Za-z0-9]/, "Must contain special character"),
+    title: z.string(),
+    firstName: z.string().trim().min(1, "First Name is Required").min(2, "First Name is Too Short").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
+    lastName: z.string().trim().min(1, "Last Name is Required").min(2, "Last Name is Too Short").regex(/^[a-zA-Z]+$/, "Only letters allowed"),
+    email: z.string().trim().min(1, "Email is required").max(254, "Email too long").email("Invalid email format").transform((val) => val.toLowerCase()),
+    phone: z.string().trim().min(1, "Phone is required").regex(/^\+?[\d\s\-\(\)]{8,30}$/, "Invalid phone number"),
+    password: z.string().min(1, "Password is required").min(8, "At least 8 characters").max(128, "Password too long").regex(/[A-Z]/, "Must contain uppercase").regex(/[a-z]/, "Must contain lowercase").regex(/[0-9]/, "Must contain number").regex(/[^A-Za-z0-9]/, "Must contain special character"),
 })
 
 
@@ -227,6 +227,7 @@ export function SignupFirstStep({ onNext }: { onNext: () => void }) {
                                             Phone Number
                                         </FieldLabel>
                                         <PhoneInputComponent
+                                            className="w-full"
                                             value={field.state.value}
                                             onChange={(value) => field.handleChange(value)}
                                             placeholder="Enter your phone number"

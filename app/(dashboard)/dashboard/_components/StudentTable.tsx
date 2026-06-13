@@ -11,6 +11,7 @@ import {
     Search,
 } from "lucide-react"
 import { formatLocation } from "@/lib/utils/location"
+import { requiresApsRequirement } from "@/lib/utils/aps"
 import {
     Table,
     TableHeader,
@@ -34,6 +35,7 @@ export type StudentRow = {
     state?: string | null
     country: string | null
     nationality: string | null
+    aps_requirement?: boolean | null
     guardian_email: string | null
     guardian_phone: string | null
     created_at: string
@@ -68,7 +70,7 @@ type Props = {
     onPageChange: (page: number) => void
 }
 
-const COLUMN_COUNT = 10
+const COLUMN_COUNT = 11
 
 function formatCreatedDate(value: string) {
     return new Date(value).toLocaleDateString("en-US", {
@@ -176,6 +178,9 @@ export const StudentTable = React.memo(function StudentTable({
                                 Nationality
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                APS Requirement
+                            </TableHead>
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Guardian
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
@@ -217,6 +222,10 @@ export const StudentTable = React.memo(function StudentTable({
                                     .join("")
                                     .slice(0, 2)
                                     .toUpperCase()
+
+                                const apsRequired =
+                                    student.aps_requirement ??
+                                    requiresApsRequirement(student.country)
 
                                 return (
                                     <TableRow
@@ -285,6 +294,18 @@ export const StudentTable = React.memo(function StudentTable({
                                         </TableCell>
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <Typography
+                                                as="span"
+                                                className={cn(
+                                                    "text-sm font-bold",
+                                                    apsRequired ? "text-amber-700" : "text-gray-500"
+                                                )}
+                                            >
+                                                {apsRequired ? "Yes" : "No"}
+                                            </Typography>
+                                        </TableCell>
+
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <div className="flex flex-col">
                                                 <Typography as="span" className="text-sm font-medium text-gray-700">
                                                     {student.guardian_email ?? "—"}
@@ -305,16 +326,37 @@ export const StudentTable = React.memo(function StudentTable({
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap min-w-[140px]">
                                             <div className="flex flex-col gap-1.5">
-                                                <Typography as="span" className="text-sm font-bold text-brand-blue-text">
-                                                    {student.document_upload_percentage ?? 0}%
-                                                </Typography>
-                                                <Progress
-                                                    value={student.document_upload_percentage ?? 0}
-                                                    className="h-1.5 w-24"
-                                                />
-                                                <Typography as="span" className="text-[11px] text-gray-500 font-light">
-                                                    {student.documents_uploaded_count ?? 0}/{student.total_document_types ?? 0} uploaded
-                                                </Typography>
+                                                {student.profile_id ? (
+                                                    <Link
+                                                        href={`/dashboard/document/student/${student.profile_id}`}
+                                                        className="block rounded-lg p-2 -m-2 hover:bg-brand-secondary/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-secondary/40"
+                                                        aria-label={`View documents for ${studentName}`}
+                                                    >
+                                                        <Typography as="span" className="text-sm font-bold text-brand-blue-text">
+                                                            {student.document_upload_percentage ?? 0}%
+                                                        </Typography>
+                                                        <Progress
+                                                            value={student.document_upload_percentage ?? 0}
+                                                            className="h-1.5 w-24 mt-1.5"
+                                                        />
+                                                        <Typography as="span" className="text-[11px] text-gray-500 font-light mt-1.5 block">
+                                                            {student.documents_uploaded_count ?? 0}/{student.total_document_types ?? 0} uploaded
+                                                        </Typography>
+                                                    </Link>
+                                                ) : (
+                                                    <>
+                                                        <Typography as="span" className="text-sm font-bold text-brand-blue-text">
+                                                            {student.document_upload_percentage ?? 0}%
+                                                        </Typography>
+                                                        <Progress
+                                                            value={student.document_upload_percentage ?? 0}
+                                                            className="h-1.5 w-24"
+                                                        />
+                                                        <Typography as="span" className="text-[11px] text-gray-500 font-light">
+                                                            {student.documents_uploaded_count ?? 0}/{student.total_document_types ?? 0} uploaded
+                                                        </Typography>
+                                                    </>
+                                                )}
                                             </div>
                                         </TableCell>
 

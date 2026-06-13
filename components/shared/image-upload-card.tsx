@@ -14,6 +14,7 @@ type Props = {
     className?: string
     accept?: string
     emptyIcon?: React.ReactNode
+    placeholderImage?: string
     disabled?: boolean
 }
 
@@ -38,6 +39,7 @@ export function ImageUploadCard({
     className,
     accept = "image/*",
     emptyIcon,
+    placeholderImage,
     disabled = false,
 }: Props) {
     const inputRef = useRef<HTMLInputElement>(null)
@@ -152,13 +154,26 @@ export function ImageUploadCard({
                 </div>
             ) : (
 
-                <div className="flex flex-col items-center gap-2 p-4">
-                    <div className="text-gray-400 group-hover:scale-110 transition-transform">
-                        {emptyIcon ?? <ImageIcon size={32} strokeWidth={1.5} />}
+                <div className="relative flex flex-col items-center justify-center w-full h-full min-h-[120px]">
+                    {placeholderImage && (
+                        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-white p-2">
+                            <img
+                                src={placeholderImage}
+                                alt=""
+                                className="w-full h-full object-contain opacity-30"
+                            />
+                        </div>
+                    )}
+                    <div className="relative z-10 flex flex-col items-center gap-2 p-4">
+                        {!placeholderImage && (
+                            <div className="text-gray-400 group-hover:scale-110 transition-transform">
+                                {emptyIcon ?? <ImageIcon size={32} strokeWidth={1.5} />}
+                            </div>
+                        )}
+                        <Typography font="small" className="text-gray-500 text-center bg-white/80 px-2 py-1 rounded-lg">
+                            <span className="text-[#4285f4] font-bold">Click here</span> to upload {message.toLowerCase()}
+                        </Typography>
                     </div>
-                    <Typography font="small" className="text-gray-500 text-center">
-                        <span className="text-[#4285f4] font-bold">Click here</span> to upload {message.toLowerCase()}
-                    </Typography>
                 </div>
 
             )}

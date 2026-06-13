@@ -409,7 +409,7 @@ export function Step4Course({ onBack }: { onBack: () => void }) {
                 applicationData.set("course_id", selectedCourseId)
                 applicationData.set("student_id", studentId)
                 applicationData.set("status", "pending")
-                applicationData.set("intake_date", new Date().toISOString().split('T')[0])
+                applicationData.set("intake_date", course?.degree?.intake_date ?? "summer")
                 applicationData.set("declarations", JSON.stringify([true, true, true]))
                 allSelectedDocIds.forEach(docId => {
                     applicationData.append("document_ids", docId)

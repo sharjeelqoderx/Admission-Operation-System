@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { StudentFormSchema } from "@/types/schemas/student"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
+import { formatFullName } from "@/lib/utils/profile"
+import { requiresApsRequirement } from "@/lib/utils/aps"
 
 export async function GET(req: NextRequest) {
     try {
@@ -67,7 +69,7 @@ export async function GET(req: NextRequest) {
                 if (searchTerm) {
                     const studentCode = s.student_code?.toLowerCase() || ""
                     const country = s.country?.toLowerCase() || ""
-                    const profileName = s.profile?.name?.toLowerCase() || ""
+                    const profileName = formatFullName(s.profile?.first_name, s.profile?.last_name).toLowerCase()
                     const profileEmail = s.profile?.email?.toLowerCase() || ""
 
                     return studentCode.includes(searchTerm) ||
@@ -114,8 +116,16 @@ export async function GET(req: NextRequest) {
                     const documentUploadPercentage =
                         total > 0 ? Math.round((documentsUploadedCount / total) * 100) : 0
 
+                    const profile = s.profile
+                        ? {
+                            ...s.profile,
+                            name: formatFullName(s.profile.first_name, s.profile.last_name),
+                        }
+                        : s.profile
+
                     return {
                         ...s,
+                        profile,
                         documents_uploaded_count: documentsUploadedCount,
                         total_document_types: total,
                         document_upload_percentage: documentUploadPercentage,
@@ -276,7 +286,6 @@ export async function POST(req: NextRequest) {
             .from("profile")
             .upsert({
                 id: newUserId,
-                name: fullName,
                 title: validatedData.title || null,
                 first_name: validatedData.first_name,
                 last_name: validatedData.last_name,
@@ -343,6 +352,7 @@ export async function POST(req: NextRequest) {
                 guardian_email: validatedData.guardian_email || null,
                 guardian_phone: validatedData.guardian_phone || null,
                 passport_file_url: passportUpload?.publicUrl ?? null,
+                aps_requirement: requiresApsRequirement(validatedData.country),
             },
             { onConflict: "profile_id" }
         )

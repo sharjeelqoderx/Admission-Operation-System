@@ -7,6 +7,7 @@ export enum ApplicationStatus {
     DOCUMENTS_PENDING = "Documents Pending",
     COMPLETED = "Completed",
     SIGNED = "Signed",
+    CONDITIONAL_LETTER_ISSUED = "Conditional Letter Issued",
 }
 
 export enum DocStatus {
@@ -22,6 +23,7 @@ const statusStyles: Record<string, string> = {
     [ApplicationStatus.DOCUMENTS_PENDING]: "bg-yellow-500",
     [ApplicationStatus.SIGNED]: "bg-brand-success",
     [ApplicationStatus.COMPLETED]: "bg-brand-primary",
+    [ApplicationStatus.CONDITIONAL_LETTER_ISSUED]: "bg-violet-600",
     [DocStatus.VERIFIED]: "bg-green-500",
     [DocStatus.PENDING]: "bg-yellow-500",
     [DocStatus.ACTION_REQUIRED]: "bg-orange-500",

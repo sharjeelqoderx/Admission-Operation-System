@@ -23,6 +23,7 @@ export default function ProgramDashboard() {
 
     const urlSearch = searchParams.get("search") || ""
     const levelId = searchParams.get("level_id") || "ALL"
+    const intakeSeason = searchParams.get("intake_date") || "ALL"
 
     const [localSearch, setLocalSearch] = useState(urlSearch)
     const debouncedSearch = useDebounce(localSearch, 600)
@@ -72,11 +73,12 @@ export default function ProgramDashboard() {
         isError,
         refetch,
     } = useInfiniteQuery<ProgramListResponse>({
-        queryKey: ["programs", urlSearch, levelId],
+        queryKey: ["programs", urlSearch, levelId, intakeSeason],
         queryFn: async ({ pageParam = 0 }) => {
             const params = new URLSearchParams()
             if (urlSearch) params.set("search", urlSearch)
             if (levelId !== "ALL") params.set("level_id", levelId)
+            if (intakeSeason !== "ALL") params.set("intake_date", intakeSeason)
             params.set("limit", "10")
             params.set("offset", String(pageParam))
 
@@ -115,6 +117,13 @@ export default function ProgramDashboard() {
         const params = new URLSearchParams(searchParams.toString())
         if (val && val !== "ALL") params.set("level_id", val)
         else params.delete("level_id")
+        router.push(`${pathname}?${params.toString()}`)
+    }
+
+    const updateIntakeSeason = (val: string) => {
+        const params = new URLSearchParams(searchParams.toString())
+        if (val && val !== "ALL") params.set("intake_date", val)
+        else params.delete("intake_date")
         router.push(`${pathname}?${params.toString()}`)
     }
 
@@ -172,21 +181,36 @@ export default function ProgramDashboard() {
                     />
                 </div>
 
-                <div className="flex items-center gap-2 bg-white px-4 rounded-xl shadow-sm border border-gray-100 min-w-[240px]">
-                    <SlidersHorizontal size={18} className="text-gray-400 shrink-0" />
-                    <Select value={levelId} onValueChange={updateLevel} disabled={levelsLoading}>
-                        <SelectTrigger className="border-0 focus:ring-0 h-14 font-bold text-gray-700 bg-transparent">
-                            <SelectValue placeholder="All Levels" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl border-gray-100">
-                            <SelectItem value="ALL">All Levels</SelectItem>
-                            {levels.map((level) => (
-                                <SelectItem key={level.id} value={level.id}>
-                                    {level.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex items-center gap-2 bg-white px-4 rounded-xl shadow-sm border border-gray-100 min-w-[200px]">
+                        <SlidersHorizontal size={18} className="text-gray-400 shrink-0" />
+                        <Select value={levelId} onValueChange={updateLevel} disabled={levelsLoading}>
+                            <SelectTrigger className="border-0 focus:ring-0 h-14 font-bold text-gray-700 bg-transparent">
+                                <SelectValue placeholder="All Levels" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-gray-100">
+                                <SelectItem value="ALL">All Levels</SelectItem>
+                                {levels.map((level) => (
+                                    <SelectItem key={level.id} value={level.id}>
+                                        {level.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-white px-4 rounded-xl shadow-sm border border-gray-100 min-w-[180px]">
+                        <Select value={intakeSeason} onValueChange={updateIntakeSeason}>
+                            <SelectTrigger className="border-0 focus:ring-0 h-14 font-bold text-gray-700 bg-transparent">
+                                <SelectValue placeholder="All Intakes" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-gray-100">
+                                <SelectItem value="ALL">All Intakes</SelectItem>
+                                <SelectItem value="summer">Summer</SelectItem>
+                                <SelectItem value="winter">Winter</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
             </div>
 

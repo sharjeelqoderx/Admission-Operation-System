@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react"
 import { z } from "zod"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { DragDropCard, UploadedFile } from "@/components/shared/drag-drop-card"
+import { ImageUploadCard } from "@/components/shared/image-upload-card"
 import { fileWithinSizeLimit, MAX_FILE_SIZE_ERROR_MESSAGE, MAX_FILE_SIZE_LABEL } from "@/lib/constants/file-upload"
 import { F } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
@@ -18,10 +18,12 @@ const EXPERIENCE_OPTIONS = [
     { label: "10+ years", value: "10+" },
 ]
 
+type UploadValue = File | string | null
+
 type AgentStep2Values = {
-    profilePicture: File | null
-    idCardFront: File | null
-    idCardBack: File | null
+    profilePicture: UploadValue
+    idCardFront: UploadValue
+    idCardBack: UploadValue
     professionalExperience: string
 }
 
@@ -31,29 +33,26 @@ type ExistingKyc = {
     idCardBackUrl?: string | null
 }
 
+const uploadField = z
+    .union([z.instanceof(File), z.string().min(1), z.null()])
+    .refine((val) => val !== null && val !== "", "File is required")
+    .refine(
+        (val) => val === null || typeof val === "string" || fileWithinSizeLimit(val),
+        MAX_FILE_SIZE_ERROR_MESSAGE
+    )
+
+const schema = z.object({
+    profilePicture: uploadField,
+    idCardFront: uploadField,
+    idCardBack: uploadField,
+    professionalExperience: z.string().min(1, "Select your experience range"),
+})
+
 function mapExperienceYears(years?: number | null) {
     if (years == null || years === 0) return ""
     if (years <= 3) return "1-3"
     if (years <= 10) return "4-10"
     return "10+"
-}
-
-function createSchema(existing: ExistingKyc) {
-    const uploadField = (existingUrl?: string | null) =>
-        z
-            .union([z.instanceof(File), z.null()])
-            .refine((file) => file !== null || !!existingUrl, "File is required")
-            .refine(
-                (file) => file === null || fileWithinSizeLimit(file),
-                MAX_FILE_SIZE_ERROR_MESSAGE
-            )
-
-    return z.object({
-        profilePicture: uploadField(existing.registrationCertificateUrl),
-        idCardFront: uploadField(existing.idCardFrontUrl),
-        idCardBack: uploadField(existing.idCardBackUrl),
-        professionalExperience: z.string().min(1, "Select your experience range"),
-    })
 }
 
 function getFieldState(field: {
@@ -70,19 +69,12 @@ function getFieldState(field: {
     return { isInvalid, error }
 }
 
-function toExistingFile(url?: string | null, name?: string) {
-    if (!url) return null
-    return { url, name }
-}
-
 function AgentStep2Form({
     defaultValues,
-    existingKyc,
     onBack,
     onNext,
 }: {
     defaultValues: AgentStep2Values
-    existingKyc: ExistingKyc
     onBack: () => void
     onNext: () => void
 }) {
@@ -90,7 +82,7 @@ function AgentStep2Form({
     const [submitError, setSubmitError] = useState<string | null>(null)
     const form = useForm({
         defaultValues,
-        validators: { onSubmit: createSchema(existingKyc) },
+        validators: { onSubmit: schema },
         onSubmit: async ({ value }) => {
             setSubmitError(null)
             try {
@@ -103,9 +95,15 @@ function AgentStep2Form({
 
                 const fd = new FormData()
                 fd.append("experience_years", String(years))
-                if (value.profilePicture) fd.append("registration_certificate", value.profilePicture)
-                if (value.idCardFront) fd.append("id_card_front", value.idCardFront)
-                if (value.idCardBack) fd.append("id_card_back", value.idCardBack)
+                if (value.profilePicture instanceof File) {
+                    fd.append("registration_certificate", value.profilePicture)
+                }
+                if (value.idCardFront instanceof File) {
+                    fd.append("id_card_front", value.idCardFront)
+                }
+                if (value.idCardBack instanceof File) {
+                    fd.append("id_card_back", value.idCardBack)
+                }
 
                 await agentProfile.mutateAsync(fd)
                 onNext()
@@ -124,12 +122,12 @@ function AgentStep2Form({
                         const { isInvalid, error } = getFieldState(field)
                         return (
                         <F isInvalid={isInvalid} error={error} label="Registration Certificate">
-                            <DragDropCard
-                                title="" description={`Upload your registration certificate (JPG, PNG — max ${MAX_FILE_SIZE_LABEL})`}
-                                accept=".jpg,.jpeg,.png" multiple={false}
-                                existingFile={toExistingFile(existingKyc.registrationCertificateUrl, "Registration certificate")}
-                                onChange={(files: UploadedFile[]) => field.handleChange(files[0]?.file ?? null)}
-                                className="border-0 shadow-none p-0 bg-transparent ring-0"
+                            <ImageUploadCard
+                                value={field.state.value}
+                                onChange={(file) => field.handleChange(file)}
+                                message={`registration certificate (JPG, PNG — max ${MAX_FILE_SIZE_LABEL})`}
+                                accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                                className="w-full min-h-[150px] max-h-[200px]"
                             />
                         </F>
                         )
@@ -140,13 +138,13 @@ function AgentStep2Form({
                     const { isInvalid, error } = getFieldState(field)
                     return (
                     <F isInvalid={isInvalid} error={error} label="ID Card Front">
-                        <DragDropCard
-                            title="" description={`Upload ID card front (JPG, PNG, PDF — max ${MAX_FILE_SIZE_LABEL})`}
-                            accept=".jpg,.jpeg,.png,.pdf" multiple={false}
-                            existingFile={toExistingFile(existingKyc.idCardFrontUrl, "ID card front")}
-                            onChange={(files: UploadedFile[]) => field.handleChange(files[0]?.file ?? null)}
-                            className="border-0 shadow-none p-0 bg-transparent ring-0"
-                            defaultBackgroundImage="/assets/id-card-front-example.svg"
+                        <ImageUploadCard
+                            value={field.state.value}
+                            onChange={(file) => field.handleChange(file)}
+                            message={`ID card front (JPG, PNG, PDF — max ${MAX_FILE_SIZE_LABEL})`}
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            placeholderImage="/assets/id-card-front-example.svg"
+                            className="w-full min-h-[150px] max-h-[200px]"
                         />
                     </F>
                     )
@@ -156,13 +154,13 @@ function AgentStep2Form({
                     const { isInvalid, error } = getFieldState(field)
                     return (
                     <F isInvalid={isInvalid} error={error} label="ID Card Back">
-                        <DragDropCard
-                            title="" description={`Upload ID card back (JPG, PNG, PDF — max ${MAX_FILE_SIZE_LABEL})`}
-                            accept=".jpg,.jpeg,.png,.pdf" multiple={false}
-                            existingFile={toExistingFile(existingKyc.idCardBackUrl, "ID card back")}
-                            onChange={(files: UploadedFile[]) => field.handleChange(files[0]?.file ?? null)}
-                            className="border-0 shadow-none p-0 bg-transparent ring-0"
-                            defaultBackgroundImage="/assets/id-card-back-example.svg"
+                        <ImageUploadCard
+                            value={field.state.value}
+                            onChange={(file) => field.handleChange(file)}
+                            message={`ID card back (JPG, PNG, PDF — max ${MAX_FILE_SIZE_LABEL})`}
+                            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                            placeholderImage="/assets/id-card-back-example.svg"
+                            className="w-full min-h-[150px] max-h-[200px]"
                         />
                     </F>
                     )
@@ -232,17 +230,16 @@ export function AgentStep2({ onBack, onNext }: { onBack: () => void; onNext: () 
     }
 
     const defaultValues: AgentStep2Values = {
-        profilePicture: null,
-        idCardFront: null,
-        idCardBack: null,
+        profilePicture: existingKyc.registrationCertificateUrl ?? null,
+        idCardFront: existingKyc.idCardFrontUrl ?? null,
+        idCardBack: existingKyc.idCardBackUrl ?? null,
         professionalExperience: mapExperienceYears(agentProfile?.experience_years),
     }
 
     return (
         <AgentStep2Form
-            key={JSON.stringify({ defaultValues, existingKyc })}
+            key={JSON.stringify(defaultValues)}
             defaultValues={defaultValues}
-            existingKyc={existingKyc}
             onBack={onBack}
             onNext={onNext}
         />

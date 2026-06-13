@@ -21,15 +21,17 @@ import {
 import ImageUploadCard from "./shared/image-upload-card"
 import { DatePicker } from "@/components/shared/date-picker"
 import { CountrySelect } from "@/components/shared/country-select"
-import { Building, ChevronDown, School, FileUp, FileText, CheckSquare, Square, Plus, Loader2 } from "lucide-react"
+import { Building, ChevronDown, School, FileUp, FileText, CheckSquare, Square, Plus, Loader2, Upload, X } from "lucide-react"
 import { resolveGradeType, type GradeType } from "@/types/schemas/academic"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import { toast } from "sonner"
 import { FilePreview } from "./shared/FilePreview"
 import { cn } from "@/lib/utils"
+import { isFileWithinSizeLimit, MAX_FILE_SIZE_ERROR_MESSAGE } from "@/lib/constants/file-upload"
 import { useLevels } from "@/hooks/useLevels"
 import type { CourseProgram } from "@/types/schemas/program"
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
+import { filterCoursesAboveQualification } from "@/lib/utils/levels"
 import {
     Dialog,
     DialogContent,
@@ -57,6 +59,83 @@ function getFieldState(field: {
     return { isInvalid, error }
 }
 
+function genderFromTitle(title: string): "MALE" | "FEMALE" | undefined {
+    switch (title) {
+        case "Mr":
+            return "MALE"
+        case "Mrs":
+        case "Ms":
+            return "FEMALE"
+        default:
+            return undefined
+    }
+}
+
+function DocumentUploadField({
+    id,
+    value,
+    onChange,
+    accept,
+}: {
+    id: string
+    value?: File | null
+    onChange: (file: File | null) => void
+    accept: string
+}) {
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    const handleSelect = (file: File | null) => {
+        if (!file) {
+            onChange(null)
+            if (inputRef.current) inputRef.current.value = ""
+            return
+        }
+        if (!isFileWithinSizeLimit(file)) {
+            alert(MAX_FILE_SIZE_ERROR_MESSAGE)
+            if (inputRef.current) inputRef.current.value = ""
+            return
+        }
+        onChange(file)
+    }
+
+    return (
+        <div className="flex items-center gap-3 h-12 w-full min-w-0 rounded-sm border border-input bg-brand-input px-3">
+            <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className="flex shrink-0 items-center justify-center size-9 rounded-md text-brand-byzantine hover:bg-brand-byzantine/10 transition-colors"
+                aria-label="Upload file"
+            >
+                <Upload className="size-5" />
+            </button>
+            <Typography
+                font="small"
+                className={cn("truncate flex-1 min-w-0", !value && "text-muted-foreground")}
+            >
+                {value?.name ?? "No file selected"}
+            </Typography>
+            {value && (
+                <button
+                    type="button"
+                    onClick={() => handleSelect(null)}
+                    className="flex shrink-0 items-center justify-center size-8 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    aria-label="Remove file"
+                >
+                    <X className="size-4" />
+                </button>
+            )}
+            <input
+                ref={inputRef}
+                id={id}
+                type="file"
+                accept={accept}
+                className="hidden"
+                onChange={(e) => handleSelect(e.target.files?.[0] ?? null)}
+            />
+        </div>
+    )
+}
+
 function F({ field, label, children }: { field: any; label: string; children: React.ReactNode }) {
     const { isInvalid, error } = getFieldState(field)
     return (
@@ -71,6 +150,8 @@ function F({ field, label, children }: { field: any; label: string; children: Re
 type StudentData = {
     title?: string | null
     name?: string | null
+    first_name?: string | null
+    last_name?: string | null
     email?: string | null
     phone?: string | null
     date_of_birth?: string | null
@@ -620,6 +701,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
     const { data: degrees = [], isLoading: loadingDegrees } = useDegrees()
 
     const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+    const [courseError, setCourseError] = useState<string | null>(null);
     const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
     const [createdStudentId, setCreatedStudentId] = useState<string | null>(null);
     const [documents, setDocuments] = useState<Document[]>([]);
@@ -759,32 +841,28 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                 }
             }
 
-            // Step 3: If course selected, create application
-            if (selectedCourseId) {
-                let universityId = "";
-                const course = courses.find(c => c.id === selectedCourseId);
-                if (course) {
-                    const levelId = course.degree?.level_id;
-                    universityId = levels.find((level) => level.id === levelId)?.university_id ?? "";
-                }
-
-                // Use course's intake date or today's date, and set all declarations to true
-                const today = new Date().toISOString().split('T')[0];
-                const appRes = await fetch("/api/application", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        profile_id: newStudentProfileId,
-                        course_id: selectedCourseId,
-                        university_id: universityId,
-                        document_ids: uploadedDocIds,
-                        intake_date: course?.degree?.intake_date ?? today,
-                        declarations: [true, true, true],
-                    })
-                });
-                const appJson = await appRes.json();
-                if (!appRes.ok) throw new Error(appJson?.error ?? "Failed to create application");
+            // Step 3: Create application (course is required before submit)
+            let universityId = "";
+            const course = courses.find(c => c.id === selectedCourseId);
+            if (course) {
+                const levelId = course.degree?.level_id;
+                universityId = levels.find((level) => level.id === levelId)?.university_id ?? "";
             }
+
+            const appRes = await fetch("/api/application", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    profile_id: newStudentProfileId,
+                    course_id: selectedCourseId,
+                    university_id: universityId,
+                    document_ids: uploadedDocIds,
+                    intake_date: course?.degree?.intake_date ?? "summer",
+                    declarations: [true, true, true],
+                })
+            });
+            const appJson = await appRes.json();
+            if (!appRes.ok) throw new Error(appJson?.error ?? "Failed to create application");
 
             return studentJson;
         },
@@ -808,14 +886,18 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
     const form = useForm({
         defaultValues: {
             title: defaultData?.title ?? "",
-            first_name: defaultData?.name?.split(' ')[0] ?? "",
-            last_name: defaultData?.name?.split(' ').slice(1).join(' ') ?? "",
+            first_name: defaultData?.first_name ?? defaultData?.name?.split(" ")[0] ?? "",
+            last_name: defaultData?.last_name ?? defaultData?.name?.split(" ").slice(1).join(" ") ?? "",
             email: defaultData?.email ?? "",
             phone: defaultData?.phone ?? "",
             dob: defaultData?.date_of_birth ?? "",
-            gender: (defaultData?.gender?.toUpperCase() === "MALE" || defaultData?.gender?.toUpperCase() === "FEMALE"
-                ? defaultData.gender.toUpperCase()
-                : undefined) as "MALE" | "FEMALE" | undefined,
+            gender: (() => {
+                const fromData = defaultData?.gender?.toUpperCase()
+                if (fromData === "MALE" || fromData === "FEMALE") {
+                    return fromData as "MALE" | "FEMALE"
+                }
+                return genderFromTitle(defaultData?.title ?? "")
+            })(),
             country: defaultData?.student?.country ?? "",
             state: defaultData?.student?.state ?? "",
             city: defaultData?.student?.city ?? "",
@@ -887,6 +969,11 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
             if (value.resume_file instanceof File) fd.set("resume_file", value.resume_file)
 
             if (mode === "create" && user?.role === "AGENT") {
+                if (!selectedCourseId.trim()) {
+                    setCourseError("Course is required")
+                    return
+                }
+                setCourseError(null)
                 await mutation.mutateAsync({
                     studentFormData: fd,
                     selectedCourseId,
@@ -959,7 +1046,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
 
     return (
         <div className="space-y-8">
-            <div className="bg-white/5 p-8 relative overflow-visible">
+            <div className="bg-white/5 p-4 sm:p-6 lg:p-8 relative overflow-hidden">
 
                 <form id="student-form" onSubmit={handleFormSubmit} className="space-y-12 relative z-10">
                     <FieldGroup className="space-y-10">
@@ -972,18 +1059,43 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                             </div>
 
 
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                                {/* Inputs: First Name, Last Name, Email, Phone */}
-                                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <div className="sm:col-span-2">
+                            <div className="space-y-6 min-w-0">
+                                <div className="w-full max-w-sm">
+                                    <form.Field name="avatar_url">
+                                        {(field) => (
+                                            <div className="space-y-2">
+                                                <Typography font="small" className="text-gray-900">
+                                                    Upload Profile Picture
+                                                </Typography>
+                                                <ImageUploadCard
+                                                    value={field.state.value ?? (defaultData?.avatar_url ?? null)}
+                                                    onChange={(file) => field.handleChange((file ?? undefined) as File | undefined)}
+                                                    message="passport size picture"
+                                                    className="w-full min-h-[180px] max-h-[220px]"
+                                                />
+                                            </div>
+                                        )}
+                                    </form.Field>
+                                </div>
+
+                                <div className="space-y-4 sm:space-y-6 min-w-0">
+                                    <div className="grid grid-cols-1 sm:grid-cols-[minmax(120px,160px)_1fr_1fr] gap-4 sm:gap-6 min-w-0">
                                         <form.Field name="title">
                                             {(field) => (
                                                 <F field={field} label="Title">
                                                     <Select
                                                         value={field.state.value}
-                                                        onValueChange={(v) => field.handleChange(v)}
+                                                        onValueChange={(v) => {
+                                                            field.handleChange(v)
+                                                            const mappedGender = genderFromTitle(v)
+                                                            if (mappedGender) {
+                                                                form.setFieldValue("gender", mappedGender)
+                                                            }
+                                                        }}
                                                     >
-                                                        <SelectTrigger id={field.name} className="h-12"><SelectValue placeholder="Select Title" /></SelectTrigger>
+                                                        <SelectTrigger id={field.name} className="h-12 w-full">
+                                                            <SelectValue placeholder="Select Title" />
+                                                        </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectItem value="Mr">Mr</SelectItem>
                                                             <SelectItem value="Mrs">Mrs</SelectItem>
@@ -993,36 +1105,38 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                 </F>
                                             )}
                                         </form.Field>
+
+                                        <form.Field name="first_name">
+                                            {(field) => (
+                                                <F field={field} label="First Name">
+                                                    <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter first name" className="w-full" />
+                                                </F>
+                                            )}
+                                        </form.Field>
+
+                                        <form.Field name="last_name">
+                                            {(field) => (
+                                                <F field={field} label="Last Name">
+                                                    <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter last name" className="w-full" />
+                                                </F>
+                                            )}
+                                        </form.Field>
                                     </div>
 
-                                    <form.Field name="first_name">
-                                        {(field) => (
-                                            <F field={field} label="First Name">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter first name" />
-                                            </F>
-                                        )}
-                                    </form.Field>
-
-                                    <form.Field name="last_name">
-                                        {(field) => (
-                                            <F field={field} label="Last Name">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter last name" />
-                                            </F>
-                                        )}
-                                    </form.Field>
-
-                                    <form.Field name="email">
-                                        {(field) => (
-                                            <F field={field} label="Email">
-                                                <Input id={field.name} type="email" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your email" />
-                                            </F>
-                                        )}
-                                    </form.Field>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 min-w-0">
+                                        <form.Field name="email">
+                                            {(field) => (
+                                                <F field={field} label="Email">
+                                                    <Input id={field.name} type="email" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your email" className="w-full" />
+                                                </F>
+                                            )}
+                                        </form.Field>
 
                                         <form.Field name="phone">
                                             {(field) => (
                                                 <F field={field} label="Phone">
                                                     <PhoneInputComponent
+                                                        className="w-full"
                                                         value={field.state.value}
                                                         onChange={(value) => field.handleChange(value)}
                                                         placeholder="Enter phone number"
@@ -1030,24 +1144,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                 </F>
                                             )}
                                         </form.Field>
-                                </div>
-
-                                {/* Avatar Upload */}
-                                <div className="lg:col-span-1 h-full">
-                                    <form.Field name="avatar_url">
-                                        {(field) => (
-                                            <div className="space-y-2 h-full flex flex-col">
-                                                <Typography font="small" className="text-gray-900">Upload Profile Picture</Typography>
-
-                                                <ImageUploadCard
-                                                    value={field.state.value ?? (defaultData?.avatar_url ?? null)}
-                                                    onChange={(file) => field.handleChange(file as unknown as File)}
-                                                    message="Passport size picture"
-                                                    className="w-full h-full min-h-[150px] lg:min-h-[200px]"
-                                                />
-                                            </div>
-                                        )}
-                                    </form.Field>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1060,11 +1157,12 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 <ChevronDown className="size-5 text-gray-500" />
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 min-w-0">
                                 <form.Field name="guardian_phone">
                                     {(field) => (
                                         <F field={field} label="Parent/Guardian Phone">
                                             <PhoneInputComponent
+                                                className="w-full"
                                                 value={field.state.value}
                                                 onChange={(value) => field.handleChange(value)}
                                                 placeholder="Enter phone number"
@@ -1098,7 +1196,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                     field.handleBlur()
                                                 }}
                                             >
-                                                <SelectTrigger className="h-12"><SelectValue placeholder="Select your gender" /></SelectTrigger>
+                                                <SelectTrigger className="h-12 w-full"><SelectValue placeholder="Select your gender" /></SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="MALE">Male</SelectItem>
                                                     <SelectItem value="FEMALE">Female</SelectItem>
@@ -1160,7 +1258,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                         )}
                                     </form.Field>
 
-                                <div className="col-span-1 sm:col-span-2 lg:col-span-1">
+                                <div className="sm:col-span-2 xl:col-span-1">
                                     <form.Field name="passport_file_url">
                                         {(field) => (
                                             <div className="space-y-2">
@@ -1168,7 +1266,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
 
                                                 <ImageUploadCard
                                                     value={field.state.value ?? (defaultData?.student?.passport_file_url ?? null)}
-                                                    onChange={(file) => field.handleChange(file as unknown as File)}
+                                                    onChange={(file) => field.handleChange((file ?? undefined) as File | undefined)}
                                                     message="Passport picture"
                                                     className="w-full max-h-[200px]"
                                                 />
@@ -1180,15 +1278,11 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 <form.Field name="cv_file">
                                     {(field) => (
                                         <F field={field} label="CV (Required)">
-                                            <Input
+                                            <DocumentUploadField
                                                 id="cv_file"
-                                                type="file"
-                                                accept=".pdf,.doc,.docx"
-                                                onChange={(e) => {
-                                                    const file = e.target.files?.[0]
-                                                    if (file) field.handleChange(file as unknown as File)
-                                                }}
-                                                className="h-12"
+                                                value={field.state.value ?? null}
+                                                onChange={(file) => field.handleChange((file ?? undefined) as File | undefined)}
+                                                accept=".pdf,.doc,.docx,application/pdf"
                                             />
                                         </F>
                                     )}
@@ -1197,15 +1291,11 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 <form.Field name="resume_file">
                                     {(field) => (
                                         <F field={field} label="Resume (Required)">
-                                            <Input
+                                            <DocumentUploadField
                                                 id="resume_file"
-                                                type="file"
-                                                accept=".pdf,.doc,.docx"
-                                                onChange={(e) => {
-                                                    const file = e.target.files?.[0]
-                                                    if (file) field.handleChange(file as unknown as File)
-                                                }}
-                                                className="h-12"
+                                                value={field.state.value ?? null}
+                                                onChange={(file) => field.handleChange((file ?? undefined) as File | undefined)}
+                                                accept=".pdf,.doc,.docx,application/pdf"
                                             />
                                         </F>
                                     )}
@@ -1246,6 +1336,9 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                                                 onValueChange={(v) => {
                                                                                     subField.handleChange(v)
                                                                                     subField.handleBlur()
+                                                                                    setSelectedCourseId("")
+                                                                                    setCourseError(null)
+                                                                                    setSelectedDocumentIds([])
                                                                                 }}
                                                                                 disabled={loadingDegrees}
                                                                             >
@@ -1433,37 +1526,61 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
 
                         {/* ── Section: Course Selection & Documents (Only for Agent Create) ── */}
                         {mode === "create" && user?.role === "AGENT" && (
+                            <form.Subscribe
+                                selector={(state) => state.values.academic_background[0]?.qualification}
+                            >
+                                {(qualificationId) => {
+                                    const qualificationLevelName = degrees.find(
+                                        (d) => d.id === qualificationId
+                                    )?.level?.name
+                                    const eligibleCourses = filterCoursesAboveQualification(
+                                        courses,
+                                        qualificationLevelName
+                                    )
+
+                                    if (!qualificationId) return null
+
+                                    return (
                             <>
                                 {/* Course Selection */}
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-2">
                                         <School className="size-5 text-gray-700" strokeWidth={2.5} />
-                                        <Typography as="h3" font="text-xl" className="text-gray-900 tracking-tight">Select Course (Optional)</Typography>
+                                        <Typography as="h3" font="text-xl" className="text-gray-900 tracking-tight">Select Course</Typography>
                                     </div>
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
+                                        <Field data-invalid={!!courseError}>
+                                            <FieldLabel htmlFor="course_id">Course</FieldLabel>
                                             <Select
                                                 value={selectedCourseId}
                                                 onValueChange={(val) => {
                                                     setSelectedCourseId(val);
+                                                    setCourseError(null);
                                                     setSelectedDocumentIds([]);
                                                     if (createdStudentId) {
                                                         refetchDocuments();
                                                     }
                                                 }}
                                             >
-                                                <SelectTrigger className="h-12">
+                                                <SelectTrigger id="course_id" className="h-12 w-full">
                                                     <SelectValue placeholder="Select a course" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {courses.map((course) => (
-                                                        <SelectItem key={course.id} value={course.id}>
-                                                            {course.name} - {formatProgramDate(course.deadline_date)}
-                                                        </SelectItem>
-                                                    ))}
+                                                    {eligibleCourses.length === 0 ? (
+                                                        <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                                                            No courses available for this qualification level.
+                                                        </div>
+                                                    ) : (
+                                                        eligibleCourses.map((course) => (
+                                                            <SelectItem key={course.id} value={course.id}>
+                                                                {course.name} - {formatProgramDate(course.deadline_date)}
+                                                            </SelectItem>
+                                                        ))
+                                                    )}
                                                 </SelectContent>
                                             </Select>
-                                        </div>
+                                            {courseError && <FieldError errors={[{ message: courseError }]} />}
+                                        </Field>
                                     </div>
                                 </div>
 
@@ -1484,6 +1601,9 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                     />
                                 )}
                             </>
+                                    )
+                                }}
+                            </form.Subscribe>
                         )}
 
                         {apiError && (
@@ -1500,7 +1620,13 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                         className="w-full sm:w-auto sm:min-w-[200px] h-12 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white rounded-sm text-sm font-bold transition-all"
                                         disabled={isSubmitting || mutation.isPending}
                                     >
-                                        {mutation.isPending ? "Processing..." : selectedCourseId ? "Create Student & Application" : mode === "edit" ? "Update Student" : "Register"}
+                                        {mutation.isPending
+                                            ? "Processing..."
+                                            : mode === "create" && user?.role === "AGENT"
+                                                ? "Create Student & Application"
+                                                : mode === "edit"
+                                                    ? "Update Student"
+                                                    : "Register"}
                                     </Button>
                                 )}
                             </form.Subscribe>

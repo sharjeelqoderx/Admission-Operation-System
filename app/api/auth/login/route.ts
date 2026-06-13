@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { loginSchema } from "@/types/schemas/auth"
+import { formatFullName } from "@/lib/utils/profile"
 
 export async function POST(req: NextRequest) {
     try {
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
 
         const { data: profile } = await supabase
             .from("profile")
-            .select("id, email, name, role, date_of_birth, gender")
+            .select("id, email, first_name, last_name, role, date_of_birth, gender")
             .eq("id", data.user.id)
             .maybeSingle()
 
@@ -62,7 +63,13 @@ export async function POST(req: NextRequest) {
         return ok({
             id: data.user.id,
             email: profile?.email ?? data.user.email ?? "",
-            fullName: profile?.name ?? data.user.user_metadata?.full_name ?? "",
+            fullName: formatFullName(
+                profile?.first_name ?? data.user.user_metadata?.first_name,
+                profile?.last_name ?? data.user.user_metadata?.last_name,
+                data.user.user_metadata?.full_name ?? ""
+            ),
+            firstName: profile?.first_name ?? data.user.user_metadata?.first_name ?? "",
+            lastName: profile?.last_name ?? data.user.user_metadata?.last_name ?? "",
             role: profile?.role ?? (data.user.user_metadata?.role ?? "STUDENT"),
             profile: {
                 dateOfBirth: profile?.date_of_birth ?? "",

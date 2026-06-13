@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server"
+import { formatFullName } from "@/lib/utils/profile"
+import { requiresApsRequirement } from "@/lib/utils/aps"
 
 export async function GET(
     req: NextRequest,
@@ -48,62 +50,77 @@ export async function GET(
             ),
         ]
 
-        let qualificationDegreeById = new Map<
+        let qualificationById = new Map<
             string,
             {
                 id: string
                 name: string
-                credits: number | null
-                location: string | null
-                language_of_study: string | null
-                duration: string | null
+                credits?: number | null
+                location?: string | null
+                language_of_study?: string | null
+                duration?: string | null
                 level_id: string | null
                 level?: { id: string; name: string } | null
             }
         >()
 
         if (qualificationIds.length > 0) {
-            const { data: qualificationDegrees } = await supabase
-                .from("degree")
-                .select("id, name, credits, location, language_of_study, duration, level_id")
+            const { data: educationTypes } = await supabase
+                .from("education_type")
+                .select("id, name, level_id, linked_level:level_id(id, name)")
                 .in("id", qualificationIds)
 
-            // Get levels for degrees that have level_id
-            const levelIds = (qualificationDegrees ?? [])
-                .map((d) => d.level_id)
-                .filter((id): id is string => Boolean(id));
-
-            let levelById = new Map<string, { id: string; name: string }>();
-            if (levelIds.length > 0) {
-                const { data: levels } = await supabase
-                    .from("levels")
-                    .select("id, name")
-                    .in("id", levelIds);
-                levelById = new Map((levels ?? []).map((level) => [level.id, level]));
+            for (const row of educationTypes ?? []) {
+                const linkedLevel = (row.linked_level as unknown as { id: string; name: string } | null)
+                qualificationById.set(row.id, {
+                    id: row.id,
+                    name: row.name,
+                    level_id: row.level_id,
+                    level: linkedLevel ?? { id: row.id, name: row.name },
+                })
             }
 
-            qualificationDegreeById = new Map(
-                (qualificationDegrees ?? []).map((degree) => [
-                    degree.id,
-                    {
+            const unresolvedIds = qualificationIds.filter((id) => !qualificationById.has(id))
+            if (unresolvedIds.length > 0) {
+                const { data: qualificationDegrees } = await supabase
+                    .from("degree")
+                    .select("id, name, credits, location, language_of_study, duration, level_id")
+                    .in("id", unresolvedIds)
+
+                const levelIds = (qualificationDegrees ?? [])
+                    .map((d) => d.level_id)
+                    .filter((id): id is string => Boolean(id))
+
+                let levelById = new Map<string, { id: string; name: string }>()
+                if (levelIds.length > 0) {
+                    const { data: levels } = await supabase
+                        .from("levels")
+                        .select("id, name")
+                        .in("id", levelIds)
+                    levelById = new Map((levels ?? []).map((level) => [level.id, level]))
+                }
+
+                for (const degree of qualificationDegrees ?? []) {
+                    qualificationById.set(degree.id, {
                         ...degree,
                         level: degree.level_id ? levelById.get(degree.level_id) ?? null : null,
-                    },
-                ])
-            );
+                    })
+                }
+            }
         }
 
         const enrichedEducation = (education ?? []).map((row) => ({
             ...row,
             qualification_degree: row.qualification
-                ? qualificationDegreeById.get(row.qualification) ?? null
+                ? qualificationById.get(row.qualification) ?? null
                 : null,
-        }));
+        }))
 
         return NextResponse.json(
             {
                 data: {
                     ...profile,
+                    name: formatFullName(profile.first_name, profile.last_name),
                     student: student || null,
                     education: enrichedEducation,
                 },
@@ -171,11 +188,9 @@ export async function PATCH(
             ? await (await import("@/lib/supabase/upload-public-image")).uploadPublicImage({ supabase, bucket: "student-admission", userId: `${id}/passport`, file: data.passport_file_url })
             : null
 
-        const fullName = data.first_name && data.last_name ? `${data.first_name} ${data.last_name}` : undefined
         const { error: profileError } = await supabase
             .from("profile")
             .update({
-                ...(fullName ? { name: fullName } : {}),
                 ...(data.title ? { title: data.title } : {}),
                 ...(data.first_name ? { first_name: data.first_name } : {}),
                 ...(data.last_name ? { last_name: data.last_name } : {}),
@@ -207,6 +222,9 @@ export async function PATCH(
                     guardian_email: data.guardian_email,
                     guardian_phone: data.guardian_phone,
                     ...(passportUpload ? { passport_file_url: passportUpload.publicUrl } : {}),
+                    ...(data.country !== undefined
+                        ? { aps_requirement: requiresApsRequirement(data.country) }
+                        : {}),
                 },
                 { onConflict: "profile_id" }
             )

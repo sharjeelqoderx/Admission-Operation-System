@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { DocumentFormSchema } from "@/types/schemas/document"
+import { formatFullName } from "@/lib/utils/profile"
 
 export async function GET(req: NextRequest) {
     try {
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
         if (profile?.role === "STUDENT") {
             const { data: studentProfile } = await supabase
                 .from("profile")
-                .select("id, name, avatar_url")
+                .select("id, first_name, last_name, avatar_url")
                 .eq("id", user.id)
                 .single()
 
@@ -63,7 +64,7 @@ export async function GET(req: NextRequest) {
                     data: [
                         {
                             student_id: user.id,
-                            student_name: studentProfile?.name ?? "—",
+                            student_name: formatFullName(studentProfile?.first_name, studentProfile?.last_name, "—"),
                             avatar_url: studentProfile?.avatar_url ?? null,
                             document_count: docs.length,
                             last_uploaded_at: lastDoc?.created_at ?? null,
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
                 id,
                 profile_id,
                 created_at,
-                profile:profile_id (id, name, avatar_url)
+                profile:profile_id (id, first_name, last_name, avatar_url)
             `)
             .eq("created_by_agent_id", agentRow.id)
  
@@ -128,7 +129,8 @@ export async function GET(req: NextRequest) {
             .map((s: any) => {
                 const docs = (documents ?? []).filter((d: any) => d.profile_id === s.profile_id)
 
-                if (search && !s.profile?.name?.toLowerCase().includes(search)) return null
+                const profileName = formatFullName(s.profile?.first_name, s.profile?.last_name).toLowerCase()
+                if (search && !profileName.includes(search)) return null
 
                 const lastDoc = docs.length
                     ? [...docs].sort(
@@ -143,7 +145,7 @@ export async function GET(req: NextRequest) {
 
                 return {
                     student_id: s.profile_id,
-                    student_name: s.profile?.name ?? "—",
+                    student_name: formatFullName(s.profile?.first_name, s.profile?.last_name, "—"),
                     avatar_url: s.profile?.avatar_url ?? null,
                     document_count: docs.length,
                     last_uploaded_at: lastDoc?.created_at ?? null,

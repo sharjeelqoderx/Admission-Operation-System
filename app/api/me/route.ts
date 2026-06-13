@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { normalizeDateValue } from "@/types/schemas/academic"
+import { formatFullName } from "@/lib/utils/profile"
 
 export async function GET() {
     try {
@@ -126,7 +127,11 @@ export async function GET() {
         return ok({
             id: user.id,
             email: profile?.email ?? user.email ?? "",
-            fullName: profile?.name ?? user.user_metadata?.full_name ?? "User",
+            fullName: formatFullName(
+                profile?.first_name,
+                profile?.last_name,
+                user.user_metadata?.full_name ?? "User"
+            ),
             firstName: profile?.first_name ?? user.user_metadata?.first_name ?? "",
             lastName: profile?.last_name ?? user.user_metadata?.last_name ?? "",
             title: profile?.title ?? "",
@@ -142,6 +147,8 @@ export async function GET() {
                 nationality: extraData.nationality ?? "",
                 guardianEmail: extraData.guardian_email ?? "",
                 guardianPhone: extraData.guardian_phone ?? "",
+                contact_person_first_name: extraData.contact_person_first_name ?? "",
+                contact_person_last_name: extraData.contact_person_last_name ?? "",
                 ...extraData
             },
             academic: academics && academics.length > 0 ? academics.map(academic => ({
