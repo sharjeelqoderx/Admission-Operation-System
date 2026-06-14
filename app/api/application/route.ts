@@ -6,7 +6,6 @@ import {
     COURSE_SELECT,
     type CourseRow,
 } from "@/lib/api/course-program";
-import { formatFullName, withProfileDisplayName } from "@/lib/utils/profile";
 
 const APPLICATION_LIST_SELECT = `
     id,
@@ -14,8 +13,8 @@ const APPLICATION_LIST_SELECT = `
     status,
     created_at,
     course_id,
-    student:profile_id ( id, first_name, last_name, avatar_url, email ),
-    agent:submitted_by_profile_id ( id, first_name, last_name )
+    student:profile_id ( id, name, avatar_url, email ),
+    agent:submitted_by_profile_id ( id, name )
 `;
 
 type ApplicationListRow = {
@@ -26,13 +25,11 @@ type ApplicationListRow = {
     course_id: string;
     student: {
         id: string;
-        first_name: string | null;
-        last_name: string | null;
-        name?: string | null;
+        name: string | null;
         avatar_url: string | null;
         email: string | null;
     } | null;
-    agent: { id: string; first_name: string | null; last_name: string | null; name?: string | null } | null;
+    agent: { id: string; name: string | null } | null;
 };
 
 async function attachStudentCodes(
@@ -57,99 +54,6 @@ async function attachStudentCodes(
     );
 }
 
-function getRequiredDocumentTypeIds(
-    degree: {
-        requirements?: Array<{ document_type?: { id: string } | null }> | null
-    } | null
-): string[] {
-    if (!degree?.requirements?.length) return [];
-
-    return degree.requirements
-        .map((item) => item.document_type?.id)
-        .filter((id): id is string => Boolean(id));
-}
-
-function computeDocumentVault(
-    profileId: string | undefined,
-    requiredTypeIds: string[],
-    uploadedByProfile: Map<string, Set<string>>
-) {
-    const total = requiredTypeIds.length;
-
-    if (!profileId || total === 0) {
-        return {
-            documents_uploaded_count: 0,
-            total_required_documents: total,
-            document_vault_percentage: total === 0 ? 100 : 0,
-        };
-    }
-
-    const uploadedSet = uploadedByProfile.get(profileId) ?? new Set<string>();
-    const uploadedCount = requiredTypeIds.filter((id) => uploadedSet.has(id)).length;
-
-    return {
-        documents_uploaded_count: uploadedCount,
-        total_required_documents: total,
-        document_vault_percentage: Math.round((uploadedCount / total) * 100),
-    };
-}
-
-async function buildUploadedDocumentsByProfile(
-    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-    profileIds: string[]
-) {
-    const uploadedByProfile = new Map<string, Set<string>>();
-
-    if (profileIds.length === 0) {
-        return uploadedByProfile;
-    }
-
-    const { data: documents, error } = await supabase
-        .from("document")
-        .select("profile_id, document_type_id")
-        .in("profile_id", profileIds)
-        .not("document_type_id", "is", null);
-
-    if (error) {
-        throw error;
-    }
-
-    for (const doc of documents ?? []) {
-        if (!doc.document_type_id) continue;
-        const existing = uploadedByProfile.get(doc.profile_id) ?? new Set<string>();
-        existing.add(doc.document_type_id);
-        uploadedByProfile.set(doc.profile_id, existing);
-    }
-
-    return uploadedByProfile;
-}
-
-async function buildOffersByApplicationId(
-    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-    applicationIds: string[]
-) {
-    const offerByApplicationId = new Map<string, { status: string }>();
-
-    if (applicationIds.length === 0) {
-        return offerByApplicationId;
-    }
-
-    const { data: offers, error } = await supabase
-        .from("offer_letter")
-        .select("application_id, status")
-        .in("application_id", applicationIds);
-
-    if (error) {
-        throw error;
-    }
-
-    for (const offer of offers ?? []) {
-        offerByApplicationId.set(offer.application_id, { status: offer.status });
-    }
-
-    return offerByApplicationId;
-}
-
 async function attachCoursesToApplications(
     supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
     applications: ApplicationListRow[]
@@ -162,42 +66,27 @@ async function attachCoursesToApplications(
         ),
     ];
     const studentCodeByProfile = await attachStudentCodes(supabase, profileIds);
-    const applicationIds = applications.map((application) => application.id);
-    const offerByApplicationId = await buildOffersByApplicationId(supabase, applicationIds);
-    const uploadedByProfile = await buildUploadedDocumentsByProfile(supabase, profileIds);
 
     const courseIds = [
         ...new Set(applications.map((application) => application.course_id).filter(Boolean)),
     ];
 
     if (courseIds.length === 0) {
-        return applications.map((application) => {
-            const vault = computeDocumentVault(
-                application.student?.id,
-                [],
-                uploadedByProfile
-            );
-            const offer = offerByApplicationId.get(application.id);
-
-            return {
-                id: application.id,
-                application_no: application.application_no,
-                status: application.status,
-                created_at: application.created_at,
-                offer_shared: Boolean(offer),
-                offer_status: offer?.status ?? null,
-                ...vault,
-                student: application.student
-                    ? {
-                          ...withProfileDisplayName(application.student)!,
-                          student_code:
-                              studentCodeByProfile.get(application.student.id) ?? null,
-                      }
-                    : null,
-                agent: withProfileDisplayName(application.agent),
-                course: null,
-            };
-        });
+        return applications.map((application) => ({
+            id: application.id,
+            application_no: application.application_no,
+            status: application.status,
+            created_at: application.created_at,
+            student: application.student
+                ? {
+                      ...application.student,
+                      student_code:
+                          studentCodeByProfile.get(application.student.id) ?? null,
+                  }
+                : null,
+            agent: application.agent,
+            course: null,
+        }));
     }
 
     const { data: courses, error } = await supabase
@@ -222,32 +111,21 @@ async function attachCoursesToApplications(
             name: string
             fees?: string | null
             intake_date?: string | null
-            requirements?: Array<{ document_type?: { id: string } | null }> | null
         } | null;
-        const requiredTypeIds = getRequiredDocumentTypeIds(degree);
-        const vault = computeDocumentVault(
-            application.student?.id,
-            requiredTypeIds,
-            uploadedByProfile
-        );
-        const offer = offerByApplicationId.get(application.id);
 
         return {
             id: application.id,
             application_no: application.application_no,
             status: application.status,
             created_at: application.created_at,
-            offer_shared: Boolean(offer),
-            offer_status: offer?.status ?? null,
-            ...vault,
             student: application.student
                 ? {
-                      ...withProfileDisplayName(application.student)!,
+                      ...application.student,
                       student_code:
                           studentCodeByProfile.get(application.student.id) ?? null,
                   }
                 : null,
-            agent: withProfileDisplayName(application.agent),
+            agent: application.agent,
             course: course
                 ? {
                       id: course.id,
@@ -336,7 +214,7 @@ async function resolveMatchingStudentProfileIds(
     if (options.role === "STUDENT") {
         const { data: profile, error } = await supabase
             .from("profile")
-            .select("id, first_name, last_name, email")
+            .select("id, name, email")
             .eq("id", options.userId)
             .maybeSingle();
 
@@ -348,8 +226,7 @@ async function resolveMatchingStudentProfileIds(
             return [];
         }
 
-        const displayName = formatFullName(profile.first_name, profile.last_name);
-        const haystack = `${displayName} ${profile.email ?? ""}`.toLowerCase();
+        const haystack = `${profile.name ?? ""} ${profile.email ?? ""}`.toLowerCase();
         return haystack.includes(searchTerm.toLowerCase()) ? [profile.id] : [];
     }
 
@@ -391,7 +268,7 @@ async function resolveMatchingStudentProfileIds(
     let profileQuery = supabase
         .from("profile")
         .select("id")
-        .or(`first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern}`);
+        .or(`name.ilike.${pattern},email.ilike.${pattern}`);
 
     if (allowedProfileIds) {
         profileQuery = profileQuery.in("id", allowedProfileIds);

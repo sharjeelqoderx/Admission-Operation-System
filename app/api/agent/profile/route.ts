@@ -111,10 +111,8 @@ export async function POST(req: NextRequest) {
 
         const experienceRaw = maybe("experience_years")
         const body = {
-            first_name: maybe("first_name"),
-            last_name: maybe("last_name"),
-            contact_person_first_name: maybe("contact_person_first_name"),
-            contact_person_last_name: maybe("contact_person_last_name"),
+            agent_name: maybe("agent_name"),
+            contact_person_name: maybe("contact_person_name"),
             gender: maybe("gender"),
             country: maybe("country"),
             state: maybe("state"),
@@ -132,8 +130,7 @@ export async function POST(req: NextRequest) {
         const { error: profileError } = await supabase
             .from("profile")
             .update({
-                ...(data.first_name && { first_name: data.first_name }),
-                ...(data.last_name && { last_name: data.last_name }),
+                name: data.agent_name,
                 gender: data.gender,
                 role: "AGENT",
             })
@@ -144,8 +141,7 @@ export async function POST(req: NextRequest) {
             .from("agent")
             .upsert({
                 profile_id: user.id,
-                contact_person_first_name: data.contact_person_first_name,
-                contact_person_last_name: data.contact_person_last_name,
+                contact_person_name: data.contact_person_name,
                 country: data.country,
                 state: data.state,
                 city: data.city,
@@ -194,9 +190,5 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
         return err(e?.message ?? "Internal server error", 500)
     }
-}
-
-export async function PATCH(req: NextRequest) {
-    return POST(req)
 }
 

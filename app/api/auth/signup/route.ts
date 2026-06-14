@@ -9,9 +9,8 @@ export async function POST(req: NextRequest) {
         const parsed = signupSchema.safeParse(body)
         if (!parsed.success) return err(parsed.error.issues[0].message, 400)
 
-        const { title, firstName, lastName, email, phone, password, role } = parsed.data
+        const { fullName, email, phone, password, role } = parsed.data
         const normalizedEmail = email.toLowerCase()
-        const fullName = `${firstName} ${lastName}`
         const supabase = await createSupabaseServerClient()
 
         const { data: existingProfile, error: profileCheckError } = await supabase
@@ -29,7 +28,7 @@ export async function POST(req: NextRequest) {
             password,
             options: {
                 emailRedirectTo: `${origin}/api/auth/callback`,
-                data: { title, full_name: fullName, first_name: firstName, last_name: lastName, phone, role },
+                data: { full_name: fullName, phone, role },
             },
         })
 
@@ -46,8 +45,6 @@ export async function POST(req: NextRequest) {
             id: authData.user.id,
             email: normalizedEmail,
             fullName,
-            firstName,
-            lastName,
             role,
             profile: {
                 dateOfBirth: "",

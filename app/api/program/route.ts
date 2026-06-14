@@ -7,21 +7,14 @@ import {
     type CourseRow,
 } from "@/lib/api/course-program"
 
-async function getDegreeIdsForFilters(
+async function getDegreeIdsForLevel(
     supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-    filters: { levelId?: string; intakeDate?: string }
+    levelId: string
 ): Promise<string[]> {
-    let query = supabase.from("degree").select("id")
-
-    if (filters.levelId) {
-        query = query.eq("level_id", filters.levelId)
-    }
-
-    if (filters.intakeDate) {
-        query = query.eq("intake_date", filters.intakeDate)
-    }
-
-    const { data, error } = await query
+    const { data, error } = await supabase
+        .from("degree")
+        .select("id")
+        .eq("level_id", levelId)
 
     if (error) {
         throw error
@@ -38,7 +31,6 @@ export async function GET(req: NextRequest) {
         const parsed = ProgramListQuerySchema.safeParse({
             search: searchParams.get("search") ?? undefined,
             level_id: searchParams.get("level_id") ?? undefined,
-            intake_date: searchParams.get("intake_date") ?? undefined,
             limit: searchParams.get("limit") ?? undefined,
             offset: searchParams.get("offset") ?? undefined,
         })
@@ -50,27 +42,24 @@ export async function GET(req: NextRequest) {
             )
         }
 
-        const { search, level_id, intake_date, limit, offset } = parsed.data
+        const { search, level_id, limit, offset } = parsed.data
         const searchTerm = search?.trim()
 
         let matchingDegreeIds: string[] = []
-        let filterDegreeIds: string[] | null = null
+        let levelDegreeIds: string[] | null = null
 
-        if (level_id || intake_date) {
+        if (level_id) {
             try {
-                filterDegreeIds = await getDegreeIdsForFilters(supabase, {
-                    levelId: level_id,
-                    intakeDate: intake_date,
-                })
-            } catch (filterError) {
-                console.error("degree filter error:", filterError)
+                levelDegreeIds = await getDegreeIdsForLevel(supabase, level_id)
+            } catch (levelError) {
+                console.error("level filter error:", levelError)
                 return NextResponse.json(
-                    { error: "Failed to filter programs", details: filterError },
+                    { error: "Failed to filter by level", details: levelError },
                     { status: 500 }
                 )
             }
 
-            if (filterDegreeIds.length === 0) {
+            if (levelDegreeIds.length === 0) {
                 return NextResponse.json({
                     data: [],
                     pagination: { total: 0, limit, offset, hasMore: false },
@@ -102,8 +91,8 @@ export async function GET(req: NextRequest) {
                 .from("course")
                 .select(COURSE_SELECT, { count: "exact" })
 
-            if (filterDegreeIds) {
-                query = query.in("degree_id", filterDegreeIds)
+            if (levelDegreeIds) {
+                query = query.in("degree_id", levelDegreeIds)
             }
 
             if (searchTerm) {

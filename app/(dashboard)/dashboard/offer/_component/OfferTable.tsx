@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useMemo, useState } from "react"
+import React, { useMemo } from "react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -15,9 +15,8 @@ import {
     TableCell,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, AlertCircle, Loader2, Copy, Check } from "lucide-react"
+import { ChevronLeft, ChevronRight, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
-import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 export type OfferRow = {
@@ -62,25 +61,6 @@ export const OfferTable = React.memo(function OfferTable({
     searchQuery,
     onRetry,
 }: Props) {
-    const [copiedOfferId, setCopiedOfferId] = useState<string | null>(null)
-
-    const handleCopySignLink = useCallback(async (offer: OfferRow) => {
-        if (!offer.application?.student?.id) {
-            toast.error("Student data not available for this offer")
-            return
-        }
-        const signLink = `${window.location.origin}/sign?user_id=${offer.application.student.id}&offer_id=${offer.id}`
-        try {
-            await navigator.clipboard.writeText(signLink)
-            setCopiedOfferId(offer.id)
-            toast.success("Sign link copied to clipboard!")
-            setTimeout(() => setCopiedOfferId(null), 2000)
-        } catch (err) {
-            console.error("Failed to copy link:", err)
-            toast.error("Failed to copy link")
-        }
-    }, [])
-
     const filteredOffers = useMemo(() => {
         if (!searchQuery) return offers
         const s = searchQuery.toLowerCase()
@@ -263,29 +243,16 @@ export const OfferTable = React.memo(function OfferTable({
                                         </TableCell>
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
-                                    asChild
-                                >
-                                    <Link href={`/dashboard/offer/${offer.id}`}>
-                                        View
-                                    </Link>
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    className="h-9 px-3 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg transition-all shadow-sm"
-                                    onClick={() => handleCopySignLink(offer)}
-                                >
-                                    {copiedOfferId === offer.id ? (
-                                        <Check className="size-4" />
-                                    ) : (
-                                        <Copy className="size-4" />
-                                    )}
-                                </Button>
-                            </div>
-                        </TableCell>
+                                            <Button
+                                                variant="outline"
+                                                className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
+                                                asChild
+                                            >
+                                                <Link href={`/dashboard/offer/${offer.id}`}>
+                                                    View
+                                                </Link>
+                                            </Button>
+                                        </TableCell>
                                     </TableRow>
                                 )
                             })

@@ -7,10 +7,8 @@ export const DEGREES_QUERY_KEYS = {
 
 export type DegreeOption = Pick<
     Tables<"degree">,
-    "id" | "name" | "credits" | "location" | "language_of_study" | "duration" | "level_id"
-> & {
-    level: Pick<Tables<"levels">, "id" | "name"> | null
-}
+    "id" | "name" | "credits" | "location" | "language_of_study" | "duration"
+>
 
 async function fetchDegreesClient(): Promise<DegreeOption[]> {
     const res = await fetch("/api/degree")

@@ -59,7 +59,7 @@ const sidebarRoutes = [
         label: 'View Student',
         href: '/dashboard/student',
         icon: Eye,
-        allowFor: [Role.AGENT, Role.UNIVERSITY],
+        allowFor: [Role.AGENT],
       },
     ],
   },
@@ -187,7 +187,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const routes = filterByRole(sidebarRoutes, role);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-transparent app-bg">
+    <div className="flex h-screen bg-transparent app-bg">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -242,7 +242,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         })}
       </Sidebar>
 
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Navbar
           userName={currentUser?.fullName ?? 'John Doe'}
           userRole={currentUser?.role ?? 'STUDENT'}
@@ -252,13 +252,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           isSidebarOpen={sidebarOpen}
         />
 
-        <main className="flex-1 relative overflow-y-auto overflow-x-auto">
+        <main className="flex-1 overflow-y-auto relative">
           {/* Fixed Background Layer */}
           <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
             <div
               className="absolute inset-0"
               style={{
-                backgroundColor: "#faf8ff",
+                backgroundColor: "#f0f4fe",
                 // backgroundImage: 'url("/bg-pattern.png")',
                 // backgroundSize: 'cover',
                 // backgroundPosition: 'center',
@@ -266,7 +266,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             />
           </div>
 
-          <div className="relative z-10 p-4 sm:p-6 max-w-[1400px] mx-auto w-full min-w-0">
+          {/* Page Content */}
+          <div className="relative z-10 p-4 sm:p-6 max-w-[1400px] mx-auto w-full">
             {children}
           </div>
         </main>

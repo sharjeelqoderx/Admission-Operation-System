@@ -4,9 +4,7 @@ import { NextRequest, NextResponse } from "next/server"
 export async function proxy(req: NextRequest) {
     const res = NextResponse.next()
     const supabase = await createSupabaseMiddlewareClient(req, res)
-    const { data: { user } } = supabase
-        ? await supabase.auth.getUser()
-        : { data: { user: null } }
+    const { data: { user } } = await supabase.auth.getUser()
 
     const path = req.nextUrl.pathname
 
@@ -23,7 +21,7 @@ export async function proxy(req: NextRequest) {
         }
     }
 
-    // Not logged in (or Supabase env missing) → handle redirects or API 401s
+    // Not logged in → handle redirects or API 401s
     if (!user && (
         path.startsWith("/dashboard") ||
         path.startsWith("/onboarding") ||

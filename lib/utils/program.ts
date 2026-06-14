@@ -37,9 +37,6 @@ export function formatProgramDate(value?: string | null): string {
 export function formatIntakeDate(value?: string | null): string {
     if (!value) return "N/A"
 
-    if (value === "summer") return "Summer"
-    if (value === "winter") return "Winter"
-
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return value
 

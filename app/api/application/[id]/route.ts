@@ -1,6 +1,5 @@
-import { NextRequest, NextResponse } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { formatFullName, withProfileDisplayName } from "@/lib/utils/profile"
+import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(
     req: NextRequest,
@@ -26,7 +25,7 @@ export async function GET(
             .from("application")
             .select(`
                 *,
-                student:profile_id ( id, first_name, last_name, avatar_url, email, date_of_birth, gender ),
+                student:profile_id ( id, name, avatar_url, email, date_of_birth, gender ),
                 course:course_id (
                     id,
                     name,
@@ -43,7 +42,7 @@ export async function GET(
                     )
                 ),
                 university:university_id ( * ),
-                agent:submitted_by_profile_id ( id, first_name, last_name ),
+                agent:submitted_by_profile_id ( id, name ),
                 documents:application_document (
                     document:document_id (
                         id,
@@ -71,15 +70,7 @@ export async function GET(
             return NextResponse.json({ error: "Application not found" }, { status: 404 });
         }
 
-        const mappedApplication = application
-            ? {
-                ...application,
-                student: withProfileDisplayName(application.student as { first_name?: string | null; last_name?: string | null } | null),
-                agent: withProfileDisplayName(application.agent as { first_name?: string | null; last_name?: string | null } | null),
-            }
-            : application;
-
-        return NextResponse.json({ data: mappedApplication }, { status: 200 });
+        return NextResponse.json({ data: application }, { status: 200 });
     } catch (e) {
         console.error("GET /api/application/[id] error:", e);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

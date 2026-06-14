@@ -205,26 +205,3 @@
     @apply flex justify-center items-center flex-col;
   }
 }
-
-/* Phone Input Dropdown: Extreme Z-Index */
-.react-phone-input-2 {
-  z-index: 9999999999 !important;
-}
-.react-phone-input-2 .form-control {
-  z-index: 9999999999 !important;
-}
-.react-phone-input-2 .flag-dropdown {
-  z-index: 9999999999 !important;
-}
-.react-phone-input-2 .country-list {
-  z-index: 99999999999 !important;
-  position: fixed !important;
-}
-.react-phone-input-2 .country-list .country.highlight {
-  background-color: #F3F4F6 !important;
-}
-
-/* Ensure no parent clips dropdown */
-.search-emoji {
-  display: none;
-}

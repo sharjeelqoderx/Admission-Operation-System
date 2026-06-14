@@ -91,9 +91,7 @@ export const academicRecordSchema = z
     })
 
 export const StudentFormSchema = z.object({
-    title: z.string().optional(),
-    first_name: z.string().min(2, "First name is required"),
-    last_name: z.string().min(2, "Last name is required"),
+    full_name: z.string().min(2, "Full name is required"),
     email: z.string().email("Valid email is required"),
     phone: z.string().min(1, "Phone is required"),
     dob: z.string().min(1, "Date of birth is required"),
@@ -109,8 +107,6 @@ export const StudentFormSchema = z.object({
 
     avatar_url: optionalUploadFileSchema,
     passport_file_url: optionalUploadFileSchema,
-    cv_file: optionalUploadFileSchema,
-    resume_file: optionalUploadFileSchema,
 })
 
 export type StudentInput = z.infer<typeof StudentFormSchema>

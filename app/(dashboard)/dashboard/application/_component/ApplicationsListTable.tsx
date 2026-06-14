@@ -17,8 +17,6 @@ import { ChevronLeft, ChevronRight, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
 import { cn } from "@/lib/utils"
-import { Progress } from "@/components/ui/progress"
-import { ApplicationStatus } from "@/components/shared/StatusBadge"
 
 export type ApplicationRow = {
     id: string
@@ -39,11 +37,6 @@ export type ApplicationRow = {
         degree?: { id: string; name: string; fees?: string | null; intake_date?: string | null } | null
     } | null
     agent: { id: string; name: string | null } | null
-    offer_shared?: boolean
-    offer_status?: string | null
-    documents_uploaded_count?: number
-    total_required_documents?: number
-    document_vault_percentage?: number
 }
 
 type Props = {
@@ -67,66 +60,6 @@ function getApplicationNumber(app: ApplicationRow) {
     return app.application_no ?? `APP-${app.id.slice(0, 8).toUpperCase()}`
 }
 
-function getDocumentVaultHref(
-    app: ApplicationRow,
-    variant: "degree" | "student",
-    fallbackStudentId?: string
-): string | null {
-    const studentId = app.student?.id ?? fallbackStudentId
-
-    if (!studentId) return null
-
-    if (variant === "student") {
-        return `/dashboard/document/student/${studentId}`
-    }
-
-    const degreeId = app.course?.degree?.id
-    if (!degreeId) return null
-
-    return `/dashboard/document/student/${studentId}/degree/${degreeId}`
-}
-
-export function DocumentVaultCell({
-    app,
-    variant = "degree",
-    fallbackStudentId,
-}: {
-    app: ApplicationRow
-    variant?: "degree" | "student"
-    fallbackStudentId?: string
-}) {
-    const href = getDocumentVaultHref(app, variant, fallbackStudentId)
-    const content = (
-        <div className="flex flex-col gap-1.5">
-            <Typography as="span" className="text-sm font-bold text-brand-blue-text">
-                {app.document_vault_percentage ?? 0}%
-            </Typography>
-            <Progress
-                value={app.document_vault_percentage ?? 0}
-                className="h-1.5 w-24"
-            />
-            <Typography as="span" className="text-[11px] text-gray-500 font-light">
-                {app.documents_uploaded_count ?? 0}/{app.total_required_documents ?? 0} attached
-            </Typography>
-        </div>
-    )
-
-    if (!href) {
-        return content
-    }
-
-    return (
-        <Link
-            href={href}
-            scroll={false}
-            className="block rounded-lg p-2 -m-2 hover:bg-brand-secondary/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-secondary/40"
-            aria-label={`View documents for ${app.student?.name ?? "student"}`}
-        >
-            {content}
-        </Link>
-    )
-}
-
 export const ApplicationsListTable = React.memo(function ApplicationsListTable({
     applications,
     role = "AGENT",
@@ -143,13 +76,13 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
     const showExtendedProgramColumns = isStudent || isAgent
 
     const columnCount = useMemo(() => {
-        if (isStudent) return 9
-        if (isAgent) return 10
-        if (showAgentColumn) return 7
-        return 6
+        if (isStudent) return 8
+        if (isAgent) return 9
+        if (showAgentColumn) return 6
+        return 5
     }, [isStudent, isAgent, showAgentColumn])
 
-    const tableMinWidth = isAgent ? "min-w-[1320px]" : "min-w-[1020px]"
+    const tableMinWidth = isAgent ? "min-w-[1200px]" : "min-w-[900px]"
 
     if (isLoading) {
         return (
@@ -245,9 +178,6 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                     Agent
                                 </TableHead>
                             )}
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase min-w-[140px]">
-                                Document Vault
-                            </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Status
                             </TableHead>
@@ -372,19 +302,8 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                             </TableCell>
                                         )}
 
-                                        <TableCell className="px-6 py-5 whitespace-nowrap min-w-[140px]">
-                                            <DocumentVaultCell app={app} />
-                                        </TableCell>
-
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <div className="flex flex-col gap-1.5">
-                                                <StatusBadge status={app.status} />
-                                                {app.offer_shared && (
-                                                    <StatusBadge
-                                                        status={ApplicationStatus.CONDITIONAL_LETTER_ISSUED}
-                                                    />
-                                                )}
-                                            </div>
+                                            <StatusBadge status={app.status} />
                                         </TableCell>
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">

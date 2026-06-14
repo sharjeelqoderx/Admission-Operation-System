@@ -37,14 +37,11 @@ export const BluryCard = ({
     return (
         <Card
             className={cn(
-                "relative bg-brand-secondary/3 ring-0 border-x border-white/40 rounded-l-lg rounded-r-lg overflow-visible",
+                "relative overflow-hidden bg-brand-secondary/3 ring-0 border-x border-white/40 rounded-l-lg rounded-r-lg",
                 sharpClasses,
                 (!backgroundImage ? blurAmount : ''),
                 className
             )}
-            style={{
-                zIndex: 1
-            }}
         >
             <div className={cn("absolute inset-0 z-0", blendColorClass)}>
                 {backgroundImage && (
@@ -72,9 +69,6 @@ export const BluryCard = ({
                         ? "flex flex-col items-center justify-center text-center"
                         : "block"
                 )}
-                style={{
-                    zIndex: 2
-                }}
             >
                 {children}
             </div>

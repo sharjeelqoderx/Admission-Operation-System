@@ -3,62 +3,6 @@ import {
   buildDbBedingteZuLetterHeaderHtml,
 } from "@/components/shared/db-bedingte-zu/letter-header-footer"
 
-export type LetterType =
-  | "business_administration"
-  | "international_business"
-  | "digital_business"
-  | "media_management"
-  | "tourism_management"
-  | "sport_management"
-  | "event_management"
-  | "health_management"
-  | "psychology"
-
-export const LETTER_CONFIGS: Record<
-  LetterType,
-  {
-    courseNameEN: string
-    courseNameDE: string
-  }
-> = {
-  business_administration: {
-    courseNameEN: "Business Administration",
-    courseNameDE: "Betriebswirtschaftslehre",
-  },
-  international_business: {
-    courseNameEN: "International Business",
-    courseNameDE: "Internationales Wirtschaften",
-  },
-  digital_business: {
-    courseNameEN: "Digital Business",
-    courseNameDE: "Digitale Wirtschaft",
-  },
-  media_management: {
-    courseNameEN: "Media Management",
-    courseNameDE: "Medienmanagement",
-  },
-  tourism_management: {
-    courseNameEN: "Tourism Management",
-    courseNameDE: "Tourismusmanagement",
-  },
-  sport_management: {
-    courseNameEN: "Sport Management",
-    courseNameDE: "Sportmanagement",
-  },
-  event_management: {
-    courseNameEN: "Event Management",
-    courseNameDE: "Eventmanagement",
-  },
-  health_management: {
-    courseNameEN: "Health Management",
-    courseNameDE: "Gesundheitsmanagement",
-  },
-  psychology: {
-    courseNameEN: "Psychology",
-    courseNameDE: "Psychologie",
-  },
-}
-
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -87,7 +31,6 @@ export function buildDbBedingteZuLetterHtml(params: {
   programWindow: string
   registrationWindow: string
   universityName?: string
-  letterType: LetterType
 }) {
   const {
     origin,
@@ -107,6 +50,9 @@ export function buildDbBedingteZuLetterHtml(params: {
     website: "https://www.fh-mittelstand.de",
     email: "info@fh-mittelstand.de",
   })
+
+  const stampSrc = `${origin}/db-bedingte-zu/conditional-letter-stamp.png`
+  const signatureSrc = `${origin}/db-bedingte-zu/signature.png`
 
   const page1Body = `
       ${header}
@@ -172,15 +118,15 @@ export function buildDbBedingteZuLetterHtml(params: {
         <span style="font-weight:800;">${escapeHtml(universityName)}</span>
       </div>
 
-      <div style="display:flex;align-items:flex-end;gap:24px;margin-top:18px;">
-        <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;">
-          <img src="${origin}/assets/signature.jpg" alt="Signature" style="height:60px;width:auto;object-fit:contain;" />
-          <div style="font-size:10px;color:#6b7280;">
-            Prof. Dr. Volker Wittberg<br/>
-            Prorektor Internationales
-          </div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-top:18px;">
+        <div style="font-size:10px;color:#6b7280;">
+          Prof. Dr. Volker Wittberg<br/>
+          Prorektor Internationales
         </div>
-        <img src="${origin}/assets/conditional-letter-stamp.png" alt="Stamp" style="height:140px;width:auto;object-fit:contain;" />
+        <div style="display:flex;align-items:flex-end;gap:12px;">
+          <img src="${signatureSrc}" alt="Signature" style="height:44px;width:auto;object-fit:contain;mix-blend-mode:multiply;"/>
+          <img src="${stampSrc}" alt="Stamp" style="height:64px;width:auto;object-fit:contain;"/>
+        </div>
       </div>
     `
 
@@ -241,15 +187,15 @@ export function buildDbBedingteZuLetterHtml(params: {
 
       <div style="height:20px;"></div>
 
-      <div style="display:flex;align-items:flex-end;gap:24px;">
-        <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;">
-          <img src="${origin}/assets/signature.jpg" alt="Signature" style="height:60px;width:auto;object-fit:contain;" />
-          <div style="font-size:11px;color:#111827;line-height:1.7;">
-            With kind regards,<br/>
-            <span style="font-weight:800;">${escapeHtml(universityName)}</span>
-          </div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;">
+        <div style="font-size:11px;color:#111827;line-height:1.7;">
+          With kind regards,<br/>
+          <span style="font-weight:800;">${escapeHtml(universityName)}</span>
         </div>
-        <img src="${origin}/assets/conditional-letter-stamp.png" alt="Stamp" style="height:140px;width:auto;object-fit:contain;" />
+        <div style="display:flex;align-items:flex-end;gap:12px;">
+          <img src="${signatureSrc}" alt="Signature" style="height:44px;width:auto;object-fit:contain;mix-blend-mode:multiply;"/>
+          <img src="${stampSrc}" alt="Stamp" style="height:64px;width:auto;object-fit:contain;"/>
+        </div>
       </div>
     `
 
@@ -328,7 +274,7 @@ export function buildDbBedingteZuLetterHtml(params: {
         width: 100%;
         height: 100%;
         min-height: 1123px;
-        padding: 44px 44px 20px;
+        padding: 44px;
         display: flex;
         flex-direction: column;
       }
@@ -338,8 +284,8 @@ export function buildDbBedingteZuLetterHtml(params: {
       }
       .page-footer {
         flex-shrink: 0;
-        margin-top: 0;
-        padding-top: 8px;
+        margin-top: auto;
+        padding-top: 18px;
       }
       @media print {
         body { background: white; padding: 0; }

@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { StudentFormSchema } from "@/types/schemas/student"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
-import { formatFullName } from "@/lib/utils/profile"
-import { requiresApsRequirement } from "@/lib/utils/aps"
 
 export async function GET(req: NextRequest) {
     try {
@@ -69,7 +67,7 @@ export async function GET(req: NextRequest) {
                 if (searchTerm) {
                     const studentCode = s.student_code?.toLowerCase() || ""
                     const country = s.country?.toLowerCase() || ""
-                    const profileName = formatFullName(s.profile?.first_name, s.profile?.last_name).toLowerCase()
+                    const profileName = s.profile?.name?.toLowerCase() || ""
                     const profileEmail = s.profile?.email?.toLowerCase() || ""
 
                     return studentCode.includes(searchTerm) ||
@@ -87,51 +85,6 @@ export async function GET(req: NextRequest) {
             // Apply pagination
             const start = (page - 1) * limit
             students = students.slice(start, start + limit)
-
-            if (students.length > 0) {
-                const { count: totalDocumentTypes } = await supabase
-                    .from("document_type")
-                    .select("id", { count: "exact", head: true })
-
-                const profileIds = students.map((s) => s.profile_id)
-
-                const { data: documents } = await supabase
-                    .from("document")
-                    .select("profile_id, document_type_id")
-                    .in("profile_id", profileIds)
-                    .not("document_type_id", "is", null)
-
-                const uploadedByProfile = new Map<string, Set<string>>()
-                for (const doc of documents ?? []) {
-                    if (!doc.document_type_id) continue
-                    const existing = uploadedByProfile.get(doc.profile_id) ?? new Set<string>()
-                    existing.add(doc.document_type_id)
-                    uploadedByProfile.set(doc.profile_id, existing)
-                }
-
-                const total = totalDocumentTypes ?? 0
-
-                students = students.map((s) => {
-                    const documentsUploadedCount = uploadedByProfile.get(s.profile_id)?.size ?? 0
-                    const documentUploadPercentage =
-                        total > 0 ? Math.round((documentsUploadedCount / total) * 100) : 0
-
-                    const profile = s.profile
-                        ? {
-                            ...s.profile,
-                            name: formatFullName(s.profile.first_name, s.profile.last_name),
-                        }
-                        : s.profile
-
-                    return {
-                        ...s,
-                        profile,
-                        documents_uploaded_count: documentsUploadedCount,
-                        total_document_types: total,
-                        document_upload_percentage: documentUploadPercentage,
-                    }
-                })
-            }
         }
 
         if (error) {
@@ -175,9 +128,7 @@ export async function POST(req: NextRequest) {
         const academic_background = academicRaw ? JSON.parse(academicRaw) : []
 
         const validatedData = StudentFormSchema.parse({
-            title: getString("title") || undefined,
-            first_name: getString("first_name"),
-            last_name: getString("last_name"),
+            full_name: getString("full_name"),
             email: getString("email"),
             phone: getString("phone"),
             dob: getString("dob"),
@@ -191,8 +142,6 @@ export async function POST(req: NextRequest) {
             avatar_url: getFile("avatar_url"),
             passport_file_url: getFile("passport_file_url"),
             academic_background,
-            cv_file: getFile("cv_file"),
-            resume_file: getFile("resume_file"),
         })
 
         const { data: meProfile } = await supabase
@@ -236,17 +185,13 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: msg }, { status: 409 })
         }
 
-        const fullName = `${validatedData.first_name} ${validatedData.last_name}`
         const { data: authData, error: createUserError } =
             await supabase.auth.signUp({
                 email: validatedData.email,
                 password: "student@123",
                 options: {
                     data: {
-                        title: validatedData.title || "",
-                        full_name: fullName,
-                        first_name: validatedData.first_name,
-                        last_name: validatedData.last_name,
+                        full_name: validatedData.full_name,
                         role: "STUDENT",
                     },
                 },
@@ -286,9 +231,7 @@ export async function POST(req: NextRequest) {
             .from("profile")
             .upsert({
                 id: newUserId,
-                title: validatedData.title || null,
-                first_name: validatedData.first_name,
-                last_name: validatedData.last_name,
+                name: validatedData.full_name,
                 email: validatedData.email,
                 phone: validatedData.phone || null,
                 date_of_birth: validatedData.dob || null,
@@ -352,7 +295,6 @@ export async function POST(req: NextRequest) {
                 guardian_email: validatedData.guardian_email || null,
                 guardian_phone: validatedData.guardian_phone || null,
                 passport_file_url: passportUpload?.publicUrl ?? null,
-                aps_requirement: requiresApsRequirement(validatedData.country),
             },
             { onConflict: "profile_id" }
         )
@@ -411,8 +353,6 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        /* ---------------- CV + RESUME DOCUMENTS — handled separately ---------------- */
-
         /* ---------------- SUCCESS ---------------- */
         return NextResponse.json(
             {
@@ -422,7 +362,6 @@ export async function POST(req: NextRequest) {
             { status: 201 }
         )
     } catch (e: any) {
-        console.error("[POST /api/student] error:", e?.message ?? e)
         if (e?.name === "ZodError") {
             return NextResponse.json(
                 { error: "Validation failed", details: e.errors },
@@ -431,7 +370,7 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json(
-            { error: e?.message ?? "Internal Server Error" },
+            { error: "Internal Server Error" },
             { status: 500 }
         )
     }

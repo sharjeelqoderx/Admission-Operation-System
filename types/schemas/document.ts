@@ -18,10 +18,8 @@ export type DocumentInput = z.infer<typeof DocumentFormSchema>
 export type UploadedDocumentSummary = {
     document_id: string
     status: string
-    note: string | null
     files: Array<{ file_url: string; type: string | null }>
     created_at: string
-    updated_at: string | null
 }
 
 export type CourseRequiredDocument = {
@@ -73,7 +71,6 @@ export type DegreeDocumentBundle = {
 
 export const CourseDocumentUploadItemSchema = z.object({
     document_type_id: z.string().uuid(),
-    note: z.string().optional(),
     files: z.array(uploadFileSchema).min(1, "At least one file is required").max(2, "Maximum 2 files allowed"),
 })
 

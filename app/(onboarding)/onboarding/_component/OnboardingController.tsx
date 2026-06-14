@@ -14,18 +14,16 @@ import { PageLoader } from "@/components/shared/page-loader"
 import { Step1Basic } from "./step_1"
 import { Step2Academic } from "./step_2"
 import { Step3Work } from "./step_3"
-import { Step4Course } from "./step_4"
 import { AgentStep1 } from "./agent_step_1"
 import { AgentStep2 } from "./agent_step_2"
 import { AgentStep3 } from "./agent_step_3"
 
-type Step = "welcome" | "step1" | "step2" | "step3" | "step4"
+type Step = "welcome" | "step1" | "step2" | "step3"
 
 const STUDENT_STEPS = [
     { key: "step1", label: "Basic" },
     { key: "step2", label: "Academic" },
     { key: "step3", label: "Experience" },
-    { key: "step4", label: "Course" },
 ] as const
 
 const AGENT_STEPS = [
@@ -34,13 +32,13 @@ const AGENT_STEPS = [
     { key: "step3", label: "Contact" },
 ] as const
 
-const STEP_INDEX: Record<Step, number> = { welcome: -1, step1: 0, step2: 1, step3: 2, step4: 3 }
+const STEP_INDEX: Record<Step, number> = { welcome: -1, step1: 0, step2: 1, step3: 2 }
 
 const STUDENT_TITLES: Record<Step, string> = {
-    welcome: "", step1: "Basic Information", step2: "Academic Background", step3: "Work Experience", step4: "Select Course (Optional)",
+    welcome: "", step1: "Basic Information", step2: "Academic Background", step3: "Work Experience",
 }
 const AGENT_TITLES: Record<Step, string> = {
-    welcome: "", step1: "Agent Profile", step2: "KYC / Verification", step3: "Contact", step4: "",
+    welcome: "", step1: "Agent Profile", step2: "KYC / Verification", step3: "Contact",
 }
 
 function Stepper({ step, isAgent }: { step: Step; isAgent: boolean }) {
@@ -50,7 +48,7 @@ function Stepper({ step, isAgent }: { step: Step; isAgent: boolean }) {
         <div className="space-y-6">
             <div className="space-y-2">
                 <Typography font="small" className="text-brand-blue uppercase">
-                    Step {String(current + 1).padStart(2, "0")} of {isAgent ? "03" : "04"}
+                    Step {String(current + 1).padStart(2, "0")} of 03
                 </Typography>
 
                 <Typography as="h2" font="sub-heading" className="font-bold">
@@ -155,10 +153,7 @@ function OnboardingControllerInner() {
                         />
                     )}
                     {!isAgent && step === "step3" && (
-                        <Step3Work onBack={() => navigate("step2")} onNext={() => navigate("step4")} onSkip={() => navigate("step4")} />
-                    )}
-                    {!isAgent && step === "step4" && (
-                        <Step4Course onBack={() => navigate("step3")} />
+                        <Step3Work onBack={() => navigate("step2")} />
                     )}
 
                     {isAgent && step === "step1" && (

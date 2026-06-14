@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { useInfiniteQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -10,7 +10,6 @@ import { Search, SlidersHorizontal, AlertCircle } from "lucide-react"
 import { ProgramCard, InfiniteLoader } from "./_component/ProgramCard"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useLevels } from "@/hooks/useLevels"
-import { getLevelPriority } from "@/lib/utils/levels"
 import { Button } from "@/components/ui/button"
 import { PageLoader } from "@/components/shared/page-loader"
 import type { ProgramListResponse } from "@/types/schemas/program"
@@ -23,32 +22,9 @@ export default function ProgramDashboard() {
 
     const urlSearch = searchParams.get("search") || ""
     const levelId = searchParams.get("level_id") || "ALL"
-    const intakeSeason = searchParams.get("intake_date") || "ALL"
 
     const [localSearch, setLocalSearch] = useState(urlSearch)
     const debouncedSearch = useDebounce(localSearch, 600)
-
-    // Fetch user
-    const { data: user } = useQuery({
-        queryKey: ["me"],
-        queryFn: async () => {
-            const res = await fetch("/api/me")
-            if (!res.ok) throw new Error("Failed to fetch user")
-            return res.json()
-        },
-    })
-
-    // Fetch student details if user is student
-    const { data: studentDetails } = useQuery({
-        queryKey: ["student", user?.data?.id],
-        queryFn: async () => {
-            if (!user?.data?.id) return null
-            const res = await fetch(`/api/student/${user.data.id}`)
-            if (!res.ok) throw new Error("Failed to fetch student")
-            return res.json()
-        },
-        enabled: !!user?.data?.id && user?.data?.role === "STUDENT",
-    })
 
     const { data: levels = [], isLoading: levelsLoading } = useLevels()
 
@@ -73,12 +49,11 @@ export default function ProgramDashboard() {
         isError,
         refetch,
     } = useInfiniteQuery<ProgramListResponse>({
-        queryKey: ["programs", urlSearch, levelId, intakeSeason],
+        queryKey: ["programs", urlSearch, levelId],
         queryFn: async ({ pageParam = 0 }) => {
             const params = new URLSearchParams()
             if (urlSearch) params.set("search", urlSearch)
             if (levelId !== "ALL") params.set("level_id", levelId)
-            if (intakeSeason !== "ALL") params.set("intake_date", intakeSeason)
             params.set("limit", "10")
             params.set("offset", String(pageParam))
 
@@ -120,42 +95,10 @@ export default function ProgramDashboard() {
         router.push(`${pathname}?${params.toString()}`)
     }
 
-    const updateIntakeSeason = (val: string) => {
-        const params = new URLSearchParams(searchParams.toString())
-        if (val && val !== "ALL") params.set("intake_date", val)
-        else params.delete("intake_date")
-        router.push(`${pathname}?${params.toString()}`)
-    }
-
-    const allPrograms = useMemo(() => {
-        let programs = data?.pages.flatMap((page) => page.data) ?? [];
-
-        if (user?.data?.role === "STUDENT") {
-            // Find highest level priority from student's education
-            let highestLevelPriority = 0;
-            if (studentDetails?.data?.education && Array.isArray(studentDetails.data.education)) {
-                for (const edu of studentDetails.data.education) {
-                    if (edu?.qualification_degree?.level?.name) {
-                        const levelPriority = getLevelPriority(edu.qualification_degree.level.name);
-                        if (levelPriority > highestLevelPriority) {
-                            highestLevelPriority = levelPriority;
-                        }
-                    }
-                }
-            }
-
-            if (highestLevelPriority > 0) {
-                // Filter courses where course's level is higher than highestLevelPriority
-                programs = programs.filter((course) => {
-                    const courseLevelName = course?.degree?.level?.name;
-                    const courseLevelPriority = getLevelPriority(courseLevelName);
-                    return courseLevelPriority > highestLevelPriority;
-                });
-            }
-        }
-
-        return programs;
-    }, [data, user, studentDetails])
+    const allPrograms = useMemo(
+        () => data?.pages.flatMap((page) => page.data) ?? [],
+        [data]
+    )
 
     const isPageLoading = levelsLoading || isLoading || (isFetching && !isFetchingNextPage)
 
@@ -181,36 +124,21 @@ export default function ProgramDashboard() {
                     />
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex items-center gap-2 bg-white px-4 rounded-xl shadow-sm border border-gray-100 min-w-[200px]">
-                        <SlidersHorizontal size={18} className="text-gray-400 shrink-0" />
-                        <Select value={levelId} onValueChange={updateLevel} disabled={levelsLoading}>
-                            <SelectTrigger className="border-0 focus:ring-0 h-14 font-bold text-gray-700 bg-transparent">
-                                <SelectValue placeholder="All Levels" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-gray-100">
-                                <SelectItem value="ALL">All Levels</SelectItem>
-                                {levels.map((level) => (
-                                    <SelectItem key={level.id} value={level.id}>
-                                        {level.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div className="flex items-center gap-2 bg-white px-4 rounded-xl shadow-sm border border-gray-100 min-w-[180px]">
-                        <Select value={intakeSeason} onValueChange={updateIntakeSeason}>
-                            <SelectTrigger className="border-0 focus:ring-0 h-14 font-bold text-gray-700 bg-transparent">
-                                <SelectValue placeholder="All Intakes" />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-gray-100">
-                                <SelectItem value="ALL">All Intakes</SelectItem>
-                                <SelectItem value="summer">Summer</SelectItem>
-                                <SelectItem value="winter">Winter</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+                <div className="flex items-center gap-2 bg-white px-4 rounded-xl shadow-sm border border-gray-100 min-w-[240px]">
+                    <SlidersHorizontal size={18} className="text-gray-400 shrink-0" />
+                    <Select value={levelId} onValueChange={updateLevel} disabled={levelsLoading}>
+                        <SelectTrigger className="border-0 focus:ring-0 h-14 font-bold text-gray-700 bg-transparent">
+                            <SelectValue placeholder="All Levels" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-gray-100">
+                            <SelectItem value="ALL">All Levels</SelectItem>
+                            {levels.map((level) => (
+                                <SelectItem key={level.id} value={level.id}>
+                                    {level.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
 

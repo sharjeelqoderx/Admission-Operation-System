@@ -9,7 +9,6 @@ import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { PhoneInputComponent } from "@/components/ui/phone-input"
 import {
     Select,
     SelectContent,
@@ -72,9 +71,7 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
 
     const form = useForm({
         defaultValues: {
-            title: profile?.title || "",
-            first_name: profile?.first_name || "",
-            last_name: profile?.last_name || "",
+            full_name: profile?.name || "",
             email: profile?.email || "",
             phone: profile?.phone || "",
             password: "",
@@ -91,14 +88,10 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
             gpa: edu?.cumulative_gpa?.toString() || edu?.gpa?.toString() || "",
             avatar_url: undefined as unknown as File,
             passport_file_url: undefined as unknown as File,
-            cv_file: undefined as File | undefined,
-            resume_file: undefined as File | undefined,
         },
         onSubmit: async ({ value }) => {
             const fd = new FormData()
-            if (value.title) fd.set("title", value.title)
-            fd.set("first_name", value.first_name)
-            fd.set("last_name", value.last_name)
+            fd.set("full_name", value.full_name)
             fd.set("email", value.email)
             fd.set("phone", value.phone)
             if (value.password) fd.set("password", value.password)
@@ -115,8 +108,6 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
             fd.set("gpa", value.gpa)
             if (value.avatar_url) fd.set("avatar_url", value.avatar_url)
             if (value.passport_file_url) fd.set("passport_file_url", value.passport_file_url)
-            if (value.cv_file) fd.set("cv_file", value.cv_file)
-            if (value.resume_file) fd.set("resume_file", value.resume_file)
 
             await editStudent.mutateAsync({ id, data: fd as any })
             router.push(`/dashboard/student/${id}`)
@@ -126,7 +117,7 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
 
     return (
         <div className="space-y-8">
-            <div className="bg-white/5 p-8 relative overflow-visible">
+            <div className="bg-white/5 p-8 relative overflow-hidden">
                 <form id="edit-student-form" onSubmit={(e) => { e.preventDefault(); form.handleSubmit() }} className="space-y-12 relative z-10">
                     <FieldGroup className="space-y-10">
 
@@ -139,37 +130,10 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
                                 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
-                                    <div className="md:col-span-2">
-                                        <form.Field name="title">
-                                            {(field) => (
-                                                <F field={field} label="Title">
-                                                    <Select
-                                                        value={field.state.value}
-                                                        onValueChange={(v) => field.handleChange(v)}
-                                                    >
-                                                        <SelectTrigger id={field.name} className="h-12 bg-white border-none rounded-sm shadow-sm text-sm"><SelectValue placeholder="Select Title" /></SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="Mr">Mr</SelectItem>
-                                                            <SelectItem value="Mrs">Mrs</SelectItem>
-                                                            <SelectItem value="Ms">Ms</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </F>
-                                            )}
-                                        </form.Field>
-                                    </div>
-
-                                    <form.Field name="first_name">
+                                    <form.Field name="full_name">
                                         {(field) => (
-                                            <F field={field} label="First Name">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter first name" className="h-12 bg-white border-none rounded-sm shadow-sm focus:ring-1 focus:ring-purple-500 transition-all text-sm" />
-                                            </F>
-                                        )}
-                                    </form.Field>
-                                    <form.Field name="last_name">
-                                        {(field) => (
-                                            <F field={field} label="Last Name">
-                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter last name" className="h-12 bg-white border-none rounded-sm shadow-sm focus:ring-1 focus:ring-purple-500 transition-all text-sm" />
+                                            <F field={field} label="Full Name">
+                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter full name" className="h-12 bg-white border-none rounded-sm shadow-sm focus:ring-1 focus:ring-purple-500 transition-all text-sm" />
                                             </F>
                                         )}
                                     </form.Field>
@@ -185,11 +149,7 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                     <form.Field name="phone">
                                         {(field) => (
                                             <F field={field} label="Phone">
-                                                <PhoneInputComponent
-                                                    value={field.state.value}
-                                                    onChange={(value) => field.handleChange(value)}
-                                                    placeholder="Enter phone number"
-                                                />
+                                                <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter phone number" className="h-12 bg-white border-none rounded-sm shadow-sm focus:ring-1 focus:ring-purple-500 transition-all text-sm" />
                                             </F>
                                         )}
                                     </form.Field>
@@ -234,11 +194,7 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                 <form.Field name="guardian_phone">
                                     {(field) => (
                                         <F field={field} label="Contact Number">
-                                            <PhoneInputComponent
-                                                value={field.state.value}
-                                                onChange={(value) => field.handleChange(value)}
-                                                placeholder="Enter phone number"
-                                            />
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter phone number" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
                                         </F>
                                     )}
                                 </form.Field>
@@ -308,11 +264,7 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                 <form.Field name="phone">
                                     {(field) => (
                                         <F field={field} label="Parent/Guardian Phone">
-                                            <PhoneInputComponent
-                                                value={field.state.value}
-                                                onChange={(value) => field.handleChange(value)}
-                                                placeholder="+123-456-7890"
-                                            />
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="+123-456-7890" className="h-12 bg-white border-none rounded-sm shadow-sm text-sm" />
                                         </F>
                                     )}
                                 </form.Field>
@@ -347,42 +299,6 @@ function EditFormContent({ studentData, id }: { studentData: any; id: string }) 
                                         )}
                                     </form.Field>
                                 </div>
-
-                                <form.Field name="cv_file">
-                                    {(field) => (
-                                        <Field>
-                                            <FieldLabel>CV</FieldLabel>
-                                            <Input
-                                                id="cv_file"
-                                                type="file"
-                                                accept=".pdf,.doc,.docx"
-                                                onChange={(e) => {
-                                                    const file = e.target.files?.[0]
-                                                    if (file) field.handleChange(file)
-                                                }}
-                                                className="h-12 bg-white border-none rounded-sm shadow-sm text-sm"
-                                            />
-                                        </Field>
-                                    )}
-                                </form.Field>
-
-                                <form.Field name="resume_file">
-                                    {(field) => (
-                                        <Field>
-                                            <FieldLabel>Resume</FieldLabel>
-                                            <Input
-                                                id="resume_file"
-                                                type="file"
-                                                accept=".pdf,.doc,.docx"
-                                                onChange={(e) => {
-                                                    const file = e.target.files?.[0]
-                                                    if (file) field.handleChange(file)
-                                                }}
-                                                className="h-12 bg-white border-none rounded-sm shadow-sm text-sm"
-                                            />
-                                        </Field>
-                                    )}
-                                </form.Field>
                             </div>
                         </div>
 
