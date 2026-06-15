@@ -1093,12 +1093,12 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                 </div>
 
                                 <div className="space-y-4 sm:space-y-6 min-w-0">
-                                    <div className="grid grid-cols-1 sm:grid-cols-[minmax(120px,160px)_1fr_1fr] gap-4 sm:gap-6 min-w-0">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 min-w-0">
                                         <form.Field name="title">
                                             {(field) => (
-                                                <F field={field} label="Title">
+                                                <F field={field} label={mode === "create" ? "Title (Required)" : "Title"}>
                                                     <Select
-                                                        value={field.state.value}
+                                                        value={field.state.value || undefined}
                                                         onValueChange={(v) => {
                                                             field.handleChange(v)
                                                             const mappedGender = genderFromTitle(v)
@@ -1117,6 +1117,34 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                         </SelectContent>
                                                     </Select>
                                                 </F>
+                                            )}
+                                        </form.Field>
+
+                                        <form.Field name="gender">
+                                            {(field) => (
+                                                <form.Subscribe selector={(s) => s.values.title}>
+                                                    {(title) => {
+                                                        const derivedGender =
+                                                            genderFromTitle(String(title ?? "")) ??
+                                                            (field.state.value as "MALE" | "FEMALE" | undefined)
+                                                        return (
+                                                            <F field={field} label="Gender">
+                                                                <Select
+                                                                    value={derivedGender || undefined}
+                                                                    disabled
+                                                                >
+                                                                    <SelectTrigger className="h-12 w-full opacity-100">
+                                                                        <SelectValue placeholder="Select title first" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="MALE">Male</SelectItem>
+                                                                        <SelectItem value="FEMALE">Female</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </F>
+                                                        )
+                                                    }}
+                                                </form.Subscribe>
                                             )}
                                         </form.Field>
 
@@ -1196,26 +1224,6 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                 }}
                                                 placeholder="Select date of birth"
                                             />
-                                        </F>
-                                    )}
-                                </form.Field>
-
-                                <form.Field name="gender">
-                                    {(field) => (
-                                        <F field={field} label="Select Gender">
-                                            <Select
-                                                value={field.state.value || undefined}
-                                                onValueChange={(v) => {
-                                                    field.handleChange(v as "MALE" | "FEMALE")
-                                                    field.handleBlur()
-                                                }}
-                                            >
-                                                <SelectTrigger className="h-12 w-full"><SelectValue placeholder="Select your gender" /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="MALE">Male</SelectItem>
-                                                    <SelectItem value="FEMALE">Female</SelectItem>
-                                                </SelectContent>
-                                            </Select>
                                         </F>
                                     )}
                                 </form.Field>

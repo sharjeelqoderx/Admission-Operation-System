@@ -81,15 +81,38 @@ type MeUser = {
     } | null
 }
 
+function genderFromTitle(title: string): "MALE" | "FEMALE" | undefined {
+    switch (title) {
+        case "Mr":
+            return "MALE"
+        case "Mrs":
+        case "Ms":
+            return "FEMALE"
+        default:
+            return undefined
+    }
+}
+
+function formatGenderLabel(gender?: string) {
+    const normalized = gender?.toUpperCase()
+    if (normalized === "MALE") return "Male"
+    if (normalized === "FEMALE") return "Female"
+    if (normalized === "OTHER") return "Other"
+    return gender || "N/A"
+}
+
 function getProfileFormValues(user?: MeUser | null) {
+    const title = user?.title ?? ""
+    const storedGender = user?.profile?.gender?.toUpperCase() ?? ""
+
     return {
-        title: user?.title ?? "",
+        title,
         firstName: user?.firstName ?? "",
         lastName: user?.lastName ?? "",
         fullName: user?.fullName ?? "",
         phone: user?.phone ?? "",
         date_of_birth: user?.profile?.dateOfBirth ?? "",
-        gender: user?.profile?.gender ?? "",
+        gender: storedGender || genderFromTitle(title) || "",
         country: user?.profile?.country ?? "",
         state: user?.profile?.state ?? "",
         city: user?.profile?.city ?? "",
@@ -142,7 +165,9 @@ function buildStudentProfileFormData(
     fd.append("fullName", String(value.fullName ?? ""))
     fd.append("phone", String(value.phone ?? ""))
     fd.append("dob", String(value.date_of_birth ?? ""))
-    fd.append("gender", String(value.gender ?? "").toLowerCase())
+    const gender =
+        genderFromTitle(String(value.title ?? "")) ?? String(value.gender ?? "")
+    fd.append("gender", gender.toLowerCase())
     fd.append("country", String(value.country ?? ""))
     fd.append("state", String(value.state ?? ""))
     fd.append("city", String(value.city ?? ""))
@@ -467,8 +492,14 @@ export default function ProfilePage() {
                                     <F field={field} label="Title">
                                         {isEditingBasic ? (
                                             <Select
-                                                value={field.state.value}
-                                                onValueChange={(v) => field.handleChange(v)}
+                                                value={field.state.value || undefined}
+                                                onValueChange={(v) => {
+                                                    field.handleChange(v)
+                                                    const mappedGender = genderFromTitle(v)
+                                                    if (mappedGender) {
+                                                        field.form.setFieldValue("gender", mappedGender)
+                                                    }
+                                                }}
                                             >
                                                 <SelectTrigger className="h-12 bg-white/50 border-white/20"><SelectValue placeholder="Select Title" /></SelectTrigger>
                                                 <SelectContent>
@@ -570,25 +601,33 @@ export default function ProfilePage() {
  
                             <form.Field name="gender">
                                 {(field) => (
+                                    <form.Subscribe selector={(s) => s.values.title}>
+                                        {(title) => {
+                                            const derivedGender =
+                                                genderFromTitle(String(title ?? "")) ??
+                                                field.state.value?.toUpperCase()
+                                            return (
                                     <F field={field} label="Gender">
                                         {isEditingBasic ? (
                                             <Select
-                                                value={field.state.value?.toUpperCase()}
-                                                onValueChange={(v) => field.handleChange(v)}
+                                                value={derivedGender || undefined}
+                                                disabled
                                             >
-                                                <SelectTrigger className="h-12 bg-white/50 border-white/20"><SelectValue placeholder="Select Gender" /></SelectTrigger>
+                                                <SelectTrigger className="h-12 bg-white/50 border-white/20 opacity-100"><SelectValue placeholder="Select title first" /></SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="MALE">Male</SelectItem>
                                                     <SelectItem value="FEMALE">Female</SelectItem>
-                                                    <SelectItem value="OTHER">Other</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         ) : (
                                             <div className="p-3 bg-white/20 rounded-xl border border-white/20 min-h-12 flex items-center shadow-sm">
-                                                <Typography className="text-gray-800 font-semibold uppercase">{field.state.value || "N/A"}</Typography>
+                                                <Typography className="text-gray-800 font-semibold">{formatGenderLabel(derivedGender)}</Typography>
                                             </div>
                                         )}
                                     </F>
+                                            )
+                                        }}
+                                    </form.Subscribe>
                                 )}
                             </form.Field>
                         </div>

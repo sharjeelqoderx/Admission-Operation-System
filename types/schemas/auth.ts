@@ -249,6 +249,7 @@ export const studentProfileSchema = z.object({
 export const agentProfileSchema = z.object({
     first_name: z.string().trim().min(2).optional(),
     last_name: z.string().trim().min(2).optional(),
+    title: z.enum(["Mr", "Mrs", "Ms"]).optional(),
     agent_name: z.string().trim().min(2).optional(),
     contact_person_name: z.string().trim().min(2).optional(),
     contact_person_first_name: z.string().trim().min(2).optional(),

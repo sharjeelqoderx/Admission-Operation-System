@@ -117,8 +117,23 @@ export const StudentFormSchema = z.object({
 })
 
 export const StudentCreateFormSchema = StudentFormSchema.extend({
+    title: z.enum(["Mr", "Mrs", "Ms"], { message: "Title is required" }),
     passport_file_url: requiredUploadFileSchema,
     cv_file: requiredUploadFileSchema,
+}).superRefine((data, ctx) => {
+    const mappedGender =
+        data.title === "Mr"
+            ? "MALE"
+            : data.title === "Mrs" || data.title === "Ms"
+                ? "FEMALE"
+                : undefined
+    if (!mappedGender || data.gender !== mappedGender) {
+        ctx.addIssue({
+            path: ["gender"],
+            code: "custom",
+            message: "Select a title to set gender",
+        })
+    }
 })
 
 export type StudentInput = z.infer<typeof StudentFormSchema>

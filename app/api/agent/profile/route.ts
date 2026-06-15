@@ -113,6 +113,7 @@ export async function POST(req: NextRequest) {
         const body = {
             first_name: maybe("first_name"),
             last_name: maybe("last_name"),
+            title: maybe("title"),
             contact_person_first_name: maybe("contact_person_first_name"),
             contact_person_last_name: maybe("contact_person_last_name"),
             gender: maybe("gender"),
@@ -134,6 +135,7 @@ export async function POST(req: NextRequest) {
             .update({
                 ...(data.first_name && { first_name: data.first_name }),
                 ...(data.last_name && { last_name: data.last_name }),
+                ...(data.title && { title: data.title }),
                 gender: data.gender,
                 role: "AGENT",
             })

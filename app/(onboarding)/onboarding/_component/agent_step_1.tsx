@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { F, GENDERS } from "./_shared"
+import { F } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
 import { CountrySelect } from "@/components/shared/country-select"
 import { PageLoader } from "@/components/shared/page-loader"
@@ -26,7 +26,8 @@ const schema = z
         contactPersonFirstName: z.string().trim(),
         contactPersonLastName: z.string().trim(),
         sameAsAgentName: z.boolean(),
-        gender: z.enum(["male", "female", "other"], { message: "Select gender" }),
+        title: z.enum(["Mr", "Mrs", "Ms"], { message: "Select title" }),
+        gender: z.enum(["male", "female"]).or(z.literal("")),
         primaryBaseCountry: z.string().trim().min(2, "Country is required"),
         primaryBaseState: z.string().trim().min(2, "State is required"),
         primaryBaseCity: z.string().trim().min(2, "City is required"),
@@ -67,6 +68,14 @@ const schema = z
                 })
             }
         }
+        const mappedGender = genderFromTitle(data.title)
+        if (!mappedGender || data.gender !== mappedGender) {
+            ctx.addIssue({
+                path: ["gender"],
+                code: "custom",
+                message: "Select a title to set gender",
+            })
+        }
     })
 
 type AgentStep1Values = {
@@ -75,6 +84,7 @@ type AgentStep1Values = {
     contactPersonFirstName: string
     contactPersonLastName: string
     sameAsAgentName: boolean
+    title: string
     gender: string
     primaryBaseCountry: string
     primaryBaseState: string
@@ -101,6 +111,18 @@ function normalizeGender(value?: string) {
     return gender === "male" || gender === "female" || gender === "other" ? gender : ""
 }
 
+function genderFromTitle(title: string): "male" | "female" | undefined {
+    switch (title) {
+        case "Mr":
+            return "male"
+        case "Mrs":
+        case "Ms":
+            return "female"
+        default:
+            return undefined
+    }
+}
+
 function AgentStep1Form({
     defaultValues,
     onNext,
@@ -123,9 +145,11 @@ function AgentStep1Form({
             const fd = new FormData()
             fd.append("first_name", value.agentFirstName)
             fd.append("last_name", value.agentLastName)
+            if (value.title) fd.append("title", value.title)
             fd.append("contact_person_first_name", contactFirst)
             fd.append("contact_person_last_name", contactLast)
-            fd.append("gender", value.gender === "male" ? "MALE" : value.gender === "female" ? "FEMALE" : "")
+            const gender = genderFromTitle(value.title)
+            fd.append("gender", gender === "male" ? "MALE" : gender === "female" ? "FEMALE" : "")
             fd.append("country", value.primaryBaseCountry)
             fd.append("state", value.primaryBaseState)
             fd.append("city", value.primaryBaseCity)
@@ -146,6 +170,28 @@ function AgentStep1Form({
     return (
         <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+
+                <form.Field name="title">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="Title">
+                        <Select
+                            value={field.state.value || undefined}
+                            onValueChange={(v) => {
+                                field.handleChange(v)
+                                form.setFieldValue("gender", genderFromTitle(v) ?? "")
+                            }}
+                        >
+                            <SelectTrigger><SelectValue placeholder="Select title" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Mr">Mr</SelectItem>
+                                <SelectItem value="Mrs">Mrs</SelectItem>
+                                <SelectItem value="Ms">Ms</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </F>
+                    )
+                }}</form.Field>
 
                 <form.Field name="agentFirstName">{(field) => {
                     const { isInvalid, error } = getFieldState(field)
@@ -223,12 +269,22 @@ function AgentStep1Form({
                 <form.Field name="gender">{(field) => {
                     const { isInvalid, error } = getFieldState(field)
                     return (
+                    <form.Subscribe selector={(s) => s.values.title}>
+                        {(title) => {
+                            const derivedGender = genderFromTitle(title) ?? field.state.value
+                            return (
                     <F isInvalid={isInvalid} error={error} label="Gender">
-                        <Select value={field.state.value} onValueChange={field.handleChange}>
-                            <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
-                            <SelectContent>{GENDERS.map(g => <SelectItem key={g} value={g} className="capitalize">{g}</SelectItem>)}</SelectContent>
+                        <Select value={derivedGender || undefined} disabled>
+                            <SelectTrigger className="opacity-100"><SelectValue placeholder="Select title first" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="male">Male</SelectItem>
+                                <SelectItem value="female">Female</SelectItem>
+                            </SelectContent>
                         </Select>
                     </F>
+                            )
+                        }}
+                    </form.Subscribe>
                     )
                 }}</form.Field>
 
@@ -295,6 +351,7 @@ export function AgentStep1({ onNext }: { onNext: () => void; onSkip: () => void 
 
     const agentFirstName = meData?.firstName ?? ""
     const agentLastName = meData?.lastName ?? ""
+    const profileTitle = meData?.title ?? ""
 
     const agentProfile = meData?.profile as {
         contact_person_first_name?: string
@@ -320,7 +377,11 @@ export function AgentStep1({ onNext }: { onNext: () => void; onSkip: () => void 
         contactPersonFirstName: storedFirst || agentFirstName,
         contactPersonLastName: storedLast || agentLastName,
         sameAsAgentName,
-        gender: normalizeGender(agentProfile?.gender ?? meData?.profile?.gender),
+        title: profileTitle === "Mr" || profileTitle === "Mrs" || profileTitle === "Ms" ? profileTitle : ("" as AgentStep1Values["title"]),
+        gender:
+            normalizeGender(agentProfile?.gender ?? meData?.profile?.gender) ||
+            genderFromTitle(profileTitle) ||
+            "",
         primaryBaseCountry: agentProfile?.country ?? meData?.profile?.country ?? "",
         primaryBaseState: agentProfile?.state ?? meData?.profile?.state ?? "",
         primaryBaseCity: agentProfile?.city ?? meData?.profile?.city ?? "",
