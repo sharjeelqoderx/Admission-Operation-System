@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { fetchCourseProgramById } from "@/lib/api/course-program"
-import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
+import { upsertStudentDocument } from "@/lib/supabase/upsert-student-document"
+import { STUDENT_DOCUMENT_TYPE_IDS } from "@/lib/constants/document-types"
 
 export async function GET(
     req: NextRequest,
@@ -96,57 +97,30 @@ export async function POST(
         const { "student-id": studentId } = await params
         const formData = await req.formData()
 
-        const docFiles: { code: string; file: File }[] = [
-            { code: "CV", file: formData.get("cv_file") as File },
-            { code: "RESUME", file: formData.get("resume_file") as File },
+        const docFiles: { documentTypeId: string; file: File; storageSubpath: string }[] = [
+            {
+                documentTypeId: STUDENT_DOCUMENT_TYPE_IDS.CV,
+                file: formData.get("cv_file") as File,
+                storageSubpath: "cv",
+            },
+            {
+                documentTypeId: STUDENT_DOCUMENT_TYPE_IDS.PASSPORT,
+                file: formData.get("passport_file_url") as File,
+                storageSubpath: "passport",
+            },
         ].filter((d) => d.file instanceof File)
 
         if (!docFiles.length) return NextResponse.json({ message: "No files provided" }, { status: 200 })
 
-        const { data: docTypes } = await supabase
-            .from("document_type")
-            .select("id, code")
-            .in("code", docFiles.map((d) => d.code))
-
-        for (const { code, file } of docFiles) {
-            const docType = (docTypes ?? []).find((d: any) => d.code === code)
-            if (!docType) continue
-
-            const { publicUrl } = await uploadPublicImage({
+        for (const { documentTypeId, file, storageSubpath } of docFiles) {
+            await upsertStudentDocument({
                 supabase,
-                bucket: "student-admission",
-                userId: `${studentId}/${code.toLowerCase()}`,
+                profileId: studentId,
+                uploadedByProfileId: user.id,
+                documentTypeId,
                 file,
+                storageSubpath,
             })
-
-            // Delete existing doc of same type
-            await supabase.from("document").delete()
-                .eq("profile_id", studentId)
-                .eq("document_type_id", docType.id)
-
-            const { data: docRecord } = await supabase
-                .from("document")
-                .insert({
-                    profile_id: studentId,
-                    uploaded_by_profile_id: user.id,
-                    document_type_id: docType.id,
-                })
-                .select()
-                .single()
-
-            if (docRecord) {
-                await supabase.from("document_files").insert({
-                    document_id: docRecord.id,
-                    file_url: publicUrl,
-                    type: "FRONT",
-                })
-                await supabase.from("document_review").insert({
-                    document_id: docRecord.id,
-                    reviewed_by_profile_id: null,
-                    status: "PENDING",
-                    feedback: null,
-                })
-            }
         }
 
         return NextResponse.json({ message: "Documents uploaded" }, { status: 201 })

@@ -10,6 +10,10 @@ const optionalUploadFileSchema = z
     ])
     .optional()
 
+const requiredUploadFileSchema = z
+    .instanceof(File, { message: "File is required" })
+    .refine(fileWithinSizeLimit, MAX_FILE_SIZE_ERROR_MESSAGE)
+
 export const academicRecordSchema = z
     .object({
         id: z.string().uuid().optional(),
@@ -110,7 +114,12 @@ export const StudentFormSchema = z.object({
     avatar_url: optionalUploadFileSchema,
     passport_file_url: optionalUploadFileSchema,
     cv_file: optionalUploadFileSchema,
-    resume_file: optionalUploadFileSchema,
+})
+
+export const StudentCreateFormSchema = StudentFormSchema.extend({
+    passport_file_url: requiredUploadFileSchema,
+    cv_file: requiredUploadFileSchema,
 })
 
 export type StudentInput = z.infer<typeof StudentFormSchema>
+export type StudentCreateInput = z.infer<typeof StudentCreateFormSchema>

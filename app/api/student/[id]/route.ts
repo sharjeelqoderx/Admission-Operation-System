@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server"
+import { upsertStudentDocument } from "@/lib/supabase/upsert-student-document"
+import { STUDENT_DOCUMENT_TYPE_IDS } from "@/lib/constants/document-types"
 import { formatFullName } from "@/lib/utils/profile"
 import { requiresApsRequirement } from "@/lib/utils/aps"
 
@@ -174,7 +176,6 @@ export async function PATCH(
             avatar_url: getFile("avatar_url"),
             passport_file_url: getFile("passport_file_url"),
             cv_file: getFile("cv_file"),
-            resume_file: getFile("resume_file"),
             academic,
         }
 
@@ -283,60 +284,27 @@ export async function PATCH(
             }
         }
 
-        // 4. Upsert CV + Resume documents if provided
-        const docFilesToUpsert = [
-            { code: "CV", file: data.cv_file },
-            { code: "RESUME", file: data.resume_file },
-        ].filter((d): d is { code: string; file: File } => d.file instanceof File)
+        // 4. Upsert CV + Passport documents if provided
+        if (data.cv_file instanceof File) {
+            await upsertStudentDocument({
+                supabase,
+                profileId: id,
+                uploadedByProfileId: user.id,
+                documentTypeId: STUDENT_DOCUMENT_TYPE_IDS.CV,
+                file: data.cv_file,
+                storageSubpath: "cv",
+            })
+        }
 
-        if (docFilesToUpsert.length > 0) {
-            const { data: docTypes } = await supabase
-                .from("document_type")
-                .select("id, code")
-                .in("code", docFilesToUpsert.map((d) => d.code))
-
-            for (const { code, file } of docFilesToUpsert) {
-                const docType = (docTypes ?? []).find((d: any) => d.code === code)
-                if (!docType) continue
-
-                const { publicUrl } = await (await import("@/lib/supabase/upload-public-image")).uploadPublicImage({
-                    supabase,
-                    bucket: "student-admission",
-                    userId: `${id}/${code.toLowerCase()}`,
-                    file,
-                })
-
-                // Delete existing and re-insert
-                await supabase
-                    .from("document")
-                    .delete()
-                    .eq("profile_id", id)
-                    .eq("document_type_id", docType.id)
-
-                const { data: docRecord } = await supabase
-                    .from("document")
-                    .insert({
-                        profile_id: id,
-                        uploaded_by_profile_id: user.id,
-                        document_type_id: docType.id,
-                    })
-                    .select()
-                    .single()
-
-                if (docRecord) {
-                    await supabase.from("document_files").insert({
-                        document_id: docRecord.id,
-                        file_url: publicUrl,
-                        type: "FRONT",
-                    })
-                    await supabase.from("document_review").insert({
-                        document_id: docRecord.id,
-                        reviewed_by_profile_id: null,
-                        status: "PENDING",
-                        feedback: null,
-                    })
-                }
-            }
+        if (data.passport_file_url instanceof File) {
+            await upsertStudentDocument({
+                supabase,
+                profileId: id,
+                uploadedByProfileId: user.id,
+                documentTypeId: STUDENT_DOCUMENT_TYPE_IDS.PASSPORT,
+                file: data.passport_file_url,
+                storageSubpath: "passport",
+            })
         }
 
         return NextResponse.json({ message: "Student updated successfully" }, { status: 200 })

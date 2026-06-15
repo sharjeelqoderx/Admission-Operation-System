@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { StudentFormSchema } from "@/types/schemas/student"
+import { StudentCreateFormSchema } from "@/types/schemas/student"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
+import { upsertStudentDocument } from "@/lib/supabase/upsert-student-document"
+import { STUDENT_DOCUMENT_TYPE_IDS } from "@/lib/constants/document-types"
 import { formatFullName } from "@/lib/utils/profile"
 import { requiresApsRequirement } from "@/lib/utils/aps"
 
@@ -159,7 +161,19 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const formData = await req.formData()
+        let formData: FormData
+        try {
+            formData = await req.formData()
+        } catch (parseError) {
+            console.error("[POST /api/student] formData parse error:", parseError)
+            return NextResponse.json(
+                {
+                    error:
+                        "Failed to read uploaded files. The request may be too large or the upload was interrupted.",
+                },
+                { status: 400 }
+            )
+        }
 
         const getString = (key: string) => {
             const v = formData.get(key)
@@ -174,7 +188,7 @@ export async function POST(req: NextRequest) {
         const academicRaw = getString("academic_background")
         const academic_background = academicRaw ? JSON.parse(academicRaw) : []
 
-        const validatedData = StudentFormSchema.parse({
+        const validatedData = StudentCreateFormSchema.parse({
             title: getString("title") || undefined,
             first_name: getString("first_name"),
             last_name: getString("last_name"),
@@ -192,7 +206,6 @@ export async function POST(req: NextRequest) {
             passport_file_url: getFile("passport_file_url"),
             academic_background,
             cv_file: getFile("cv_file"),
-            resume_file: getFile("resume_file"),
         })
 
         const { data: meProfile } = await supabase
@@ -411,7 +424,28 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        /* ---------------- CV + RESUME DOCUMENTS — handled separately ---------------- */
+        /* ---------------- CV + PASSPORT DOCUMENTS ---------------- */
+        if (validatedData.cv_file instanceof File) {
+            await upsertStudentDocument({
+                supabase,
+                profileId: newUserId,
+                uploadedByProfileId: user.id,
+                documentTypeId: STUDENT_DOCUMENT_TYPE_IDS.CV,
+                file: validatedData.cv_file,
+                storageSubpath: "cv",
+            })
+        }
+
+        if (validatedData.passport_file_url instanceof File) {
+            await upsertStudentDocument({
+                supabase,
+                profileId: newUserId,
+                uploadedByProfileId: user.id,
+                documentTypeId: STUDENT_DOCUMENT_TYPE_IDS.PASSPORT,
+                file: validatedData.passport_file_url,
+                storageSubpath: "passport",
+            })
+        }
 
         /* ---------------- SUCCESS ---------------- */
         return NextResponse.json(

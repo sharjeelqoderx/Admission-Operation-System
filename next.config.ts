@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
             process.env.SUPABASE_ANON_KEY ??
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     },
+    experimental: {
+        // Student create uploads CV + passport + avatar through proxy-matched /api/student
+        proxyClientMaxBodySize: "65mb",
+    },
 };
 
 export default nextConfig;
