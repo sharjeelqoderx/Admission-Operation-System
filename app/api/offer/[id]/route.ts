@@ -105,31 +105,31 @@ export async function GET(
             );
         }
 
+        type ProfileRelation = {
+            first_name?: string | null
+            last_name?: string | null
+        } | null
+
+        const pickProfile = (
+            value: ProfileRelation | ProfileRelation[] | null | undefined
+        ): ProfileRelation => (Array.isArray(value) ? value[0] ?? null : value ?? null)
+
+        const application = offer.application as unknown as (Record<string, unknown> & {
+            student?: ProfileRelation | ProfileRelation[] | null
+            university?: ProfileRelation | ProfileRelation[] | null
+            agent?: ProfileRelation | ProfileRelation[] | null
+        }) | null
+
         const mappedOffer = {
             ...offer,
-            application: offer.application
+            application: application
                 ? {
-                      ...offer.application,
-                      student: withProfileDisplayName(
-                          offer.application.student as {
-                              first_name?: string | null
-                              last_name?: string | null
-                          } | null
-                      ),
-                      university: withProfileDisplayName(
-                          offer.application.university as {
-                              first_name?: string | null
-                              last_name?: string | null
-                          } | null
-                      ),
-                      agent: withProfileDisplayName(
-                          offer.application.agent as {
-                              first_name?: string | null
-                              last_name?: string | null
-                          } | null
-                      ),
+                      ...application,
+                      student: withProfileDisplayName(pickProfile(application.student)),
+                      university: withProfileDisplayName(pickProfile(application.university)),
+                      agent: withProfileDisplayName(pickProfile(application.agent)),
                   }
-                : offer.application,
+                : application,
         };
 
         return NextResponse.json(

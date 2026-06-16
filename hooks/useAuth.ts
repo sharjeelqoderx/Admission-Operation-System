@@ -51,6 +51,8 @@ type AuthUserResponse = {
     fullName: string
     firstName: NonNullable<ProfileRow["first_name"]> | ""
     lastName: NonNullable<ProfileRow["last_name"]> | ""
+    title: NonNullable<ProfileRow["title"]> | ""
+    phone: NonNullable<ProfileRow["phone"]> | ""
     role: RoleEnum
     avatarUrl: NonNullable<ProfileRow["avatar_url"]> | ""
     role_profile: RoleBasedProfile
