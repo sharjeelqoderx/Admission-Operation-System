@@ -19,7 +19,7 @@ export function Sidebar({ children, className, isOpen = true }: SidebarProps) {
                 'md:w-64 md:static md:translate-x-0',
                 'fixed inset-y-0 left-0 z-50 w-64',
                 isOpen ? 'translate-x-0' : '-translate-x-full',
-                'bg-brand-byzantine/10',
+                'bg-[#f0e4ff]',
                 className
             )}
         >
