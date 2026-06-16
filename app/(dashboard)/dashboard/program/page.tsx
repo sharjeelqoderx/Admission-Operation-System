@@ -206,8 +206,8 @@ export default function ProgramDashboard() {
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-gray-100">
                                 <SelectItem value="ALL">All Intakes</SelectItem>
-                                <SelectItem value="summer">Summer</SelectItem>
-                                <SelectItem value="winter">Winter</SelectItem>
+                                <SelectItem value="summer">SUMMER</SelectItem>
+                                <SelectItem value="winter">WINTER</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { formatIntakeDate } from "@/lib/utils/program"
 
 export default function ApplicationDetailsPage() {
     const params = useParams()
@@ -167,7 +168,7 @@ export default function ApplicationDetailsPage() {
                                     <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Intake</Typography>
                                     <div className="flex items-center gap-2">
                                         <Clock className="size-4 text-gray-400" />
-                                        <Typography className="font-bold text-brand-secondary">{degree?.intake_date || "N/A"}</Typography>
+                                        <Typography className="font-bold text-brand-secondary">{formatIntakeDate(degree?.intake_date)}</Typography>
                                     </div>
                                 </div>
                                 <div className="space-y-1">

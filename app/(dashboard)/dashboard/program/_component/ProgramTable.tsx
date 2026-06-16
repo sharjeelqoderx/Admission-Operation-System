@@ -5,6 +5,7 @@ import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
 import { MapPin, Clock, Globe, ArrowLeft, ArrowRight, BookOpen, Layers } from "lucide-react"
 import Link from "next/link"
+import { formatIntakeDate } from "@/lib/utils/program"
 
 type ProgramRow = {
     id: string
@@ -75,7 +76,7 @@ export function ProgramTable({ rows, isLoading, isError, onRetry }: Props) {
                                 <span className="text-[#a855f7]">•</span>
                                 <span className="flex items-center gap-1">
                                     <BookOpen size={12} className="text-brand-byzantine" />
-                                    {program.intake_date ? `Intake: ${new Date(program.intake_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}` : "N/A"}
+                                    {`Intake: ${formatIntakeDate(program.intake_date)}`}
                                 </span>
                                 <span className="text-[#a855f7]">•</span>
                                 <span className="text-gray-500">Deadline: {program.deadline ? new Date(program.deadline).toLocaleDateString() : "Rolling"}</span>

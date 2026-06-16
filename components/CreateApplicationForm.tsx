@@ -1409,7 +1409,7 @@ function Step3({ form, studentDetails, allDocuments, courses, onBack, isSubmitti
                                                 ))}
                                                 {uniqueIntakes.length === 0 && (
                                                     <SelectItem value={field.state.value || "N/A"}>
-                                                        {field.state.value}
+                                                        {formatIntakeDate(field.state.value)}
                                                     </SelectItem>
                                                 )}
                                             </SelectContent>
