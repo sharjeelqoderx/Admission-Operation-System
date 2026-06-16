@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { withProfileDisplayName } from "@/lib/utils/profile";
 
 export async function GET(req: NextRequest) {
     try {
@@ -46,7 +47,8 @@ export async function GET(req: NextRequest) {
                         university_id,
                         student:profile_id (
                             id,
-                            name,
+                            first_name,
+                            last_name,
                             avatar_url,
                             email
                         ),
@@ -64,7 +66,8 @@ export async function GET(req: NextRequest) {
                         ),
                         university:university_id (
                             id,
-                            name
+                            first_name,
+                            last_name
                         )
                     )
                 `)
@@ -87,7 +90,16 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        let filtered = offers ?? [];
+        let filtered = (offers ?? []).map((offer: any) => ({
+            ...offer,
+            application: offer.application
+                ? {
+                      ...offer.application,
+                      student: withProfileDisplayName(offer.application.student),
+                      university: withProfileDisplayName(offer.application.university),
+                  }
+                : offer.application,
+        }));
 
         switch (profile.role) {
             case "STUDENT":

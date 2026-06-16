@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { withProfileDisplayName } from "@/lib/utils/profile";
 
 export async function GET(
     req: NextRequest,
@@ -43,7 +44,8 @@ export async function GET(
                     university_id,
                     student:profile_id (
                         id,
-                        name,
+                        first_name,
+                        last_name,
                         avatar_url,
                         email,
                         phone,
@@ -68,11 +70,13 @@ export async function GET(
                     ),
                     university:university_id (
                         id,
-                        name
+                        first_name,
+                        last_name
                     ),
                     agent:submitted_by_profile_id (
                         id,
-                        name,
+                        first_name,
+                        last_name,
                         email
                     ),
                     application_review (
@@ -101,8 +105,35 @@ export async function GET(
             );
         }
 
+        const mappedOffer = {
+            ...offer,
+            application: offer.application
+                ? {
+                      ...offer.application,
+                      student: withProfileDisplayName(
+                          offer.application.student as {
+                              first_name?: string | null
+                              last_name?: string | null
+                          } | null
+                      ),
+                      university: withProfileDisplayName(
+                          offer.application.university as {
+                              first_name?: string | null
+                              last_name?: string | null
+                          } | null
+                      ),
+                      agent: withProfileDisplayName(
+                          offer.application.agent as {
+                              first_name?: string | null
+                              last_name?: string | null
+                          } | null
+                      ),
+                  }
+                : offer.application,
+        };
+
         return NextResponse.json(
-            { data: offer },
+            { data: mappedOffer },
             { status: 200 }
         );
     } catch (e) {
