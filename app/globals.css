@@ -228,3 +228,36 @@
 .search-emoji {
   display: none;
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .document-template-print-target,
+  .document-template-print-target * {
+    visibility: visible;
+  }
+
+  .document-template-print-target {
+    position: absolute;
+    left: 0;
+    top: 0;
+    box-shadow: none !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+  }
+
+  .document-center-logo-placeholder {
+    display: none !important;
+  }
+}

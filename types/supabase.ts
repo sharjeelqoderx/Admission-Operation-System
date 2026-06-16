@@ -611,6 +611,47 @@ export type Database = {
           },
         ]
       }
+      document_template: {
+        Row: {
+          body_html: string
+          created_at: string
+          created_by_profile_id: string
+          id: string
+          is_deleted: boolean
+          title: string
+          updated_at: string
+          variables: Json
+        }
+        Insert: {
+          body_html?: string
+          created_at?: string
+          created_by_profile_id: string
+          id?: string
+          is_deleted?: boolean
+          title: string
+          updated_at?: string
+          variables?: Json
+        }
+        Update: {
+          body_html?: string
+          created_at?: string
+          created_by_profile_id?: string
+          id?: string
+          is_deleted?: boolean
+          title?: string
+          updated_at?: string
+          variables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_template_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_review: {
         Row: {
           created_at: string
