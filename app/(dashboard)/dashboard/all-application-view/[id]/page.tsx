@@ -65,8 +65,8 @@ export default function AllApplicationViewDetailsPage() {
     }, [offersResponse, id])
 
     const handleOfferCreated = useCallback(
-        (offerId: string) => {
-            router.push(`/dashboard/offer/${offerId}`)
+        () => {
+            router.push("/dashboard/all-application-view")
         },
         [router]
     )

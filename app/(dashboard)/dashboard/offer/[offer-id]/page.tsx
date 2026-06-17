@@ -36,13 +36,6 @@ import {
     formatStudyMode,
 } from "@/lib/utils/program"
 import {
-    buildDbBedingteZuLetterHtml,
-    buildDbBedingteZuLetterParamsFromOffer,
-    openDbBedingteZuLetterPreview,
-    LETTER_CONFIGS,
-    type LetterType,
-} from "@/components/shared/db-bedingte-zu/db-bedingte-zu"
-import {
     buildSignatureBlockHtml,
     buildTemplateOfferLetterHtml,
 } from "@/lib/offer/offer-letter-html"
@@ -160,8 +153,6 @@ export default function OfferDetailsPage() {
     const [isDrawing, setIsDrawing] = React.useState(false)
     const [hasSigned, setHasSigned] = React.useState(false)
     const [isSubmitting, setIsSubmitting] = React.useState(false)
-    const [isDownloadingConditionalLetter, setIsDownloadingConditionalLetter] =
-        React.useState(false)
     const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
 
     const fetchOffer = useCallback(async () => {
@@ -342,117 +333,11 @@ export default function OfferDetailsPage() {
     const offerStatus = String(offer?.status ?? "PENDING").toUpperCase()
     const isOfferSigned = offerStatus === "ACCEPTED" && Boolean(offer?.file_url)
     const canAcceptAndSign = !isOfferSigned && offerStatus !== "REJECTED"
-    const isDbBedingteZuEnabled = true
 
     const openSignModal = useCallback(() => {
         setHasSigned(false)
         setIsSignModalOpen(true)
     }, [])
-
-    const handleViewDbBedingteZuLetter = useCallback((letterType: LetterType) => {
-        if (!offer) return
-
-        const params = buildDbBedingteZuLetterParamsFromOffer(offer, window.location.origin)
-        const html = buildDbBedingteZuLetterHtml({ ...params, letterType })
-
-        const opened = openDbBedingteZuLetterPreview(html)
-        if (!opened) {
-            toast.error("Could not open preview. Please allow pop-ups for this site.")
-        }
-    }, [offer])
-
-    const handleDownloadDbBedingteZuPDF = useCallback(async (letterType: LetterType) => {
-        if (typeof window === "undefined" || !offer) {
-            toast.error("Offer data is not ready yet.")
-            return
-        }
-
-        const offerSnapshot = offer
-        const pdfFileName = `db-bedingte-zu-${letterType}-${applicationRef}.pdf`
-
-        setIsDownloadingConditionalLetter(true)
-        const toastId = toast.loading("Generating conditional letter PDF...")
-
-        try {
-            const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-                import("jspdf"),
-                import("html2canvas"),
-            ])
-
-            const origin = window.location.origin
-            const params = buildDbBedingteZuLetterParamsFromOffer(offerSnapshot, origin)
-            const html = buildDbBedingteZuLetterHtml({ ...params, letterType })
-
-            const iframe = document.createElement("iframe")
-            iframe.style.position = "fixed"
-            iframe.style.left = "-9999px"
-            iframe.style.top = "-9999px"
-            iframe.style.width = "794px"
-            iframe.style.height = "1123px"
-            iframe.style.border = "none"
-            document.body.appendChild(iframe)
-
-            const doc = iframe.contentDocument || iframe.contentWindow?.document
-            if (!doc) throw new Error("Could not access iframe document")
-
-            doc.open()
-            doc.write(html)
-            doc.close()
-
-            const images = doc.getElementsByTagName("img")
-            if (images.length > 0) {
-                await Promise.all(
-                    Array.from(images).map((img) => {
-                        if (img.complete) return Promise.resolve()
-                        return new Promise<void>((resolve) => {
-                            img.onload = () => resolve()
-                            img.onerror = () => resolve()
-                        })
-                    })
-                )
-            } else {
-                await new Promise((resolve) => setTimeout(resolve, 100))
-            }
-
-            const pages = Array.from(doc.querySelectorAll<HTMLElement>(".a4-page"))
-            if (pages.length === 0) throw new Error("No pages found for PDF generation")
-
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4",
-            })
-
-            for (let i = 0; i < pages.length; i += 1) {
-                const pageEl = pages[i]
-                const canvas = await html2canvas(pageEl, {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: "#ffffff",
-                    logging: false,
-                    width: 794,
-                    height: 1123,
-                    windowWidth: 794,
-                    windowHeight: 1123,
-                })
-
-                const imgData = canvas.toDataURL("image/png")
-                if (i > 0) pdf.addPage()
-                pdf.addImage(imgData, "PNG", 0, 0, 210, 297)
-            }
-
-            document.body.removeChild(iframe)
-
-            pdf.save(pdfFileName)
-            toast.success("Conditional letter PDF downloaded successfully!")
-        } catch (err) {
-            console.error(err)
-            toast.error("Failed to generate conditional letter PDF. Please try again.")
-        } finally {
-            toast.dismiss(toastId)
-            setIsDownloadingConditionalLetter(false)
-        }
-    }, [applicationRef, offer])
 
     const handleViewLetter = useCallback(() => {
         if (!offer) return
@@ -784,10 +669,6 @@ export default function OfferDetailsPage() {
         university?.name,
     ])
 
-    if (isDownloadingConditionalLetter) {
-        return <PageLoader label="Generating conditional letter PDF..." />
-    }
-
     if (!offerId || isLoading) {
         return <PageLoader label="Loading offer details..." />
     }
@@ -929,48 +810,6 @@ export default function OfferDetailsPage() {
                             />
                         </div>
                     </BluryCard>
-
-                    {isDbBedingteZuEnabled && (
-                        <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6 space-y-4">
-                            <SectionHeader icon={FileCheck} title="Conditional Admission Letters" />
-                            <Typography font="sub-text" className="text-sm text-gray-600">
-                                View or download any of the 9 conditional admission letters.
-                            </Typography>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {Object.entries(LETTER_CONFIGS).map(([letterTypeKey, config]) => {
-                                    const letterType = letterTypeKey as LetterType
-                                    return (
-                                        <div
-                                            key={letterType}
-                                            className="flex flex-col gap-2 p-4 bg-white/30 border border-white/50 rounded-xl"
-                                        >
-                                            <Typography className="text-sm font-bold text-gray-800">
-                                                {config.courseNameEN}
-                                            </Typography>
-                                            <div className="flex flex-col sm:flex-row gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    className="flex-1 rounded-lg gap-1.5 border-white/50 bg-white/30 text-sm"
-                                                    onClick={() => handleViewDbBedingteZuLetter(letterType)}
-                                                >
-                                                    <Eye className="size-3.5" />
-                                                    View
-                                                </Button>
-                                                <Button
-                                                    className="flex-1 rounded-lg gap-1.5 bg-brand-byzantine hover:bg-brand-byzantine/90 text-sm"
-                                                    onClick={() => handleDownloadDbBedingteZuPDF(letterType)}
-                                                    disabled={isDownloadingConditionalLetter}
-                                                >
-                                                    <Download className="size-3.5" />
-                                                    Download
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </BluryCard>
-                    )}
 
                     {reviews.length > 0 && (
                         <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6">
