@@ -971,7 +971,9 @@ export type Database = {
         Row: {
           accepted_at: string | null
           application_id: string
+          body_html: string | null
           created_at: string
+          document_template_id: string | null
           feedback: string | null
           file_url: string | null
           id: string
@@ -983,7 +985,9 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           application_id: string
+          body_html?: string | null
           created_at?: string
+          document_template_id?: string | null
           feedback?: string | null
           file_url?: string | null
           id?: string
@@ -995,7 +999,9 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           application_id?: string
+          body_html?: string | null
           created_at?: string
+          document_template_id?: string | null
           feedback?: string | null
           file_url?: string | null
           id?: string
@@ -1010,6 +1016,13 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: false
             referencedRelation: "application"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_letter_document_template_id_fkey"
+            columns: ["document_template_id"]
+            isOneToOne: false
+            referencedRelation: "document_template"
             referencedColumns: ["id"]
           },
           {

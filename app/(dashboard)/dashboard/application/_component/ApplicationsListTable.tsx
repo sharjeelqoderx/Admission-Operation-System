@@ -53,6 +53,7 @@ type Props = {
     isError: boolean
     onRetry: () => void
     showPagination?: boolean
+    viewBasePath?: string
 }
 
 function formatSubmittedDate(value: string) {
@@ -134,6 +135,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
     isError,
     onRetry,
     showPagination = true,
+    viewBasePath = "/dashboard/application",
 }: Props) {
     const isStudent = role === "STUDENT"
     const isAgent = role === "AGENT"
@@ -399,7 +401,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                                 className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
                                                 asChild
                                             >
-                                                <Link href={`/dashboard/application/${app.id}`}>
+                                                <Link href={`${viewBasePath}/${app.id}`}>
                                                     View
                                                 </Link>
                                             </Button>

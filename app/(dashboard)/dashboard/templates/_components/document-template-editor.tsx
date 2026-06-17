@@ -557,6 +557,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                                     variant="outline"
                                     size="xs"
                                     onClick={() => insertVariable(variable.key)}
+                                    title={variable.label}
                                 >
                                     {`{{${variable.key}}}`}
                                 </Button>

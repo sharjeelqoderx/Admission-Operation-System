@@ -7,6 +7,11 @@ import {
     type CourseRow,
 } from "@/lib/api/course-program";
 import { formatFullName, withProfileDisplayName } from "@/lib/utils/profile";
+import {
+    buildAgentApplicationOrFilter,
+    canAgentAccessApplication,
+    resolveAgentStudentProfileIds,
+} from "@/lib/api/agent-applications";
 
 const APPLICATION_LIST_SELECT = `
     id,
@@ -324,6 +329,7 @@ async function resolveMatchingStudentProfileIds(
         role: string;
         userId: string;
         studentId?: string;
+        scope?: "all";
     }
 ) {
     if (options.studentId) {
@@ -355,7 +361,7 @@ async function resolveMatchingStudentProfileIds(
 
     let allowedProfileIds: string[] | null = null;
 
-    if (options.role === "AGENT") {
+    if (options.role === "AGENT" && options.scope !== "all") {
         const { data: agentRow, error: agentError } = await supabase
             .from("agent")
             .select("id")
@@ -414,6 +420,8 @@ type ApplicationFilterContext = {
     dateTo?: string;
     filteredCourseIds?: string[] | null;
     filteredProfileIds?: string[] | null;
+    agentStudentProfileIds?: string[] | null;
+    scope?: "all";
 };
 
 const EMPTY_APPLICATION_STATS = {
@@ -428,10 +436,15 @@ function applyApplicationFilters(query: any, ctx: ApplicationFilterContext) {
 
     if (ctx.studentId) {
         nextQuery = nextQuery.eq("profile_id", ctx.studentId);
+    } else if (ctx.scope === "all") {
+        // All Application View — no role-based row restriction
     } else if (ctx.role === "STUDENT") {
         nextQuery = nextQuery.eq("profile_id", ctx.userId);
     } else if (ctx.role === "AGENT") {
-        nextQuery = nextQuery.eq("submitted_by_profile_id", ctx.userId);
+        const studentProfileIds = ctx.agentStudentProfileIds ?? [];
+        nextQuery = nextQuery.or(
+            buildAgentApplicationOrFilter(ctx.userId, studentProfileIds)
+        );
     } else if (ctx.role === "UNIVERSITY") {
         nextQuery = nextQuery.eq("university_id", ctx.userId);
     }
@@ -505,6 +518,7 @@ export async function GET(req: NextRequest) {
             date_from: searchParams.get("date_from") ?? undefined,
             date_to: searchParams.get("date_to") ?? undefined,
             q: searchParams.get("q") ?? undefined,
+            scope: searchParams.get("scope") ?? undefined,
         });
 
         if (!queryParse.success) {
@@ -525,6 +539,7 @@ export async function GET(req: NextRequest) {
             date_from: dateFrom,
             date_to: dateTo,
             q: searchTerm,
+            scope: listScope,
         } = queryParse.data;
 
         const { data: profile, error: profileError } = await supabase
@@ -535,6 +550,10 @@ export async function GET(req: NextRequest) {
 
         if (profileError || !profile) {
             return NextResponse.json({ error: "Profile not found" }, { status: 403 });
+        }
+
+        if (listScope === "all" && profile.role === "STUDENT") {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         if (studentId) {
@@ -552,6 +571,11 @@ export async function GET(req: NextRequest) {
 
         let filteredCourseIds: string[] | null = null;
         let filteredProfileIds: string[] | null = null;
+        let agentStudentProfileIds: string[] | null = null;
+
+        if (profile.role === "AGENT" && !studentId && listScope !== "all") {
+            agentStudentProfileIds = await resolveAgentStudentProfileIds(supabase, user.id);
+        }
 
         if (degreeId) {
             filteredCourseIds = await resolveCourseIdsForDegree(supabase, degreeId);
@@ -568,6 +592,7 @@ export async function GET(req: NextRequest) {
                 role: profile.role,
                 userId: user.id,
                 studentId,
+                scope: listScope,
             });
 
             if (filteredProfileIds.length === 0) {
@@ -586,6 +611,8 @@ export async function GET(req: NextRequest) {
             dateTo,
             filteredCourseIds,
             filteredProfileIds,
+            agentStudentProfileIds,
+            scope: listScope,
         };
 
         const stats = await fetchApplicationStats(supabase, filterContext);

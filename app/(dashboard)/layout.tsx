@@ -23,6 +23,7 @@ import {
   Building,
   UserPlus,
   Eye,
+  FileStack,
   // FileUp,
 } from 'lucide-react';
 
@@ -34,6 +35,7 @@ export enum Role {
   UNIVERSITY = 'UNIVERSITY',
   STUDENT = 'STUDENT',
   AGENT = 'AGENT',
+  ADMIN = 'ADMIN',
 }
 
 const sidebarRoutes = [
@@ -72,6 +74,20 @@ const sidebarRoutes = [
   },
 
   {
+    label: 'All Application View',
+    href: '/dashboard/all-application-view',
+    icon: Eye,
+    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.ADMIN],
+  },
+
+  {
+    label: 'Templates',
+    href: '/dashboard/templates',
+    icon: FileStack,
+    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.ADMIN],
+  },
+
+  {
     label: 'Programs',
     href: '/dashboard/program',
     icon: BarChart3,
@@ -102,7 +118,7 @@ const sidebarRoutes = [
     label: 'Offers',
     href: '/dashboard/offer',
     icon: Award,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT, Role.ADMIN],
   },
 
   {
@@ -160,6 +176,9 @@ function filterByRole(routes: any[], role: Role) {
  */
 function isRouteActive(pathname: string, href?: string) {
   if (!href) return false;
+  if (href === '/dashboard/templates') {
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
   return pathname === href;
 }
 

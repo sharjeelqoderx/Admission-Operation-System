@@ -34,7 +34,8 @@ export const A4_DOCUMENT_CONTENT_CLASS = cn(
     "[&_img.document-header-image]:w-auto [&_img.document-header-image]:object-contain",
     "[&_img.document-center-logo]:mx-auto [&_img.document-center-logo]:my-6",
     "[&_img.document-center-logo]:block [&_img.document-center-logo]:object-contain",
-    "[&_img.document-image]:my-4 [&_img.document-image]:max-w-full [&_img.document-image]:h-auto"
+    "[&_img.document-image]:my-4 [&_img.document-image]:max-w-full [&_img.document-image]:h-auto",
+    "[&_img.document-student-signature]:inline-block [&_img.document-student-signature]:max-w-[180px] [&_img.document-student-signature]:h-auto"
 )
 
 export const A4_DOCUMENT_SHEET_WRAPPER_CLASS = cn(

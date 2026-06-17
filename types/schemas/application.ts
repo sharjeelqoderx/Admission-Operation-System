@@ -22,6 +22,7 @@ export const ApplicationListQuerySchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "date_to must be YYYY-MM-DD")
     .optional(),
   q: z.string().trim().min(1).optional(),
+  scope: z.enum(["all"]).optional(),
 });
 
 export type ApplicationListQuery = z.infer<typeof ApplicationListQuerySchema>;

@@ -1,5 +1,6 @@
 export const TEMPLATE_MERGE_VARIABLES = [
     { key: "student_name", label: "Student Name" },
+    { key: "student_signature", label: "Student Signature" },
     { key: "course_name", label: "Course Name" },
     { key: "degree_name", label: "Degree Name" },
     { key: "university_name", label: "University Name" },
@@ -9,8 +10,24 @@ export const TEMPLATE_MERGE_VARIABLES = [
     { key: "intake_date", label: "Intake Date" },
 ] as const
 
+const STUDENT_SIGNATURE_PREVIEW_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="48" viewBox="0 0 160 48" aria-hidden="true"><path d="M8 32 C24 8, 40 40, 56 24 S88 8, 104 28 S128 36, 152 20" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round"/></svg>`
+
+export function buildStudentSignatureHtml(
+    signatureUrl?: string | null,
+    options?: { alt?: string }
+): string {
+    const alt = options?.alt ?? "Student Signature"
+
+    if (signatureUrl) {
+        return `<img src="${signatureUrl}" alt="${alt}" class="document-student-signature" style="display:inline-block;max-width:180px;height:auto;object-fit:contain;background:transparent;" />`
+    }
+
+    return `<span class="document-student-signature-placeholder" style="display:inline-block;color:#9ca3af;font-style:italic;font-size:12px;">Signature not available</span>`
+}
+
 export const TEMPLATE_PREVIEW_SAMPLE_DATA: Record<string, string> = {
     student_name: "John Doe",
+    student_signature: `<span class="document-student-signature-preview">${STUDENT_SIGNATURE_PREVIEW_SVG}</span>`,
     course_name: "Business Administration",
     degree_name: "Bachelor of Business",
     university_name: "Fachhochschule des Mittelstands",

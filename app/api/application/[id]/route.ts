@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { formatFullName, withProfileDisplayName } from "@/lib/utils/profile"
+import { canAgentAccessApplication } from "@/lib/api/agent-applications"
 
 export async function GET(
     req: NextRequest,
@@ -15,12 +16,18 @@ export async function GET(
         }
 
         const { id } = await params;
+        const { searchParams } = new URL(req.url);
+        const viewScope = searchParams.get("scope") === "all" ? "all" : undefined;
 
         const { data: profile } = await supabase
             .from("profile")
             .select("role")
             .eq("id", user.id)
             .single();
+
+        if (viewScope === "all" && profile?.role === "STUDENT") {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
 
         let query = supabase
             .from("application")
@@ -56,18 +63,29 @@ export async function GET(
             `)
             .eq("id", id);
 
-        if (profile?.role === "STUDENT") {
-            query = query.eq("profile_id", user.id);
-        } else if (profile?.role === "AGENT") {
-            query = query.eq("submitted_by_profile_id", user.id);
-        } else if (profile?.role === "UNIVERSITY") {
-            query = query.eq("university_id", user.id);
-        }
-
         const { data: application, error } = await query.single();
 
-        if (error) {
+        if (error || !application) {
             console.error("GET /api/application/[id] error:", error);
+            return NextResponse.json({ error: "Application not found" }, { status: 404 });
+        }
+
+        if (profile?.role === "STUDENT" && application.profile_id !== user.id) {
+            return NextResponse.json({ error: "Application not found" }, { status: 404 });
+        }
+
+        if (profile?.role === "AGENT" && viewScope !== "all") {
+            const allowed = await canAgentAccessApplication(supabase, user.id, {
+                profile_id: application.profile_id,
+                submitted_by_profile_id: application.submitted_by_profile_id,
+            });
+
+            if (!allowed) {
+                return NextResponse.json({ error: "Application not found" }, { status: 404 });
+            }
+        }
+
+        if (profile?.role === "UNIVERSITY" && viewScope !== "all" && application.university_id !== user.id) {
             return NextResponse.json({ error: "Application not found" }, { status: 404 });
         }
 

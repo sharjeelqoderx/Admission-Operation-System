@@ -1,7 +1,7 @@
 "use client"
 
 import { memo, useCallback, useState } from "react"
-import { ArrowLeft, Plus, Printer, Save } from "lucide-react"
+import { ArrowLeft, Printer, Save } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { ErrorView } from "@/components/shared/error-view"
@@ -91,7 +91,6 @@ function DocumentTemplatePageView({
     formError,
     setTitle,
     setBodyHtml,
-    openCreate,
     openEdit,
     openView,
     backToList,
@@ -143,13 +142,13 @@ function DocumentTemplatePageView({
                             </Typography>
                             <Typography as="p" font="sub-text" className="text-muted-foreground">
                                 Create reusable document templates with dynamic fields like{" "}
-                                {"{{student_name}}"} and attach them to student offers later.
+                                {"{{student_name}}"}, {"{{student_signature}}"}, and attach them to student offers later.
                             </Typography>
                         </div>
-                        <Button type="button" className="gap-2" onClick={openCreate}>
+                        {/* <Button type="button" className="gap-2" onClick={openCreate}>
                             <Plus className="size-4" />
                             Create Template
-                        </Button>
+                        </Button> */}
                     </div>
                 </BluryCard>
 

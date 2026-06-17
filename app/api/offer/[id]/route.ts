@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { withProfileDisplayName } from "@/lib/utils/profile";
+import {
+    isMissingOfferTemplateColumnError,
+    OFFER_DETAIL_SELECT_LEGACY,
+    OFFER_DETAIL_SELECT_WITH_TEMPLATE,
+} from "@/lib/offer/select-fields";
 
 export async function GET(
     req: NextRequest,
@@ -24,72 +29,22 @@ export async function GET(
 
         const { id } = await context.params;
 
-        const { data: offer, error } = await supabase
+        const primaryResult = await supabase
             .from("offer_letter")
-            .select(`
-                id,
-                status,
-                created_at,
-                accepted_at,
-                file_url,
-                feedback,
-                issued_by_profile_id,
-                application!inner (
-                    id,
-                    application_no,
-                    status,
-                    created_at,
-                    profile_id,
-                    submitted_by_profile_id,
-                    university_id,
-                    student:profile_id (
-                        id,
-                        first_name,
-                        last_name,
-                        avatar_url,
-                        email,
-                        phone,
-                        gender,
-                        date_of_birth,
-                        signature
-                    ),
-                    course:course_id (
-                        id,
-                        name,
-                        deadline_date,
-                        degree:degree_id (
-                            id,
-                            name,
-                            fees,
-                            intake_date,
-                            study_mode,
-                            duration,
-                            location,
-                            language_of_study
-                        )
-                    ),
-                    university:university_id (
-                        id,
-                        first_name,
-                        last_name
-                    ),
-                    agent:submitted_by_profile_id (
-                        id,
-                        first_name,
-                        last_name,
-                        email
-                    ),
-                    application_review (
-                        id,
-                        status,
-                        feedback,
-                        created_at,
-                        reviewed_by_profile_id
-                    )
-                )
-            `)
+            .select(OFFER_DETAIL_SELECT_WITH_TEMPLATE)
             .eq("id", id)
-            .single();
+            .single()
+
+        const offerResult =
+            primaryResult.error && isMissingOfferTemplateColumnError(primaryResult.error.message)
+                ? await supabase
+                      .from("offer_letter")
+                      .select(OFFER_DETAIL_SELECT_LEGACY)
+                      .eq("id", id)
+                      .single()
+                : primaryResult
+
+        const { data: offer, error } = offerResult
 
         if (error || !offer) {
             console.error(

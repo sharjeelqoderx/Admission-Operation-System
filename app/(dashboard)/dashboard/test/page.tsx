@@ -1,8 +1,5 @@
-import { fetchDocumentTemplatesForPage } from "@/lib/document-template/server"
-import { PageContent } from "./_components/page-content"
+import { redirect } from "next/navigation"
 
-export default async function TestDocumentTemplatesPage() {
-    const initialTemplates = await fetchDocumentTemplatesForPage()
-
-    return <PageContent initialTemplates={initialTemplates} />
+export default function LegacyTestRoutePage() {
+    redirect("/dashboard/templates")
 }

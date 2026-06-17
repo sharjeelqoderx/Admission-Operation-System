@@ -47,3 +47,11 @@ export function createSupabaseServiceClient() {
         auth: { autoRefreshToken: false, persistSession: false },
     })
 }
+
+export function tryCreateSupabaseServiceClient() {
+    try {
+        return createSupabaseServiceClient()
+    } catch {
+        return null
+    }
+}
