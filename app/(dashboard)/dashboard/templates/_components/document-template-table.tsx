@@ -1,7 +1,8 @@
 "use client"
 
 import { memo } from "react"
-import { AlertCircle, Eye, FileText, Loader2, Pencil, Trash2 } from "lucide-react"
+import { AlertCircle, Eye, FileText, Loader2, Pencil } from "lucide-react"
+// import { Trash2 } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
@@ -215,6 +216,7 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                             >
                                                 <Pencil className="size-4" />
                                             </Button>
+                                            {/* Delete disabled — templates should not be removed from UI
                                             <Button
                                                 type="button"
                                                 variant="destructive"
@@ -226,6 +228,7 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                             >
                                                 <Trash2 className="size-4" />
                                             </Button>
+                                            */}
                                         </div>
                                     </TableCell>
                                 </TableRow>

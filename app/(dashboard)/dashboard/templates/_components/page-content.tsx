@@ -1,19 +1,19 @@
 "use client"
 
-import { memo, useCallback, useState } from "react"
+import { memo } from "react"
 import { ArrowLeft, Printer, Save } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
+// import {
+//     Dialog,
+//     DialogContent,
+//     DialogDescription,
+//     DialogFooter,
+//     DialogHeader,
+//     DialogTitle,
+// } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { DocumentTemplateEditor } from "./document-template-editor"
 import { DocumentTemplatePreview } from "./document-template-preview"
@@ -28,6 +28,7 @@ type PageContentProps = {
     initialTemplates: DocumentTemplateListItem[]
 }
 
+/* Delete dialog disabled — templates should not be removed from UI
 type DeleteTemplateDialogProps = {
     template: DocumentTemplateListItem | null
     open: boolean
@@ -76,6 +77,7 @@ function DeleteTemplateDialog({
         </Dialog>
     )
 }
+*/
 
 function DocumentTemplatePageView({
     templates,
@@ -86,7 +88,7 @@ function DocumentTemplatePageView({
     title,
     bodyHtml,
     isSaving,
-    isDeleting,
+    // isDeleting,
     deletingId,
     formError,
     setTitle,
@@ -95,32 +97,32 @@ function DocumentTemplatePageView({
     openView,
     backToList,
     saveTemplate,
-    deleteTemplateById,
+    // deleteTemplateById,
     refetchTemplates,
 }: DocumentTemplatePageLogicProps) {
-    const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplateListItem | null>(
-        null
-    )
+    // Delete flow disabled — templates should not be removed from UI
+    // const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplateListItem | null>(
+    //     null
+    // )
+    // const handleOpenDeleteDialog = useCallback((template: DocumentTemplateListItem) => {
+    //     setTemplateToDelete(template)
+    // }, [])
 
-    const handleOpenDeleteDialog = useCallback((template: DocumentTemplateListItem) => {
-        setTemplateToDelete(template)
-    }, [])
+    // const handleCloseDeleteDialog = useCallback(() => {
+    //     if (isDeleting) return
+    //     setTemplateToDelete(null)
+    // }, [isDeleting])
 
-    const handleCloseDeleteDialog = useCallback(() => {
-        if (isDeleting) return
-        setTemplateToDelete(null)
-    }, [isDeleting])
+    // const handleConfirmDelete = useCallback(async () => {
+    //     if (!templateToDelete) return
 
-    const handleConfirmDelete = useCallback(async () => {
-        if (!templateToDelete) return
-
-        try {
-            await deleteTemplateById(templateToDelete.id)
-            setTemplateToDelete(null)
-        } catch {
-            // Error toast is handled in deleteTemplateById.
-        }
-    }, [deleteTemplateById, templateToDelete])
+    //     try {
+    //         await deleteTemplateById(templateToDelete.id)
+    //         setTemplateToDelete(null)
+    //     } catch {
+    //         // Error toast is handled in deleteTemplateById.
+    //     }
+    // }, [deleteTemplateById, templateToDelete])
 
     const handlePrint = () => {
         window.print()
@@ -161,11 +163,13 @@ function DocumentTemplatePageView({
                         deletingId={deletingId}
                         onView={openView}
                         onEdit={openEdit}
-                        onDelete={handleOpenDeleteDialog}
+                        // onDelete={handleOpenDeleteDialog}
+                        onDelete={() => {}}
                         onRetry={refetchTemplates}
                     />
                 </div>
 
+                {/* Delete dialog disabled — templates should not be removed from UI
                 <DeleteTemplateDialog
                     template={templateToDelete}
                     open={templateToDelete !== null}
@@ -175,6 +179,7 @@ function DocumentTemplatePageView({
                     }}
                     onConfirm={handleConfirmDelete}
                 />
+                */}
             </main>
         )
     }

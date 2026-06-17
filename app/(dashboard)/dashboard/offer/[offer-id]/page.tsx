@@ -36,6 +36,7 @@ import {
     formatStudyMode,
 } from "@/lib/utils/program"
 import {
+    buildLegacyLetterHeadHtml,
     buildSignatureBlockHtml,
     buildTemplateOfferLetterHtml,
 } from "@/lib/offer/offer-letter-html"
@@ -153,6 +154,9 @@ export default function OfferDetailsPage() {
     const [isDrawing, setIsDrawing] = React.useState(false)
     const [hasSigned, setHasSigned] = React.useState(false)
     const [isSubmitting, setIsSubmitting] = React.useState(false)
+    const [isDownloadingLetterHead, setIsDownloadingLetterHead] = React.useState(false)
+    const [isDownloadingConditionalLetter, setIsDownloadingConditionalLetter] =
+        React.useState(false)
     const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
 
     const fetchOffer = useCallback(async () => {
@@ -333,85 +337,48 @@ export default function OfferDetailsPage() {
     const offerStatus = String(offer?.status ?? "PENDING").toUpperCase()
     const isOfferSigned = offerStatus === "ACCEPTED" && Boolean(offer?.file_url)
     const canAcceptAndSign = !isOfferSigned && offerStatus !== "REJECTED"
+    const hasConditionalLetter = Boolean(offer?.body_html)
 
     const openSignModal = useCallback(() => {
         setHasSigned(false)
         setIsSignModalOpen(true)
     }, [])
 
-    const handleViewLetter = useCallback(() => {
-        if (!offer) return
-
-        const signatureHtml = buildSignatureBlockHtml({
-            status: offer.status,
-            fileUrl: offer.file_url,
-            studentName: student?.name,
-            acceptedAt,
-        })
-
-        if (offer.body_html) {
-            const html = buildTemplateOfferLetterHtml(offer.body_html, {
-                title: `Offer Letter – ${student?.name || "Applicant"}`,
-                signatureHtml,
-            })
-
-            const win = window.open("", "_blank")
-            if (win) {
-                win.document.write(html)
-                win.document.close()
-            }
-            return
-        }
-
-        const legacySignatureHtml = offer.status === "ACCEPTED" && offer.file_url
-            ? `<div style="margin-top:auto;border-top:1px dashed #e5e7eb;padding-top:24px;display:flex;flex-direction:column;align-items:flex-end;">
-                 <img src="${offer.file_url}" alt="Signature" style="width:140px;height:48px;object-fit:contain;background:transparent;mix-blend-mode:multiply;" />
+    const buildLetterHeadSignatureHtml = useCallback(
+        (signatureSrc?: string) => {
+            if (offer?.status === "ACCEPTED" && (signatureSrc || offer.file_url)) {
+                const src = signatureSrc || offer.file_url
+                return `<div style="margin-top:auto;border-top:1px dashed #e5e7eb;padding-top:24px;display:flex;flex-direction:column;align-items:flex-end;">
+                 <img src="${src}" alt="Signature" style="width:140px;height:48px;object-fit:contain;background:transparent;mix-blend-mode:multiply;" />
                  <div style="font-size:10px;color:#9ca3af;margin-top:4px;text-align:right;">
                    <div style="font-weight:700;color:#374151;">${student?.name || ""}</div>
                    <div>Accepted &amp; Signed on ${acceptedAt || new Date().toLocaleDateString("en-US", { dateStyle: "medium" })}</div>
                  </div>
                </div>`
-            : `<div style="margin-top:auto;border-top:1px dashed #f3f4f6;padding-top:24px;display:flex;flex-direction:column;align-items:flex-end;">
+            }
+
+            return `<div style="margin-top:auto;border-top:1px dashed #f3f4f6;padding-top:24px;display:flex;flex-direction:column;align-items:flex-end;">
                  <div style="font-size:10px;color:#d1d5db;font-style:italic;">Signature Required</div>
                  <div style="font-size:10px;color:#9ca3af;margin-top:4px;">Pending Student Signature</div>
                </div>`
+        },
+        [acceptedAt, offer?.file_url, offer?.status, student?.name]
+    )
 
-        const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><title>Offer Letter – ${student?.name || "Applicant"}</title>
-        <style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#f3f4f6;display:flex;justify-content:center;padding:40px 16px;font-family:Georgia,serif;}@media print{body{background:white;padding:0;}.page{box-shadow:none!important;}}</style>
-        </head><body>
-        <div class="page" style="background:white;max-width:720px;width:100%;min-height:1000px;padding:60px;box-shadow:0 4px 32px rgba(0,0,0,0.12);border-radius:8px;display:flex;flex-direction:column;gap:32px;position:relative;">
-          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.03;pointer-events:none;transform:rotate(-35deg);"><span style="font-size:120px;font-weight:900;letter-spacing:8px;color:black;">OFFICIAL</span></div>
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <div>
-              <div style="font-size:22px;font-weight:900;color:#1a1a2e;letter-spacing:-0.5px;">${university?.name || "University"}</div>
-              <div style="font-size:12px;color:#6b7280;margin-top:4px;">Official Offer of Admission</div>
-            </div>
-            <div style="text-align:right;font-size:11px;color:#9ca3af;">
-              <div>Date Issued</div>
-              <div style="font-weight:700;color:#374151;">${issuedAt}</div>
-              <div style="margin-top:4px;">Ref: ${app?.application_no || ("APP-" + app?.id?.slice(0, 8).toUpperCase())}</div>
-            </div>
-          </div>
-          <hr style="border:none;border-top:2px solid #f3f4f6;"/>
-          <div style="font-size:15px;color:#374151;">Dear <strong>${student?.name || "Applicant"}</strong>,</div>
-          <div style="font-size:14px;color:#4b5563;line-height:1.8;">
-            We are pleased to offer you admission to the <strong>${course?.name || "course"}</strong>${degree?.name ? ` (${degree.name})` : ""} at <strong>${university?.name || "our university"}</strong>.
-          </div>
-          <div style="font-size:14px;color:#4b5563;line-height:1.8;">
-            Your academic achievement and potential make you an excellent candidate for our program. This offer is subject to the terms and conditions outlined in the full admission package.
-          </div>
-          <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;">
-            <thead><tr style="background:#f9fafb;"><th colspan="2" style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Admission Details</th></tr></thead>
-            <tbody>
-              ${admissionDetailRows.map(([label, value]) =>
-            `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
-        ).join("")}
-            </tbody>
-          </table>
-          ${legacySignatureHtml}
-          <div style="font-size:10px;color:#d1d5db;text-align:center;margin-top:16px;">This is an official offer letter generated by the Admission Operation System.</div>
-        </div>
-        </body></html>`
+    const handleViewLetterHead = useCallback(() => {
+        if (!offer) return
+
+        const html = buildLegacyLetterHeadHtml({
+            studentName: student?.name,
+            universityName: university?.name,
+            courseName: course?.name,
+            degreeName: degree?.name,
+            issuedAt,
+            applicationRef,
+            admissionDetailRows,
+            signatureHtml: buildLetterHeadSignatureHtml(),
+            variant: "preview",
+        })
 
         const win = window.open("", "_blank")
         if (win) {
@@ -419,10 +386,9 @@ export default function OfferDetailsPage() {
             win.document.close()
         }
     }, [
-        acceptedAt,
         admissionDetailRows,
-        app?.application_no,
-        app?.id,
+        applicationRef,
+        buildLetterHeadSignatureHtml,
         course?.name,
         degree?.name,
         issuedAt,
@@ -431,10 +397,146 @@ export default function OfferDetailsPage() {
         university?.name,
     ])
 
-    const handleDownloadPDF = useCallback(async () => {
+    const handleDownloadLetterHead = useCallback(async () => {
         if (!offer) return
 
-        const toastId = toast.loading("Generating PDF...")
+        setIsDownloadingLetterHead(true)
+        const toastId = toast.loading("Generating letter head PDF...")
+
+        try {
+            const { default: jsPDF } = await import("jspdf")
+            const { default: html2canvas } = await import("html2canvas")
+
+            let signatureBase64 = ""
+            if (offer.status === "ACCEPTED" && offer.file_url) {
+                try {
+                    const response = await fetch(offer.file_url)
+                    const blob = await response.blob()
+                    signatureBase64 = await new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader()
+                        reader.onload = () => resolve(reader.result as string)
+                        reader.onerror = reject
+                        reader.readAsDataURL(blob)
+                    })
+                } catch (e) {
+                    console.error("Failed to fetch signature image:", e)
+                }
+            }
+
+            const html = buildLegacyLetterHeadHtml({
+                studentName: student?.name,
+                universityName: university?.name,
+                courseName: course?.name,
+                degreeName: degree?.name,
+                issuedAt,
+                applicationRef,
+                admissionDetailRows,
+                signatureHtml: buildLetterHeadSignatureHtml(signatureBase64),
+                variant: "pdf",
+            })
+
+            const iframe = document.createElement("iframe")
+            iframe.style.position = "fixed"
+            iframe.style.left = "-9999px"
+            iframe.style.top = "-9999px"
+            iframe.style.width = "794px"
+            iframe.style.height = "1123px"
+            iframe.style.border = "none"
+            document.body.appendChild(iframe)
+
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
+            if (!iframeDoc) throw new Error("Could not access iframe document")
+
+            iframeDoc.open()
+            iframeDoc.write(html)
+            iframeDoc.close()
+
+            const images = iframeDoc.getElementsByTagName("img")
+            if (images.length > 0) {
+                await Promise.all(
+                    Array.from(images).map((img) => {
+                        if (img.complete) return Promise.resolve()
+                        return new Promise<void>((resolve) => {
+                            img.onload = () => resolve()
+                            img.onerror = () => resolve()
+                        })
+                    })
+                )
+            } else {
+                await new Promise((resolve) => setTimeout(resolve, 100))
+            }
+
+            const canvas = await html2canvas(iframeDoc.body, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                logging: false,
+                width: 794,
+                height: 1123,
+                windowWidth: 794,
+                windowHeight: 1123,
+            })
+
+            document.body.removeChild(iframe)
+
+            const imgData = canvas.toDataURL("image/png")
+            const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+            pdf.addImage(imgData, "PNG", 0, 0, 210, 297)
+            pdf.save(`letter-head-${applicationRef}.pdf`)
+
+            toast.success("Letter head downloaded successfully!", { id: toastId })
+        } catch (error) {
+            console.error("Error generating letter head PDF:", error)
+            toast.dismiss(toastId)
+            toast.error("Failed to generate letter head PDF. Please try again.")
+        } finally {
+            setIsDownloadingLetterHead(false)
+        }
+    }, [
+        admissionDetailRows,
+        applicationRef,
+        buildLetterHeadSignatureHtml,
+        course?.name,
+        degree?.name,
+        issuedAt,
+        offer,
+        student?.name,
+        university?.name,
+    ])
+
+    const handleViewConditionalLetter = useCallback(() => {
+        if (!offer?.body_html) {
+            toast.error("No conditional letter template is attached to this offer.")
+            return
+        }
+
+        const signatureHtml = buildSignatureBlockHtml({
+            status: offer.status,
+            fileUrl: offer.file_url,
+            studentName: student?.name,
+            acceptedAt,
+        })
+
+        const html = buildTemplateOfferLetterHtml(offer.body_html, {
+            title: `Conditional Letter – ${student?.name || "Applicant"}`,
+            signatureHtml,
+        })
+
+        const win = window.open("", "_blank")
+        if (win) {
+            win.document.write(html)
+            win.document.close()
+        }
+    }, [acceptedAt, offer, student?.name])
+
+    const handleDownloadConditionalLetter = useCallback(async () => {
+        if (!offer?.body_html) {
+            toast.error("No conditional letter template is attached to this offer.")
+            return
+        }
+
+        setIsDownloadingConditionalLetter(true)
+        const toastId = toast.loading("Generating conditional letter PDF...")
 
         try {
             const { default: jsPDF } = await import("jspdf")
@@ -465,72 +567,11 @@ export default function OfferDetailsPage() {
                      </div>
                    </div>`
                 : buildSignatureBlockHtml({
-                    status: offer.status,
-                    studentName: student?.name,
-                    acceptedAt,
-                })
+                      status: offer.status,
+                      studentName: student?.name,
+                      acceptedAt,
+                  })
 
-            if (offer.body_html) {
-                const iframe = document.createElement("iframe")
-                iframe.style.position = "fixed"
-                iframe.style.left = "-9999px"
-                iframe.style.top = "-9999px"
-                iframe.style.width = "794px"
-                iframe.style.height = "1123px"
-                iframe.style.border = "none"
-                document.body.appendChild(iframe)
-
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
-                if (!iframeDoc) throw new Error("Could not access iframe document")
-
-                iframeDoc.open()
-                iframeDoc.write(
-                    buildTemplateOfferLetterHtml(offer.body_html, {
-                        title: `Offer Letter – ${student?.name || "Applicant"}`,
-                        signatureHtml,
-                    })
-                )
-                iframeDoc.close()
-
-                await new Promise((resolve) => setTimeout(resolve, 300))
-
-                const pageElement = iframeDoc.querySelector(".page") as HTMLElement | null
-                if (!pageElement) throw new Error("Could not find offer letter content")
-
-                const canvas = await html2canvas(pageElement, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: "#ffffff",
-                })
-
-                const imgData = canvas.toDataURL("image/png")
-                const pdf = new jsPDF("p", "mm", "a4")
-                const pdfWidth = pdf.internal.pageSize.getWidth()
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-                pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight)
-                pdf.save(`Offer-Letter-${student?.name || "Applicant"}.pdf`)
-
-                document.body.removeChild(iframe)
-                toast.success("PDF downloaded successfully!", { id: toastId })
-                return
-            }
-
-            // Legacy hardcoded offer letter PDF flow
-            const legacySignatureHtml = signatureBase64
-                ? `<div style="margin-top:auto;border-top:1px dashed #e5e7eb;padding-top:24px;display:flex;flex-direction:column;align-items:flex-end;">
-                     <img src="${signatureBase64}" alt="Signature" style="width:140px;height:48px;object-fit:contain;background:transparent;mix-blend-mode:multiply;" />
-                     <div style="font-size:10px;color:#9ca3af;margin-top:4px;text-align:right;">
-                       <div style="font-weight:700;color:#374151;">${student?.name || ""}</div>
-                       <div>Accepted &amp; Signed on ${acceptedAt || new Date().toLocaleDateString("en-US", { dateStyle: "medium" })}</div>
-                     </div>
-                   </div>`
-                : `<div style="margin-top:auto;border-top:1px dashed #f3f4f6;padding-top:24px;display:flex;flex-direction:column;align-items:flex-end;">
-                     <div style="font-size:10px;color:#d1d5db;font-style:italic;">Signature Required</div>
-                     <div style="font-size:10px;color:#9ca3af;margin-top:4px;">Pending Student Signature</div>
-                   </div>`
-
-            // Create off-screen iframe to isolate CSS environment from parent stylesheets
             const iframe = document.createElement("iframe")
             iframe.style.position = "fixed"
             iframe.style.left = "-9999px"
@@ -544,130 +585,51 @@ export default function OfferDetailsPage() {
             if (!iframeDoc) throw new Error("Could not access iframe document")
 
             iframeDoc.open()
-            iframeDoc.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="utf-8" />
-              <style>
-                * {
-                  box-sizing: border-box;
-                  margin: 0;
-                  padding: 0;
-                }
-                html, body {
-                  margin: 0;
-                  padding: 0;
-                  width: 794px;
-                  height: 1123px;
-                  overflow: hidden;
-                  font-family: Georgia, serif;
-                  background-color: #ffffff;
-                }
-              </style>
-            </head>
-            <body>
-              <div style="width:100%;height:100%;padding:60px;display:flex;flex-direction:column;gap:32px;position:relative;box-sizing:border-box;background:#ffffff;justify-content:space-between;">
-                <div style="display:flex;flex-direction:column;gap:32px;width:100%;">
-                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.03;pointer-events:none;transform:rotate(-35deg);"><span style="font-size:120px;font-weight:900;letter-spacing:8px;color:black;user-select:none;">OFFICIAL</span></div>
-                  <div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;">
-                    <div>
-                      <div style="font-size:22px;font-weight:900;color:#1a1a2e;letter-spacing:-0.5px;">${university?.name || "University"}</div>
-                      <div style="font-size:12px;color:#6b7280;margin-top:4px;">Official Offer of Admission</div>
-                    </div>
-                    <div style="text-align:right;font-size:11px;color:#9ca3af;">
-                      <div>Date Issued</div>
-                      <div style="font-weight:700;color:#374151;">${issuedAt}</div>
-                      <div style="margin-top:4px;">Ref: ${app?.application_no || ("APP-" + app?.id?.slice(0, 8).toUpperCase())}</div>
-                    </div>
-                  </div>
-                  <hr style="border:none;border-top:2px solid #f3f4f6;width:100%;"/>
-                  <div style="font-size:15px;color:#374151;width:100%;">Dear <strong>${student?.name || "Applicant"}</strong>,</div>
-                  <div style="font-size:14px;color:#4b5563;line-height:1.8;width:100%;">
-                    We are pleased to offer you admission to the <strong>${course?.name || "course"}</strong>${degree?.name ? ` (${degree.name})` : ""} at <strong>${university?.name || "our university"}</strong>.
-                  </div>
-                  <div style="font-size:14px;color:#4b5563;line-height:1.8;width:100%;">
-                    Your academic achievement and potential make you an excellent candidate for our program. This offer is subject to the terms and conditions outlined in the full admission package.
-                  </div>
-                  <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;">
-                    <thead><tr style="background:#f9fafb;"><th colspan="2" style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;border-bottom:2px solid #e5e7eb;">Admission Details</th></tr></thead>
-                    <tbody>
-                      ${admissionDetailRows.map(([label, value]) =>
-                `<tr><td style="padding:9px 14px;color:#6b7280;width:40%;border-bottom:1px solid #f3f4f6;">${label}</td><td style="padding:9px 14px;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td></tr>`
-            ).join("")}
-                    </tbody>
-                  </table>
-                </div>
-                <div style="width:100%;display:flex;flex-direction:column;gap:16px;">
-                  ${legacySignatureHtml}
-                  <div style="font-size:10px;color:#d1d5db;text-align:center;width:100%;">This is an official offer letter generated by the Admission Operation System.</div>
-                </div>
-              </div>
-            </body>
-            </html>
-            `)
+            iframeDoc.write(
+                buildTemplateOfferLetterHtml(offer.body_html, {
+                    title: `Conditional Letter – ${student?.name || "Applicant"}`,
+                    signatureHtml,
+                })
+            )
             iframeDoc.close()
 
-            // Wait for images to load inside the iframe (if signature exists)
-            const images = iframeDoc.getElementsByTagName("img")
-            if (images.length > 0) {
-                await Promise.all(
-                    Array.from(images).map(img => {
-                        if (img.complete) return Promise.resolve()
-                        return new Promise<void>((resolve) => {
-                            img.onload = () => resolve()
-                            img.onerror = () => resolve()
-                        })
-                    })
-                )
-            } else {
-                await new Promise(resolve => setTimeout(resolve, 100))
-            }
+            await new Promise((resolve) => setTimeout(resolve, 300))
 
-            // Render to canvas
-            const canvas = await html2canvas(iframeDoc.body, {
+            const pageElement = iframeDoc.querySelector(".page") as HTMLElement | null
+            if (!pageElement) throw new Error("Could not find conditional letter content")
+
+            const canvas = await html2canvas(pageElement, {
                 scale: 2,
                 useCORS: true,
-                backgroundColor: "#ffffff",
                 logging: false,
-                width: 794,
-                height: 1123,
-                windowWidth: 794,
-                windowHeight: 1123,
+                backgroundColor: "#ffffff",
             })
-
-            // Remove iframe from DOM
-            document.body.removeChild(iframe)
 
             const imgData = canvas.toDataURL("image/png")
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4",
-            })
+            const pdf = new jsPDF("p", "mm", "a4")
+            const pdfWidth = pdf.internal.pageSize.getWidth()
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+            pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight)
+            pdf.save(`conditional-letter-${applicationRef}.pdf`)
 
-            pdf.addImage(imgData, "PNG", 0, 0, 210, 297)
-            pdf.save(`offer-${app?.application_no || offerId}.pdf`)
-
-            toast.dismiss(toastId)
-            toast.success("PDF downloaded successfully!")
+            document.body.removeChild(iframe)
+            toast.success("Conditional letter downloaded successfully!", { id: toastId })
         } catch (error) {
-            console.error("Error generating PDF:", error)
+            console.error("Error generating conditional letter PDF:", error)
             toast.dismiss(toastId)
-            toast.error("Failed to generate PDF. Please try again.")
+            toast.error("Failed to generate conditional letter PDF. Please try again.")
+        } finally {
+            setIsDownloadingConditionalLetter(false)
         }
-    }, [
-        acceptedAt,
-        admissionDetailRows,
-        app?.application_no,
-        course?.name,
-        degree?.name,
-        issuedAt,
-        offer,
-        offerId,
-        student?.name,
-        university?.name,
-    ])
+    }, [acceptedAt, applicationRef, offer, student?.name])
+
+    if (isDownloadingLetterHead) {
+        return <PageLoader label="Generating letter head PDF..." />
+    }
+
+    if (isDownloadingConditionalLetter) {
+        return <PageLoader label="Generating conditional letter PDF..." />
+    }
 
     if (!offerId || isLoading) {
         return <PageLoader label="Loading offer details..." />
@@ -811,6 +773,61 @@ export default function OfferDetailsPage() {
                         </div>
                     </BluryCard>
 
+                    <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6 space-y-4">
+                        <SectionHeader icon={Building2} title="Letter Head" />
+                        <Typography font="sub-text" className="text-sm text-gray-600">
+                            Official offer of admission with university branding and admission details for{" "}
+                            {courseDisplayName}.
+                        </Typography>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            <Button
+                                variant="outline"
+                                className="flex-1 rounded-xl gap-2 border-white/50 bg-white/30"
+                                onClick={handleViewLetterHead}
+                                disabled={isDownloadingLetterHead}
+                            >
+                                <Eye className="size-4" />
+                                View
+                            </Button>
+                            <Button
+                                className="flex-1 rounded-xl gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90"
+                                onClick={handleDownloadLetterHead}
+                                disabled={isDownloadingLetterHead}
+                            >
+                                <Download className="size-4" />
+                                Download
+                            </Button>
+                        </div>
+                    </BluryCard>
+
+                    <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6 space-y-4">
+                        <SectionHeader icon={FileCheck} title="Conditional Letter" />
+                        <Typography font="sub-text" className="text-sm text-gray-600">
+                            {hasConditionalLetter
+                                ? "Template-based conditional letter created from your saved document template."
+                                : "No conditional letter template is attached to this offer yet."}
+                        </Typography>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            <Button
+                                variant="outline"
+                                className="flex-1 rounded-xl gap-2 border-white/50 bg-white/30"
+                                onClick={handleViewConditionalLetter}
+                                disabled={!hasConditionalLetter || isDownloadingConditionalLetter}
+                            >
+                                <Eye className="size-4" />
+                                View
+                            </Button>
+                            <Button
+                                className="flex-1 rounded-xl gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90"
+                                onClick={handleDownloadConditionalLetter}
+                                disabled={!hasConditionalLetter || isDownloadingConditionalLetter}
+                            >
+                                <Download className="size-4" />
+                                Download
+                            </Button>
+                        </div>
+                    </BluryCard>
+
                     {reviews.length > 0 && (
                         <BluryCard isCentered={false} className="rounded-2xl" childClass="p-5 sm:p-6">
                             <SectionHeader
@@ -939,36 +956,6 @@ export default function OfferDetailsPage() {
                             )}
                         </BluryCard>
                     )}
-
-                    <BluryCard
-                        isCentered={false}
-                        className="rounded-2xl w-full"
-                        childClass="p-5 sm:p-6 space-y-4"
-                    >
-                        <SectionHeader icon={FileCheck} title="Offer Letter" />
-                        <Typography font="sub-text" className="text-sm text-gray-600">
-                            {isOfferSigned
-                                ? `Signed by ${student?.name || "applicant"} on ${acceptedAt || "—"}.`
-                                : "Open or download your official offer letter."}
-                        </Typography>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                            <Button
-                                variant="outline"
-                                className="flex-1 rounded-xl gap-2 border-white/50 bg-white/30"
-                                onClick={handleViewLetter}
-                            >
-                                <Eye className="size-4" />
-                                View
-                            </Button>
-                            <Button
-                                className="flex-1 rounded-xl gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90"
-                                onClick={handleDownloadPDF}
-                            >
-                                <Download className="size-4" />
-                                Download
-                            </Button>
-                        </div>
-                    </BluryCard>
 
                     {offer.status === "ACCEPTED" && offer.file_url && (
                         <Button

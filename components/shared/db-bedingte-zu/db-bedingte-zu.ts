@@ -358,6 +358,23 @@ export function buildDbBedingteZuLetterHtml(params: {
 </html>`
 }
 
+export function resolveLetterTypeFromCourse(
+  courseName?: string | null,
+  degreeName?: string | null
+): LetterType {
+  const haystack = `${courseName ?? ""} ${degreeName ?? ""}`.toLowerCase()
+
+  for (const [key, config] of Object.entries(LETTER_CONFIGS)) {
+    const english = config.courseNameEN.toLowerCase()
+    const german = config.courseNameDE.toLowerCase()
+    if (haystack.includes(english) || haystack.includes(german)) {
+      return key as LetterType
+    }
+  }
+
+  return "business_administration"
+}
+
 export function buildDbBedingteZuLetterParamsFromOffer(
   offer: {
     created_at?: string | null
