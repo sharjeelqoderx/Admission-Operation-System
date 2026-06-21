@@ -418,18 +418,21 @@ export type Database = {
           degree_id: string | null
           id: string
           name: string
+          program_id: string | null
         }
         Insert: {
           deadline_date?: string | null
           degree_id?: string | null
           id?: string
           name: string
+          program_id?: string | null
         }
         Update: {
           deadline_date?: string | null
           degree_id?: string | null
           id?: string
           name?: string
+          program_id?: string | null
         }
         Relationships: [
           {
@@ -439,15 +442,24 @@ export type Database = {
             referencedRelation: "degree"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "course_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "program"
+            referencedColumns: ["id"]
+          },
         ]
       }
       degree: {
         Row: {
+          agent_commission: number | null
           credits: number | null
           duration: string | null
           fees: string | null
           id: string
           intake_date: Database["public"]["Enums"]["intake_season_enum"] | null
+          intake_starts_on: string | null
           language_of_study: string | null
           level_id: string | null
           location: string | null
@@ -455,11 +467,13 @@ export type Database = {
           study_mode: Database["public"]["Enums"]["study_mode_enum"] | null
         }
         Insert: {
+          agent_commission?: number | null
           credits?: number | null
           duration?: string | null
           fees?: string | null
           id?: string
           intake_date?: Database["public"]["Enums"]["intake_season_enum"] | null
+          intake_starts_on?: string | null
           language_of_study?: string | null
           level_id?: string | null
           location?: string | null
@@ -467,11 +481,13 @@ export type Database = {
           study_mode?: Database["public"]["Enums"]["study_mode_enum"] | null
         }
         Update: {
+          agent_commission?: number | null
           credits?: number | null
           duration?: string | null
           fees?: string | null
           id?: string
           intake_date?: Database["public"]["Enums"]["intake_season_enum"] | null
+          intake_starts_on?: string | null
           language_of_study?: string | null
           level_id?: string | null
           location?: string | null

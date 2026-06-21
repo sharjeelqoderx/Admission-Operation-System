@@ -67,17 +67,31 @@ const sidebarRoutes = [
   },
 
   {
+    label: 'Agents',
+    icon: UserCircle,
+    allowFor: [Role.UNIVERSITY],
+    children: [
+      {
+        label: 'Agent Profile',
+        href: '/dashboard/agent',
+        icon: UserCircle,
+        allowFor: [Role.UNIVERSITY],
+      },
+    ],
+  },
+
+  {
     label: 'All Applications',
     href: '/dashboard/application',
     icon: FileText,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT, Role.ADMIN],
   },
 
   {
     label: 'All Application View',
     href: '/dashboard/all-application-view',
     icon: Eye,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.ADMIN],
+    allowFor: [Role.AGENT, Role.ADMIN],
   },
 
   {
@@ -91,7 +105,7 @@ const sidebarRoutes = [
     label: 'Programs',
     href: '/dashboard/program',
     icon: BarChart3,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT, Role.ADMIN],
   },
 
   {
@@ -146,7 +160,7 @@ const sidebarRoutes = [
     label: 'Agent Profile',
     href: '/dashboard/profile',
     icon: UserCircle,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+    allowFor: [Role.AGENT, Role.STUDENT],
   },
 ];
 
@@ -176,7 +190,7 @@ function filterByRole(routes: any[], role: Role) {
  */
 function isRouteActive(pathname: string, href?: string) {
   if (!href) return false;
-  if (href === '/dashboard/templates') {
+  if (href === '/dashboard/templates' || href === '/dashboard/agent' || href === '/dashboard/application' || href === '/dashboard/program') {
     return pathname === href || pathname.startsWith(`${href}/`);
   }
   return pathname === href;
@@ -185,7 +199,10 @@ function isRouteActive(pathname: string, href?: string) {
 /**
  * ✅ Group active if ANY child is active
  */
-function isGroupActive(pathname: string, children?: any[]) {
+function isGroupActive(pathname: string, children?: any[], label?: string) {
+  if (label === 'Agents' && pathname.startsWith('/dashboard/agent')) {
+    return true;
+  }
   if (!children) return false;
   return children.some(c => isRouteActive(pathname, c.href));
 }
@@ -220,7 +237,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           // 🔹 GROUP
           if (route.children?.length) {
-            const groupActive = isGroupActive(pathname, route.children);
+            const groupActive = isGroupActive(pathname, route.children, route.label);
 
             return (
               <SidebarGroup

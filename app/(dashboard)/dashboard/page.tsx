@@ -1,27 +1,20 @@
-"use client"
+import { redirect } from "next/navigation"
+import { getDashboardRole } from "@/lib/dashboard/server"
+import { fetchUniversityOverviewForPage } from "@/lib/university-overview/server"
+import { ClientDashboard } from "./_components/client-dashboard"
+import { UniversityOverviewPageContent } from "./_components/university-overview/page-content"
 
-import { useAuth } from '@/hooks/useAuth';
-import { PageLoader } from '@/components/shared/page-loader';
-import { AgentDashboard } from './_components/agent-dashboard';
-import { StudentDashboard } from './_components/student-dashboard';
-import { UniversityDashboard } from './_components/university-dashboard';
+export default async function DashboardPage() {
+    const role = await getDashboardRole()
 
-export default function DashboardPage() {
-    const { me } = useAuth();
-    const { data: meData, isLoading } = me;
-
-    if (isLoading) {
-        return <PageLoader label="Loading dashboard..." />;
+    if (!role) {
+        redirect("/login")
     }
 
-    if (meData?.role === "STUDENT") {
-        return <StudentDashboard />;
+    if (role === "UNIVERSITY") {
+        const initialOverview = await fetchUniversityOverviewForPage()
+        return <UniversityOverviewPageContent initialOverview={initialOverview} />
     }
 
-    if (meData?.role === "UNIVERSITY") {
-        return <UniversityDashboard />;
-    }
-
-    // Default to Agent dashboard
-    return <AgentDashboard />;
+    return <ClientDashboard role={role} />
 }
