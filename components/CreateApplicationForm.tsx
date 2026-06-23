@@ -6,7 +6,7 @@ import { Typography } from "@/components/shared/Typography";
 import { BluryCard } from "@/components/shared/blury-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, CheckSquare, Square, FileText, GraduationCap, User2, User } from "lucide-react";
+import { Search, CheckSquare, FileText, GraduationCap, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -33,9 +33,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { DatePicker } from "@/components/shared/date-picker";
 import { useForm, useStore } from "@tanstack/react-form";
-import { CreateApplicationSchema, type CreateApplicationInput } from "@/types/schemas/application";
+import { CreateApplicationSchema, type CreateApplicationInput, type ApplicationStudentDocument, type ApplicationStudentDetail, type ApplicationMe, type ApplicationProfileRole, type ApplicationDuplicateRow, type ApplicationDocumentTypeSummary, type CreateApplicationFormApi, type ApplicationFormFieldRenderProps, getApplicationFieldError } from "@/types/schemas/application";
 import type { CourseProgram } from "@/types/schemas/program";
+import type { LevelOption } from "@/hooks/useLevels";
+import type { StudentListItem } from "@/lib/student/list";
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program";
+import { resolveCourseDocumentTypes } from "@/lib/utils/course-documents";
 import { getLevelPriority } from "@/lib/utils/levels";
 import { useLevels } from "@/hooks/useLevels";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
@@ -48,44 +51,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { UserRole } from "@/types";
-
-
-type Student = {
-    profile: {
-        id: string;
-        name: string;
-    };
-    student_code: string;
-    avatar_url?: string;
-    name?: string;
-    email?: string;
-    date_of_birth?: string;
-    gender?: string;
-    id?: string;
-    student?: {
-        student_code?: string | null;
-        nationality?: string | null;
-        country?: string | null;
-        state?: string | null;
-        city?: string | null;
-    } | null;
-    education?: Array<{
-        qualification_degree?: {
-            level?: { name: string } | null;
-        } | null;
-    }>;
-};
-
-type Document = {
-    id: string;
-    name: string;
-    document_type_id: string;
-    document_type?: { id: string; name: string };
-    created_at: string;
-    document_files?: { file_url: string }[];
-};
-
 
 function getCourseStatus(course: CourseProgram): "AVAILABLE" | "CLOSED" {
     if (!course.deadline_date) return "AVAILABLE";
@@ -107,20 +72,96 @@ function parseCourseFees(fees?: string | null): number | undefined {
     return Number.isNaN(parsed) ? undefined : parsed;
 }
 
-function getStudentCode(studentDetails?: Student, students?: Student[], profileId?: string): string {
+function getStudentCode(studentDetails?: ApplicationStudentDetail, students?: StudentListItem[], profileId?: string): string {
     if (studentDetails?.student?.student_code) {
         return studentDetails.student.student_code;
     }
 
-    const fromList = students?.find((student) => student.profile.id === profileId);
+    const fromList = students?.find((student) => student.profile_id === profileId);
     return fromList?.student_code ?? "-";
 }
 
-function F({ field, label, isStepAttempted, children }: { field: any; label: string; isStepAttempted?: boolean; children: React.ReactNode }) {
+type FlowStep = {
+    internalStep: 1 | 2 | 3;
+    label: string;
+};
+
+function findDocumentForType(documents: ApplicationStudentDocument[], typeId: string) {
+    return documents.find((d) => {
+        const docTypeId = d.document_type?.id ?? d.document_type_id;
+        return docTypeId === typeId;
+    });
+}
+
+function getMissingRequiredDocTypes(requiredDocTypes: ApplicationDocumentTypeSummary[], documents: ApplicationStudentDocument[]) {
+    return requiredDocTypes.filter((rt) => !findDocumentForType(documents, rt.id));
+}
+
+function areAllRequiredDocumentsAttached(requiredDocTypes: ApplicationDocumentTypeSummary[], documents: ApplicationStudentDocument[]) {
+    if (requiredDocTypes.length === 0) return documents.length > 0;
+    return getMissingRequiredDocTypes(requiredDocTypes, documents).length === 0;
+}
+
+function collectAttachedDocumentIds(
+    documents: ApplicationStudentDocument[],
+    requiredDocTypes: ApplicationDocumentTypeSummary[],
+    optionalDocTypes: ApplicationDocumentTypeSummary[]
+) {
+    const typeIds = new Set(
+        [...requiredDocTypes, ...optionalDocTypes].map((t) => t.id)
+    );
+
+    if (typeIds.size === 0) {
+        return documents.map((d) => d.id);
+    }
+
+    return documents
+        .filter((d) => {
+            const typeId = d.document_type?.id ?? d.document_type_id;
+            return typeId != null && typeIds.has(typeId);
+        })
+        .map((d) => d.id);
+}
+
+function applyCourseToForm(
+    form: CreateApplicationFormApi,
+    course: CourseProgram,
+    levels: LevelOption[]
+) {
+    form.setFieldValue("course_id", course.id);
+    form.setFieldValue("intake_date", course.degree?.intake_date || "N/A");
+    form.setFieldValue("tuition_fee", parseCourseFees(course.degree?.fees));
+
+    const levelId = course.degree?.level_id;
+    const universityId = levels.find((level) => level.id === levelId)?.university_id;
+    if (universityId) {
+        form.setFieldValue("university_id", universityId);
+    }
+}
+
+function buildFlowSteps(role: ApplicationProfileRole | undefined, courseIdFromParams: string | null): FlowStep[] {
+    const isStudent = role === "STUDENT";
+    const steps: FlowStep[] = [];
+
+    if (!(isStudent && courseIdFromParams)) {
+        steps.push({
+            internalStep: 1,
+            label: isStudent ? "Your Profile" : "Student Profile",
+        });
+    }
+
+    if (!courseIdFromParams) {
+        steps.push({ internalStep: 2, label: "Course Selection" });
+    }
+
+    steps.push({ internalStep: 3, label: "Review & Submit" });
+    return steps;
+}
+
+function F<TValue>({ field, label, isStepAttempted, children }: { field: ApplicationFormFieldRenderProps<TValue>; label: string; isStepAttempted?: boolean; children: React.ReactNode }) {
     const isSubmitted = field.form.state.isSubmitted || isStepAttempted;
     const isInvalid = isSubmitted && !field.state.meta.isValid;
-    const error = field.state.meta.errors?.[0];
-    const errorMessage = typeof error === "string" ? error : (error as any)?.message;
+    const errorMessage = getApplicationFieldError(field.state.meta.errors?.[0]);
 
     return (
         <Field data-invalid={isInvalid} className="w-full">
@@ -153,7 +194,7 @@ export function CreateApplicationForm() {
             const res = await fetch("/api/me");
             if (!res.ok) throw new Error("Failed to fetch profile");
             const json = await res.json();
-            return json.data;
+            return json.data as ApplicationMe;
         },
     });
 
@@ -161,12 +202,14 @@ export function CreateApplicationForm() {
         queryKey: ["students"],
         enabled: user?.role === "AGENT",
         queryFn: async () => {
-            const res = await fetch("/api/student");
+            const res = await fetch("/api/student?limit=100");
             if (!res.ok) throw new Error("Failed to fetch students");
             return res.json();
         }
     });
-    const students: Student[] = Array.isArray(studentsResponse?.data) ? studentsResponse.data : [];
+    const students: StudentListItem[] = Array.isArray(studentsResponse?.data)
+        ? studentsResponse.data
+        : [];
 
     const createApplication = useMutation({
         mutationFn: async (value: CreateApplicationInput) => {
@@ -206,7 +249,7 @@ export function CreateApplicationForm() {
         onSubmit: async ({ value }) => {
             await createApplication.mutateAsync(value);
         }
-    });
+    }) as CreateApplicationFormApi;
 
     useEffect(() => {
         if (user?.role === "STUDENT") {
@@ -216,8 +259,8 @@ export function CreateApplicationForm() {
         }
     }, [user, studentIdParam, form]);
 
-    const selectedStudentId = useStore(form.store, (s: any) => s.values.profile_id);
-    const selectedCourseId = useStore(form.store, (s: any) => s.values.course_id) || courseIdParam || "";
+    const selectedStudentId = useStore(form.store, (state) => state.values.profile_id);
+    const selectedCourseId = useStore(form.store, (state) => state.values.course_id) || courseIdParam || "";
 
     const { data: studentDetailsResponse } = useQuery({
         queryKey: ["student", selectedStudentId],
@@ -225,11 +268,11 @@ export function CreateApplicationForm() {
             if (!selectedStudentId) return null;
             const res = await fetch(`/api/student/${selectedStudentId}`);
             if (!res.ok) throw new Error("Failed to fetch student details");
-            return res.json();
+            return res.json() as Promise<{ data: ApplicationStudentDetail }>;
         },
         enabled: !!selectedStudentId
     });
-    const studentDetails: Student | undefined = studentDetailsResponse?.data;
+    const studentDetails: ApplicationStudentDetail | undefined = studentDetailsResponse?.data;
 
     const { data: documentsResponse, isLoading: isDocumentsLoading, refetch: refetchDocuments } = useQuery({
         queryKey: ["student-documents", selectedStudentId, selectedCourseId],
@@ -239,13 +282,15 @@ export function CreateApplicationForm() {
             if (selectedCourseId) params.set("course_id", selectedCourseId);
             const res = await fetch(`/api/document/student/${selectedStudentId}?${params.toString()}`);
             if (!res.ok) throw new Error("Failed to fetch documents");
-            return res.json();
+            return res.json() as Promise<{ data: ApplicationStudentDocument[] }>;
         },
         enabled: !!selectedStudentId,
         staleTime: 0,
         refetchOnMount: "always",
     });
-    const documents: Document[] = Array.isArray(documentsResponse?.data) ? documentsResponse.data : [];
+    const documents: ApplicationStudentDocument[] = Array.isArray(documentsResponse?.data)
+        ? documentsResponse.data
+        : [];
 
     useEffect(() => {
         if (stepParam === "2" && (studentIdParam || selectedStudentId) && (courseIdParam || selectedCourseId)) {
@@ -302,7 +347,7 @@ export function CreateApplicationForm() {
     }
     const { data: levels = [] } = useLevels();
 
-    const { data: programDetailResponse } = useQuery({
+    const { data: programDetailResponse, isLoading: isCourseDetailLoading } = useQuery({
         queryKey: ["course-detail", selectedCourseId],
         queryFn: async () => {
             const res = await fetch(`/api/program/${selectedCourseId}`);
@@ -312,18 +357,28 @@ export function CreateApplicationForm() {
         enabled: !!selectedCourseId,
     });
 
-    const requiredDocTypes: { id: string; name: string }[] = useMemo(() => {
-        const fromCourse = (
-            programDetailResponse?.data?.degree?.requirements ?? []
-        )
-            .map((r: { document_type?: { id: string; name: string } }) => r.document_type)
-            .filter((t: { id: string; name: string } | undefined): t is { id: string; name: string } => Boolean(t?.id));
+    const courseFromParam = useMemo((): CourseProgram | undefined => {
+        if (!courseIdParam) return undefined;
 
-        if (fromCourse.length > 0) return fromCourse;
+        const detail = programDetailResponse?.data as CourseProgram | undefined;
+        if (detail?.id === courseIdParam) return detail;
 
-        // No program requirements configured — show types from student's uploaded documents
+        return courses.find((course) => course.id === courseIdParam);
+    }, [courseIdParam, programDetailResponse?.data, courses]);
+
+    const isCourseFromParamValid = Boolean(courseIdParam && courseFromParam);
+
+    const { required: requiredDocTypes, optional: optionalDocTypes } = useMemo(() => {
+        const fromCourse = resolveCourseDocumentTypes({
+            requirements: programDetailResponse?.data?.degree?.requirements ?? [],
+        });
+
+        if (fromCourse.required.length > 0 || fromCourse.optional.length > 0) {
+            return fromCourse;
+        }
+
         const seen = new Set<string>();
-        return documents.reduce<{ id: string; name: string }[]>((acc, d) => {
+        const fromDocuments = documents.reduce<ApplicationDocumentTypeSummary[]>((acc, d) => {
             const typeId = d.document_type?.id ?? d.document_type_id;
             const typeName = d.document_type?.name ?? "Document";
             if (typeId && !seen.has(typeId)) {
@@ -332,24 +387,23 @@ export function CreateApplicationForm() {
             }
             return acc;
         }, []);
+
+        return {
+            required: [],
+            optional: fromDocuments,
+        };
     }, [programDetailResponse, documents]);
 
-    useEffect(() => {
-        if (courseIdParam && courses.length > 0) {
-            const course = courses.find((item) => item.id === courseIdParam);
-            if (course) {
-                form.setFieldValue("course_id", course.id);
-                form.setFieldValue("intake_date", course.degree?.intake_date || "N/A");
-                form.setFieldValue("tuition_fee", parseCourseFees(course.degree?.fees));
+    const selectedCourseDetail = useMemo((): CourseProgram | undefined => {
+        const detail = programDetailResponse?.data as CourseProgram | undefined;
+        if (detail) return detail;
+        return courses.find((course) => course.id === selectedCourseId);
+    }, [programDetailResponse?.data, courses, selectedCourseId]);
 
-                const levelId = course.degree?.level_id;
-                const universityId = levels.find((level) => level.id === levelId)?.university_id;
-                if (universityId) {
-                    form.setFieldValue("university_id", universityId);
-                }
-            }
-        }
-    }, [courseIdParam, courses, levels, form]);
+    useEffect(() => {
+        if (!courseFromParam) return;
+        applyCourseToForm(form, courseFromParam, levels);
+    }, [courseFromParam, levels, form]);
 
     const prevCourseRef = useRef<string>("");
     useEffect(() => {
@@ -359,38 +413,65 @@ export function CreateApplicationForm() {
         prevCourseRef.current = selectedCourseId;
     }, [selectedCourseId, form]);
 
-    // Auto-select documents for required types that are not yet selected (e.g. after upload)
+    // Auto-attach documents that match required/optional course types
     useEffect(() => {
-        if (!selectedCourseId || documents.length === 0) return;
+        if (!selectedCourseId) return;
 
-        const currentIds = form.getFieldValue("document_ids") as string[];
-        const selectedDocs = documents.filter((d) => currentIds.includes(d.id));
-        const selectedTypeIds = new Set(
-            selectedDocs.map((d) => d.document_type?.id ?? d.document_type_id)
-        );
+        const attachedIds = collectAttachedDocumentIds(documents, requiredDocTypes, optionalDocTypes);
+        const currentIds = form.getFieldValue("document_ids") ?? [];
+        const sortedCurrent = [...currentIds].sort().join(",");
+        const sortedNew = [...attachedIds].sort().join(",");
 
-        const typesToMatch =
-            requiredDocTypes.length > 0
-                ? requiredDocTypes
-                : documents
-                    .map((d) => ({
-                        id: d.document_type?.id ?? d.document_type_id,
-                    }))
-                    .filter((t): t is { id: string } => Boolean(t.id));
-
-        const toAdd = typesToMatch
-            .filter((t) => !selectedTypeIds.has(t.id))
-            .map((t) =>
-                documents.find(
-                    (d) => (d.document_type?.id ?? d.document_type_id) === t.id
-                )?.id
-            )
-            .filter((id): id is string => Boolean(id));
-
-        if (toAdd.length > 0) {
-            form.setFieldValue("document_ids", [...currentIds, ...toAdd]);
+        if (sortedCurrent !== sortedNew) {
+            form.setFieldValue("document_ids", attachedIds);
         }
-    }, [selectedCourseId, requiredDocTypes, documents, form]);
+    }, [selectedCourseId, requiredDocTypes, optionalDocTypes, documents, form]);
+
+    const flowSteps = useMemo(
+        () => buildFlowSteps(user?.role, courseIdParam),
+        [user?.role, courseIdParam]
+    );
+
+    const currentFlowIndex = flowSteps.findIndex((s) => s.internalStep === step);
+    const progressWidth =
+        flowSteps.length <= 1 || currentFlowIndex <= 0
+            ? currentFlowIndex >= 0 && flowSteps.length === 1
+                ? "100%"
+                : "0%"
+            : `${(currentFlowIndex / (flowSteps.length - 1)) * 100}%`;
+
+    const checkDuplicateApplication = useCallback(
+        async (studentId: string, courseId: string) => {
+            setIsCheckingDuplicate(true);
+            setDuplicateError(null);
+
+            try {
+                const res = await fetch(`/api/application?student_id=${studentId}`);
+
+                if (res.ok) {
+                    const json = await res.json();
+                    const existing = (json.data as ApplicationDuplicateRow[] | undefined)?.find(
+                        (app) =>
+                            app.course?.id === courseId && app.status !== "REJECTED"
+                    );
+
+                    if (existing) {
+                        setDuplicateError("Application is already created for this course");
+                        toast.error("Application is already created for this course");
+                        return false;
+                    }
+                }
+
+                return true;
+            } catch (err) {
+                console.error("Failed to check existing applications", err);
+                return true;
+            } finally {
+                setIsCheckingDuplicate(false);
+            }
+        },
+        []
+    );
 
 
     const handleNextStep = async () => {
@@ -405,15 +486,22 @@ export function CreateApplicationForm() {
                 return;
             }
 
-            // If course_id comes from params and course exists
-            // then skip Step 2 and go directly to Step 3
-            const hasValidCourse =
-                courseIdParam &&
-                courses.some((course) => course.id === courseIdParam);
+            // If course_id comes from params and course exists, skip Step 2
+            if (courseIdParam) {
+                if (isCourseDetailLoading && !courseFromParam) {
+                    toast.error("Loading course details, please try again.");
+                    return;
+                }
 
-            if (hasValidCourse) {
-                setStep(3);
-                return;
+                if (isCourseFromParamValid && courseFromParam) {
+                    applyCourseToForm(form, courseFromParam, levels);
+
+                    const canProceed = await checkDuplicateApplication(studentId, courseIdParam);
+                    if (!canProceed) return;
+
+                    setStep(3);
+                    return;
+                }
             }
 
             // Normal flow
@@ -424,95 +512,36 @@ export function CreateApplicationForm() {
 
             const courseId = form.getFieldValue("course_id");
             const studentId = form.getFieldValue("profile_id");
-            const documentIds = form.getFieldValue("document_ids");
 
             if (!courseId) {
                 toast.error("Please select a course first.");
                 return;
             }
 
-            if (!documentIds || documentIds.length === 0) {
-                toast.error("Please select at least one supporting document.");
+            const missingRequired = getMissingRequiredDocTypes(requiredDocTypes, documents);
+            if (missingRequired.length > 0) {
+                toast.error(
+                    `Missing required documents: ${missingRequired.map((m) => m.name).join(", ")}`
+                );
                 return;
             }
 
-            // Validate required document types
-            if (requiredDocTypes.length > 0) {
-                const studentDocTypeIds = documents
-                    .filter(d => documentIds.includes(d.id))
-                    .map((d) => d.document_type?.id ?? d.document_type_id);
-
-                const missingTypes = requiredDocTypes.filter(
-                    rt => !studentDocTypeIds.includes(rt.id)
-                );
-
-                if (missingTypes.length > 0) {
-                    toast.error(
-                        `Missing required documents: ${missingTypes
-                            .map(m => m.name)
-                            .join(", ")}`
-                    );
-                    return;
-                }
+            if (requiredDocTypes.length === 0 && documents.length === 0) {
+                toast.error("Please upload at least one supporting document.");
+                return;
             }
 
-            // Check for existing application
-            try {
-                setIsCheckingDuplicate(true);
-                setDuplicateError(null);
-
-                const res = await fetch(
-                    `/api/application?student_id=${studentId}`
-                );
-
-                if (res.ok) {
-                    const json = await res.json();
-
-                    const existing = (json.data || []).find(
-                        (app: any) =>
-                            app.course?.id === courseId &&
-                            app.status !== "REJECTED"
-                    );
-
-                    if (existing) {
-                        setDuplicateError(
-                            "Application is already created for this course"
-                        );
-
-                        toast.error(
-                            "Application is already created for this course"
-                        );
-
-                        setIsCheckingDuplicate(false);
-                        return;
-                    }
-                }
-
-                setIsCheckingDuplicate(false);
-
-            } catch (err) {
-                console.error(
-                    "Failed to check existing applications",
-                    err
-                );
-
-                setIsCheckingDuplicate(false);
-            }
+            const canProceed = await checkDuplicateApplication(studentId, courseId);
+            if (!canProceed) return;
 
             setStep(3);
         }
     };
 
     useEffect(() => {
-        // Only for STUDENT role
-        if (
-            user?.role === "STUDENT" &&
-            courseIdParam &&
-            courses.some((course) => course.id === courseIdParam)
-        ) {
-            setStep(3);
-        }
-    }, [user, courseIdParam, courses]);
+        if (user?.role !== "STUDENT" || !courseIdParam || !isCourseFromParamValid) return;
+        setStep(3);
+    }, [user?.role, courseIdParam, isCourseFromParamValid]);
     return (
         <div className="space-y-8 pb-20">
             {/* Header */}
@@ -531,49 +560,55 @@ export function CreateApplicationForm() {
                 <div className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 -z-10" />
                 <div
                     className="absolute top-8 left-0 h-0.5 bg-brand-secondary -z-10 transition-all duration-300"
-                    style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}
+                    style={{ width: progressWidth }}
                 />
 
-                {courseIdParam && user?.role !== UserRole.STUDENT && (
-                    <div className="flex flex-col items-center gap-3">
-                        <div className={cn(
-                            "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
-                            step >= 1 ? "bg-brand-secondary text-white" : "bg-[#e2e8f0] text-gray-500"
-                        )}>
-                            1
+                {flowSteps.map((flowStep, index) => {
+                    const displayNumber = index + 1;
+                    const isActive = currentFlowIndex >= index;
+                    const isCurrent = flowSteps[currentFlowIndex]?.internalStep === flowStep.internalStep;
+
+                    return (
+                        <div key={flowStep.internalStep} className="flex flex-col items-center gap-3">
+                            <div
+                                className={cn(
+                                    "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
+                                    isActive ? "bg-brand-secondary text-white" : "bg-[#e2e8f0] text-gray-500"
+                                )}
+                            >
+                                {displayNumber}
+                            </div>
+                            <span
+                                className={cn(
+                                    "text-[10px] font-bold tracking-widest uppercase",
+                                    isCurrent ? "text-brand-secondary" : "text-gray-500"
+                                )}
+                            >
+                                {flowStep.label}
+                            </span>
                         </div>
-                        <span className="text-[10px] font-bold tracking-widest text-brand-secondary uppercase">Student Profile</span>
-                    </div>
-                )}
-
-                {!courseIdParam && (
-
-                    <div className="flex flex-col items-center gap-3">
-                        <div className={cn(
-                            "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
-                            step >= 2 ? "bg-brand-secondary text-white" : "bg-[#e2e8f0] text-gray-500"
-                        )}>
-                            2
-                        </div>
-                        <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Course Selection</span>
-                    </div>
-                )}
-
-                <div className="flex flex-col items-center gap-3">
-                    <div className={cn(
-                        "size-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors",
-                        step >= 3 ? "bg-brand-secondary text-white" : "bg-[#e2e8f0] text-gray-500"
-                    )}>
-                        3
-                    </div>
-                    <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Review & Submit</span>
-                </div>
+                    );
+                })}
             </div>
 
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
+
+                    const missingRequired = getMissingRequiredDocTypes(requiredDocTypes, documents);
+                    if (missingRequired.length > 0) {
+                        toast.error(
+                            `Missing required documents: ${missingRequired.map((m) => m.name).join(", ")}`
+                        );
+                        return;
+                    }
+
+                    if (requiredDocTypes.length === 0 && documents.length === 0) {
+                        toast.error("Please upload at least one supporting document.");
+                        return;
+                    }
+
                     form.handleSubmit();
                 }}
             >
@@ -596,6 +631,7 @@ export function CreateApplicationForm() {
                         selectedStudentId={selectedStudentId}
                         documents={documents}
                         requiredDocTypes={requiredDocTypes}
+                        optionalDocTypes={optionalDocTypes}
                         selectedCourseId={selectedCourseId}
                         levels={levels}
                         refetchDocuments={refetchDocuments}
@@ -611,14 +647,20 @@ export function CreateApplicationForm() {
                     <Step3
                         form={form}
                         studentDetails={studentDetails}
+                        selectedCourse={selectedCourseDetail}
                         allDocuments={documents}
-                        courses={courses}
+                        requiredDocTypes={requiredDocTypes}
+                        optionalDocTypes={optionalDocTypes}
+                        selectedCourseId={selectedCourseId}
+                        selectedStudentId={selectedStudentId}
+                        refetchDocuments={refetchDocuments}
+                        isDocumentsLoading={isDocumentsLoading}
                         onBack={() => {
                             if (courseIdParam) return setStep(1)
                             setStep(2)
                         }}
                         isSubmitting={createApplication.isPending}
-                        error={createApplication.error?.message}
+                        error={createApplication.error?.message ?? duplicateError ?? undefined}
                     />
                 )}
 
@@ -628,24 +670,43 @@ export function CreateApplicationForm() {
     );
 }
 
-function Step1({ form, students, studentDetails, role, isStepAttempted, onNext }: { form: any; students: Student[]; studentDetails?: Student; role?: string; isStepAttempted?: boolean; onNext: () => void }) {
+function Step1({ form, students, studentDetails, role, isStepAttempted, onNext }: { form: CreateApplicationFormApi; students: StudentListItem[]; studentDetails?: ApplicationStudentDetail; role?: ApplicationProfileRole; isStepAttempted?: boolean; onNext: () => void }) {
     return (
         <div className="space-y-8">
             <div className="space-y-2">
                 {role !== "STUDENT" && (
                     <form.Field name="profile_id">
-                        {(field: any) => (
+                        {(field: ApplicationFormFieldRenderProps<string>) => (
                             <F field={field} label="Select Student" isStepAttempted={isStepAttempted}>
-                                <Select value={field.state.value} onValueChange={field.handleChange}>
+                                <Select
+                                    value={field.state.value || undefined}
+                                    onValueChange={field.handleChange}
+                                >
                                     <SelectTrigger className="w-full h-12 bg-white/40 backdrop-blur-md rounded-xl border border-white/60 shadow-sm focus:ring-brand-byzantine/20">
                                         <SelectValue placeholder="Select a student..." />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-white/90 backdrop-blur-xl border-white/60 rounded-xl shadow-2xl">
-                                        {students.map((s) => (
-                                            <SelectItem key={s.profile.id} value={s.profile.id} className="focus:bg-brand-byzantine/10 focus:text-brand-byzantine cursor-pointer py-3">
-                                                {s.student_code}
+                                    <SelectContent className="bg-white/90 backdrop-blur-xl border-white/60 rounded-xl shadow-2xl max-h-72">
+                                        {students.length === 0 ? (
+                                            <SelectItem value="__empty" disabled>
+                                                No students found
                                             </SelectItem>
-                                        ))}
+                                        ) : (
+                                            students.map((student) => {
+                                                const label = student.profile?.name
+                                                    ? `${student.student_code ? `${student.student_code}` : ""} · ${student.profile.name}`
+                                                    : (student.student_code ?? "Student");
+
+                                                return (
+                                                <SelectItem
+                                                    key={student.profile_id}
+                                                    value={student.profile_id}
+                                                    className="focus:bg-brand-byzantine/10 focus:text-brand-byzantine cursor-pointer py-3"
+                                                >
+                                                    {label}
+                                                </SelectItem>
+                                                );
+                                            })
+                                        )}
                                     </SelectContent>
                                 </Select>
                             </F>
@@ -720,7 +781,7 @@ function SupportingDocumentUploadModal({
     open: boolean;
     onOpenChange: (open: boolean) => void;
     studentId: string;
-    documentType: { id: string; name: string } | null;
+    documentType: ApplicationDocumentTypeSummary | null;
     onUploaded: (documentId: string) => void;
 }) {
     const [frontFile, setFrontFile] = useState<File | null>(null);
@@ -860,19 +921,160 @@ function SupportingDocumentUploadModal({
     );
 }
 
+function DocumentTypeCard({
+    docType,
+    doc,
+    isRequired,
+    onUpload,
+}: {
+    docType: ApplicationDocumentTypeSummary;
+    doc?: ApplicationStudentDocument;
+    isRequired: boolean;
+    onUpload?: () => void;
+}) {
+    const isAttached = Boolean(doc);
+
+    if (!isAttached) {
+        if (isRequired) {
+            return (
+                <button
+                    type="button"
+                    onClick={onUpload}
+                    className="flex w-full min-w-0 flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border-2 border-dashed border-red-200 bg-red-50/50 p-3 min-h-[140px] transition-all hover:border-red-300 hover:bg-red-50 group"
+                >
+                    <div className="size-10 shrink-0 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                        <FileText className="size-5 text-red-400" />
+                    </div>
+                    <div className="w-full min-w-0 overflow-hidden text-center">
+                        <span title={docType.name} className="block w-full truncate text-[11px] font-bold text-red-600">
+                            <Typography as="p" className="truncate text-[11px] font-bold text-red-600">
+                                {docType.name}
+                            </Typography>
+                        </span>
+                        <Typography as="p" className="mt-0.5 block w-full truncate text-[9px] text-red-400">
+                            Required · Click to upload
+                        </Typography>
+                    </div>
+                </button>
+            );
+        }
+
+        return (
+            <button
+                type="button"
+                onClick={onUpload}
+                className="flex w-full min-w-0 flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 min-h-[140px] transition-all hover:border-gray-300 hover:bg-gray-100 group"
+            >
+                <div className="size-10 shrink-0 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                    <FileText className="size-5 text-gray-400" />
+                </div>
+                <div className="w-full min-w-0 overflow-hidden text-center">
+                    <span title={docType.name} className="block w-full truncate text-[11px] font-bold text-gray-600">
+                        <Typography as="p" className="truncate text-[11px] font-bold text-gray-600">
+                            {docType.name}
+                        </Typography>
+                    </span>
+                    <Typography as="p" className="mt-0.5 block w-full truncate text-[9px] text-gray-400">
+                        Optional · Not attached
+                    </Typography>
+                    
+                </div>
+            </button>
+        );
+    }
+
+    if (!doc) {
+        return null;
+    }
+
+    return (
+        <div className="w-full min-w-0 overflow-hidden rounded-xl border border-green-500 bg-green-50/40 p-3 space-y-3 shadow-md">
+            <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-green-100 shadow-inner">
+                {doc.document_files?.[0]?.file_url ? (
+                    <FilePreview
+                        url={doc.document_files[0].file_url}
+                        name={docType.name}
+                        showActions={false}
+                        className="border-none shadow-none size-full"
+                    />
+                ) : (
+                    <FileText className="size-10 text-green-500" />
+                )}
+            </div>
+            <div className="min-w-0 w-full overflow-hidden">
+                <span title={docType.name} className="block w-full truncate text-[11px] font-bold text-gray-900">
+                    <Typography as="p" className="truncate text-[11px] font-bold text-gray-900">
+                        {docType.name}
+                    </Typography>
+                </span>
+                <Typography
+                    as="p"
+                    className="mt-1 block w-full truncate text-[8px] font-bold uppercase tracking-widest text-green-600"
+                >
+                    {isRequired ? "Required · Attached" : "Optional · Attached"}
+                </Typography>
+                <Typography
+                    as="p"
+                    className="mt-0.5 block w-full truncate text-[8px] font-bold uppercase tracking-widest text-gray-500"
+                >
+                    {new Date(doc.created_at).toLocaleDateString()}
+                </Typography>
+            </div>
+        </div>
+    );
+}
+
+function DocumentRequirementsGrid({
+    title,
+    docTypes,
+    documents,
+    isRequired,
+    onUpload,
+}: {
+    title: string;
+    docTypes: ApplicationDocumentTypeSummary[];
+    documents: ApplicationStudentDocument[];
+    isRequired: boolean;
+    onUpload: (docType: ApplicationDocumentTypeSummary) => void;
+}) {
+    if (docTypes.length === 0) return null;
+
+    return (
+        <div className="space-y-3">
+            <Typography as="p" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{title}</Typography>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 [&>*]:min-w-0">
+                {docTypes.map((docType) => {
+                    const doc = findDocumentForType(documents, docType.id);
+                    return (
+                        <DocumentTypeCard
+                            key={docType.id}
+                            docType={docType}
+                            doc={doc}
+                            isRequired={isRequired}
+                            onUpload={() => onUpload(docType)}
+                        />
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 function SupportingDocumentsSection({
     form,
     documents,
     requiredDocTypes,
+    optionalDocTypes,
     selectedCourseId,
     selectedStudentId,
     refetchDocuments,
     isDocumentsLoading,
     isStepAttempted,
 }: {
-    form: any;
-    documents: Document[];
-    requiredDocTypes: { id: string; name: string }[];
+    form: CreateApplicationFormApi;
+    documents: ApplicationStudentDocument[];
+    requiredDocTypes: ApplicationDocumentTypeSummary[];
+    optionalDocTypes: ApplicationDocumentTypeSummary[];
     selectedCourseId: string;
     selectedStudentId: string;
     refetchDocuments: () => Promise<unknown>;
@@ -880,9 +1082,9 @@ function SupportingDocumentsSection({
     isStepAttempted?: boolean;
 }) {
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
-    const [activeDocumentType, setActiveDocumentType] = useState<{ id: string; name: string } | null>(null);
+    const [activeDocumentType, setActiveDocumentType] = useState<ApplicationDocumentTypeSummary | null>(null);
 
-    const openUploadModal = useCallback((documentType: { id: string; name: string }) => {
+    const openUploadModal = useCallback((documentType: ApplicationDocumentTypeSummary) => {
         setActiveDocumentType(documentType);
         setUploadModalOpen(true);
     }, []);
@@ -890,13 +1092,16 @@ function SupportingDocumentsSection({
     const handleDocumentUploaded = useCallback(
         async (documentId: string) => {
             await refetchDocuments();
-            const currentIds = (form.getFieldValue("document_ids") as string[]) || [];
+            const currentIds = form.getFieldValue("document_ids") ?? [];
             if (!currentIds.includes(documentId)) {
                 form.setFieldValue("document_ids", [...currentIds, documentId]);
             }
         },
         [form, refetchDocuments]
     );
+
+    const allRequiredAttached = areAllRequiredDocumentsAttached(requiredDocTypes, documents);
+    const hasCourseRequirements = requiredDocTypes.length > 0 || optionalDocTypes.length > 0;
 
     if (!selectedCourseId) {
         return (
@@ -925,147 +1130,71 @@ function SupportingDocumentsSection({
             />
 
             <div className="bg-white rounded-2xl p-6 space-y-6 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                         <FileText className="size-5 text-blue-600" />
                         <Typography as="h3" font="title" className="text-brand-secondary">Supporting Documents</Typography>
                     </div>
+                    {hasCourseRequirements && allRequiredAttached && (
+                        <Typography as="span" className="text-[10px] font-bold uppercase tracking-widest text-green-600">
+                            All required attached
+                        </Typography>
+                    )}
                 </div>
 
-                <form.Field name="document_ids">
-                    {(field: any) => (
-                        <div className="space-y-2">
-                            {isDocumentsLoading ? (
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {[1, 2, 3, 4].map(i => (
-                                        <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />
-                                    ))}
-                                </div>
-                            ) : requiredDocTypes.length > 0 ? (
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {requiredDocTypes.map((rt) => {
-                                        const doc = documents.find(d => (d.document_type?.id ?? d.document_type_id) === rt.id);
-                                        const isChecked = doc ? field.state.value?.includes(doc.id) : false;
-                                        if (doc) {
-                                            return (
-                                                <div
-                                                    key={rt.id}
-                                                    onClick={() => {
-                                                        const current = field.state.value || [];
-                                                        const next = current.includes(doc.id)
-                                                            ? current.filter((id: string) => id !== doc.id)
-                                                            : [...current, doc.id];
-                                                        field.handleChange(next);
-                                                    }}
-                                                    className={cn(
-                                                        "bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border transition-all cursor-pointer group",
-                                                        isChecked ? "border-green-500 bg-green-50/30 shadow-md" : "border-gray-100 hover:border-gray-300"
-                                                    )}
-                                                >
-                                                    <div className="absolute top-3 left-3 z-10">
-                                                        {isChecked
-                                                            ? <CheckSquare className="size-4 text-green-500 fill-green-50" />
-                                                            : <Square className="size-4 text-brand-secondary/20 group-hover:text-brand-secondary/40" />}
-                                                    </div>
-                                                    <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                                        {doc.document_files?.[0]?.file_url ? (
-                                                            <FilePreview
-                                                                url={doc.document_files[0].file_url}
-                                                                name={rt.name}
-                                                                showActions={false}
-                                                                className="border-none shadow-none size-full"
-                                                            />
-                                                        ) : (
-                                                            <FileText className={cn("size-10", isChecked ? "text-green-500" : "text-gray-300")} />
-                                                        )}
-                                                    </div>
-                                                    <div>
-                                                        <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{rt.name}</Typography>
-                                                        <Typography as="p" className="text-[8px] font-bold tracking-widest text-gray-500 uppercase mt-1">
-                                                            {new Date(doc.created_at).toLocaleDateString()}
-                                                        </Typography>
-                                                    </div>
-                                                </div>
-                                            );
-                                        }
-                                        return (
-                                            <button
-                                                key={rt.id}
-                                                type="button"
-                                                onClick={() => openUploadModal(rt)}
-                                                className="bg-red-50/50 rounded-xl p-3 space-y-3 relative border-2 border-dashed border-red-200 flex flex-col items-center justify-center gap-2 min-h-[140px] hover:bg-red-50 hover:border-red-300 transition-all group w-full"
-                                            >
-                                                <div className="size-10 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                                                    <FileText className="size-5 text-red-400" />
-                                                </div>
-                                                <div className="text-center">
-                                                    <Typography as="p" className="text-[11px] font-bold text-red-600 truncate">{rt.name}</Typography>
-                                                    <Typography as="p" className="text-[9px] text-red-400 mt-0.5">Click to upload</Typography>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            ) : documents.length > 0 ? (
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {documents.map((doc) => {
-                                        const isChecked = field.state.value?.includes(doc.id);
-                                        const label = doc.document_type?.name ?? "Document";
-                                        return (
-                                            <div
-                                                key={doc.id}
-                                                onClick={() => {
-                                                    const current = field.state.value || [];
-                                                    const next = current.includes(doc.id)
-                                                        ? current.filter((id: string) => id !== doc.id)
-                                                        : [...current, doc.id];
-                                                    field.handleChange(next);
-                                                }}
-                                                className={cn(
-                                                    "bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border transition-all cursor-pointer group",
-                                                    isChecked ? "border-green-500 bg-green-50/30 shadow-md" : "border-gray-100 hover:border-gray-300"
-                                                )}
-                                            >
-                                                <div className="absolute top-3 left-3 z-10">
-                                                    {isChecked
-                                                        ? <CheckSquare className="size-4 text-green-500 fill-green-50" />
-                                                        : <Square className="size-4 text-brand-secondary/20 group-hover:text-brand-secondary/40" />}
-                                                </div>
-                                                <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                                    {doc.document_files?.[0]?.file_url ? (
-                                                        <FilePreview
-                                                            url={doc.document_files[0].file_url}
-                                                            name={label}
-                                                            showActions={false}
-                                                            className="border-none shadow-none size-full"
-                                                        />
-                                                    ) : (
-                                                        <FileText className={cn("size-10", isChecked ? "text-green-500" : "text-gray-300")} />
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{label}</Typography>
-                                                    <Typography as="p" className="text-[8px] font-bold tracking-widest text-gray-500 uppercase mt-1">
-                                                        {new Date(doc.created_at).toLocaleDateString()}
-                                                    </Typography>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="col-span-full py-12 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center gap-4">
-                                    <FileText className="size-6 text-gray-400" />
-                                    <Typography as="p" className="text-sm font-bold text-gray-900">No documents uploaded yet</Typography>
-                                    <Typography as="p" className="text-xs text-gray-500">Upload required documents using the cards above.</Typography>
-                                </div>
-                            )}
-                            {isStepAttempted && (!field.state.value || field.state.value.length === 0) && (
-                                <p className="text-[10px] text-red-500 font-medium mt-2">Please select at least one document</p>
-                            )}
-                        </div>
-                    )}
-                </form.Field>
+                {isDocumentsLoading ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 [&>*]:min-w-0">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />
+                        ))}
+                    </div>
+                ) : hasCourseRequirements ? (
+                    <div className="space-y-6">
+                        <DocumentRequirementsGrid
+                            title="Required Documents"
+                            docTypes={requiredDocTypes}
+                            documents={documents}
+                            isRequired
+                            onUpload={openUploadModal}
+                        />
+                        <DocumentRequirementsGrid
+                            title="Optional Documents"
+                            docTypes={optionalDocTypes}
+                            documents={documents}
+                            isRequired={false}
+                            onUpload={openUploadModal}
+                        />
+                    </div>
+                ) : documents.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 [&>*]:min-w-0">
+                        {documents.map((doc) => {
+                            const typeId = doc.document_type?.id ?? doc.document_type_id;
+                            if (!typeId) return null;
+
+                            const label = doc.document_type?.name ?? "Document";
+                            return (
+                                <DocumentTypeCard
+                                    key={doc.id}
+                                    docType={{ id: typeId, name: label }}
+                                    doc={doc}
+                                    isRequired={false}
+                                />
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="py-12 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center gap-4">
+                        <FileText className="size-6 text-gray-400" />
+                        <Typography as="p" className="text-sm font-bold text-gray-900">No documents uploaded yet</Typography>
+                        <Typography as="p" className="text-xs text-gray-500">Upload required documents for this program.</Typography>
+                    </div>
+                )}
+
+                {isStepAttempted && !allRequiredAttached && (
+                    <Typography as="p" className="text-[10px] text-red-500 font-medium">
+                        Please upload all required documents before continuing.
+                    </Typography>
+                )}
             </div>
         </>
     );
@@ -1079,6 +1208,7 @@ function Step2({
     selectedStudentId,
     documents,
     requiredDocTypes,
+    optionalDocTypes,
     selectedCourseId,
     levels,
     refetchDocuments,
@@ -1089,15 +1219,16 @@ function Step2({
     onNext,
     onBack,
 }: {
-    form: any;
+    form: CreateApplicationFormApi;
     courses: CourseProgram[];
-    students: Student[];
-    studentDetails?: Student;
+    students: StudentListItem[];
+    studentDetails?: ApplicationStudentDetail;
     selectedStudentId: string;
-    documents: Document[];
-    requiredDocTypes: { id: string; name: string }[];
+    documents: ApplicationStudentDocument[];
+    requiredDocTypes: ApplicationDocumentTypeSummary[];
+    optionalDocTypes: ApplicationDocumentTypeSummary[];
     selectedCourseId: string;
-    levels: Array<{ id: string; university_id: string | null }>;
+    levels: LevelOption[];
     refetchDocuments: () => Promise<unknown>;
     isDocumentsLoading?: boolean;
     isChecking?: boolean;
@@ -1246,7 +1377,7 @@ function Step2({
                 className="rounded-[24px] overflow-hidden border border-white/30 shadow-sm p-0"
             >
                 <form.Field name="course_id">
-                    {(field: any) => (
+                    {(field: ApplicationFormFieldRenderProps<string>) => (
                         <Table>
                             <TableHeader className="bg-white/30">
                                 <TableRow className="hover:bg-transparent border-b-white/20">
@@ -1333,6 +1464,7 @@ function Step2({
                 form={form}
                 documents={documents}
                 requiredDocTypes={requiredDocTypes}
+                optionalDocTypes={optionalDocTypes}
                 selectedCourseId={selectedCourseId}
                 selectedStudentId={selectedStudentId}
                 refetchDocuments={refetchDocuments}
@@ -1362,21 +1494,45 @@ function Step2({
     );
 }
 
-function Step3({ form, studentDetails, allDocuments, courses, onBack, isSubmitting, error }: { form: any; studentDetails?: Student; allDocuments: Document[]; courses: CourseProgram[]; onBack: () => void; isSubmitting: boolean; error?: string }) {
+function Step3({
+    form,
+    studentDetails,
+    selectedCourse,
+    allDocuments,
+    requiredDocTypes,
+    optionalDocTypes,
+    selectedCourseId,
+    selectedStudentId,
+    refetchDocuments,
+    isDocumentsLoading,
+    onBack,
+    isSubmitting,
+    error,
+}: {
+    form: CreateApplicationFormApi;
+    studentDetails?: ApplicationStudentDetail;
+    selectedCourse?: CourseProgram;
+    allDocuments: ApplicationStudentDocument[];
+    requiredDocTypes: ApplicationDocumentTypeSummary[];
+    optionalDocTypes: ApplicationDocumentTypeSummary[];
+    selectedCourseId: string;
+    selectedStudentId: string;
+    refetchDocuments: () => Promise<unknown>;
+    isDocumentsLoading?: boolean;
+    onBack: () => void;
+    isSubmitting: boolean;
+    error?: string;
+}) {
+    const declarations = useStore(form.store, (state) => state.values.declarations);
 
-
-    const selectedCourseId = useStore(form.store, (s: any) => s.values.course_id);
-    const selectedDocIds = useStore(form.store, (s: any) => s.values.document_ids) || [];
-    const declarations = useStore(form.store, (s: any) => s.values.declarations);
-    const selectedCourse = courses.find((course) => course.id === selectedCourseId);
-
-    const selectedDocs = allDocuments.filter(doc => selectedDocIds.includes(doc.id));
-
+    const allRequiredAttached = areAllRequiredDocumentsAttached(requiredDocTypes, allDocuments);
 
     const isAllChecked = Array.isArray(declarations) && declarations.every(Boolean);
 
     const intakeDate = selectedCourse?.degree?.intake_date;
     const uniqueIntakes = intakeDate ? [intakeDate] : [];
+    const degreeName = selectedCourse?.degree?.name;
+    const degreeFees = selectedCourse?.degree?.fees;
 
     return (
         <div className="space-y-6">
@@ -1389,13 +1545,13 @@ function Step3({ form, studentDetails, allDocuments, courses, onBack, isSubmitti
 
                     <div className="flex flex-col sm:flex-row justify-between gap-6">
                         <div className="space-y-1">
-                            <Typography as="h4" font="text-lg" className="font-extrabold text-gray-900 leading-tight">{selectedCourse?.name}</Typography>
-                            <Typography as="p" font="small" className="text-gray-500">{selectedCourse?.degree?.name ?? "N/A"}</Typography>
-                            <Typography as="p" font="small" className="text-gray-500">{selectedCourse?.degree?.fees ?? "Contact University"}</Typography>
+                            <Typography as="h4" font="text-lg" className="font-extrabold text-gray-900 leading-tight">{selectedCourse?.name ?? "—"}</Typography>
+                            <Typography as="p" font="small" className="text-gray-500">{degreeName ?? "N/A"}</Typography>
+                            <Typography as="p" font="small" className="text-gray-500">{degreeFees ?? "Contact University"}</Typography>
                         </div>
                         <div className="space-y-1.5 w-full sm:w-64">
                             <form.Field name="intake_date">
-                                {(field: any) => (
+                                {(field: ApplicationFormFieldRenderProps<string>) => (
                                     <F field={field} label="Academic Session">
                                         <Select value={field.state.value} onValueChange={field.handleChange}>
                                             <SelectTrigger className="h-11 bg-[#f8f9fc] border-gray-200 rounded-xl font-bold">
@@ -1446,41 +1602,16 @@ function Step3({ form, studentDetails, allDocuments, courses, onBack, isSubmitti
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-2 mb-6 text-brand-secondary">
-                    <FileText className="size-5" />
-                    <Typography as="h3" font="title" className="font-bold">Attached Documents ({selectedDocs.length})</Typography>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {selectedDocs.map((doc) => (
-                        <div key={doc.id} className="space-y-2">
-                            <div className="aspect-square bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm">
-                                {doc.document_files?.[0]?.file_url ? (
-                                    <FilePreview
-                                        url={doc.document_files[0].file_url}
-                                        name={doc.document_type?.name ?? ""}
-                                        showActions={false}
-                                        className="border-none shadow-none size-full"
-                                    />
-                                ) : (
-                                    <div className="size-full flex items-center justify-center bg-gray-50">
-                                        <FileText className="size-8 text-gray-300" />
-                                    </div>
-                                )}
-                            </div>
-                            <Typography as="p" className="text-[10px] font-bold text-gray-700 truncate px-1">
-                                {doc.document_type?.name ?? "—"}
-                            </Typography>
-                        </div>
-                    ))}
-                    {selectedDocs.length === 0 && (
-                        <div className="col-span-full py-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                            <Typography className="text-sm text-gray-400 italic">No documents attached</Typography>
-                        </div>
-                    )}
-                </div>
-            </div>
+            <SupportingDocumentsSection
+                form={form}
+                documents={allDocuments}
+                requiredDocTypes={requiredDocTypes}
+                optionalDocTypes={optionalDocTypes}
+                selectedCourseId={selectedCourseId}
+                selectedStudentId={selectedStudentId}
+                refetchDocuments={refetchDocuments}
+                isDocumentsLoading={isDocumentsLoading}
+            />
 
 
             <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-6 shadow-sm">
@@ -1493,7 +1624,7 @@ function Step3({ form, studentDetails, allDocuments, courses, onBack, isSubmitti
 
 
                 <form.Field name="declarations">
-                    {(field: any) => (
+                    {(field: ApplicationFormFieldRenderProps<boolean[]>) => (
                         <div className="space-y-4">
                             {[
                                 "I confirm that all information provided in this application is true, complete, and accurate to the best of my knowledge. I understand that misrepresentation may lead to rejection.",
@@ -1523,13 +1654,12 @@ function Step3({ form, studentDetails, allDocuments, courses, onBack, isSubmitti
                                     </div>
                                 );
                             })}
-                            {field.state.meta.errors?.[0] && (
-                                <p className="text-[10px] text-red-500 font-medium">
-                                    {typeof field.state.meta.errors[0] === "string"
-                                        ? field.state.meta.errors[0]
-                                        : (field.state.meta.errors[0] as any)?.message}
-                                </p>
-                            )}
+                            {(() => {
+                                const declarationError = getApplicationFieldError(field.state.meta.errors?.[0]);
+                                return declarationError ? (
+                                    <p className="text-[10px] text-red-500 font-medium">{declarationError}</p>
+                                ) : null;
+                            })()}
                         </div>
                     )}
                 </form.Field>
@@ -1556,9 +1686,9 @@ function Step3({ form, studentDetails, allDocuments, courses, onBack, isSubmitti
                     type="submit"
                     className={cn(
                         "h-12 px-10",
-                        (isSubmitting || !isAllChecked) && "opacity-50 cursor-not-allowed grayscale-[0.5]"
+                        (isSubmitting || !isAllChecked || !allRequiredAttached) && "opacity-50 cursor-not-allowed grayscale-[0.5]"
                     )}
-                    disabled={isSubmitting || !isAllChecked}
+                    disabled={isSubmitting || !isAllChecked || !allRequiredAttached}
                 >
                     {isSubmitting ? "Submitting Application..." : "Send Your Application"}
                 </Button>

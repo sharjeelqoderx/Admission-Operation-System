@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { useAuth } from "@/hooks/useAuth"
@@ -13,8 +14,8 @@ import { PageLoader } from "@/components/shared/page-loader"
 
 import { Step1Basic } from "./step_1"
 import { Step2Academic } from "./step_2"
-import { Step3Work } from "./step_3"
-import { Step4Course } from "./step_4"
+import { Step3Experience } from "./step_3"
+import { Step4Application } from "./step_4"
 import { AgentStep1 } from "./agent_step_1"
 import { AgentStep2 } from "./agent_step_2"
 import { AgentStep3 } from "./agent_step_3"
@@ -25,7 +26,7 @@ const STUDENT_STEPS = [
     { key: "step1", label: "Basic" },
     { key: "step2", label: "Academic" },
     { key: "step3", label: "Experience" },
-    { key: "step4", label: "Course" },
+    { key: "step4", label: "Application" },
 ] as const
 
 const AGENT_STEPS = [
@@ -37,15 +38,43 @@ const AGENT_STEPS = [
 const STEP_INDEX: Record<Step, number> = { welcome: -1, step1: 0, step2: 1, step3: 2, step4: 3 }
 
 const STUDENT_TITLES: Record<Step, string> = {
-    welcome: "", step1: "Basic Information", step2: "Academic Background", step3: "Work Experience", step4: "Select Course (Optional)",
+    welcome: "",
+    step1: "Basic Information",
+    step2: "Academic Background",
+    step3: "Work Experience",
+    step4: "Create Application",
 }
+
+const STUDENT_DESCRIPTIONS: Record<Step, string> = {
+    welcome: "",
+    step1: "Complete your personal details and location.",
+    step2: "Add your highest qualification, institution, and grades.",
+    step3: "Add at least one work experience to complete your profile.",
+    step4: "If you want to apply for a program, you can do it directly from here while completing your profile.",
+}
+
 const AGENT_TITLES: Record<Step, string> = {
-    welcome: "", step1: "Agent Profile", step2: "KYC / Verification", step3: "Contact", step4: "",
+    welcome: "",
+    step1: "University Partner Profile",
+    step2: "KYC / Verification",
+    step3: "Contact",
+    step4: "",
+}
+
+const AGENT_DESCRIPTIONS: Record<Step, string> = {
+    welcome: "",
+    step1: "",
+    step2: "",
+    step3: "",
+    step4: "",
 }
 
 function Stepper({ step, isAgent }: { step: Step; isAgent: boolean }) {
     const current = STEP_INDEX[step]
     const steps = isAgent ? AGENT_STEPS : STUDENT_STEPS
+    const titles = isAgent ? AGENT_TITLES : STUDENT_TITLES
+    const descriptions = isAgent ? AGENT_DESCRIPTIONS : STUDENT_DESCRIPTIONS
+
     return (
         <div className="space-y-6">
             <div className="space-y-2">
@@ -53,9 +82,20 @@ function Stepper({ step, isAgent }: { step: Step; isAgent: boolean }) {
                     Step {String(current + 1).padStart(2, "0")} of {isAgent ? "03" : "04"}
                 </Typography>
 
-                <Typography as="h2" font="sub-heading" className="font-bold">
-                    {(isAgent ? AGENT_TITLES : STUDENT_TITLES)[step]}
-                </Typography>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Typography as="h2" font="sub-heading" className="font-bold">
+                        {titles[step]}
+                    </Typography>
+                    {!isAgent && step === "step4" && (
+                        <Badge variant="outline">Optional</Badge>
+                    )}
+                </div>
+
+                {descriptions[step] && (
+                    <Typography as="p" font="text" className="text-muted-foreground">
+                        {descriptions[step]}
+                    </Typography>
+                )}
             </div>
 
             <div className="flex gap-2">
@@ -65,12 +105,6 @@ function Stepper({ step, isAgent }: { step: Step; isAgent: boolean }) {
                             "h-1.5 w-full rounded-full transition-colors duration-300",
                             i <= current ? "bg-brand-blue" : "bg-border"
                         )} />
-                        {/* <p className={cn(
-                            "text-xs font-medium transition-colors",
-                            i === current ? "text-brand-blue" : i < current ? "text-brand-blue" : "text-brand-blue/50"
-                        )}>
-                            {s.label}
-                        </p> */}
                     </div>
                 ))}
             </div>
@@ -87,15 +121,14 @@ function OnboardingControllerInner() {
     const step = (searchParams.get("step") ?? "welcome") as Step
     const isAgent = meData?.role?.toLowerCase() === "agent"
 
-    const navigate = (s: Step, sidebar = true) => {
+    const navigate = (s: Step) => {
         const params = new URLSearchParams(searchParams.toString())
         params.set("step", s)
-        // params.set("sidebar", sidebar ? "true" : "false")
         params.delete("sidebar")
         router.replace(`/onboarding?${params.toString()}`)
     }
 
-    if (isLoading) {
+    if (step !== "welcome" && isLoading) {
         return <PageLoader fullScreen label="Setting up your onboarding..." />
     }
 
@@ -118,12 +151,9 @@ function OnboardingControllerInner() {
                             </Typography>
                         </div>
                         <div className="flex flex-col gap-3 w-full">
-                            <Button className="w-full capitalize" onClick={() => navigate("step1", true)}>
+                            <Button className="w-full capitalize" onClick={() => navigate("step1")}>
                                 Start Creating your Profile
                             </Button>
-                            {/* <Button variant="ghost" className="hover:bg-transparent" onClick={() => router.push("/dashboard")}>
-                                Skip for now
-                            </Button> */}
                         </div>
                     </div>
                 </BluryCard>
@@ -142,23 +172,22 @@ function OnboardingControllerInner() {
                     <Stepper step={step} isAgent={isAgent} />
 
                     {!isAgent && step === "step1" && (
-                        <Step1Basic
-                            onNext={() => navigate("step2")}
-                            // onSkip={() => router.push("/dashboard")}
-                        />
+                        <Step1Basic onNext={() => navigate("step2")} />
                     )}
                     {!isAgent && step === "step2" && (
                         <Step2Academic
                             onBack={() => navigate("step1")}
                             onNext={() => navigate("step3")}
-                            onSkip={() => router.push("/dashboard")}
                         />
                     )}
                     {!isAgent && step === "step3" && (
-                        <Step3Work onBack={() => navigate("step2")} onNext={() => navigate("step4")} onSkip={() => navigate("step4")} />
+                        <Step3Experience
+                            onBack={() => navigate("step2")}
+                            onNext={() => navigate("step4")}
+                        />
                     )}
                     {!isAgent && step === "step4" && (
-                        <Step4Course onBack={() => navigate("step3")} />
+                        <Step4Application onBack={() => navigate("step3")} />
                     )}
 
                     {isAgent && step === "step1" && (

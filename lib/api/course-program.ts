@@ -18,6 +18,7 @@ export const COURSE_SELECT = `
         level_id,
         requirements:degree_requirement (
             id,
+            requirement_type,
             created_at,
             updated_at,
             document_type:document_type_id (

@@ -53,6 +53,53 @@ export function getLevelPriority(levelName?: string | null): number {
   return 0;
 }
 
+function normalizeLevelName(levelName?: string | null): string {
+  return levelName?.trim().toLowerCase() ?? ""
+}
+
+/** Maps highest qualification level to eligible course level(s). */
+export function getTargetCourseLevelNames(
+  qualificationLevelName?: string | null
+): string[] {
+  const level = normalizeLevelName(qualificationLevelName)
+  if (!level) return []
+
+  if (level === "mba") return ["MBA"]
+  if (level === "bachelor") return ["Master"]
+  if (level === "master") return ["Master", "MBA"]
+
+  const priority = getLevelPriority(qualificationLevelName)
+  if (priority === 6) return ["Master"]
+
+  return []
+}
+
+export function matchesTargetCourseLevel(
+  courseLevelName?: string | null,
+  targetLevelNames: string[] = []
+): boolean {
+  const courseLevel = normalizeLevelName(courseLevelName)
+  if (!courseLevel || targetLevelNames.length === 0) return false
+
+  return targetLevelNames.some(
+    (target) => courseLevel === normalizeLevelName(target)
+  )
+}
+
+export function filterCoursesByQualificationLevel<
+  T extends { degree?: { level?: { name?: string | null } | null } | null },
+>(
+  courses: T[],
+  qualificationLevelName?: string | null
+): T[] {
+  const targetLevelNames = getTargetCourseLevelNames(qualificationLevelName)
+  if (targetLevelNames.length === 0) return []
+
+  return courses.filter((course) =>
+    matchesTargetCourseLevel(course.degree?.level?.name, targetLevelNames)
+  )
+}
+
 export function getNextPossibleLevelPriorities(
   highestLevelName?: string | null
 ): number[] {

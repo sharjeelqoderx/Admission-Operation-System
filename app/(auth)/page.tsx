@@ -43,7 +43,7 @@ const page = () => {
                             </Button>
                             <div className='text-white'>
                                 <Typography as={'h1'} font='title'>
-                                    Agent
+                                    University Partner
                                 </Typography>
                                 <Typography as={'p'} font='sub-text'>
                                     Manage student applications, track commissions, and grow your partnership                            </Typography>

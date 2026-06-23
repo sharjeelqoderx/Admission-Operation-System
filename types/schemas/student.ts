@@ -106,20 +106,27 @@ export const StudentFormSchema = z.object({
     state: z.string().min(1, "State is required"),
     city: z.string().min(1, "City is required"),
     nationality: z.string().min(1, "Nationality is required"),
-    guardian_email: z.string().email("Valid guardian email is required"),
-    guardian_phone: z.string().min(1, "Guardian phone is required"),
+    guardian_email: z.union([
+        z.literal(""),
+        z.string().trim().email("Invalid guardian email format"),
+    ]),
+    guardian_phone: z.union([
+        z.literal(""),
+        z
+            .string()
+            .trim()
+            .regex(/^\+?[\d\s\-()]{8,30}$/, "Invalid guardian phone number"),
+    ]),
 
     academic_background: z.array(academicRecordSchema).min(1),
 
     avatar_url: optionalUploadFileSchema,
     passport_file_url: optionalUploadFileSchema,
-    cv_file: optionalUploadFileSchema,
 })
 
 export const StudentCreateFormSchema = StudentFormSchema.extend({
     title: z.enum(["Mr", "Mrs", "Ms"], { message: "Title is required" }),
     passport_file_url: requiredUploadFileSchema,
-    cv_file: requiredUploadFileSchema,
 }).superRefine((data, ctx) => {
     const mappedGender =
         data.title === "Mr"

@@ -4,8 +4,8 @@ import { StudentCreateFormSchema } from "@/types/schemas/student"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { upsertStudentDocument } from "@/lib/supabase/upsert-student-document"
 import { STUDENT_DOCUMENT_TYPE_IDS } from "@/lib/constants/document-types"
-import { formatFullName } from "@/lib/utils/profile"
 import { requiresApsRequirement } from "@/lib/utils/aps"
+import { fetchStudentsListForAgent } from "@/lib/student/list"
 
 export async function GET(req: NextRequest) {
     try {
@@ -16,132 +16,24 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        // Get agent row for logged-in user
-        const { data: agentRow } = await supabase
-            .from("agent")
-            .select("id")
-            .eq("profile_id", user.id)
-            .maybeSingle()
-
-        if (!agentRow) {
-            return NextResponse.json({ error: "Agent profile not found" }, { status: 400 })
-        }
-
         const { searchParams } = new URL(req.url)
-        const q = searchParams.get("q")
-        const status = searchParams.get("status")
-        const page = parseInt(searchParams.get("page") || "1")
-        const limit = parseInt(searchParams.get("limit") || "10")
+        const q = searchParams.get("q") ?? ""
+        const status = searchParams.get("status") ?? "all"
+        const page = parseInt(searchParams.get("page") || "1", 10)
+        const limit = parseInt(searchParams.get("limit") || "10", 10)
 
-        // Fetch students created by this agent with their profile
-        let query = supabase
-            .from("student")
-            .select(`
-                *,
-                profile:profile_id (*)
-            `)
-            .eq("created_by_agent_id", agentRow.id)
-
-        if (status && status !== "all") {
-            // We'll filter status in-memory below to avoid DB errors if column is missing
-        }
-
-        let { data: students, error } = await query.order("created_at", { ascending: false })
-
-        let pagination = {
-            total: 0,
+        const result = await fetchStudentsListForAgent(supabase, user.id, {
+            q,
+            status,
             page,
             limit,
-            totalPages: 0
+        })
+
+        if ("error" in result) {
+            return NextResponse.json({ error: result.error }, { status: 400 })
         }
 
-        if (students) {
-            // In-memory filtering for both search (q) and status
-            const searchTerm = q?.toLowerCase() || ""
-            const statusFilter = status?.toLowerCase() || "all"
-
-            students = students.filter(s => {
-                // 1. Status Filter
-                const studentStatus = (s.status || "CREATED").toLowerCase()
-                if (statusFilter !== "all" && studentStatus !== statusFilter) {
-                    return false
-                }
-
-                // 2. Search Filter
-                if (searchTerm) {
-                    const studentCode = s.student_code?.toLowerCase() || ""
-                    const country = s.country?.toLowerCase() || ""
-                    const profileName = formatFullName(s.profile?.first_name, s.profile?.last_name).toLowerCase()
-                    const profileEmail = s.profile?.email?.toLowerCase() || ""
-
-                    return studentCode.includes(searchTerm) ||
-                        country.includes(searchTerm) ||
-                        profileName.includes(searchTerm) ||
-                        profileEmail.includes(searchTerm)
-                }
-
-                return true
-            })
-
-            pagination.total = students.length
-            pagination.totalPages = Math.ceil(students.length / limit)
-
-            // Apply pagination
-            const start = (page - 1) * limit
-            students = students.slice(start, start + limit)
-
-            if (students.length > 0) {
-                const { count: totalDocumentTypes } = await supabase
-                    .from("document_type")
-                    .select("id", { count: "exact", head: true })
-
-                const profileIds = students.map((s) => s.profile_id)
-
-                const { data: documents } = await supabase
-                    .from("document")
-                    .select("profile_id, document_type_id")
-                    .in("profile_id", profileIds)
-                    .not("document_type_id", "is", null)
-
-                const uploadedByProfile = new Map<string, Set<string>>()
-                for (const doc of documents ?? []) {
-                    if (!doc.document_type_id) continue
-                    const existing = uploadedByProfile.get(doc.profile_id) ?? new Set<string>()
-                    existing.add(doc.document_type_id)
-                    uploadedByProfile.set(doc.profile_id, existing)
-                }
-
-                const total = totalDocumentTypes ?? 0
-
-                students = students.map((s) => {
-                    const documentsUploadedCount = uploadedByProfile.get(s.profile_id)?.size ?? 0
-                    const documentUploadPercentage =
-                        total > 0 ? Math.round((documentsUploadedCount / total) * 100) : 0
-
-                    const profile = s.profile
-                        ? {
-                            ...s.profile,
-                            name: formatFullName(s.profile.first_name, s.profile.last_name),
-                        }
-                        : s.profile
-
-                    return {
-                        ...s,
-                        profile,
-                        documents_uploaded_count: documentsUploadedCount,
-                        total_document_types: total,
-                        document_upload_percentage: documentUploadPercentage,
-                    }
-                })
-            }
-        }
-
-        if (error) {
-            console.error("Supabase Error:", error)
-            return NextResponse.json({ error: "Failed to fetch students" }, { status: 500 })
-        }
-
-        return NextResponse.json({ data: students, pagination }, { status: 200 })
+        return NextResponse.json({ data: result.data, pagination: result.pagination }, { status: 200 })
     } catch (e) {
         console.error("Error in GET /api/student:", e)
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
@@ -205,7 +97,6 @@ export async function POST(req: NextRequest) {
             avatar_url: getFile("avatar_url"),
             passport_file_url: getFile("passport_file_url"),
             academic_background,
-            cv_file: getFile("cv_file"),
         })
 
         const { data: meProfile } = await supabase
@@ -230,7 +121,7 @@ export async function POST(req: NextRequest) {
 
         if (!agentRow) {
             return NextResponse.json(
-                { error: "Agent profile not found" },
+                { error: "University Partner profile not found" },
                 { status: 400 }
             )
         }
@@ -424,18 +315,7 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        /* ---------------- CV + PASSPORT DOCUMENTS ---------------- */
-        if (validatedData.cv_file instanceof File) {
-            await upsertStudentDocument({
-                supabase,
-                profileId: newUserId,
-                uploadedByProfileId: user.id,
-                documentTypeId: STUDENT_DOCUMENT_TYPE_IDS.CV,
-                file: validatedData.cv_file,
-                storageSubpath: "cv",
-            })
-        }
-
+        /* ---------------- PASSPORT DOCUMENT ---------------- */
         if (validatedData.passport_file_url instanceof File) {
             await upsertStudentDocument({
                 supabase,

@@ -1,0 +1,264 @@
+import "server-only"
+
+import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { normalizeDateValue } from "@/types/schemas/academic"
+import { formatFullName } from "@/lib/utils/profile"
+import type { Database } from "@/types/supabase"
+
+type RoleEnum = Database["public"]["Enums"]["role_enum"]
+
+export type ProfilePageAcademic = {
+    qualification?: string | null
+    instituteName?: string | null
+    grade_type?: string | null
+    gpa?: string | number | null
+    obtained_marks?: string | number | null
+    total_marks?: string | number | null
+    start_date?: string | null
+    end_date?: string | null
+    about?: string | null
+}
+
+export type ProfilePageExperience = {
+    hasExperience?: "yes" | "no"
+    entries?: Array<{
+        jobTitle?: string
+        organization?: string
+        industry?: string
+        country?: string
+        startDate?: string
+        endDate?: string
+        responsibilities?: string
+    }>
+}
+
+export type ProfilePageData = {
+    id: string
+    email: string
+    fullName: string
+    firstName: string
+    lastName: string
+    title: string
+    phone: string
+    avatarUrl: string
+    role: RoleEnum
+    profile: Record<string, string | undefined | null> & {
+        dateOfBirth?: string
+        gender?: string
+        country?: string
+        state?: string
+        city?: string
+        nationality?: string
+        guardianEmail?: string
+        guardianPhone?: string
+        guardian_email?: string
+        guardian_phone?: string
+        student_code?: string
+        contact_person_first_name?: string
+        contact_person_last_name?: string
+        address?: string
+        zip_code?: string
+        website?: string
+        experience_years?: string
+        description?: string
+        other_contact_number?: string
+    }
+    academic?: ProfilePageAcademic[] | null
+    experience?: ProfilePageExperience | null
+    agentKyc?: {
+        registrationCertificateUrl: string | null
+        idCardFrontUrl: string | null
+        idCardBackUrl: string | null
+    } | null
+}
+
+export async function fetchProfilePageData(): Promise<ProfilePageData | null> {
+    const supabase = await createSupabaseServerClient()
+    const {
+        data: { user },
+        error,
+    } = await supabase.auth.getUser()
+
+    if (error || !user) {
+        return null
+    }
+
+    const { data: profile } = await supabase
+        .from("profile")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle()
+
+    const role = (profile?.role ?? "STUDENT") as RoleEnum
+
+    let extraData: Record<string, string | null | undefined> = {}
+
+    if (role === "STUDENT") {
+        const { data: student } = await supabase
+            .from("student")
+            .select("*")
+            .eq("profile_id", user.id)
+            .maybeSingle()
+        extraData = student ?? {}
+    } else if (role === "AGENT") {
+        const { data: agent } = await supabase
+            .from("agent")
+            .select("*")
+            .eq("profile_id", user.id)
+            .maybeSingle()
+        extraData = agent ?? {}
+    } else if (role === "UNIVERSITY") {
+        const { data: university } = await supabase
+            .from("university")
+            .select("*")
+            .eq("profile_id", user.id)
+            .maybeSingle()
+        extraData = university ?? {}
+    }
+
+    const { data: academics } = await supabase
+        .from("education")
+        .select("*")
+        .eq("profile_id", user.id)
+
+    const { data: experiences } = await supabase
+        .from("work_experience")
+        .select("*")
+        .eq("profile_id", user.id)
+
+    let agentKyc: ProfilePageData["agentKyc"] = null
+
+    if (role === "AGENT") {
+        const { data: agentDocuments } = await supabase
+            .from("document")
+            .select(
+                "document_type_id, created_at, document_type:document_type_id(code, name), document_files(file_url, type)"
+            )
+            .eq("profile_id", user.id)
+            .order("created_at", { ascending: true })
+
+        const docs = agentDocuments ?? []
+
+        const latestUrlForCode = (code: string) => {
+            let url: string | null = null
+            for (const doc of docs) {
+                const docType = doc.document_type as {
+                    code?: string | null
+                    name?: string | null
+                } | null
+                if (docType?.code !== code) continue
+                for (const file of doc.document_files ?? []) {
+                    url = file.file_url
+                }
+            }
+            return url
+        }
+
+        const legacyFrontUrls: string[] = []
+        const legacyBackUrls: string[] = []
+        const legacyCnicFrontUrls: string[] = []
+        const legacyCnicBackUrls: string[] = []
+
+        for (const doc of docs) {
+            const docType = doc.document_type as {
+                code?: string | null
+                name?: string | null
+            } | null
+            const isLegacyCnic =
+                !!doc.document_type_id &&
+                (docType?.code === "CNIC" || docType?.name === "CNIC")
+
+            for (const file of doc.document_files ?? []) {
+                if (isLegacyCnic) {
+                    if (file.type === "FRONT") legacyCnicFrontUrls.push(file.file_url)
+                    if (file.type === "BACK") legacyCnicBackUrls.push(file.file_url)
+                } else if (!doc.document_type_id) {
+                    if (file.type === "FRONT") legacyFrontUrls.push(file.file_url)
+                    if (file.type === "BACK") legacyBackUrls.push(file.file_url)
+                }
+            }
+        }
+
+        agentKyc = {
+            registrationCertificateUrl:
+                latestUrlForCode("AGENT_REGISTRATION") ?? legacyFrontUrls[0] ?? null,
+            idCardFrontUrl:
+                latestUrlForCode("AGENT_ID_FRONT") ??
+                legacyCnicFrontUrls.at(-1) ??
+                (legacyFrontUrls.length > 1
+                    ? legacyFrontUrls.at(-1)
+                    : legacyBackUrls.length > 0
+                        ? legacyFrontUrls[0]
+                        : null) ??
+                null,
+            idCardBackUrl:
+                latestUrlForCode("AGENT_ID_BACK") ??
+                legacyCnicBackUrls.at(-1) ??
+                legacyBackUrls.at(-1) ??
+                null,
+        }
+    }
+
+    return {
+        id: user.id,
+        email: profile?.email ?? user.email ?? "",
+        fullName: formatFullName(
+            profile?.first_name,
+            profile?.last_name,
+            user.user_metadata?.full_name ?? "User"
+        ),
+        firstName: profile?.first_name ?? user.user_metadata?.first_name ?? "",
+        lastName: profile?.last_name ?? user.user_metadata?.last_name ?? "",
+        title: profile?.title ?? "",
+        phone: profile?.phone ?? "",
+        avatarUrl: profile?.avatar_url ?? "",
+        role,
+        profile: {
+            dateOfBirth: profile?.date_of_birth ?? "",
+            gender: profile?.gender ?? "",
+            country: extraData.country ?? "",
+            state: extraData.state ?? "",
+            city: extraData.city ?? "",
+            nationality: extraData.nationality ?? "",
+            guardianEmail: extraData.guardian_email ?? "",
+            guardianPhone: extraData.guardian_phone ?? "",
+            contact_person_first_name: extraData.contact_person_first_name ?? "",
+            contact_person_last_name: extraData.contact_person_last_name ?? "",
+            ...extraData,
+        },
+        academic:
+            academics && academics.length > 0
+                ? academics.map((academic) => ({
+                      qualification: academic.qualification ?? "",
+                      grade_type: academic.grade_type ?? null,
+                      gpa: academic.gpa != null ? String(academic.gpa) : "",
+                      instituteName: academic.institution_name ?? "",
+                      obtained_marks:
+                          academic.obtained_marks != null
+                              ? String(academic.obtained_marks)
+                              : "",
+                      total_marks:
+                          academic.total_marks != null ? String(academic.total_marks) : "",
+                      start_date: normalizeDateValue(academic.start_date),
+                      end_date: normalizeDateValue(academic.end_date),
+                      about: academic.honors ?? "",
+                  }))
+                : null,
+        experience:
+            experiences && experiences.length > 0
+                ? {
+                      hasExperience: "yes" as const,
+                      entries: experiences.map((experience) => ({
+                          jobTitle: experience.title ?? "",
+                          organization: experience.organization_name ?? "",
+                          industry: experience.industry_sector ?? "",
+                          country: experience.country ?? "",
+                          startDate: experience.start_date ?? "",
+                          endDate: experience.end_date ?? "",
+                          responsibilities: experience.key_responsibilities ?? "",
+                      })),
+                  }
+                : null,
+        agentKyc,
+    }
+}

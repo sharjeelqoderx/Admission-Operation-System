@@ -9,7 +9,7 @@ import { Typography } from '@/components/shared/Typography';
 import {
     ApplicationsListTable,
     type ApplicationRow,
-} from '@/app/(dashboard)/dashboard/application/_component/ApplicationsListTable';
+} from "@/app/(dashboard)/dashboard/application/_components/applications-list-table"
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
@@ -81,7 +81,7 @@ export function AgentDashboard() {
         <div className="space-y-8 animate-in fade-in duration-700">
             <div className="space-y-1 max-w-2xl">
                 <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
-                    Agent Dashboard
+                    Partner Dashboard
                 </Typography>
                 <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
                     Here is a summary of your global student recruitment performance and pending administrative tasks.

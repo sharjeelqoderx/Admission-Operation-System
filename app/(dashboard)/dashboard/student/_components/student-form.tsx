@@ -8,6 +8,7 @@ import { StudentCreateFormSchema, StudentFormSchema, type StudentInput } from "@
 import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { PhoneInputComponent } from "@/components/ui/phone-input"
@@ -18,20 +19,23 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import ImageUploadCard from "./shared/image-upload-card"
+import ImageUploadCard from "@/components/shared/image-upload-card"
 import { DatePicker } from "@/components/shared/date-picker"
 import { CountrySelect } from "@/components/shared/country-select"
-import { Building, ChevronDown, School, FileUp, FileText, Plus, Loader2, Upload, X } from "lucide-react"
+import { StateSelect } from "@/components/shared/state-select"
+import { CitySelect } from "@/components/shared/city-select"
+import { Building, ChevronDown, School, FileUp, FileText, Plus, Loader2, Upload, X, ClipboardList } from "lucide-react"
 import { resolveGradeType, type GradeType } from "@/types/schemas/academic"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import { toast } from "sonner"
-import { FilePreview } from "./shared/FilePreview"
+import { FilePreview } from "@/components/shared/FilePreview"
 import { cn } from "@/lib/utils"
 import { isFileWithinSizeLimit, MAX_FILE_SIZE_ERROR_MESSAGE } from "@/lib/constants/file-upload"
 import { useLevels } from "@/hooks/useLevels"
 import type { CourseProgram } from "@/types/schemas/program"
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
-import { filterCoursesAboveQualification } from "@/lib/utils/levels"
+import { filterCoursesByQualificationLevel } from "@/lib/utils/levels"
+import { resolveCourseDocumentTypesForCourses } from "@/lib/utils/course-documents"
 import {
     Dialog,
     DialogContent,
@@ -46,7 +50,8 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { UserRole } from "@/types"
+import type { StudentFormPageData } from "@/lib/student/server"
+import type { UserRole } from "@/types"
 
 function getFieldState(field: {
     state: { meta: { isTouched: boolean; isValid: boolean; errors?: unknown[] } }
@@ -83,7 +88,6 @@ function buildStudentFormData(value: StudentInput): FormData {
     fd.set("academic_background", JSON.stringify(value.academic_background))
     if (value.avatar_url instanceof File) fd.set("avatar_url", value.avatar_url)
     if (value.passport_file_url instanceof File) fd.set("passport_file_url", value.passport_file_url)
-    if (value.cv_file instanceof File) fd.set("cv_file", value.cv_file)
     return fd
 }
 
@@ -175,48 +179,11 @@ function F({ field, label, children }: { field: any; label: string; children: Re
     )
 }
 
-type StudentData = {
-    title?: string | null
-    name?: string | null
-    first_name?: string | null
-    last_name?: string | null
-    email?: string | null
-    phone?: string | null
-    date_of_birth?: string | null
-    gender?: string | null
-    avatar_url?: string | null
-    student?: {
-        country?: string | null
-        state?: string | null
-        city?: string | null
-        nationality?: string | null
-        guardian_email?: string | null
-        guardian_phone?: string | null
-        passport_file_url?: string | null
-    } | null
-    education?: Array<{
-        id?: string | null
-        qualification?: string | null
-        institution_name?: string | null
-        grade_type?: string | null
-        gpa?: number | string | null
-        obtained_marks?: number | string | null
-        total_marks?: number | string | null
-    }> | {
-        id?: string | null
-        qualification?: string | null
-        institution_name?: string | null
-        grade_type?: string | null
-        gpa?: number | string | null
-        obtained_marks?: number | string | null
-        total_marks?: number | string | null
-    } | null
-}
-
 type Props = {
     mode: "create" | "edit"
     studentId?: string
-    defaultData?: StudentData
+    defaultData?: StudentFormPageData
+    initialUser?: { id: string; role: UserRole } | null
 }
 
 type Document = {
@@ -407,10 +374,71 @@ function RequiredDocumentTitle({
     )
 }
 
+function hasUploadedApplicationDocument(
+    documentTypeId: string,
+    pendingFiles: Record<string, { front: File | null; back: File | null }>,
+    documents: Document[]
+): boolean {
+    if (pendingFiles[documentTypeId]?.front) return true
+    return documents.some(
+        (doc) => (doc.document_type?.id ?? doc.document_type_id) === documentTypeId
+    )
+}
+
+const CourseSelect = React.memo(function CourseSelect({
+    courses,
+    selectedCourseIds,
+    onChange,
+}: {
+    courses: CourseProgram[]
+    selectedCourseIds: string[]
+    onChange: (courseIds: string[]) => void
+}) {
+    if (courses.length === 0) {
+        return (
+            <div className="col-span-full space-y-2">
+                <FieldLabel>Courses</FieldLabel>
+                <Select disabled>
+                    <SelectTrigger className="h-12 w-full">
+                        <SelectValue placeholder="No courses available for this qualification level." />
+                    </SelectTrigger>
+                </Select>
+            </div>
+        )
+    }
+
+    return (
+        <div className="col-span-full space-y-2">
+            <FieldLabel>Courses</FieldLabel>
+            <Select
+                value={selectedCourseIds[0] || undefined}
+                onValueChange={(val) => onChange(val ? [val] : [])}
+            >
+                <SelectTrigger className="h-12 w-full">
+                    <SelectValue placeholder="Select a course" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                    {courses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                            {course.name}
+                            {course.degree?.level?.name || course.deadline_date
+                                ? ` — ${[course.degree?.level?.name, formatProgramDate(course.deadline_date)]
+                                      .filter(Boolean)
+                                      .join(" • ")}`
+                                : ""}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    )
+})
+
 function SupportingDocumentsSection({
     documents,
     requiredDocTypes,
-    selectedCourseId,
+    optionalDocTypes = [],
+    hasSelectedCourses,
     selectedStudentId,
     refetchDocuments,
     isDocumentsLoading,
@@ -421,7 +449,8 @@ function SupportingDocumentsSection({
 }: {
     documents: Document[];
     requiredDocTypes: { id: string; name: string }[];
-    selectedCourseId: string;
+    optionalDocTypes?: { id: string; name: string }[];
+    hasSelectedCourses: boolean;
     selectedStudentId: string;
     refetchDocuments: () => Promise<unknown>;
     isDocumentsLoading?: boolean;
@@ -458,7 +487,133 @@ function SupportingDocumentsSection({
         await refetchDocuments();
     }, [refetchDocuments]);
 
-    if (!selectedCourseId) {
+    const renderDocumentCards = useCallback(
+        (docTypes: { id: string; name: string }[], isRequired: boolean) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {docTypes.map((rt) => {
+                    const doc = documents.find(
+                        (d) => (d.document_type?.id ?? d.document_type_id) === rt.id
+                    );
+                    const hasPending = pendingFiles[rt.id]?.front;
+
+                    if (isUploading[rt.id]) {
+                        return (
+                            <div
+                                key={rt.id}
+                                className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border-2 border-purple-400 bg-purple-50/30 shadow-md cursor-not-allowed group"
+                            >
+                                <div className="absolute top-3 left-3 z-10">
+                                    <Loader2 className="size-4 text-purple-500 animate-spin" />
+                                </div>
+                                <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                    <Loader2 className="size-10 text-purple-500 animate-spin" />
+                                </div>
+                                <div>
+                                    <RequiredDocumentTitle name={rt.name} />
+                                    <Typography as="p" className="text-[8px] font-bold tracking-widest text-purple-600 uppercase mt-1">
+                                        Uploading...
+                                    </Typography>
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    if (doc) {
+                        return (
+                            <div
+                                key={rt.id}
+                                className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border border-green-500 bg-green-50/30 shadow-md group"
+                            >
+                                <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                    {doc.document_files?.[0]?.file_url ? (
+                                        <FilePreview
+                                            url={doc.document_files[0].file_url}
+                                            name={rt.name}
+                                            showActions={false}
+                                            className="border-none shadow-none size-full"
+                                        />
+                                    ) : (
+                                        <FileText className="size-10 text-green-500" />
+                                    )}
+                                </div>
+                                <div>
+                                    <RequiredDocumentTitle name={rt.name} />
+                                    <Typography as="p" className="text-[8px] font-bold tracking-widest text-green-600 uppercase mt-1">
+                                        Attached
+                                    </Typography>
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    if (hasPending && !selectedStudentId) {
+                        return (
+                            <div
+                                key={rt.id}
+                                className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border-2 border-yellow-400 bg-yellow-50/30 shadow-md cursor-pointer group"
+                                onClick={() => openLocalUploadModal(rt)}
+                            >
+                                <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                    <FileText className="size-10 text-yellow-500" />
+                                </div>
+                                <div>
+                                    <RequiredDocumentTitle name={rt.name} />
+                                    <Typography as="p" className="text-[8px] font-bold tracking-widest text-yellow-600 uppercase mt-1">
+                                        Pending
+                                    </Typography>
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <button
+                            key={rt.id}
+                            type="button"
+                            onClick={() => openLocalUploadModal(rt)}
+                            className={cn(
+                                "rounded-xl p-3 space-y-3 relative border-2 border-dashed flex flex-col items-center justify-center gap-2 min-h-[140px] transition-all group w-full",
+                                isRequired
+                                    ? "bg-red-50/50 border-red-200 hover:bg-red-50 hover:border-red-300"
+                                    : "bg-gray-50/50 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
+                            )}
+                        >
+                            <div
+                                className={cn(
+                                    "size-10 rounded-full flex items-center justify-center transition-colors",
+                                    isRequired
+                                        ? "bg-red-100 group-hover:bg-red-200"
+                                        : "bg-gray-100 group-hover:bg-gray-200"
+                                )}
+                            >
+                                <FileText
+                                    className={cn("size-5", isRequired ? "text-red-400" : "text-gray-400")}
+                                />
+                            </div>
+                            <div className="text-center w-full min-w-0 px-1">
+                                <RequiredDocumentTitle
+                                    name={rt.name}
+                                    className={cn("text-center", isRequired ? "text-red-600" : "text-gray-700")}
+                                />
+                                <Typography
+                                    as="p"
+                                    className={cn(
+                                        "text-[9px] mt-0.5",
+                                        isRequired ? "text-red-400" : "text-gray-400"
+                                    )}
+                                >
+                                    {isRequired ? "Required — click to upload" : "Optional — click to upload"}
+                                </Typography>
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+        ),
+        [documents, pendingFiles, isUploading, selectedStudentId, openLocalUploadModal]
+    );
+
+    if (!hasSelectedCourses) {
         return (
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                 <div className="flex items-center gap-2 mb-4">
@@ -576,113 +731,49 @@ function SupportingDocumentsSection({
                             Loading required documents...
                         </Typography>
                     </div>
-                ) : requiredDocTypes.length > 0 ? (
-                    <div className="space-y-4">
-                        <div className="rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3 space-y-2">
-                            <Typography as="p" font="small" className="font-semibold text-brand-secondary">
-                                {requiredDocTypes.length} required document{requiredDocTypes.length !== 1 ? "s" : ""} for this program
-                            </Typography>
-                            <ul className="space-y-1">
-                                {requiredDocTypes.map((rt) => (
-                                    <li key={rt.id} className="flex items-start gap-2">
-                                        <Typography as="span" font="small" className="text-brand-byzantine mt-0.5 shrink-0">•</Typography>
-                                        <Typography as="span" font="small" className="text-gray-700 break-words">
-                                            {rt.name}
-                                        </Typography>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                ) : requiredDocTypes.length > 0 || optionalDocTypes.length > 0 ? (
+                    <div className="space-y-6">
+                        {requiredDocTypes.length > 0 && (
+                            <div className="space-y-4">
+                                <div className="rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3 space-y-2">
+                                    <Typography as="p" font="small" className="font-semibold text-brand-secondary">
+                                        {requiredDocTypes.length} required document{requiredDocTypes.length !== 1 ? "s" : ""}
+                                    </Typography>
+                                    <ul className="space-y-1">
+                                        {requiredDocTypes.map((rt) => (
+                                            <li key={rt.id} className="flex items-start gap-2">
+                                                <Typography as="span" font="small" className="text-brand-byzantine mt-0.5 shrink-0">•</Typography>
+                                                <Typography as="span" font="small" className="text-gray-700 break-words">
+                                                    {rt.name}
+                                                </Typography>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                {renderDocumentCards(requiredDocTypes, true)}
+                            </div>
+                        )}
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {requiredDocTypes.map((rt) => {
-                            const doc = documents.find(d => (d.document_type?.id ?? d.document_type_id) === rt.id);
-                            const hasPending = pendingFiles[rt.id]?.front;
-                            if (isUploading[rt.id]) {
-                                return (
-                                    <div
-                                        key={rt.id}
-                                        className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border-2 border-purple-400 bg-purple-50/30 shadow-md cursor-not-allowed group"
-                                    >
-                                        <div className="absolute top-3 left-3 z-10">
-                                            <Loader2 className="size-4 text-purple-500 animate-spin" />
-                                        </div>
-                                        <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                            <Loader2 className="size-10 text-purple-500 animate-spin" />
-                                        </div>
-                                        <div>
-                                            <RequiredDocumentTitle name={rt.name} />
-                                            <Typography as="p" className="text-[8px] font-bold tracking-widest text-purple-600 uppercase mt-1">
-                                                Uploading...
-                                            </Typography>
-                                        </div>
-                                    </div>
-                                );
-                            }
-                            if (doc) {
-                                return (
-                                    <div
-                                        key={rt.id}
-                                        className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border border-green-500 bg-green-50/30 shadow-md group"
-                                    >
-                                        <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                            {doc.document_files?.[0]?.file_url ? (
-                                                <FilePreview
-                                                    url={doc.document_files[0].file_url}
-                                                    name={rt.name}
-                                                    showActions={false}
-                                                    className="border-none shadow-none size-full"
-                                                />
-                                            ) : (
-                                                <FileText className="size-10 text-green-500" />
-                                            )}
-                                        </div>
-                                        <div>
-                                            <RequiredDocumentTitle name={rt.name} />
-                                            <Typography as="p" className="text-[8px] font-bold tracking-widest text-green-600 uppercase mt-1">
-                                                Attached
-                                            </Typography>
-                                        </div>
-                                    </div>
-                                );
-                            }
-                            if (hasPending && !selectedStudentId) {
-                                return (
-                                    <div
-                                        key={rt.id}
-                                        className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border-2 border-yellow-400 bg-yellow-50/30 shadow-md cursor-pointer group"
-                                        onClick={() => openLocalUploadModal(rt)}
-                                    >
-                                        <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                            <FileText className="size-10 text-yellow-500" />
-                                        </div>
-                                        <div>
-                                            <RequiredDocumentTitle name={rt.name} />
-                                            <Typography as="p" className="text-[8px] font-bold tracking-widest text-yellow-600 uppercase mt-1">
-                                                Pending
-                                            </Typography>
-                                        </div>
-                                    </div>
-                                );
-                            }
-                            return (
-                                <button
-                                    key={rt.id}
-                                    type="button"
-                                    onClick={() => openLocalUploadModal(rt)}
-                                    className="bg-red-50/50 rounded-xl p-3 space-y-3 relative border-2 border-dashed border-red-200 flex flex-col items-center justify-center gap-2 min-h-[140px] hover:bg-red-50 hover:border-red-300 transition-all group w-full"
-                                >
-                                    <div className="size-10 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                                        <FileText className="size-5 text-red-400" />
-                                    </div>
-                                    <div className="text-center w-full min-w-0 px-1">
-                                        <RequiredDocumentTitle name={rt.name} className="text-red-600 text-center" />
-                                        <Typography as="p" className="text-[9px] text-red-400 mt-0.5">Click to upload</Typography>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
+                        {optionalDocTypes.length > 0 && (
+                            <div className="space-y-4">
+                                <div className="rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 space-y-2">
+                                    <Typography as="p" font="small" className="font-semibold text-gray-700">
+                                        {optionalDocTypes.length} optional document{optionalDocTypes.length !== 1 ? "s" : ""}
+                                    </Typography>
+                                    <ul className="space-y-1">
+                                        {optionalDocTypes.map((rt) => (
+                                            <li key={rt.id} className="flex items-start gap-2">
+                                                <Typography as="span" font="small" className="text-gray-400 mt-0.5 shrink-0">•</Typography>
+                                                <Typography as="span" font="small" className="text-gray-600 break-words">
+                                                    {rt.name}
+                                                </Typography>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                {renderDocumentCards(optionalDocTypes, false)}
+                            </div>
+                        )}
                     </div>
                 ) : documents.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -728,13 +819,13 @@ function SupportingDocumentsSection({
     );
 }
 
-export function StudentForm({ mode, studentId, defaultData }: Props) {
+export function StudentForm({ mode, studentId, defaultData, initialUser }: Props) {
     const router = useRouter()
     const queryClient = useQueryClient()
     const { data: degrees = [], isLoading: loadingDegrees } = useDegrees()
 
-    const [selectedCourseId, setSelectedCourseId] = useState<string>("");
-    const [courseError, setCourseError] = useState<string | null>(null);
+    const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+    const [applicationDocError, setApplicationDocError] = useState<string | null>(null);
     const [createdStudentId, setCreatedStudentId] = useState<string | null>(null);
     const [documents, setDocuments] = useState<Document[]>([]);
     const [isDocumentsLoading, setIsDocumentsLoading] = useState(false);
@@ -749,12 +840,13 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
             const json = await res.json();
             return json.data;
         },
+        initialData: initialUser ?? undefined,
     });
 
     const { data: programsResponse } = useQuery({
         queryKey: ["programs"],
         queryFn: async () => {
-            const res = await fetch("/api/program?limit=50");
+            const res = await fetch("/api/program?limit=100");
             if (!res.ok) throw new Error("Failed to fetch courses");
             return res.json();
         }
@@ -762,58 +854,48 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
     const courses: CourseProgram[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
     const { data: levels = [] } = useLevels();
 
-    const {
-        data: programDetailResponse,
-        isLoading: isRequiredDocsLoading,
-        isFetching: isRequiredDocsFetching,
-    } = useQuery({
-        queryKey: ["course-detail", selectedCourseId],
+    const { data: allDocumentTypes = [] } = useQuery({
+        queryKey: ["document-types"],
         queryFn: async () => {
-            if (!selectedCourseId) return null;
-            const res = await fetch(`/api/program/${selectedCourseId}`);
-            if (!res.ok) throw new Error("Failed to fetch course details");
-            return res.json();
+            const res = await fetch("/api/document-type");
+            if (!res.ok) throw new Error("Failed to fetch document types");
+            const json = await res.json();
+            return (json.data ?? []) as { id: string; name: string }[];
         },
-        enabled: !!selectedCourseId,
+        enabled: mode === "create" && user?.role === "AGENT",
     });
 
-    const requiredDocTypes: { id: string; name: string }[] = useMemo(() => {
-        if (!programDetailResponse?.data) return []
-
-        const fromCourse = (
-            programDetailResponse.data.degree?.requirements ?? []
-        )
-            .map((r: { document_type?: { id: string; name: string } }) => r.document_type)
-            .filter((t: { id: string; name: string } | undefined): t is { id: string; name: string } => Boolean(t?.id));
-
-        if (fromCourse.length > 0) return fromCourse;
-
-        return documents.reduce<{ id: string; name: string }[]>((acc, d) => {
-            const typeId = d.document_type?.id ?? d.document_type_id;
-            const typeName = d.document_type?.name ?? "Document";
-            if (typeId && !acc.find(x => x.id === typeId)) {
-                acc.push({ id: typeId, name: typeName });
-            }
-            return acc;
-        }, []);
-    }, [programDetailResponse, documents]);
-
-    const isLoadingRequiredDocs = isRequiredDocsLoading || isRequiredDocsFetching
+    const { required: applicationRequiredDocTypes, optional: applicationOptionalDocTypes } = useMemo(
+        () => resolveCourseDocumentTypesForCourses(
+            courses,
+            selectedCourseIds,
+            allDocumentTypes
+        ),
+        [selectedCourseIds, courses, allDocumentTypes]
+    )
 
     const refetchDocuments = useCallback(async () => {
         if (!createdStudentId) return;
         setIsDocumentsLoading(true);
         try {
-            const params = new URLSearchParams();
-            if (selectedCourseId) params.set("course_id", selectedCourseId);
-            const res = await fetch(`/api/document/student/${createdStudentId}?${params.toString()}`);
+            const res = await fetch(`/api/document/student/${createdStudentId}`);
             if (!res.ok) throw new Error("Failed to fetch documents");
             const json = await res.json();
             setDocuments(Array.isArray(json?.data) ? json.data : []);
         } finally {
             setIsDocumentsLoading(false);
         }
-    }, [createdStudentId, selectedCourseId]);
+    }, [createdStudentId]);
+
+    const clearCourseSelection = useCallback(() => {
+        setSelectedCourseIds([])
+        setApplicationDocError(null)
+    }, [])
+
+    const handleCourseSelectionChange = useCallback((courseIds: string[]) => {
+        setSelectedCourseIds(courseIds)
+        setApplicationDocError(null)
+    }, [])
 
     // Refetch documents when student is created
     useEffect(() => {
@@ -825,13 +907,13 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
     const mutation = useMutation({
         mutationFn: async ({
             formValues,
-            selectedCourseId,
+            selectedCourseIds,
             pendingFiles,
             courses,
             levels
         }: {
             formValues: StudentInput,
-            selectedCourseId: string,
+            selectedCourseIds: string[],
             pendingFiles: Record<string, { front: File | null; back: File | null }>,
             courses: CourseProgram[],
             levels: any[]
@@ -882,7 +964,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                 }
             }
 
-            // Step 3: Collect all uploaded document IDs (CV, passport, supporting docs)
+            // Step 3: Collect all uploaded document IDs (passport, course-required docs)
             const docsRes = await fetch(`/api/document/student/${newStudentProfileId}`);
             const docsJson = docsRes.ok ? await docsRes.json() : { data: [] };
             const documentIds = [
@@ -892,36 +974,51 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                 ]),
             ];
 
-            // Step 4: Create application
-            let universityId = "";
-            const course = courses.find(c => c.id === selectedCourseId);
-            if (course) {
-                const levelId = course.degree?.level_id;
-                universityId = levels.find((level) => level.id === levelId)?.university_id ?? "";
+            // Step 4: Create applications when courses are selected (optional)
+            if (selectedCourseIds.length > 0) {
+                for (const courseId of selectedCourseIds) {
+                    let universityId = "";
+                    const course = courses.find((c) => c.id === courseId);
+                    if (course) {
+                        const levelId = course.degree?.level_id;
+                        universityId = levels.find((level) => level.id === levelId)?.university_id ?? "";
+                    }
+
+                    const appRes = await fetch("/api/application", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            profile_id: newStudentProfileId,
+                            course_id: courseId,
+                            university_id: universityId,
+                            document_ids: documentIds,
+                            intake_date: course?.degree?.intake_date ?? "summer",
+                            declarations: [true, true, true],
+                        })
+                    });
+                    const appJson = await appRes.json();
+                    if (!appRes.ok) {
+                        throw new Error(appJson?.error ?? "Failed to create application");
+                    }
+                }
             }
 
-            const appRes = await fetch("/api/application", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    profile_id: newStudentProfileId,
-                    course_id: selectedCourseId,
-                    university_id: universityId,
-                    document_ids: documentIds,
-                    intake_date: course?.degree?.intake_date ?? "summer",
-                    declarations: [true, true, true],
-                })
-            });
-            const appJson = await appRes.json();
-            if (!appRes.ok) throw new Error(appJson?.error ?? "Failed to create application");
-
-            return studentJson;
+            return { studentJson, applicationCount: selectedCourseIds.length };
         },
-        onSuccess: () => {
+        onSuccess: ({ applicationCount }) => {
             queryClient.invalidateQueries({ queryKey: ["students"] });
             queryClient.invalidateQueries({ queryKey: ["applications"] });
-            toast.success("Student and application created successfully!");
-            router.push("/dashboard/application");
+            if (applicationCount > 0) {
+                toast.success(
+                    applicationCount === 1
+                        ? "Student and application created successfully!"
+                        : `Student and ${applicationCount} applications created successfully!`
+                );
+                router.push("/dashboard/application");
+            } else {
+                toast.success("Student created successfully!");
+                router.push("/dashboard/student");
+            }
             router.refresh();
         },
     })
@@ -952,12 +1049,14 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
             country: defaultData?.student?.country ?? "",
             state: defaultData?.student?.state ?? "",
             city: defaultData?.student?.city ?? "",
-            nationality: defaultData?.student?.nationality ?? "",
+            nationality:
+                defaultData?.student?.nationality ??
+                defaultData?.student?.country ??
+                "",
             guardian_email: defaultData?.student?.guardian_email ?? "",
             guardian_phone: defaultData?.student?.guardian_phone ?? "",
             avatar_url: undefined as File | undefined,
             passport_file_url: undefined as File | undefined,
-            cv_file: undefined as File | undefined,
             academic_background: eduList?.length
                 ? eduList.map((e) => {
                     const gradeType = resolveGradeType(e)
@@ -999,14 +1098,28 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
 
         onSubmit: async ({ value }) => {
             if (mode === "create" && user?.role === "AGENT") {
-                if (!selectedCourseId.trim()) {
-                    setCourseError("Course is required")
-                    return
+                if (selectedCourseIds.length > 0) {
+                    const missingDocs = applicationRequiredDocTypes.filter(
+                        (docType) =>
+                            !hasUploadedApplicationDocument(
+                                docType.id,
+                                pendingFiles,
+                                documents
+                            )
+                    );
+
+                    if (missingDocs.length > 0) {
+                        setApplicationDocError(
+                            `Please upload required documents: ${missingDocs.map((doc) => doc.name).join(", ")}`
+                        );
+                        return;
+                    }
                 }
-                setCourseError(null)
+
+                setApplicationDocError(null);
                 await mutation.mutateAsync({
                     formValues: value,
-                    selectedCourseId,
+                    selectedCourseIds,
                     pendingFiles,
                     courses,
                     levels
@@ -1200,19 +1313,6 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 min-w-0">
-                                <form.Field name="guardian_phone">
-                                    {(field) => (
-                                        <F field={field} label="Parent/Guardian Phone">
-                                            <PhoneInputComponent
-                                                className="w-full"
-                                                value={field.state.value}
-                                                onChange={(value) => field.handleChange(value)}
-                                                placeholder="Enter phone number"
-                                            />
-                                        </F>
-                                    )}
-                                </form.Field>
-
                                 <form.Field name="dob">
                                     {(field) => (
                                         <F field={field} label="Date Of Birth">
@@ -1234,37 +1334,63 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                             <CountrySelect
                                                 value={field.state.value}
                                                 onValueChange={(v) => {
+                                                    const previousCountry = field.state.value
+                                                    const currentNationality = form.getFieldValue("nationality")
                                                     field.handleChange(v)
                                                     field.handleBlur()
+                                                    form.setFieldValue("state", "")
+                                                    form.setFieldValue("city", "")
+                                                    if (
+                                                        !currentNationality ||
+                                                        currentNationality === previousCountry
+                                                    ) {
+                                                        form.setFieldValue("nationality", v)
+                                                    }
                                                 }}
                                             />
                                         </F>
                                     )}
                                 </form.Field>
 
-                                <form.Field name="state">
-                                    {(field) => (
-                                        <F field={field} label="State">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter state" />
-                                        </F>
+                                <form.Subscribe selector={(s) => s.values.country}>
+                                    {(country) => (
+                                        <form.Field name="state">
+                                            {(field) => (
+                                                <F field={field} label="State">
+                                                    <StateSelect
+                                                        country={country}
+                                                        value={field.state.value}
+                                                        onValueChange={(v) => {
+                                                            field.handleChange(v)
+                                                            field.handleBlur()
+                                                            form.setFieldValue("city", "")
+                                                        }}
+                                                    />
+                                                </F>
+                                            )}
+                                        </form.Field>
                                     )}
-                                </form.Field>
+                                </form.Subscribe>
 
-                                <form.Field name="city">
-                                    {(field) => (
-                                        <F field={field} label="City">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter city" />
-                                        </F>
+                                <form.Subscribe selector={(s) => ({ country: s.values.country, state: s.values.state })}>
+                                    {({ country, state }) => (
+                                        <form.Field name="city">
+                                            {(field) => (
+                                                <F field={field} label="City">
+                                                    <CitySelect
+                                                        country={country}
+                                                        state={state}
+                                                        value={field.state.value}
+                                                        onValueChange={(v) => {
+                                                            field.handleChange(v)
+                                                            field.handleBlur()
+                                                        }}
+                                                    />
+                                                </F>
+                                            )}
+                                        </form.Field>
                                     )}
-                                </form.Field>
-
-                                <form.Field name="guardian_email">
-                                    {(field) => (
-                                        <F field={field} label="Parent/Guardian Email">
-                                            <Input id={field.name} type="email" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your guardian Email" />
-                                        </F>
-                                    )}
-                                </form.Field>
+                                </form.Subscribe>
 
                                     <form.Field name="nationality">
                                         {(field) => (
@@ -1274,7 +1400,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                     value={field.state.value}
                                                     onBlur={field.handleBlur}
                                                     onChange={(e) => field.handleChange(e.target.value)}
-                                                    placeholder="Enter nationality"
+                                                    placeholder="Auto-filled from country — edit if different"
                                                 />
                                             </F>
                                         )}
@@ -1293,15 +1419,23 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                     )}
                                 </form.Field>
 
-                                <form.Field name="cv_file">
+                                <form.Field name="guardian_phone">
                                     {(field) => (
-                                        <F field={field} label={mode === "create" ? "CV (Required)" : "CV"}>
-                                            <DocumentUploadField
-                                                id="cv_file"
-                                                value={field.state.value ?? null}
-                                                onChange={(file) => field.handleChange((file ?? undefined) as File | undefined)}
-                                                accept=".pdf,.doc,.docx,application/pdf"
+                                        <F field={field} label="Parent/Guardian Phone">
+                                            <PhoneInputComponent
+                                                className="w-full"
+                                                value={field.state.value}
+                                                onChange={(value) => field.handleChange(value)}
+                                                placeholder="Enter phone number"
                                             />
+                                        </F>
+                                    )}
+                                </form.Field>
+
+                                <form.Field name="guardian_email">
+                                    {(field) => (
+                                        <F field={field} label="Parent/Guardian Email">
+                                            <Input id={field.name} type="email" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your guardian Email" />
                                         </F>
                                     )}
                                 </form.Field>
@@ -1341,8 +1475,7 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                                                                 onValueChange={(v) => {
                                                                                     subField.handleChange(v)
                                                                                     subField.handleBlur()
-                                                                                    setSelectedCourseId("")
-                                                                                    setCourseError(null)
+                                                                                    clearCourseSelection()
                                                                                 }}
                                                                                 disabled={loadingDegrees}
                                                                             >
@@ -1515,97 +1648,83 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                     </div>
                                 )}
                             </form.Field>
-                            {/* <div className="flex justify-end">
-                                <Button
-                                    type="button"
-                                    size="lg"
-                                    className="font-light"
-                                    variant="ghost"
-                                    onClick={addRow}
-                                >
-                                    + Add More
-                                </Button>
-                            </div> */}
                         </div>
 
-                        {/* ── Section: Course Selection & Documents (Only for Agent Create) ── */}
+                        {/* ── Section: Create Application ── */}
                         {mode === "create" && user?.role === "AGENT" && (
-                            <form.Subscribe
-                                selector={(state) => state.values.academic_background[0]?.qualification}
-                            >
-                                {(qualificationId) => {
-                                    const qualificationLevelName = degrees.find(
-                                        (d) => d.id === qualificationId
-                                    )?.level?.name
-                                    const eligibleCourses = filterCoursesAboveQualification(
-                                        courses,
-                                        qualificationLevelName
-                                    )
-
-                                    if (!qualificationId) return null
-
-                                    return (
-                            <>
-                                {/* Course Selection */}
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-2">
-                                        <School className="size-5 text-gray-700" strokeWidth={2.5} />
-                                        <Typography as="h3" font="text-xl" className="text-gray-900 tracking-tight">Select Program</Typography>
+                            <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <div className="flex flex-wrap items-center gap-2 pb-2">
+                                        <ClipboardList className="size-5" strokeWidth={2.5} />
+                                        <Typography as="h3" className="font-bold">
+                                            Create Application
+                                        </Typography>
+                                        <Badge variant="outline">Optional</Badge>
                                     </div>
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                        <Field data-invalid={!!courseError}>
-                                            <FieldLabel htmlFor="course_id">Course</FieldLabel>
-                                            <Select
-                                                value={selectedCourseId}
-                                                onValueChange={(val) => {
-                                                    setSelectedCourseId(val);
-                                                    setCourseError(null);
-                                                    if (createdStudentId) {
-                                                        refetchDocuments();
-                                                    }
-                                                }}
-                                            >
-                                                <SelectTrigger id="course_id" className="h-12 w-full">
-                                                    <SelectValue placeholder="Select a course" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {eligibleCourses.length === 0 ? (
-                                                        <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                                                            No courses available for this qualification level.
-                                                        </div>
-                                                    ) : (
-                                                        eligibleCourses.map((course) => (
-                                                            <SelectItem key={course.id} value={course.id}>
-                                                                {course.name} - {formatProgramDate(course.deadline_date)}
-                                                            </SelectItem>
-                                                        ))
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
-                                            {courseError && <FieldError errors={[{ message: courseError }]} />}
-                                        </Field>
-                                    </div>
+                                    <Typography as="p" className="text-sm text-gray-600">
+                                        If you want to apply for a program, you can do it directly from here while creating the student.
+                                    </Typography>
                                 </div>
 
-                                {/* Supporting Documents */}
-                                {selectedCourseId && (
-                                    <SupportingDocumentsSection
-                                        documents={documents}
-                                        requiredDocTypes={requiredDocTypes}
-                                        selectedCourseId={selectedCourseId}
-                                        selectedStudentId={createdStudentId || ""}
-                                        refetchDocuments={refetchDocuments}
-                                        isDocumentsLoading={isDocumentsLoading}
-                                        isRequiredDocsLoading={isLoadingRequiredDocs}
-                                        pendingFiles={pendingFiles}
-                                        setPendingFiles={setPendingFiles}
-                                        isUploading={isUploading}
-                                    />
-                                )}
-                            </>
-                                    )
-                                }}
-                            </form.Subscribe>
+                                <form.Subscribe
+                                    selector={(state) => state.values.academic_background[0]?.qualification}
+                                >
+                                    {(qualificationId) => {
+                                        const qualificationLevelName = qualificationId
+                                            ? degrees.find((d) => d.id === qualificationId)?.level?.name
+                                            : null;
+                                        const eligibleCourses = qualificationId
+                                            ? filterCoursesByQualificationLevel(
+                                                  courses,
+                                                  qualificationLevelName
+                                              )
+                                            : [];
+
+                                        return (
+                                            <div className="space-y-6">
+                                                {!qualificationId ? (
+                                                    <div className="rounded-sm border border-dashed border-gray-200 bg-gray-50/50 px-4 py-6 text-center">
+                                                        <Typography as="p" className="text-sm font-medium text-gray-500">
+                                                            Select your highest degree in Academic Background to view available courses.
+                                                        </Typography>
+                                                    </div>
+                                                ) : (
+                                                    <CourseSelect
+                                                        courses={eligibleCourses}
+                                                        selectedCourseIds={selectedCourseIds}
+                                                        onChange={handleCourseSelectionChange}
+                                                    />
+                                                )}
+
+                                                {selectedCourseIds.length > 0 && (
+                                                    <div className="space-y-4">
+                                                        <Typography as="p" className="text-sm text-gray-600">
+                                                            This application is optional. Documents marked as required must be uploaded before submitting.
+                                                        </Typography>
+
+                                                        <SupportingDocumentsSection
+                                                            documents={documents}
+                                                            requiredDocTypes={applicationRequiredDocTypes}
+                                                            optionalDocTypes={applicationOptionalDocTypes}
+                                                            hasSelectedCourses
+                                                            selectedStudentId={createdStudentId || ""}
+                                                            refetchDocuments={refetchDocuments}
+                                                            isDocumentsLoading={isDocumentsLoading}
+                                                            pendingFiles={pendingFiles}
+                                                            setPendingFiles={setPendingFiles}
+                                                            isUploading={isUploading}
+                                                        />
+
+                                                        {applicationDocError && (
+                                                            <FieldError errors={[{ message: applicationDocError }]} />
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    }}
+                                </form.Subscribe>
+                            </div>
                         )}
 
                         {apiError && (
@@ -1625,7 +1744,9 @@ export function StudentForm({ mode, studentId, defaultData }: Props) {
                                         {mutation.isPending
                                             ? "Processing..."
                                             : mode === "create" && user?.role === "AGENT"
-                                                ? "Create Student & Application"
+                                                ? selectedCourseIds.length > 0
+                                                    ? "Create Student & Application"
+                                                    : "Create Student"
                                                 : mode === "edit"
                                                     ? "Update Student"
                                                     : "Register"}

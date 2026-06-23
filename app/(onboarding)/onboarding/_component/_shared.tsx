@@ -1,13 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { format } from "date-fns"
-import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react"
+import { CalendarIcon, ChevronLeft, ChevronRight, Upload, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Typography } from "@/components/shared/Typography"
+import { isFileWithinSizeLimit, MAX_FILE_SIZE_ERROR_MESSAGE } from "@/lib/constants/file-upload"
 
 export const COUNTRIES     = ["Germany", "United States", "United Kingdom", "Pakistan", "India", "Canada", "Australia", "France", "Turkey", "UAE"]
 export const DEGREES       = ["High School", "Associate Degree", "Bachelor's Degree", "Master's Degree", "PhD", "Diploma", "Certificate"]
@@ -34,7 +36,11 @@ export function DatePicker({ value, onChange }: { value: string; onChange: (val:
             <PopoverTrigger asChild>
                 <Button variant="outline" className="h-[50px] w-full rounded-sm border border-input bg-brand-input px-2.5 justify-start font-normal hover:bg-brand-input">
                     <CalendarIcon className="mr-2 size-4 opacity-50" />
-                    {parsed ? format(parsed, "PPP") : <span className="text-muted-foreground">Pick a date</span>}
+                    {parsed ? (
+                        <span className="text-black">{format(parsed, "PPP")}</span>
+                    ) : (
+                        <span className="text-muted-foreground">Pick a date</span>
+                    )}
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-3 space-y-3" align="start">
@@ -87,5 +93,70 @@ export function F({ isInvalid = false, error, label, children }: { isInvalid?: b
             {children}
             {isInvalid && normalizedError?.message && <FieldError errors={[normalizedError]} />}
         </Field>
+    )
+}
+
+export function DocumentUploadField({
+    id,
+    value,
+    onChange,
+    accept,
+}: {
+    id: string
+    value?: File | null
+    onChange: (file: File | null) => void
+    accept: string
+}) {
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    const handleSelect = (file: File | null) => {
+        if (!file) {
+            onChange(null)
+            if (inputRef.current) inputRef.current.value = ""
+            return
+        }
+        if (!isFileWithinSizeLimit(file)) {
+            alert(MAX_FILE_SIZE_ERROR_MESSAGE)
+            if (inputRef.current) inputRef.current.value = ""
+            return
+        }
+        onChange(file)
+    }
+
+    return (
+        <div className="flex items-center gap-3 h-12 w-full min-w-0 rounded-sm border border-input bg-brand-input px-3">
+            <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className="flex shrink-0 items-center justify-center size-9 rounded-md text-brand-byzantine hover:bg-brand-byzantine/10 transition-colors"
+                aria-label="Upload file"
+            >
+                <Upload className="size-5" />
+            </button>
+            <Typography
+                font="small"
+                className={cn("truncate flex-1 min-w-0", !value && "text-muted-foreground")}
+            >
+                {value?.name ?? "No file selected"}
+            </Typography>
+            {value && (
+                <button
+                    type="button"
+                    onClick={() => handleSelect(null)}
+                    className="flex shrink-0 items-center justify-center size-8 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    aria-label="Remove file"
+                >
+                    <X className="size-4" />
+                </button>
+            )}
+            <input
+                ref={inputRef}
+                id={id}
+                type="file"
+                accept={accept}
+                className="hidden"
+                onChange={(e) => handleSelect(e.target.files?.[0] ?? null)}
+            />
+        </div>
     )
 }

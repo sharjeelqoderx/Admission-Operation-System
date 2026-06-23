@@ -86,8 +86,8 @@ export async function POST(req: NextRequest) {
                         state: validData.state,
                         city: validData.city,
                         nationality: validData.nationality,
-                        guardian_email: validData.guardianEmail,
-                        guardian_phone: validData.guardianPhone,
+                        guardian_email: validData.guardianEmail || null,
+                        guardian_phone: validData.guardianPhone || null,
                         address: typeof data.address === "string" ? data.address : null,
                         zip_code: typeof data.zip_code === "string" ? data.zip_code : null,
                     }, { onConflict: "profile_id" })

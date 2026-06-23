@@ -71,7 +71,7 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                 <Input
                     value={searchValue}
                     onChange={(event) => onSearchChange(event.target.value)}
-                    placeholder="Search student, program, or agent"
+                    placeholder="Search student, program, or university partner"
                     className="h-12 border-none bg-white pl-11 shadow-sm ring-1 ring-black/5"
                 />
             </div>
@@ -115,7 +115,7 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                 {[
                                     "Student Name",
                                     "Program",
-                                    "Agent Name",
+                                    "University Partner Name",
                                     "Status",
                                     "Submission Date",
                                     "Action",

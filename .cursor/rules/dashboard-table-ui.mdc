@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Dashboard Table UI Standard
 
-Reference: `app/(dashboard)/dashboard/application/_component/ApplicationsListTable.tsx`
+Reference: `app/(dashboard)/dashboard/application/_components/applications-list-table.tsx`
 
 All dashboard data tables MUST follow this structure and styling.
 

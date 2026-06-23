@@ -510,6 +510,7 @@ export type Database = {
           degree_id: string
           document_type_id: string
           id: string
+          requirement_type: Database["public"]["Enums"]["document_requirement_type_enum"]
           updated_at: string
         }
         Insert: {
@@ -517,6 +518,7 @@ export type Database = {
           degree_id: string
           document_type_id: string
           id?: string
+          requirement_type?: Database["public"]["Enums"]["document_requirement_type_enum"]
           updated_at?: string
         }
         Update: {
@@ -524,6 +526,7 @@ export type Database = {
           degree_id?: string
           document_type_id?: string
           id?: string
+          requirement_type?: Database["public"]["Enums"]["document_requirement_type_enum"]
           updated_at?: string
         }
         Relationships: [
@@ -627,47 +630,6 @@ export type Database = {
           },
         ]
       }
-      document_template: {
-        Row: {
-          body_html: string
-          created_at: string
-          created_by_profile_id: string
-          id: string
-          is_deleted: boolean
-          title: string
-          updated_at: string
-          variables: Json
-        }
-        Insert: {
-          body_html?: string
-          created_at?: string
-          created_by_profile_id: string
-          id?: string
-          is_deleted?: boolean
-          title: string
-          updated_at?: string
-          variables?: Json
-        }
-        Update: {
-          body_html?: string
-          created_at?: string
-          created_by_profile_id?: string
-          id?: string
-          is_deleted?: boolean
-          title?: string
-          updated_at?: string
-          variables?: Json
-        }
-        Relationships: [
-          {
-            foreignKeyName: "document_template_created_by_profile_id_fkey"
-            columns: ["created_by_profile_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       document_review: {
         Row: {
           created_at: string
@@ -707,6 +669,47 @@ export type Database = {
           {
             foreignKeyName: "document_review_reviewed_by_profile_id_fkey"
             columns: ["reviewed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_template: {
+        Row: {
+          body_html: string
+          created_at: string
+          created_by_profile_id: string
+          id: string
+          is_deleted: boolean
+          title: string
+          updated_at: string
+          variables: Json
+        }
+        Insert: {
+          body_html?: string
+          created_at?: string
+          created_by_profile_id: string
+          id?: string
+          is_deleted?: boolean
+          title: string
+          updated_at?: string
+          variables?: Json
+        }
+        Update: {
+          body_html?: string
+          created_at?: string
+          created_by_profile_id?: string
+          id?: string
+          is_deleted?: boolean
+          title?: string
+          updated_at?: string
+          variables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_template_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profile"
             referencedColumns: ["id"]
@@ -1436,7 +1439,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      soft_delete_document_template: {
+        Args: { template_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_status_enum: "APPROVED" | "REJECTED" | "NEEDS_REVISION" | "PENDING"
@@ -1449,6 +1455,7 @@ export type Database = {
         | "VERIFIED"
         | "PENDING"
         | "ACTION_REQUIRED"
+      document_requirement_type_enum: "REQUIRED" | "OPTIONAL"
       education_level_enum: "SCHOOL" | "COLLEGE" | "DIPLOMA" | "UNIVERSITY"
       gender_enum: "MALE" | "FEMALE"
       intake_season_enum: "summer" | "winter"
@@ -1595,6 +1602,7 @@ export const Constants = {
         "PENDING",
         "ACTION_REQUIRED",
       ],
+      document_requirement_type_enum: ["REQUIRED", "OPTIONAL"],
       education_level_enum: ["SCHOOL", "COLLEGE", "DIPLOMA", "UNIVERSITY"],
       gender_enum: ["MALE", "FEMALE"],
       intake_season_enum: ["summer", "winter"],

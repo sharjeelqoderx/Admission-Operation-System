@@ -27,7 +27,7 @@ export async function GET(
         const { id } = await params
         const data = await fetchUniversityAgentDetail(id)
 
-        if (!data) return err("Agent not found", 404)
+        if (!data) return err("University Partner not found", 404)
 
         return ok(data)
     } catch (e: unknown) {

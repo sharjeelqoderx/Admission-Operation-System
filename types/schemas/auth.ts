@@ -186,6 +186,58 @@ export const workExperienceSchema = z.object({
     }
 })
 
+export const experienceFormItemSchema = z.object({
+    name: z.string(),
+    organization: z.string(),
+    industry: z.string(),
+    country: z.string(),
+    startDate: z.string(),
+    endDate: z.string(),
+    responsibility: z.string(),
+})
+
+export const onboardingExperienceStepSchema = z.object({
+    experiences: z.array(experienceFormItemSchema).min(1, "At least one experience is required"),
+}).superRefine((data, ctx) => {
+    data.experiences.forEach((exp, i) => {
+        if (!exp.name?.trim()) {
+            ctx.addIssue({ path: ["experiences", i, "name"], code: "custom", message: "Job title is required" })
+        }
+        if (!exp.organization?.trim()) {
+            ctx.addIssue({ path: ["experiences", i, "organization"], code: "custom", message: "Organization is required" })
+        }
+        if (!exp.industry?.trim()) {
+            ctx.addIssue({ path: ["experiences", i, "industry"], code: "custom", message: "Industry is required" })
+        }
+        if (!exp.country?.trim()) {
+            ctx.addIssue({ path: ["experiences", i, "country"], code: "custom", message: "Country is required" })
+        }
+        if (!exp.startDate?.trim()) {
+            ctx.addIssue({ path: ["experiences", i, "startDate"], code: "custom", message: "Start date is required" })
+        }
+        if (!exp.endDate?.trim()) {
+            ctx.addIssue({ path: ["experiences", i, "endDate"], code: "custom", message: "End date is required" })
+        }
+        if (!exp.responsibility?.trim()) {
+            ctx.addIssue({ path: ["experiences", i, "responsibility"], code: "custom", message: "Responsibilities are required" })
+        }
+    })
+})
+
+export type ExperienceFormItem = z.infer<typeof experienceFormItemSchema>
+
+export function createEmptyExperienceItem(): ExperienceFormItem {
+    return {
+        name: "",
+        organization: "",
+        industry: "",
+        country: "",
+        startDate: "",
+        endDate: "",
+        responsibility: "",
+    }
+}
+
 
 
 export const profileStep1Schema = z.object({
@@ -219,8 +271,17 @@ export const profileStep1Schema = z.object({
         .string()
         .min(1, "Nationality is required")
         .min(2, "Nationality is too short"),
-    guardianEmail: email,
-    guardianPhone: phone,
+    guardianEmail: z.union([
+        z.literal(""),
+        z.string().trim().email("Invalid guardian email format"),
+    ]),
+    guardianPhone: z.union([
+        z.literal(""),
+        z
+            .string()
+            .trim()
+            .regex(/^\+?[\d\s\-()]{8,30}$/, "Invalid guardian phone number"),
+    ]),
     avatar_url: z
         .any()
         .refine((val) => val instanceof File || (typeof val === 'string' && val.length > 0), "Profile picture is required")
@@ -285,16 +346,6 @@ export const degreeStep2Schema = z.object({
         obtained_marks: z.string(),
 
         total_marks: z.string(),
-
-        start_date: z.string().min(1, "Start date is required"),
-        end_date: z.string().min(1, "End date is required"),
-
-        about: z
-            .string()
-            .trim()
-            .min(1, "Plan is required")
-            .min(10, "Too short")
-            .max(500, "Too long"),
     }).superRefine((val, ctx) => {
         if (val.grade_type === "gpa") {
             if (!val.gpa.trim()) {

@@ -26,7 +26,7 @@ async function fetchUniversityAgents(params: { status?: string; page?: string })
 
     const res = await fetch(url.toString())
     const json = await res.json()
-    if (!res.ok) throw new Error(json?.error ?? "Failed to fetch agents")
+    if (!res.ok) throw new Error(json?.error ?? "Failed to fetch university partners")
     return json.data as UniversityAgentListResponse
 }
 
@@ -43,7 +43,7 @@ export function withUniversityAgentPageLogic(
         const searchParams = useSearchParams()
         const status = searchParams.get("status") ?? "all"
         const page = searchParams.get("page") ?? "1"
-        const [activeTab, setActiveTab] = useState("Agents")
+        const [activeTab, setActiveTab] = useState("University Partners")
 
         const agentsQuery = useQuery({
             queryKey: ["university-agents", status, page],

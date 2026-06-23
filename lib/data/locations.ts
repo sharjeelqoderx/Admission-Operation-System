@@ -14,6 +14,17 @@ type CountriesNowCountry = {
 
 export const LOCATIONS_QUERY_KEYS = {
     countries: ["locations", "countries"] as const,
+    states: (country: string) => ["locations", "states", country] as const,
+    cities: (country: string, state: string) =>
+        ["locations", "cities", country, state] as const,
+}
+
+const STATES_API = "https://countriesnow.space/api/v0.1/countries/states"
+const CITIES_API = "https://countriesnow.space/api/v0.1/countries/state/cities"
+
+type CountriesNowState = {
+    name: string
+    state_code: string
 }
 
 /** Fallback when external API is unavailable */
@@ -69,5 +80,63 @@ export async function fetchCountries(): Promise<CountryOption[]> {
             .sort((a, b) => a.name.localeCompare(b.name))
     } catch {
         return FALLBACK_COUNTRIES
+    }
+}
+
+export async function fetchStates(country: string): Promise<string[]> {
+    const trimmedCountry = country.trim()
+    if (!trimmedCountry) return []
+
+    try {
+        const res = await fetch(STATES_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ country: trimmedCountry }),
+            next: { revalidate: 60 * 60 * 24 },
+        })
+
+        if (!res.ok) return []
+
+        const json = (await res.json()) as {
+            error?: boolean
+            data?: { states?: CountriesNowState[] }
+        }
+
+        if (json.error || !Array.isArray(json.data?.states)) return []
+
+        return json.data.states
+            .map((state) => state.name)
+            .filter(Boolean)
+            .sort((a, b) => a.localeCompare(b))
+    } catch {
+        return []
+    }
+}
+
+export async function fetchCities(country: string, state: string): Promise<string[]> {
+    const trimmedCountry = country.trim()
+    const trimmedState = state.trim()
+    if (!trimmedCountry || !trimmedState) return []
+
+    try {
+        const res = await fetch(CITIES_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ country: trimmedCountry, state: trimmedState }),
+            next: { revalidate: 60 * 60 * 24 },
+        })
+
+        if (!res.ok) return []
+
+        const json = (await res.json()) as {
+            error?: boolean
+            data?: string[]
+        }
+
+        if (json.error || !Array.isArray(json.data)) return []
+
+        return json.data.filter(Boolean).sort((a, b) => a.localeCompare(b))
+    } catch {
+        return []
     }
 }

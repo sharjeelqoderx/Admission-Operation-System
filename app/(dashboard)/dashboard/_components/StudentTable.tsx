@@ -42,6 +42,7 @@ export type StudentRow = {
     documents_uploaded_count?: number
     total_document_types?: number
     document_upload_percentage?: number
+    highest_qualification?: string | null
     profile: {
         id: string
         name: string | null
@@ -70,7 +71,7 @@ type Props = {
     onPageChange: (page: number) => void
 }
 
-const COLUMN_COUNT = 11
+const COLUMN_COUNT = 12
 
 function formatCreatedDate(value: string) {
     return new Date(value).toLocaleDateString("en-US", {
@@ -159,7 +160,7 @@ export const StudentTable = React.memo(function StudentTable({
             className="rounded-lg p-0"
         >
             <div className="w-full overflow-x-scroll rounded-xl max-w-full pb-2">
-                <Table className="w-full text-left border-collapse min-w-[1600px]">
+                <Table className="w-full text-left border-collapse min-w-[1750px]">
                     <TableHeader className="sticky top-0 z-10">
                         <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
@@ -176,6 +177,9 @@ export const StudentTable = React.memo(function StudentTable({
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Nationality
+                            </TableHead>
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                Highest Qualification
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 APS Requirement
@@ -290,6 +294,12 @@ export const StudentTable = React.memo(function StudentTable({
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <Typography as="span" className="text-sm font-medium text-gray-600">
                                                 {student.nationality ?? "—"}
+                                            </Typography>
+                                        </TableCell>
+
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <Typography as="span" className="text-sm font-medium text-gray-700">
+                                                {student.highest_qualification ?? "—"}
                                             </Typography>
                                         </TableCell>
 

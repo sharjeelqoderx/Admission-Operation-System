@@ -1,60 +1,255 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Typography } from "@/components/shared/Typography"
-import { F } from "./_shared"
+import { ErrorView } from "@/components/shared/error-view"
+import { FilePreview } from "@/components/shared/FilePreview"
 import { useAuth } from "@/hooks/useAuth"
 import { PageLoader } from "@/components/shared/page-loader"
-import { useQuery, useMutation } from "@tanstack/react-query"
-import { FileText, Loader2, CheckSquare, Square } from "lucide-react"
-import { ImageUploadCard } from "@/components/shared/image-upload-card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
+import { useDegrees } from "@/hooks/useDegrees"
+import { useLevels } from "@/hooks/useLevels"
+import { filterCoursesByQualificationLevel } from "@/lib/utils/levels"
+import { resolveCourseDocumentTypes } from "@/lib/utils/course-documents"
+import { formatProgramDate } from "@/lib/utils/program"
 import type { CourseProgram } from "@/types/schemas/program"
+import { FileText, Loader2, Plus } from "lucide-react"
+import { ImageUploadCard } from "@/components/shared/image-upload-card"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 
 type Document = {
-    id: string;
-    name: string;
-    created_at: string;
-    document_type?: {
-        id: string;
-        name: string;
-    };
-    document_type_id?: string;
-    document_files?: {
-        file_url: string;
-    }[];
-};
+    id: string
+    name: string
+    created_at: string
+    document_type_id?: string
+    document_type?: { id: string; name: string }
+    document_files?: { file_url: string }[]
+}
 
+function hasUploadedDocument(
+    documentTypeId: string,
+    pendingFiles: Record<string, { front: File | null; back: File | null }>,
+    documents: Document[]
+): boolean {
+    if (pendingFiles[documentTypeId]?.front) return true
+    return documents.some(
+        (doc) => (doc.document_type?.id ?? doc.document_type_id) === documentTypeId
+    )
+}
 
-// Re-define SupportingDocumentsSection here since we can't import from StudentForm easily
+function RequiredDocumentTitle({
+    name,
+    className,
+}: {
+    name: string
+    className?: string
+}) {
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="block w-full min-w-0 cursor-default">
+                    <Typography
+                        as="p"
+                        className={cn(
+                            "text-[11px] font-bold text-gray-900 line-clamp-2 break-words leading-snug",
+                            className
+                        )}
+                    >
+                        {name}
+                    </Typography>
+                </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-left">
+                {name}
+            </TooltipContent>
+        </Tooltip>
+    )
+}
+
+function SupportingDocumentUploadModal({
+    open,
+    onOpenChange,
+    studentId,
+    documentType,
+    onUploaded,
+}: {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    studentId: string
+    documentType: { id: string; name: string } | null
+    onUploaded: () => void
+}) {
+    const [frontFile, setFrontFile] = useState<File | null>(null)
+    const [backFile, setBackFile] = useState<File | null>(null)
+    const queryClient = useQueryClient()
+
+    const uploadMutation = useMutation({
+        mutationFn: async () => {
+            if (!studentId || !documentType?.id || !frontFile) {
+                throw new Error("Please upload the front side file")
+            }
+
+            const formData = new FormData()
+            formData.set("student_id", studentId)
+            formData.set("document_type_id", documentType.id)
+            formData.append("files", frontFile)
+            if (backFile) {
+                formData.append("files", backFile)
+            }
+
+            const res = await fetch("/api/document", { method: "POST", body: formData })
+            const json = await res.json()
+            if (!res.ok) {
+                throw new Error(json.error ?? "Failed to upload document")
+            }
+
+            return json.data as { id: string }
+        },
+        onSuccess: () => {
+            toast.success("Document uploaded successfully")
+            queryClient.invalidateQueries({ queryKey: ["onboarding-documents"], exact: false })
+            onUploaded()
+            setFrontFile(null)
+            setBackFile(null)
+            onOpenChange(false)
+        },
+        onError: (error: Error) => {
+            toast.error(error.message)
+        },
+    })
+
+    const handleOpenChange = useCallback(
+        (nextOpen: boolean) => {
+            if (uploadMutation.isPending) return
+            if (!nextOpen) {
+                setFrontFile(null)
+                setBackFile(null)
+            }
+            onOpenChange(nextOpen)
+        },
+        [onOpenChange, uploadMutation.isPending]
+    )
+
+    return (
+        <Dialog open={open} onOpenChange={handleOpenChange}>
+            <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>Upload {documentType?.name ?? "Document"}</DialogTitle>
+                    <DialogDescription>
+                        Add the required file for this document type.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+                    <div className="space-y-2">
+                        <Typography font="small" className="text-gray-400 uppercase tracking-widest">
+                            Front Side
+                        </Typography>
+                        <ImageUploadCard
+                            value={frontFile}
+                            onChange={setFrontFile}
+                            message="Front File"
+                            accept="image/*,application/pdf,.doc,.docx"
+                            className="min-h-[160px] border-2 border-transparent hover:border-brand-byzantine bg-gray-50/50 hover:bg-gray-100/50 transition-all"
+                            emptyIcon={<Plus size={32} className="text-gray-300" />}
+                        />
+                    </div>
+
+                    <div className={cn("space-y-2 transition-opacity", !frontFile && "opacity-50")}>
+                        <Typography font="small" className="text-gray-400 uppercase tracking-widest">
+                            Back Side (Optional)
+                        </Typography>
+                        <ImageUploadCard
+                            value={backFile}
+                            onChange={(file) => {
+                                if (!frontFile && file) return
+                                setBackFile(file)
+                            }}
+                            message="Back File"
+                            accept="image/*,application/pdf,.doc,.docx"
+                            disabled={!frontFile}
+                            className={cn(
+                                "min-h-[160px] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 hover:border-brand-byzantine/30 transition-all",
+                                !frontFile && "cursor-not-allowed pointer-events-none"
+                            )}
+                            emptyIcon={<Plus size={32} className="text-gray-300" />}
+                        />
+                    </div>
+                </div>
+
+                {uploadMutation.error instanceof Error && (
+                    <ErrorView message={uploadMutation.error.message} />
+                )}
+
+                <DialogFooter className="gap-2 sm:gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleOpenChange(false)}
+                        disabled={uploadMutation.isPending}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        onClick={() => uploadMutation.mutate()}
+                        disabled={!frontFile || uploadMutation.isPending}
+                        className="bg-brand-byzantine hover:bg-brand-byzantine/90"
+                    >
+                        {uploadMutation.isPending ? (
+                            <>
+                                <Loader2 className="size-4 animate-spin" />
+                                Uploading...
+                            </>
+                        ) : (
+                            "Save & Upload"
+                        )}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 function SupportingDocumentsSection({
     documents,
     requiredDocTypes,
-    selectedCourseId,
-    selectedStudentId,
+    optionalDocTypes,
+    studentId,
     refetchDocuments,
-    selectedDocumentIds,
-    onDocumentSelect,
-    isDocumentsLoading,
     pendingFiles,
     setPendingFiles,
     isUploading,
+    isDocumentsLoading,
 }: {
-    documents: Document[];
-    requiredDocTypes: { id: string; name: string }[];
-    selectedCourseId: string;
-    selectedStudentId: string;
-    refetchDocuments: () => Promise<unknown>;
-    selectedDocumentIds: string[];
-    onDocumentSelect: (docIds: string[]) => void;
-    isDocumentsLoading?: boolean;
-    pendingFiles: Record<string, { front: File | null; back: File | null }>;
-    setPendingFiles: React.Dispatch<React.SetStateAction<Record<string, { front: File | null; back: File | null }>>>;
-    isUploading: Record<string, boolean>;
+    documents: Document[]
+    requiredDocTypes: { id: string; name: string }[]
+    optionalDocTypes: { id: string; name: string }[]
+    studentId: string
+    refetchDocuments: () => Promise<unknown>
+    pendingFiles: Record<string, { front: File | null; back: File | null }>
+    setPendingFiles: React.Dispatch<React.SetStateAction<Record<string, { front: File | null; back: File | null }>>>
+    isUploading: Record<string, boolean>
+    isDocumentsLoading?: boolean
 }) {
     const [localUploadModalOpen, setLocalUploadModalOpen] = useState(false)
     const [activeDocumentType, setActiveDocumentType] = useState<{ id: string; name: string } | null>(null)
@@ -72,7 +267,7 @@ function SupportingDocumentsSection({
         if (activeDocumentType) {
             setPendingFiles((prev) => ({
                 ...prev,
-                [activeDocumentType.id]: { front: tempFront, back: tempBack }
+                [activeDocumentType.id]: { front: tempFront, back: tempBack },
             }))
         }
         setLocalUploadModalOpen(false)
@@ -80,316 +275,390 @@ function SupportingDocumentsSection({
         setTempBack(null)
     }, [activeDocumentType, tempFront, tempBack, setPendingFiles])
 
-    if (!selectedCourseId) {
-        return (
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mt-8">
-                <div className="flex items-center gap-2 mb-4">
-                    <FileText className="size-5 text-blue-600" />
-                    <Typography as="h3" font="title" className="text-brand-secondary">Supporting Documents</Typography>
-                </div>
-                <div className="py-10 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                    <Typography as="p" className="text-sm font-medium text-gray-500">
-                        Select a course above to view required supporting documents.
-                    </Typography>
-                </div>
+    const handleDocumentUploaded = useCallback(async () => {
+        await refetchDocuments()
+    }, [refetchDocuments])
+
+    const renderDocumentCards = useCallback(
+        (docTypes: { id: string; name: string }[], isRequired: boolean) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {docTypes.map((rt) => {
+                    const doc = documents.find(
+                        (d) => (d.document_type?.id ?? d.document_type_id) === rt.id
+                    )
+                    const hasPending = pendingFiles[rt.id]?.front
+
+                    if (isUploading[rt.id]) {
+                        return (
+                            <div
+                                key={rt.id}
+                                className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border-2 border-purple-400 bg-purple-50/30 shadow-md cursor-not-allowed"
+                            >
+                                <div className="absolute top-3 left-3 z-10">
+                                    <Loader2 className="size-4 text-purple-500 animate-spin" />
+                                </div>
+                                <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                    <Loader2 className="size-10 text-purple-500 animate-spin" />
+                                </div>
+                                <div>
+                                    <RequiredDocumentTitle name={rt.name} />
+                                    <Typography as="p" className="text-[8px] font-bold tracking-widest text-purple-600 uppercase mt-1">
+                                        Uploading...
+                                    </Typography>
+                                </div>
+                            </div>
+                        )
+                    }
+
+                    if (doc) {
+                        return (
+                            <div
+                                key={rt.id}
+                                className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border border-green-500 bg-green-50/30 shadow-md"
+                            >
+                                <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                    {doc.document_files?.[0]?.file_url ? (
+                                        <FilePreview
+                                            url={doc.document_files[0].file_url}
+                                            name={rt.name}
+                                            showActions={false}
+                                            className="border-none shadow-none size-full"
+                                        />
+                                    ) : (
+                                        <FileText className="size-10 text-green-500" />
+                                    )}
+                                </div>
+                                <div>
+                                    <RequiredDocumentTitle name={rt.name} />
+                                    <Typography as="p" className="text-[8px] font-bold tracking-widest text-green-600 uppercase mt-1">
+                                        Attached
+                                    </Typography>
+                                </div>
+                            </div>
+                        )
+                    }
+
+                    if (hasPending) {
+                        return (
+                            <button
+                                key={rt.id}
+                                type="button"
+                                onClick={() => openLocalUploadModal(rt)}
+                                className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border-2 border-yellow-400 bg-yellow-50/30 shadow-md w-full text-left"
+                            >
+                                <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
+                                    <FileText className="size-10 text-yellow-500" />
+                                </div>
+                                <div>
+                                    <RequiredDocumentTitle name={rt.name} />
+                                    <Typography as="p" className="text-[8px] font-bold tracking-widest text-yellow-600 uppercase mt-1">
+                                        Ready to upload
+                                    </Typography>
+                                </div>
+                            </button>
+                        )
+                    }
+
+                    return (
+                        <button
+                            key={rt.id}
+                            type="button"
+                            onClick={() => openLocalUploadModal(rt)}
+                            className={cn(
+                                "rounded-xl p-3 space-y-3 relative border-2 border-dashed flex flex-col items-center justify-center gap-2 min-h-[140px] transition-all w-full",
+                                isRequired
+                                    ? "bg-red-50/50 border-red-200 hover:bg-red-50 hover:border-red-300"
+                                    : "bg-gray-50/50 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
+                            )}
+                        >
+                            <div
+                                className={cn(
+                                    "size-10 rounded-full flex items-center justify-center",
+                                    isRequired ? "bg-red-100" : "bg-gray-100"
+                                )}
+                            >
+                                <FileText className={cn("size-5", isRequired ? "text-red-400" : "text-gray-400")} />
+                            </div>
+                            <div className="text-center w-full min-w-0 px-1">
+                                <RequiredDocumentTitle
+                                    name={rt.name}
+                                    className={cn("text-center", isRequired ? "text-red-600" : "text-gray-700")}
+                                />
+                                <Typography
+                                    as="p"
+                                    className={cn("text-[9px] mt-0.5", isRequired ? "text-red-400" : "text-gray-400")}
+                                >
+                                    {isRequired ? "Required — click to upload" : "Optional — click to upload"}
+                                </Typography>
+                            </div>
+                        </button>
+                    )
+                })}
             </div>
-        )
-    }
+        ),
+        [documents, pendingFiles, isUploading, openLocalUploadModal]
+    )
 
     return (
+        <TooltipProvider delayDuration={200}>
         <>
-            {/* Modal for pending files (before student created) */}
-            {selectedStudentId && activeDocumentType && (
-                <Dialog open={localUploadModalOpen} onOpenChange={setLocalUploadModalOpen}>
-                    <DialogContent className="sm:max-w-xl">
-                        <DialogHeader>
-                            <DialogTitle>
-                                Upload {activeDocumentType.name}
-                            </DialogTitle>
-                            <DialogDescription>
-                                Add the required file for this document type.
-                            </DialogDescription>
-                        </DialogHeader>
+            {studentId ? (
+                <SupportingDocumentUploadModal
+                    open={localUploadModalOpen}
+                    onOpenChange={setLocalUploadModalOpen}
+                    studentId={studentId}
+                    documentType={activeDocumentType}
+                    onUploaded={handleDocumentUploaded}
+                />
+            ) : (
+                activeDocumentType && (
+                    <Dialog open={localUploadModalOpen} onOpenChange={setLocalUploadModalOpen}>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Upload {activeDocumentType.name}</DialogTitle>
+                                <DialogDescription>
+                                    Add the required file for this document type.
+                                </DialogDescription>
+                            </DialogHeader>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
-                            <div className="space-y-2">
-                                <Typography font="small" className="text-gray-400 uppercase tracking-widest">
-                                    Front Side
-                                </Typography>
-                                <ImageUploadCard
-                                    value={tempFront}
-                                    onChange={setTempFront}
-                                    message="Front File"
-                                    accept="image/*,application/pdf,.doc,.docx"
-                                    className={cn(
-                                        "min-h-[160px] border-2 border-transparent hover:border-brand-byzantine bg-gray-50/50 hover:bg-gray-100/50 transition-all"
-                                    )}
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+                                <div className="space-y-2">
+                                    <Typography font="small" className="text-gray-400 uppercase tracking-widest">
+                                        Front Side
+                                    </Typography>
+                                    <ImageUploadCard
+                                        value={tempFront}
+                                        onChange={setTempFront}
+                                        message="Front File"
+                                        accept="image/*,application/pdf,.doc,.docx"
+                                        className="min-h-[160px] border-2 border-transparent hover:border-brand-byzantine bg-gray-50/50 hover:bg-gray-100/50 transition-all"
+                                        emptyIcon={<Plus size={32} className="text-gray-300" />}
+                                    />
+                                </div>
+
+                                <div className={cn("space-y-2 transition-opacity", !tempFront && "opacity-50")}>
+                                    <Typography font="small" className="text-gray-400 uppercase tracking-widest">
+                                        Back Side (Optional)
+                                    </Typography>
+                                    <ImageUploadCard
+                                        value={tempBack}
+                                        onChange={(file) => {
+                                            if (!tempFront && file) return
+                                            setTempBack(file)
+                                        }}
+                                        message="Back File"
+                                        accept="image/*,application/pdf,.doc,.docx"
+                                        disabled={!tempFront}
+                                        className={cn(
+                                            "min-h-[160px] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 hover:border-brand-byzantine/30 transition-all",
+                                            !tempFront && "cursor-not-allowed pointer-events-none"
+                                        )}
+                                        emptyIcon={<Plus size={32} className="text-gray-300" />}
+                                    />
+                                </div>
                             </div>
 
-                            <div className={cn("space-y-2 transition-opacity", !tempFront && "opacity-50")}>
-                                <Typography font="small" className="text-gray-400 uppercase tracking-widest">
-                                    Back Side (Optional)
-                                </Typography>
-                                <ImageUploadCard
-                                    value={tempBack}
-                                    onChange={(file) => {
-                                        if (!tempFront && file) return
-                                        setTempBack(file)
-                                    }}
-                                    message="Back File"
-                                    accept="image/*,application/pdf,.doc,.docx"
+                            <DialogFooter className="gap-2 sm:gap-2">
+                                <Button type="button" variant="outline" onClick={() => setLocalUploadModalOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={handleLocalUploadSave}
                                     disabled={!tempFront}
-                                    className={cn(
-                                        "min-h-[160px] border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 hover:border-brand-byzantine/30 transition-all",
-                                        !tempFront && "cursor-not-allowed pointer-events-none"
-                                    )}
-                                />
-                            </div>
-                        </div>
-
-                        <DialogFooter className="gap-2 sm:gap-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setLocalUploadModalOpen(false)}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                type="button"
-                                onClick={handleLocalUploadSave}
-                                disabled={!tempFront}
-                                className="bg-brand-byzantine hover:bg-brand-byzantine/90"
-                            >
-                                Save
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                                    className="bg-brand-byzantine hover:bg-brand-byzantine/90"
+                                >
+                                    Save Files
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                )
             )}
 
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mt-8">
-                <div className="flex items-center gap-2 mb-4">
+            <div className="space-y-6">
+                <div className="flex items-center gap-2">
                     <FileText className="size-5 text-blue-600" />
-                    <Typography as="h3" font="title" className="text-brand-secondary">Supporting Documents</Typography>
+                    <Typography as="h3" font="title" className="text-brand-secondary">
+                        Supporting Documents
+                    </Typography>
                 </div>
 
                 {isDocumentsLoading ? (
-                    <div className="py-10 flex items-center justify-center">
-                        <Loader2 className="size-6 text-gray-400 animate-spin" />
+                    <div className="flex flex-col items-center justify-center gap-3 py-14 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                        <Loader2 className="size-8 text-brand-byzantine animate-spin" />
+                        <Typography as="p" className="text-sm font-medium text-gray-600">
+                            Loading documents...
+                        </Typography>
+                    </div>
+                ) : requiredDocTypes.length > 0 || optionalDocTypes.length > 0 ? (
+                    <div className="space-y-6">
+                        {requiredDocTypes.length > 0 && (
+                            <div className="space-y-4">
+                                <div className="rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3 space-y-2">
+                                    <Typography as="p" font="small" className="font-semibold text-brand-secondary">
+                                        {requiredDocTypes.length} required document{requiredDocTypes.length !== 1 ? "s" : ""}
+                                    </Typography>
+                                    <ul className="space-y-1">
+                                        {requiredDocTypes.map((rt) => (
+                                            <li key={rt.id} className="flex items-start gap-2">
+                                                <Typography as="span" font="small" className="text-brand-byzantine mt-0.5 shrink-0">•</Typography>
+                                                <Typography as="span" font="small" className="text-gray-700 break-words">
+                                                    {rt.name}
+                                                </Typography>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                {renderDocumentCards(requiredDocTypes, true)}
+                            </div>
+                        )}
+
+                        {optionalDocTypes.length > 0 && (
+                            <div className="space-y-4">
+                                <div className="rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 space-y-2">
+                                    <Typography as="p" font="small" className="font-semibold text-gray-700">
+                                        {optionalDocTypes.length} optional document{optionalDocTypes.length !== 1 ? "s" : ""}
+                                    </Typography>
+                                    <ul className="space-y-1">
+                                        {optionalDocTypes.map((rt) => (
+                                            <li key={rt.id} className="flex items-start gap-2">
+                                                <Typography as="span" font="small" className="text-gray-400 mt-0.5 shrink-0">•</Typography>
+                                                <Typography as="span" font="small" className="text-gray-600 break-words">
+                                                    {rt.name}
+                                                </Typography>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                {renderDocumentCards(optionalDocTypes, false)}
+                            </div>
+                        )}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {requiredDocTypes.map((rt) => {
-                            const doc = documents.find(d => (d.document_type?.id ?? d.document_type_id) === rt.id);
-                            const isChecked = doc ? selectedDocumentIds.includes(doc.id) : false;
-                            const hasPending = pendingFiles[rt.id]?.front;
-
-                            if (isUploading[rt.id]) {
-                                return (
-                                    <div
-                                        key={rt.id}
-                                        className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border-2 border-purple-400 bg-purple-50/30 shadow-md cursor-not-allowed"
-                                    >
-                                        <div className="absolute top-3 left-3 z-10">
-                                            <Loader2 className="size-4 text-purple-500 animate-spin" />
-                                        </div>
-                                        <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                            <Loader2 className="size-10 text-purple-500 animate-spin" />
-                                        </div>
-                                        <div>
-                                            <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{rt.name}</Typography>
-                                            <Typography as="p" className="text-[8px] font-bold tracking-widest text-purple-600 uppercase mt-1">
-                                                Uploading...
-                                            </Typography>
-                                        </div>
-                                    </div>
-                                )
-                            }
-
-                            if (doc) {
-                                return (
-                                    <div
-                                        key={rt.id}
-                                        onClick={() => {
-                                            const next = selectedDocumentIds.includes(doc.id)
-                                                ? selectedDocumentIds.filter((id: string) => id !== doc.id)
-                                                : [...selectedDocumentIds, doc.id];
-                                            onDocumentSelect(next);
-                                        }}
-                                        className={cn(
-                                            "bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border transition-all cursor-pointer group",
-                                            isChecked ? "border-green-500 bg-green-50/30 shadow-md" : "border-gray-100 hover:border-gray-300"
-                                        )}
-                                    >
-                                        <div className="absolute top-3 left-3 z-10">
-                                            {isChecked
-                                                ? <CheckSquare className="size-4 text-green-500 fill-green-50" />
-                                                : <Square className="size-4 text-brand-secondary/20 group-hover:text-brand-secondary/40" />}
-                                        </div>
-                                        <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                            <FileText className={cn("size-10", isChecked ? "text-green-500" : "text-gray-300")} />
-                                        </div>
-                                        <div>
-                                            <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{rt.name}</Typography>
-                                            <Typography as="p" className="text-[8px] font-bold tracking-widest text-gray-500 uppercase mt-1">
-                                                {new Date(doc.created_at).toLocaleDateString()}
-                                            </Typography>
-                                        </div>
-                                    </div>
-                                );
-                            }
-
-                            if (hasPending) {
-                                return (
-                                    <div
-                                        key={rt.id}
-                                        onClick={() => openLocalUploadModal(rt)}
-                                        className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 border-2 border-dashed border-blue-400 cursor-pointer hover:border-blue-500"
-                                    >
-                                        <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                            <FileText className="size-10 text-blue-500" />
-                                        </div>
-                                        <div>
-                                            <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{rt.name}</Typography>
-                                            <Typography as="p" className="text-[8px] font-bold tracking-widest text-blue-600 uppercase mt-1">
-                                                Ready to upload
-                                            </Typography>
-                                        </div>
-                                    </div>
-                                );
-                            }
-
-                            return (
-                                <div
-                                    key={rt.id}
-                                    onClick={() => openLocalUploadModal(rt)}
-                                    className="bg-[#fff5f5] rounded-xl p-3 space-y-3 border-2 border-dashed border-red-300 cursor-pointer hover:border-red-400"
-                                >
-                                    <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                        <FileText className="size-10 text-red-500" />
-                                    </div>
-                                    <div>
-                                        <Typography as="p" className="text-[11px] font-bold text-gray-900 truncate">{rt.name}</Typography>
-                                        <Typography as="p" className="text-[8px] font-bold tracking-widest text-red-600 uppercase mt-1">
-                                            Click to upload
-                                        </Typography>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                    <div className="py-12 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                        <FileText className="size-6 text-gray-400 mx-auto mb-3" />
+                        <Typography as="p" className="text-sm font-bold text-gray-900">
+                            No supporting documents required
+                        </Typography>
+                        <Typography as="p" className="text-xs text-gray-500 mt-1">
+                            This program does not require additional supporting documents.
+                        </Typography>
                     </div>
                 )}
             </div>
         </>
+        </TooltipProvider>
     )
 }
 
-export function Step4Course({ onBack }: { onBack: () => void }) {
+export function Step4Application({ onBack }: { onBack: () => void }) {
     const router = useRouter()
     const { me } = useAuth()
-    const { data: meData, isLoading } = me
+    const { data: meData, isLoading, isFetching } = me
+    const { data: degrees = [], isLoading: loadingDegrees } = useDegrees()
+    const { data: levels = [] } = useLevels()
 
-    const [selectedCourseId, setSelectedCourseId] = useState<string>("")
-    const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([])
-    const [documents, setDocuments] = useState<Document[]>([])
-    const [isDocumentsLoading, setIsDocumentsLoading] = useState(false)
+    const [selectedCourseId, setSelectedCourseId] = useState("")
+    const [applicationDocError, setApplicationDocError] = useState<string | null>(null)
     const [pendingFiles, setPendingFiles] = useState<Record<string, { front: File | null; back: File | null }>>({})
     const [isUploading, setIsUploading] = useState<Record<string, boolean>>({})
 
-    // Fetch courses
+    const studentProfileId = meData?.id ?? ""
+
+    const qualificationId = meData?.academic?.[0]?.qualification ?? ""
+    const qualificationLevelName = qualificationId
+        ? degrees.find((d) => d.id === qualificationId)?.level?.name
+        : null
+
     const { data: programsResponse } = useQuery({
         queryKey: ["programs"],
         queryFn: async () => {
-            const res = await fetch("/api/program?limit=50")
+            const res = await fetch("/api/program?limit=100")
             if (!res.ok) throw new Error("Failed to fetch courses")
             return res.json()
         },
     })
+
     const courses: CourseProgram[] = Array.isArray(programsResponse?.data) ? programsResponse.data : []
 
+    const eligibleCourses = useMemo(
+        () => (qualificationId ? filterCoursesByQualificationLevel(courses, qualificationLevelName) : []),
+        [courses, qualificationId, qualificationLevelName]
+    )
 
-
-    // Get filtered courses (higher than highest degree)
-    // Note: meData.academic items only carry a plain qualification UUID string;
-    // nested level info is not available here, so we return all courses.
-    const filteredCourses = useCallback(() => {
-        return courses
-    }, [courses])
-
-    const { data: programDetailResponse } = useQuery({
-        queryKey: ["course-detail", selectedCourseId],
+    const { data: allDocumentTypes = [] } = useQuery({
+        queryKey: ["document-types"],
         queryFn: async () => {
-            if (!selectedCourseId) return null
-            const res = await fetch(`/api/program/${selectedCourseId}`)
-            if (!res.ok) throw new Error("Failed to fetch course details")
-            return res.json()
+            const res = await fetch("/api/document-type")
+            if (!res.ok) throw new Error("Failed to fetch document types")
+            const json = await res.json()
+            return (json.data ?? []) as { id: string; name: string }[]
         },
         enabled: !!selectedCourseId,
     })
 
-    const requiredDocTypes: { id: string; name: string }[] = useMemo(() => {
-        const fromCourse = (
-            programDetailResponse?.data?.degree?.requirements ?? []
-        )
-            .map((r: { document_type?: { id: string; name: string } }) => r.document_type)
-            .filter((t: { id: string; name: string } | undefined): t is { id: string; name: string } => Boolean(t?.id))
-
-        if (fromCourse.length > 0) return fromCourse
-
-        return []
-    }, [programDetailResponse])
-
-    // Fetch existing documents for student
-    const refetchDocuments = useCallback(async () => {
-        if (!meData?.id) return
-        setIsDocumentsLoading(true)
-        try {
-            const res = await fetch(`/api/documents?student_id=${meData.id}`)
-            if (!res.ok) throw new Error("Failed to fetch documents")
-            const data = await res.json()
-            setDocuments(data.data)
-        } catch (err) {
-            console.error(err)
-        } finally {
-            setIsDocumentsLoading(false)
+    const { required: applicationRequiredDocTypes, optional: applicationOptionalDocTypes } = useMemo(() => {
+        if (!selectedCourseId) {
+            return { required: [], optional: [] }
         }
-    }, [meData?.id])
 
-    useEffect(() => {
-        refetchDocuments()
-    }, [refetchDocuments])
+        const course = courses.find((c) => c.id === selectedCourseId)
+        return resolveCourseDocumentTypes({
+            requirements: course?.degree?.requirements ?? [],
+            fallbackDocumentTypes: allDocumentTypes,
+        })
+    }, [selectedCourseId, courses, allDocumentTypes])
 
-    // Mutation to create application and upload docs
+    const { data: documents = [], isLoading: isDocumentsLoading, refetch: refetchDocuments } = useQuery({
+        queryKey: ["onboarding-documents", studentProfileId],
+        queryFn: async () => {
+            if (!studentProfileId) return [] as Document[]
+            const res = await fetch(`/api/document/student/${studentProfileId}`)
+            if (!res.ok) throw new Error("Failed to fetch documents")
+            const json = await res.json()
+            return (Array.isArray(json?.data) ? json.data : []) as Document[]
+        },
+        enabled: !!studentProfileId,
+    })
+
     const mutation = useMutation({
         mutationFn: async () => {
-            const uploadedDocIds: string[] = []
-            const studentId = meData?.id
-
+            const studentId = studentProfileId
             if (!studentId) throw new Error("Student not found")
 
-            // Upload pending files
+            let currentDocuments = documents
+
+            if (selectedCourseId) {
+                const missingDocs = applicationRequiredDocTypes.filter(
+                    (docType) => !hasUploadedDocument(docType.id, pendingFiles, currentDocuments)
+                )
+                if (missingDocs.length > 0) {
+                    throw new Error(
+                        `Please upload required documents: ${missingDocs.map((doc) => doc.name).join(", ")}`
+                    )
+                }
+            }
+
+            const uploadedDocIds: string[] = []
+
             for (const [docTypeId, files] of Object.entries(pendingFiles)) {
                 if (files.front) {
-                    setIsUploading(prev => ({ ...prev, [docTypeId]: true }))
+                    setIsUploading((prev) => ({ ...prev, [docTypeId]: true }))
 
                     const formData = new FormData()
                     formData.set("student_id", studentId)
                     formData.set("document_type_id", docTypeId)
                     formData.append("files", files.front)
-                    if (files.back) {
-                        formData.append("files", files.back)
-                    }
+                    if (files.back) formData.append("files", files.back)
 
                     const res = await fetch("/api/document", { method: "POST", body: formData })
                     const data = await res.json()
                     if (!res.ok) throw new Error(data.error ?? "Failed to upload document")
                     uploadedDocIds.push(data.data.id)
 
-                    setIsUploading(prev => ({ ...prev, [docTypeId]: false }))
-                    // Remove from pending files
-                    setPendingFiles(prev => {
+                    setIsUploading((prev) => ({ ...prev, [docTypeId]: false }))
+                    setPendingFiles((prev) => {
                         const next = { ...prev }
                         delete next[docTypeId]
                         return next
@@ -397,26 +666,49 @@ export function Step4Course({ onBack }: { onBack: () => void }) {
                 }
             }
 
-            await refetchDocuments()
+            const refreshResult = await refetchDocuments()
+            currentDocuments = (refreshResult.data ?? currentDocuments) as Document[]
 
-            // If course selected, create application
             if (selectedCourseId) {
-                // Get all selected doc ids
-                const allSelectedDocIds = [...selectedDocumentIds, ...uploadedDocIds]
-                // Find the selected course
-                const course = courses.find((c: CourseProgram) => c.id === selectedCourseId)
-                const applicationData = new FormData()
-                applicationData.set("course_id", selectedCourseId)
-                applicationData.set("student_id", studentId)
-                applicationData.set("status", "pending")
-                applicationData.set("intake_date", course?.degree?.intake_date ?? "summer")
-                applicationData.set("declarations", JSON.stringify([true, true, true]))
-                allSelectedDocIds.forEach(docId => {
-                    applicationData.append("document_ids", docId)
-                })
-                const res = await fetch("/api/applications", {
+                const stillMissing = applicationRequiredDocTypes.filter(
+                    (docType) => !hasUploadedDocument(docType.id, {}, currentDocuments)
+                )
+                if (stillMissing.length > 0) {
+                    throw new Error(
+                        `Please upload required documents: ${stillMissing.map((doc) => doc.name).join(", ")}`
+                    )
+                }
+
+                const course = courses.find((c) => c.id === selectedCourseId)
+                const levelId = course?.degree?.level_id
+                const universityId = levels.find((level) => level.id === levelId)?.university_id ?? ""
+
+                if (!universityId) {
+                    throw new Error("Could not resolve university for the selected course")
+                }
+
+                const allDocIds = [
+                    ...new Set([
+                        ...currentDocuments.map((d) => d.id),
+                        ...uploadedDocIds,
+                    ]),
+                ]
+
+                if (allDocIds.length === 0) {
+                    throw new Error("Please attach at least one document")
+                }
+
+                const res = await fetch("/api/application", {
                     method: "POST",
-                    body: applicationData
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        profile_id: studentId,
+                        course_id: selectedCourseId,
+                        university_id: universityId,
+                        document_ids: allDocIds,
+                        intake_date: course?.degree?.intake_date ?? "summer",
+                        declarations: [true, true, true],
+                    }),
                 })
                 const data = await res.json()
                 if (!res.ok) throw new Error(data.error ?? "Failed to create application")
@@ -424,51 +716,108 @@ export function Step4Course({ onBack }: { onBack: () => void }) {
         },
         onSuccess: () => {
             router.push("/dashboard")
-        }
+        },
+        onError: (error) => {
+            setApplicationDocError(error instanceof Error ? error.message : "Something went wrong")
+        },
     })
 
-    if (isLoading) return <PageLoader label="Loading..." />
+    const handleFinish = useCallback(() => {
+        setApplicationDocError(null)
+
+        const hasPendingUploads = Object.values(pendingFiles).some((files) => files.front)
+        if (!selectedCourseId && !hasPendingUploads) {
+            router.push("/dashboard")
+            return
+        }
+
+        if (selectedCourseId && applicationRequiredDocTypes.length > 0) {
+            const missingDocs = applicationRequiredDocTypes.filter(
+                (docType) => !hasUploadedDocument(docType.id, pendingFiles, documents)
+            )
+            if (missingDocs.length > 0) {
+                setApplicationDocError(
+                    `Please upload required documents: ${missingDocs.map((doc) => doc.name).join(", ")}`
+                )
+                return
+            }
+        }
+
+        mutation.mutate()
+    }, [applicationRequiredDocTypes, documents, mutation, pendingFiles, router, selectedCourseId])
+
+    if (isLoading || loadingDegrees || (isFetching && !qualificationId)) {
+        return <PageLoader label="Loading courses..." />
+    }
 
     return (
         <div className="space-y-6">
-            <div>
-                <F label="Select Course (Optional)">
+            {!qualificationId ? (
+                <div className="rounded-sm border border-dashed border-gray-200 bg-gray-50/50 px-4 py-6 text-center">
+                    <Typography as="p" className="text-sm font-medium text-gray-500">
+                        Select your highest degree in Academic Background to view available courses.
+                    </Typography>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    <FieldLabel>Courses</FieldLabel>
                     <Select
-                        value={selectedCourseId}
+                        value={selectedCourseId || undefined}
                         onValueChange={(val) => {
                             setSelectedCourseId(val)
-                            setSelectedDocumentIds([])
                             setPendingFiles({})
+                            setApplicationDocError(null)
                         }}
                     >
-                        <SelectTrigger className="h-14">
-                            <SelectValue placeholder="Select a course" />
+                        <SelectTrigger className="h-12 w-full">
+                            <SelectValue
+                                placeholder={
+                                    eligibleCourses.length === 0
+                                        ? "No courses available for this qualification level."
+                                        : "Select a course"
+                                }
+                            />
                         </SelectTrigger>
-                        <SelectContent>
-                            {filteredCourses().map((course: CourseProgram) => (
+                        <SelectContent className="max-h-60">
+                            {eligibleCourses.map((course) => (
                                 <SelectItem key={course.id} value={course.id}>
                                     {course.name}
+                                    {course.degree?.level?.name || course.deadline_date
+                                        ? ` — ${[course.degree?.level?.name, formatProgramDate(course.deadline_date)]
+                                              .filter(Boolean)
+                                              .join(" • ")}`
+                                        : ""}
                                 </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
-                </F>
-            </div>
+                </div>
+            )}
 
             {selectedCourseId && (
-                <SupportingDocumentsSection
-                    documents={documents}
-                    requiredDocTypes={requiredDocTypes}
-                    selectedCourseId={selectedCourseId}
-                    selectedStudentId={meData?.id || ""}
-                    refetchDocuments={refetchDocuments}
-                    selectedDocumentIds={selectedDocumentIds}
-                    onDocumentSelect={setSelectedDocumentIds}
-                    isDocumentsLoading={isDocumentsLoading}
-                    pendingFiles={pendingFiles}
-                    setPendingFiles={setPendingFiles}
-                    isUploading={isUploading}
-                />
+                <>
+                    <Typography as="p" className="text-sm text-muted-foreground">
+                        This application is optional. Documents marked as required must be uploaded before submitting.
+                    </Typography>
+
+                    <SupportingDocumentsSection
+                        documents={documents}
+                        requiredDocTypes={applicationRequiredDocTypes}
+                        optionalDocTypes={applicationOptionalDocTypes}
+                        studentId={studentProfileId}
+                        refetchDocuments={refetchDocuments}
+                        pendingFiles={pendingFiles}
+                        setPendingFiles={setPendingFiles}
+                        isUploading={isUploading}
+                        isDocumentsLoading={isDocumentsLoading}
+                    />
+                </>
+            )}
+
+            {applicationDocError && (
+                <Typography as="p" className="text-destructive text-sm">
+                    {applicationDocError}
+                </Typography>
             )}
 
             <div className="flex flex-col sm:flex-row gap-3 mt-8">
@@ -480,7 +829,7 @@ export function Step4Course({ onBack }: { onBack: () => void }) {
                 </Button>
                 <Button
                     type="button"
-                    onClick={() => mutation.mutate()}
+                    onClick={handleFinish}
                     disabled={mutation.isPending}
                     className="w-full sm:w-auto sm:flex-1 bg-brand-byzantine hover:bg-brand-byzantine/90"
                 >
@@ -489,14 +838,16 @@ export function Step4Course({ onBack }: { onBack: () => void }) {
                             <Loader2 className="size-4 animate-spin mr-2" />
                             Processing...
                         </>
+                    ) : selectedCourseId ? (
+                        "Submit & Apply"
                     ) : (
-                        selectedCourseId ? "Submit & Apply" : "Finish"
+                        "Finish"
                     )}
                 </Button>
             </div>
 
-            {mutation.isError && (
-                <Typography className="text-destructive mt-4 text-sm">
+            {mutation.isError && !applicationDocError && (
+                <Typography as="p" className="text-destructive text-sm">
                     {mutation.error instanceof Error ? mutation.error.message : "Something went wrong"}
                 </Typography>
             )}

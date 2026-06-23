@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, formatRoleLabel } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 
 interface NavbarProps {
@@ -32,10 +32,10 @@ const getTitleFromPathname = (pathname: string): string => {
     }
 
     if (pathname.includes('/dashboard/agent/') && segments.length >= 3) {
-        return 'Agent Profile';
+        return 'University Partner Profile';
     }
 
-    if (pathname === '/dashboard/agent') return 'Agent Profile';
+    if (pathname === '/dashboard/agent') return 'University Partners';
 
     if (pathname.includes('/dashboard/document/student/')) {
         return 'All Documents';
@@ -126,7 +126,7 @@ export function Navbar({
                         <Button variant="outline" className="h-14 gap-3 px-4 py-2 border border-brand-byzantine rounded-xl hover:bg-brand-byzantine/10 bg-brand-byzantine/5 transition-colors">
                             <div className="hidden sm:flex flex-col items-end">
                                 <span className="text-sm font-bold text-gray-800 leading-tight">{userName}</span>
-                                <span className="text-xs text-brand-byzantine font-medium">{userRole}</span>
+                                <span className="text-xs text-brand-byzantine font-medium">{formatRoleLabel(userRole)}</span>
                             </div>
                             <Avatar className="w-9 h-9 border-2 border-purple-100">
                                 <AvatarImage src={userImage} alt={userName} />
@@ -143,7 +143,7 @@ export function Navbar({
                     <DropdownMenuContent align="end" className="w-56 mt-2">
                         <DropdownMenuItem className="flex flex-col items-start gap-1 cursor-pointer p-2">
                             <span className="font-bold text-gray-800">{userName}</span>
-                            <span className="text-xs text-brand-byzantine font-medium">{userRole}</span>
+                            <span className="text-xs text-brand-byzantine font-medium">{formatRoleLabel(userRole)}</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

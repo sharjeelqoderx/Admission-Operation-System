@@ -51,7 +51,7 @@ export const ApplicationTable = React.memo(function ApplicationTable({ applicati
                         <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
                             <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">Student Name</Typography></TableHead>
                             <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">Program</Typography></TableHead>
-                            <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">Agent Name</Typography></TableHead>
+                            <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">University Partner Name</Typography></TableHead>
                             <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">Status</Typography></TableHead>
                             <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">Date</Typography></TableHead>
                             <TableHead className="px-8 py-6"><Typography font="small" className="text-gray-600 uppercase tracking-widest">Action</Typography></TableHead>
@@ -112,7 +112,7 @@ export const ApplicationTable = React.memo(function ApplicationTable({ applicati
                                             </Typography>
                                         </TableCell>
 
-                                        {/* Agent Name */}
+                                        {/* University Partner Name */}
                                         <TableCell className="px-8 py-6 whitespace-nowrap">
                                             <Typography font="sub-text" as="span" className="font-light text-gray-600">
                                                 {app.agent?.name ?? "—"}

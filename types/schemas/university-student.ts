@@ -13,7 +13,7 @@ export const universityStudentListItemSchema = z.object({
     student_code: z.string().nullable(),
     program_name: z.string().nullable(),
     intake_label: z.string().nullable(),
-    applied_through: z.enum(["Direct", "Agent"]),
+    applied_through: z.enum(["Direct", "University Partner"]),
     pipeline_status: studentPipelineStatusSchema,
     submission_date: z.string().nullable(),
 })

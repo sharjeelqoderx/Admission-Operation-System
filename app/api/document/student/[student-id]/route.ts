@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { fetchCourseProgramById } from "@/lib/api/course-program"
+import { getCourseDocumentTypeIds } from "@/lib/utils/course-documents"
 import { upsertStudentDocument } from "@/lib/supabase/upsert-student-document"
 import { STUDENT_DOCUMENT_TYPE_IDS } from "@/lib/constants/document-types"
 
@@ -35,7 +36,7 @@ export async function GET(
                 .maybeSingle()
 
             if (!agentRow) {
-                return NextResponse.json({ error: "Agent profile not found" }, { status: 403 })
+                return NextResponse.json({ error: "University Partner profile not found" }, { status: 403 })
             }
 
             const { data: studentRow } = await supabase
@@ -54,11 +55,12 @@ export async function GET(
         if (courseId) {
             const course = await fetchCourseProgramById(supabase, courseId)
             const requirements = (course?.degree as unknown as {
-                requirements?: Array<{ document_type?: { id?: string } | null }>
-            } | null)?.requirements
-            requiredDocTypeIds = (requirements ?? [])
-                .map((requirement) => requirement.document_type?.id)
-                .filter((id): id is string => Boolean(id))
+                requirements?: Array<{
+                    requirement_type?: "REQUIRED" | "OPTIONAL" | null
+                    document_type?: { id?: string } | null
+                }>
+            } | null)?.requirements ?? []
+            requiredDocTypeIds = getCourseDocumentTypeIds(requirements)
         }
 
         let query = supabase

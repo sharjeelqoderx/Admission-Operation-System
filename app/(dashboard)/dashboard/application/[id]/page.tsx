@@ -1,7 +1,8 @@
-import { notFound, redirect } from "next/navigation"
+import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityApplicationDetailForPage } from "@/lib/application/university-server"
-import { AgentStudentApplicationDetailPage } from "./_components/agent-student-application-detail-page"
+import { fetchApplicationDetailForPage } from "@/lib/application/server"
+import { PageContent } from "./_components/page-content"
 import { UniversityApplicationDetailPageContent } from "./_components/university-application/page-content"
 
 type ApplicationDetailPageProps = {
@@ -17,19 +18,17 @@ export default async function ApplicationDetailPage({ params }: ApplicationDetai
     }
 
     if (role === "UNIVERSITY" || role === "ADMIN") {
-        const initialDetail = await fetchUniversityApplicationDetailForPage(id)
-
-        if (!initialDetail) {
-            notFound()
-        }
+        const initialData = await fetchUniversityApplicationDetailForPage(id)
 
         return (
             <UniversityApplicationDetailPageContent
                 applicationId={id}
-                initialDetail={initialDetail}
+                initialData={initialData}
             />
         )
     }
 
-    return <AgentStudentApplicationDetailPage />
+    const initialData = await fetchApplicationDetailForPage(id)
+
+    return <PageContent applicationId={id} initialData={initialData} />
 }

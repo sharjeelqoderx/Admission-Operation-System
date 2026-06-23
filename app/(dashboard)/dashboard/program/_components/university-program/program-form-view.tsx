@@ -113,7 +113,7 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                         />
                     </div>
                     <div>
-                        <FieldLabel>Agent Commission</FieldLabel>
+                        <FieldLabel>University Partner Commission</FieldLabel>
                         <Input
                             type="number"
                             min={0}
@@ -125,7 +125,7 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                                     event.target.value ? Number(event.target.value) : null
                                 )
                             }
-                            placeholder="Enter Agent Percent"
+                            placeholder="Enter University Partner Percent"
                             className="h-11 bg-white"
                         />
                     </div>

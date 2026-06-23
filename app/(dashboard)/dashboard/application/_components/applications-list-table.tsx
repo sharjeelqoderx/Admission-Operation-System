@@ -1,7 +1,7 @@
 import React, { useMemo } from "react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
-import { StatusBadge } from "@/components/shared/StatusBadge"
+import { ApplicationStatusBadge } from "./application-status-badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
     Table,
@@ -18,37 +18,15 @@ import Link from "next/link"
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
 import { cn } from "@/lib/utils"
 import { Progress } from "@/components/ui/progress"
-import { ApplicationStatus } from "@/components/shared/StatusBadge"
+import type { ApplicationListItem } from "@/types/schemas/application"
+import type { ApplicationProfileRole } from "@/types/schemas/application"
+import { formatFullName } from "@/lib/utils/profile"
 
-export type ApplicationRow = {
-    id: string
-    application_no: string | null
-    status: string
-    created_at: string
-    student: {
-        id: string
-        name: string | null
-        avatar_url: string | null
-        email: string | null
-        student_code?: string | null
-    } | null
-    course: {
-        id: string
-        name: string | null
-        deadline_date?: string | null
-        degree?: { id: string; name: string; fees?: string | null; intake_date?: string | null } | null
-    } | null
-    agent: { id: string; name: string | null } | null
-    offer_shared?: boolean
-    offer_status?: string | null
-    documents_uploaded_count?: number
-    total_required_documents?: number
-    document_vault_percentage?: number
-}
+export type ApplicationRow = ApplicationListItem
 
 type Props = {
-    applications: ApplicationRow[]
-    role?: "AGENT" | "STUDENT" | "UNIVERSITY"
+    applications: ApplicationListItem[]
+    role?: ApplicationProfileRole
     isLoading: boolean
     isError: boolean
     onRetry: () => void
@@ -64,12 +42,12 @@ function formatSubmittedDate(value: string) {
     })
 }
 
-function getApplicationNumber(app: ApplicationRow) {
+function getApplicationNumber(app: ApplicationListItem) {
     return app.application_no ?? `APP-${app.id.slice(0, 8).toUpperCase()}`
 }
 
 function getDocumentVaultHref(
-    app: ApplicationRow,
+    app: ApplicationListItem,
     variant: "degree" | "student",
     fallbackStudentId?: string
 ): string | null {
@@ -92,7 +70,7 @@ export function DocumentVaultCell({
     variant = "degree",
     fallbackStudentId,
 }: {
-    app: ApplicationRow
+    app: ApplicationListItem
     variant?: "degree" | "student"
     fallbackStudentId?: string
 }) {
@@ -102,10 +80,7 @@ export function DocumentVaultCell({
             <Typography as="span" className="text-sm font-bold text-brand-blue-text">
                 {app.document_vault_percentage ?? 0}%
             </Typography>
-            <Progress
-                value={app.document_vault_percentage ?? 0}
-                className="h-1.5 w-24"
-            />
+            <Progress value={app.document_vault_percentage ?? 0} className="h-1.5 w-24" />
             <Typography as="span" className="text-[11px] text-gray-500 font-light">
                 {app.documents_uploaded_count ?? 0}/{app.total_required_documents ?? 0} attached
             </Typography>
@@ -121,7 +96,7 @@ export function DocumentVaultCell({
             href={href}
             scroll={false}
             className="block rounded-lg p-2 -m-2 hover:bg-brand-secondary/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-secondary/40"
-            aria-label={`View documents for ${app.student?.name ?? "student"}`}
+            aria-label={`View documents for ${formatFullName(app.student?.first_name, app.student?.last_name, "student")}`}
         >
             {content}
         </Link>
@@ -244,7 +219,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                             )}
                             {showAgentColumn && (
                                 <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                    Agent
+                                    University Partner
                                 </TableHead>
                             )}
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase min-w-[140px]">
@@ -273,7 +248,11 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                             </TableRow>
                         ) : (
                             applications.map((app, index) => {
-                                const studentName = app.student?.name ?? "—"
+                                const studentName = formatFullName(
+                                    app.student?.first_name,
+                                    app.student?.last_name,
+                                    "—"
+                                )
                                 const initials = studentName
                                     .split(" ")
                                     .map((n) => n[0])
@@ -292,7 +271,10 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                     >
                                         {showApplicationNoColumn && (
                                             <TableCell className="px-6 py-5 whitespace-nowrap">
-                                                <Typography as="span" className="text-sm font-bold text-gray-900">
+                                                <Typography
+                                                    as="span"
+                                                    className="text-sm font-bold text-gray-900"
+                                                >
                                                     {getApplicationNumber(app)}
                                                 </Typography>
                                             </TableCell>
@@ -315,16 +297,25 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                                         </AvatarFallback>
                                                     </Avatar>
                                                     <div className="flex flex-col">
-                                                        <Typography as="span" className="text-sm font-bold text-gray-900">
+                                                        <Typography
+                                                            as="span"
+                                                            className="text-sm font-bold text-gray-900"
+                                                        >
                                                             {studentName}
                                                         </Typography>
                                                         {app.student?.student_code && (
-                                                            <Typography as="span" className="text-[11px] text-gray-500 font-light">
+                                                            <Typography
+                                                                as="span"
+                                                                className="text-[11px] text-gray-500 font-light"
+                                                            >
                                                                 {app.student.student_code}
                                                             </Typography>
                                                         )}
                                                         {app.student?.email && (
-                                                            <Typography as="span" className="text-[11px] text-gray-500 font-light">
+                                                            <Typography
+                                                                as="span"
+                                                                className="text-[11px] text-gray-500 font-light"
+                                                            >
                                                                 {app.student.email}
                                                             </Typography>
                                                         )}
@@ -335,11 +326,17 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <div className="flex flex-col">
-                                                <Typography as="span" className="text-sm font-bold text-gray-700">
+                                                <Typography
+                                                    as="span"
+                                                    className="text-sm font-bold text-gray-700"
+                                                >
                                                     {app.course?.name ?? "—"}
                                                 </Typography>
                                                 {app.course?.degree?.name && (
-                                                    <Typography as="span" className="text-[11px] text-gray-500 font-light">
+                                                    <Typography
+                                                        as="span"
+                                                        className="text-[11px] text-gray-500 font-light"
+                                                    >
                                                         {app.course.degree.name}
                                                     </Typography>
                                                 )}
@@ -349,17 +346,26 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                         {showExtendedProgramColumns && (
                                             <>
                                                 <TableCell className="px-6 py-5 whitespace-nowrap">
-                                                    <Typography as="span" className="text-sm font-medium text-gray-700">
+                                                    <Typography
+                                                        as="span"
+                                                        className="text-sm font-medium text-gray-700"
+                                                    >
                                                         {app.course?.degree?.fees ?? "Contact University"}
                                                     </Typography>
                                                 </TableCell>
                                                 <TableCell className="px-6 py-5 whitespace-nowrap">
-                                                    <Typography as="span" className="text-sm font-medium text-gray-600">
+                                                    <Typography
+                                                        as="span"
+                                                        className="text-sm font-medium text-gray-600"
+                                                    >
                                                         {formatIntakeDate(app.course?.degree?.intake_date)}
                                                     </Typography>
                                                 </TableCell>
                                                 <TableCell className="px-6 py-5 whitespace-nowrap">
-                                                    <Typography as="span" className="text-sm font-medium text-gray-600">
+                                                    <Typography
+                                                        as="span"
+                                                        className="text-sm font-medium text-gray-600"
+                                                    >
                                                         {formatProgramDate(app.course?.deadline_date)}
                                                     </Typography>
                                                 </TableCell>
@@ -368,8 +374,15 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
 
                                         {showAgentColumn && (
                                             <TableCell className="px-6 py-5 whitespace-nowrap">
-                                                <Typography as="span" className="text-sm font-light text-gray-600">
-                                                    {app.agent?.name ?? "—"}
+                                                <Typography
+                                                    as="span"
+                                                    className="text-sm font-light text-gray-600"
+                                                >
+                                                    {formatFullName(
+                                                        app.agent?.first_name,
+                                                        app.agent?.last_name,
+                                                        "—"
+                                                    )}
                                                 </Typography>
                                             </TableCell>
                                         )}
@@ -380,17 +393,18 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <div className="flex flex-col gap-1.5">
-                                                <StatusBadge status={app.status} />
-                                                {app.offer_shared && (
-                                                    <StatusBadge
-                                                        status={ApplicationStatus.CONDITIONAL_LETTER_ISSUED}
-                                                    />
-                                                )}
+                                                <ApplicationStatusBadge
+                                                    status={app.status}
+                                                    offerLetter={app.offer_letter}
+                                                />
                                             </div>
                                         </TableCell>
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-medium text-gray-600">
+                                            <Typography
+                                                as="span"
+                                                className="text-sm font-medium text-gray-600"
+                                            >
                                                 {formatSubmittedDate(app.created_at)}
                                             </Typography>
                                         </TableCell>
@@ -401,9 +415,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                                 className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
                                                 asChild
                                             >
-                                                <Link href={`${viewBasePath}/${app.id}`}>
-                                                    View
-                                                </Link>
+                                                <Link href={`${viewBasePath}/${app.id}`}>View</Link>
                                             </Button>
                                         </TableCell>
                                     </TableRow>
@@ -417,13 +429,22 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                             <TableCell colSpan={columnCount} className="px-8 py-5">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1">
-                                        <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                        <Typography
+                                            as="span"
+                                            className="text-[12px] font-light text-gray-500"
+                                        >
                                             Showing
                                         </Typography>
-                                        <Typography as="span" className="text-[12px] font-bold text-brand-blue-text mx-1">
+                                        <Typography
+                                            as="span"
+                                            className="text-[12px] font-bold text-brand-blue-text mx-1"
+                                        >
                                             {applications.length}
                                         </Typography>
-                                        <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                        <Typography
+                                            as="span"
+                                            className="text-[12px] font-light text-gray-500"
+                                        >
                                             entries
                                         </Typography>
                                     </div>

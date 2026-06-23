@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { clearSessionQueryCache } from "@/lib/query/session-cache"
-import { isSessionActive, setSessionActive } from "@/lib/auth/client-session"
+import { setSessionActive, syncSessionActiveFromCookie } from "@/lib/auth/client-session"
+import { useClientReady } from "@/hooks/useClientReady"
 import { z } from "zod"
 import { Enums, Tables, TablesUpdate } from "@/types/supabase"
 import { loginSchema, otpSchema, signupSchema } from "@/types/schemas/auth"
@@ -163,6 +164,8 @@ async function get<T>(url: string): Promise<T> {
 
 export function useAuth() {
     const queryClient = useQueryClient()
+    const clientReady = useClientReady()
+    const sessionActive = clientReady ? syncSessionActiveFromCookie() : false
 
     const login = useMutation({
         mutationFn: (payload: LoginPayload) =>
@@ -212,11 +215,11 @@ export function useAuth() {
                 throw error
             }
         },
-        enabled: isSessionActive(),
+        enabled: sessionActive,
         staleTime: 0,
         gcTime: 0,
         refetchOnMount: "always",
-        refetchOnWindowFocus: isSessionActive(),
+        refetchOnWindowFocus: sessionActive,
         retry: false,
     })
     const profile = useMutation({
@@ -242,10 +245,16 @@ export function useAuth() {
     const academic = useMutation({
         mutationFn: (payload: AcademicPayload) =>
             post<{ message: string }>("/api/academic", payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["me"] })
+        },
     })
     const experience = useMutation({
         mutationFn: (payload: ExperiencePayload) =>
             post<{ message: string }>("/api/experience", payload),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["me"] })
+        },
     })
     const agentProfile = useMutation({
         mutationFn: async (payload: AgentProfileFormDataPayload) => {

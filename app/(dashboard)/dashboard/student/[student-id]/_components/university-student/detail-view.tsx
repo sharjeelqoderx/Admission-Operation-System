@@ -251,7 +251,7 @@ export const UniversityStudentDetailView = memo(function UniversityStudentDetail
                                     </Typography>
                                     {detail.submission_source.agent_name ? (
                                         <Typography as="p" font="sub-text" className="text-gray-600">
-                                            Agent: {detail.submission_source.agent_name}
+                                            University Partner: {detail.submission_source.agent_name}
                                         </Typography>
                                     ) : null}
                                 </div>

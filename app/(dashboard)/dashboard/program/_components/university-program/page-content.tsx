@@ -33,7 +33,7 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
                         All Programs
                     </Typography>
                     <Typography as="p" font="sub-text" className="leading-relaxed text-gray-500">
-                        Manage your academic catalog, tuition details, and agent commission settings across
+                        Manage your academic catalog, tuition details, and university partner commission settings across
                         all active and historical programs.
                     </Typography>
                 </div>

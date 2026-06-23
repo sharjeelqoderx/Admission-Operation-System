@@ -47,7 +47,7 @@ const navItems: NavItem[] = [
     { icon: CreditCard, label: "Payments", href: "/dashboard/payment", x: true },
     { icon: BadgeDollarSign, label: "Commissions", href: "/dashboard/commission" },
     { icon: MessageSquare, label: "Messages", href: "/dashboard/chat", x: true },
-    { icon: UserCircle, label: "Agent Profile", href: "/profile" },
+    { icon: UserCircle, label: "University Partner Profile", href: "/profile" },
 ]
 
 export function NavContent() {

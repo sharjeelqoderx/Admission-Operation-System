@@ -39,7 +39,7 @@ type UniversityAgentListTableProps = {
     onPageChange: (page: number) => void
 }
 
-const tabs = ["Agents", "Country", "KYC Status", "Students Count"]
+const tabs = ["University Partners", "Country", "KYC Status", "Students Count"]
 
 export const UniversityAgentListTable = memo(function UniversityAgentListTable({
     agents,
@@ -121,7 +121,7 @@ export const UniversityAgentListTable = memo(function UniversityAgentListTable({
                                 <TableRow>
                                     <TableCell colSpan={5} className="px-6 py-12 text-center">
                                         <Typography as="span" font="sub-text" className="text-gray-500">
-                                            Loading agents...
+                                            Loading university partners...
                                         </Typography>
                                     </TableCell>
                                 </TableRow>
@@ -129,7 +129,7 @@ export const UniversityAgentListTable = memo(function UniversityAgentListTable({
                                 <TableRow>
                                     <TableCell colSpan={5} className="px-6 py-12 text-center">
                                         <Typography as="span" font="sub-text" className="text-gray-500">
-                                            No agents found.
+                                            No university partners found.
                                         </Typography>
                                     </TableCell>
                                 </TableRow>

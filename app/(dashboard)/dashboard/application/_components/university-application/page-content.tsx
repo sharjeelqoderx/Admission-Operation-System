@@ -35,7 +35,7 @@ const UniversityApplicationPageView = memo(function UniversityApplicationPageVie
                     All Application
                 </Typography>
                 <Typography as="p" font="sub-text" className="max-w-3xl leading-relaxed text-gray-500">
-                    Manage international student intake, review documentation status, and track agent
+                    Manage international student intake, review documentation status, and track university partner
                     performance across all global programs.
                 </Typography>
             </div>

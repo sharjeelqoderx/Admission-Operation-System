@@ -23,7 +23,7 @@ export const UniversityAgentStatsCards = memo(function UniversityAgentStatsCards
                         font="small"
                         className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500"
                     >
-                        Total Agents
+                        Total University Partners
                     </Typography>
                     <OverviewMetricBadge label="+12%" tone="success" showTrendIcon />
                 </div>

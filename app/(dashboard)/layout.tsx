@@ -67,12 +67,12 @@ const sidebarRoutes = [
   },
 
   {
-    label: 'Agents',
+    label: 'University Partners',
     icon: UserCircle,
     allowFor: [Role.UNIVERSITY],
     children: [
       {
-        label: 'Agent Profile',
+        label: 'View Partners',
         href: '/dashboard/agent',
         icon: UserCircle,
         allowFor: [Role.UNIVERSITY],
@@ -157,7 +157,7 @@ const sidebarRoutes = [
   },
 
   {
-    label: 'Agent Profile',
+    label: 'University Partner Profile',
     href: '/dashboard/profile',
     icon: UserCircle,
     allowFor: [Role.AGENT, Role.STUDENT],
@@ -200,7 +200,7 @@ function isRouteActive(pathname: string, href?: string) {
  * ✅ Group active if ANY child is active
  */
 function isGroupActive(pathname: string, children?: any[], label?: string) {
-  if (label === 'Agents' && pathname.startsWith('/dashboard/agent')) {
+  if (label === 'University Partners' && pathname.startsWith('/dashboard/agent')) {
     return true;
   }
   if (!children) return false;
@@ -271,7 +271,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               key={route.href}
               href={route.href}
               icon={<Icon className="w-5 h-5" />}
-              label={route.label === 'Agent Profile' && role === Role.STUDENT ? 'Student Profile' : route.label}
+              label={route.label === 'University Partner Profile' && role === Role.STUDENT ? 'Student Profile' : route.label}
               isActive={isRouteActive(pathname, route.href)}
             />
           );

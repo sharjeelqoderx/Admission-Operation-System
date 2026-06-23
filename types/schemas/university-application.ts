@@ -92,3 +92,8 @@ export type UniversityApplicationTab = z.infer<typeof universityApplicationTabSc
 export type UniversityApplicationListItem = z.infer<typeof universityApplicationListItemSchema>
 export type UniversityApplicationListResponse = z.infer<typeof universityApplicationListResponseSchema>
 export type UniversityApplicationDetail = z.infer<typeof universityApplicationDetailSchema>
+
+export type UniversityApplicationDetailPageData = {
+    detail: UniversityApplicationDetail | null
+    error: string | null
+}

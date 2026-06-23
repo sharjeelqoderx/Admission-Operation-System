@@ -1,9 +1,8 @@
-import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityApplicationsForPage } from "@/lib/application/university-server"
-import { PageLoader } from "@/components/shared/page-loader"
-import { AgentStudentApplicationPage } from "./_components/agent-student-application-page"
+import { fetchApplicationDashboardPageData } from "@/lib/application/server"
+import { PageContent } from "./_components/page-content"
 import { UniversityApplicationListPageContent } from "./_components/university-application/page-content"
 import type { UniversityApplicationTab } from "@/types/schemas/university-application"
 
@@ -12,6 +11,10 @@ type ApplicationPageProps = {
         q?: string
         tab?: string
         page?: string
+        status?: string
+        degree_id?: string
+        date_from?: string
+        date_to?: string
     }>
 }
 
@@ -22,8 +25,9 @@ export default async function ApplicationPage({ searchParams }: ApplicationPageP
         redirect("/login")
     }
 
+    const params = await searchParams
+
     if (role === "UNIVERSITY" || role === "ADMIN") {
-        const params = await searchParams
         const tab = (params.tab ?? "all") as UniversityApplicationTab
 
         const initialOverview = await fetchUniversityApplicationsForPage({
@@ -37,12 +41,10 @@ export default async function ApplicationPage({ searchParams }: ApplicationPageP
             redirect("/login")
         }
 
-        return (
-            <Suspense fallback={<PageLoader label="Loading applications..." />}>
-                <UniversityApplicationListPageContent initialOverview={initialOverview} />
-            </Suspense>
-        )
+        return <UniversityApplicationListPageContent initialOverview={initialOverview} />
     }
 
-    return <AgentStudentApplicationPage />
+    const initialData = await fetchApplicationDashboardPageData(params)
+
+    return <PageContent initialData={initialData} />
 }

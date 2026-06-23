@@ -14,7 +14,7 @@ export const TopAgentPartners = memo(function TopAgentPartners({
     return (
         <Card className="h-full border-none bg-white px-5 py-6 shadow-sm ring-1 ring-black/5">
             <Typography as="h3" font="title" className="mb-6 font-bold text-brand-primary">
-                Top Agent Partners
+                Top University Partners
             </Typography>
 
             <div className="space-y-5">

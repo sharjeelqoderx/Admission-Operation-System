@@ -14,12 +14,13 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { GraduationCap, FileText, RotateCcw, Search, CheckCircle2 } from "lucide-react"
-import { ApplicationsListTable } from "@/app/(dashboard)/dashboard/application/_component/ApplicationsListTable"
+import { ApplicationsListTable } from "@/app/(dashboard)/dashboard/application/_components/applications-list-table"
 import { BluryCard } from "@/components/shared/blury-card"
 import { DatePicker } from "@/components/shared/date-picker"
 import { useAuth } from "@/hooks/useAuth"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import type { ApplicationListStats } from "@/types/schemas/application"
+import { formatFullName } from "@/lib/utils/profile"
 
 export default function AllApplicationViewPage() {
     const { me } = useAuth()
@@ -84,8 +85,12 @@ export default function AllApplicationViewPage() {
     const applications = useMemo(() => {
         const rows = Array.isArray(response?.data) ? response.data : []
         return [...rows].sort((a, b) => {
-            const nameA = (a.student?.name ?? "").trim().toLowerCase()
-            const nameB = (b.student?.name ?? "").trim().toLowerCase()
+            const nameA = formatFullName(a.student?.first_name, a.student?.last_name, "")
+                .trim()
+                .toLowerCase()
+            const nameB = formatFullName(b.student?.first_name, b.student?.last_name, "")
+                .trim()
+                .toLowerCase()
             return nameA.localeCompare(nameB)
         })
     }, [response])

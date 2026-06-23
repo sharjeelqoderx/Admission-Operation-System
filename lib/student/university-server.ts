@@ -188,7 +188,7 @@ async function loadAgentOrganizations(
     }
 
     return new Map(
-        (data ?? []).map((agent) => [agent.profile_id, agent.agency_name ?? "Agent Partner"])
+        (data ?? []).map((agent) => [agent.profile_id, agent.agency_name ?? "University Partner"])
     )
 }
 
@@ -213,7 +213,7 @@ function mapListItem(params: {
     const appliedThrough =
         params.application?.submitted_by_profile_id &&
         params.application.submitted_by_profile_id !== params.student.profile_id
-            ? "Agent"
+            ? "University Partner"
             : "Direct"
 
     return {

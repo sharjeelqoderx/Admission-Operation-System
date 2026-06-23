@@ -1,6 +1,7 @@
 -- Allow university/admin to manage programs without service role key
 
 DROP POLICY IF EXISTS "program_write" ON program;
+DROP POLICY IF EXISTS "program_university_write" ON program;
 
 CREATE POLICY "program_university_write" ON program
     FOR ALL
@@ -38,6 +39,9 @@ CREATE POLICY "program_university_write" ON program
 DROP POLICY IF EXISTS "degree_insert" ON degree;
 DROP POLICY IF EXISTS "degree_update" ON degree;
 DROP POLICY IF EXISTS "degree_delete" ON degree;
+DROP POLICY IF EXISTS "degree_staff_insert" ON degree;
+DROP POLICY IF EXISTS "degree_staff_update" ON degree;
+DROP POLICY IF EXISTS "degree_staff_delete" ON degree;
 
 CREATE POLICY "degree_staff_insert" ON degree
     FOR INSERT
@@ -83,6 +87,9 @@ CREATE POLICY "degree_staff_delete" ON degree
 DROP POLICY IF EXISTS "course_insert" ON course;
 DROP POLICY IF EXISTS "course_update" ON course;
 DROP POLICY IF EXISTS "course_delete" ON course;
+DROP POLICY IF EXISTS "course_staff_insert" ON course;
+DROP POLICY IF EXISTS "course_staff_update" ON course;
+DROP POLICY IF EXISTS "course_staff_delete" ON course;
 
 CREATE POLICY "course_staff_insert" ON course
     FOR INSERT
@@ -126,6 +133,8 @@ CREATE POLICY "course_staff_delete" ON course
     );
 
 DROP POLICY IF EXISTS "pdr_service" ON program_document_requirements;
+DROP POLICY IF EXISTS "pdr_staff_read" ON program_document_requirements;
+DROP POLICY IF EXISTS "pdr_staff_write" ON program_document_requirements;
 
 CREATE POLICY "pdr_staff_read" ON program_document_requirements
     FOR SELECT

@@ -1,8 +1,8 @@
 "use client"
 
-import { useCallback, useMemo, useRef } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { memo } from "react"
+import Link from "next/link"
+import { GraduationCap, FileText, Plus, RotateCcw, Search, CheckCircle2 } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,107 +13,40 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { GraduationCap, FileText, Plus, RotateCcw, Search, CheckCircle2 } from "lucide-react"
-import Link from "next/link"
-import { ApplicationsListTable } from "../_component/ApplicationsListTable"
 import { BluryCard } from "@/components/shared/blury-card"
 import { DatePicker } from "@/components/shared/date-picker"
-import { useAuth } from "@/hooks/useAuth"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
-import type { ApplicationListStats } from "@/types/schemas/application"
+import { ApplicationsListTable } from "./applications-list-table"
+import {
+    withApplicationPageLogic,
+    type ApplicationPageLogicProps,
+} from "./withApplicationPageLogic"
+import type { ApplicationDashboardPageData } from "@/types/schemas/application"
 
-export function AgentStudentApplicationPage() {
-    const { me } = useAuth()
-    const role = me.data?.role
-    const canCreateApplication = me.isSuccess && (role === "AGENT" || role === "STUDENT")
-    const showStudentSearch = role !== "STUDENT"
+type PageContentProps = {
+    initialData: ApplicationDashboardPageData
+}
 
-    const searchParams = useSearchParams()
-    const router = useRouter()
-    const pathname = usePathname()
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-    const q = searchParams.get("q") || ""
-    const status = searchParams.get("status") || "all"
-    const degreeId = searchParams.get("degree_id") || "all"
-    const dateFrom = searchParams.get("date_from") || ""
-    const dateTo = searchParams.get("date_to") || ""
-
+const ApplicationDashboardView = memo(function ApplicationDashboardView({
+    role,
+    canCreateApplication,
+    showStudentSearch,
+    applications,
+    stats,
+    isLoading,
+    isError,
+    hasActiveFilters,
+    q,
+    status,
+    degreeId,
+    dateFrom,
+    dateTo,
+    handleSearch,
+    updateParams,
+    handleResetFilters,
+    handleRetry,
+}: ApplicationPageLogicProps) {
     const { data: degrees = [], isLoading: degreesLoading } = useDegrees()
-
-    const updateParams = useCallback(
-        (updates: Record<string, string>) => {
-            const params = new URLSearchParams(searchParams.toString())
-            Object.entries(updates).forEach(([key, value]) => {
-                if (value && value !== "all") {
-                    params.set(key, value)
-                } else {
-                    params.delete(key)
-                }
-            })
-            router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-        },
-        [pathname, router, searchParams]
-    )
-
-    const handleSearch = useCallback(
-        (term: string) => {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current)
-            timeoutRef.current = setTimeout(() => {
-                updateParams({ q: term })
-            }, 400)
-        },
-        [updateParams]
-    )
-
-    const { data: response, isLoading, isError, refetch } = useQuery({
-        queryKey: ["applications", q, status, degreeId, dateFrom, dateTo],
-        queryFn: async () => {
-            const url = new URL("/api/application", window.location.origin)
-            if (q) url.searchParams.set("q", q)
-            if (status !== "all") url.searchParams.set("status", status)
-            if (degreeId !== "all") url.searchParams.set("degree_id", degreeId)
-            if (dateFrom) url.searchParams.set("date_from", dateFrom)
-            if (dateTo) url.searchParams.set("date_to", dateTo)
-
-            const res = await fetch(url.toString())
-            if (!res.ok) throw new Error("Failed to fetch applications")
-            const json = await res.json()
-            return json
-        },
-    })
-
-    const applications = useMemo(
-        () => (Array.isArray(response?.data) ? response.data : []),
-        [response]
-    )
-
-    const stats = useMemo<ApplicationListStats>(
-        () =>
-            response?.stats ?? {
-                total: 0,
-                pending: 0,
-                accepted: 0,
-            },
-        [response]
-    )
-
-    const hasActiveFilters = useMemo(
-        () =>
-            Boolean(q) ||
-            status !== "all" ||
-            degreeId !== "all" ||
-            Boolean(dateFrom) ||
-            Boolean(dateTo),
-        [q, status, degreeId, dateFrom, dateTo]
-    )
-
-    const handleResetFilters = useCallback(() => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current)
-        router.replace(pathname, { scroll: false })
-    }, [pathname, router])
-
-    const handleRetry = useCallback(() => { refetch() }, [refetch])
 
     return (
         <div className="space-y-12">
@@ -122,7 +55,11 @@ export function AgentStudentApplicationPage() {
                     <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
                         {role === "STUDENT" ? "My Applications" : "All Applications"}
                     </Typography>
-                    <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
+                    <Typography
+                        as="p"
+                        font="sub-text"
+                        className="text-gray-500 font-medium max-w-2xl leading-relaxed"
+                    >
                         {role === "STUDENT"
                             ? "Track your submitted applications and their current status."
                             : "Track and manage all student applications submitted through your agency."}
@@ -149,10 +86,16 @@ export function AgentStudentApplicationPage() {
                         <GraduationCap className="size-6 text-gray-700" />
                     </BluryCard>
                     <div>
-                        <Typography as="p" className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        <Typography
+                            as="p"
+                            className="text-[12px] font-bold text-gray-500 uppercase tracking-wider"
+                        >
                             Total Applications
                         </Typography>
-                        <Typography as="p" className="text-[28px] font-extrabold text-gray-900 leading-none">
+                        <Typography
+                            as="p"
+                            className="text-[28px] font-extrabold text-gray-900 leading-none"
+                        >
                             {isLoading ? "—" : stats.total}
                         </Typography>
                     </div>
@@ -168,10 +111,16 @@ export function AgentStudentApplicationPage() {
                         <FileText className="size-6 text-gray-700" />
                     </BluryCard>
                     <div>
-                        <Typography as="p" className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        <Typography
+                            as="p"
+                            className="text-[12px] font-bold text-gray-500 uppercase tracking-wider"
+                        >
                             Pending
                         </Typography>
-                        <Typography as="p" className="text-[28px] font-extrabold text-gray-900 leading-none">
+                        <Typography
+                            as="p"
+                            className="text-[28px] font-extrabold text-gray-900 leading-none"
+                        >
                             {isLoading ? "—" : stats.pending}
                         </Typography>
                     </div>
@@ -187,10 +136,16 @@ export function AgentStudentApplicationPage() {
                         <CheckCircle2 className="size-6 text-gray-700" />
                     </BluryCard>
                     <div>
-                        <Typography as="p" className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        <Typography
+                            as="p"
+                            className="text-[12px] font-bold text-gray-500 uppercase tracking-wider"
+                        >
                             Accepted
                         </Typography>
-                        <Typography as="p" className="text-[28px] font-extrabold text-gray-900 leading-none">
+                        <Typography
+                            as="p"
+                            className="text-[28px] font-extrabold text-gray-900 leading-none"
+                        >
                             {isLoading ? "—" : stats.accepted}
                         </Typography>
                     </div>
@@ -272,11 +227,18 @@ export function AgentStudentApplicationPage() {
 
             <ApplicationsListTable
                 applications={applications}
-                role={role ?? response?.role}
+                role={role}
                 isLoading={isLoading}
                 isError={isError}
                 onRetry={handleRetry}
             />
         </div>
     )
+})
+
+const ApplicationDashboardPageContent = memo(withApplicationPageLogic(ApplicationDashboardView))
+ApplicationDashboardPageContent.displayName = "ApplicationDashboardPageContent"
+
+export function PageContent({ initialData }: PageContentProps) {
+    return <ApplicationDashboardPageContent initialData={initialData} />
 }

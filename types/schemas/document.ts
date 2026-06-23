@@ -27,6 +27,7 @@ export type UploadedDocumentSummary = {
 export type CourseRequiredDocument = {
     requirement_id: string
     document_type_id: string
+    requirement_type: "REQUIRED" | "OPTIONAL"
     name: string
     description: string | null
     code: string | null

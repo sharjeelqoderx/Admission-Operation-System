@@ -2,8 +2,9 @@ import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityStudentsForPage } from "@/lib/student/university-server"
+import { fetchStudentDashboardPageData } from "@/lib/student/server"
 import { PageLoader } from "@/components/shared/page-loader"
-import { AgentStudentPage } from "./_components/agent-student-page"
+import { PageContent } from "./_components/page-content"
 import { UniversityStudentListPageContent } from "./_components/university-student/page-content"
 
 type StudentPageProps = {
@@ -41,5 +42,8 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
         )
     }
 
-    return <AgentStudentPage />
+    const params = await searchParams
+    const initialData = await fetchStudentDashboardPageData(params)
+
+    return <PageContent initialData={initialData} />
 }

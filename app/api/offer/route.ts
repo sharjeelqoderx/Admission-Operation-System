@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
 
         if (profile.role !== "UNIVERSITY" && profile.role !== "AGENT" && profile.role !== "ADMIN") {
             return NextResponse.json(
-                { error: "Only university or agent profiles can create offers" },
+                { error: "Only university or university partner profiles can create offers" },
                 { status: 403 }
             );
         }

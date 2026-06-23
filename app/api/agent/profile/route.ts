@@ -192,7 +192,7 @@ export async function POST(req: NextRequest) {
             })
         }
 
-        return ok({ message: "Agent profile updated" })
+        return ok({ message: "University Partner profile updated" })
     } catch (e: any) {
         return err(e?.message ?? "Internal server error", 500)
     }

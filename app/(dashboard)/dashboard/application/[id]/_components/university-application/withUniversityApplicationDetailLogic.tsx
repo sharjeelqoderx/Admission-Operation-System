@@ -2,10 +2,17 @@
 
 import type { ComponentType } from "react"
 import { useQuery } from "@tanstack/react-query"
-import type { UniversityApplicationDetail } from "@/types/schemas/university-application"
+import type {
+    UniversityApplicationDetail,
+    UniversityApplicationDetailPageData,
+} from "@/types/schemas/university-application"
 
 export type UniversityApplicationDetailLogicProps = {
-    detail: UniversityApplicationDetail
+    detail?: UniversityApplicationDetail
+    isLoading: boolean
+    isError: boolean
+    errorMessage: string
+    onRetry: () => void
 }
 
 async function fetchUniversityApplicationDetail(applicationId: string) {
@@ -22,17 +29,38 @@ export function withUniversityApplicationDetailLogic(
 ) {
     return function UniversityApplicationDetailContainer({
         applicationId,
-        initialDetail,
+        initialData,
     }: {
         applicationId: string
-        initialDetail: UniversityApplicationDetail
+        initialData: UniversityApplicationDetailPageData
     }) {
         const detailQuery = useQuery({
             queryKey: ["university-application-detail", applicationId],
             queryFn: () => fetchUniversityApplicationDetail(applicationId),
-            initialData: initialDetail,
+            initialData: initialData.detail ?? undefined,
+            retry: false,
         })
 
-        return <Component detail={detailQuery.data} />
+        const detail = detailQuery.data ?? initialData.detail ?? undefined
+        const isLoading = detailQuery.isLoading && !detail
+        const isError =
+            !detail && !isLoading && (Boolean(initialData.error) || detailQuery.isError)
+        const errorMessage =
+            initialData.error ??
+            (detailQuery.error instanceof Error
+                ? detailQuery.error.message
+                : "Application not found")
+
+        return (
+            <Component
+                detail={detail}
+                isLoading={isLoading}
+                isError={isError}
+                errorMessage={errorMessage}
+                onRetry={() => {
+                    void detailQuery.refetch()
+                }}
+            />
+        )
     }
 }

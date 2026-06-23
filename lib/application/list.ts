@@ -1,0 +1,557 @@
+import type { SupabaseClient } from "@supabase/supabase-js"
+import {
+    attachLevelsToCourses,
+    COURSE_SELECT,
+    type CourseRow,
+} from "@/lib/api/course-program"
+import {
+    buildAgentApplicationOrFilter,
+    resolveAgentStudentProfileIds,
+} from "@/lib/api/agent-applications"
+import { getMandatoryDocumentTypeIds } from "@/lib/utils/course-documents"
+import { formatFullName } from "@/lib/utils/profile"
+import type {
+    ApplicationListAgent,
+    ApplicationListItem,
+    ApplicationListProfile,
+    ApplicationListQuery,
+    ApplicationListResponse,
+    ApplicationListStats,
+    ApplicationProfileRole,
+} from "@/types/schemas/application"
+import type { Database, Tables } from "@/types/supabase"
+
+const APPLICATION_LIST_SELECT = `
+    id,
+    application_no,
+    status,
+    created_at,
+    course_id,
+    student:profile_id ( id, first_name, last_name, avatar_url, email ),
+    agent:submitted_by_profile_id ( id, first_name, last_name )
+`
+
+type ApplicationListRow = Pick<
+    Tables<"application">,
+    "id" | "application_no" | "status" | "created_at" | "course_id"
+> & {
+    student: ApplicationListProfile | null
+    agent: ApplicationListAgent | null
+}
+
+type ApplicationFilterContext = {
+    userId: string
+    role: string
+    studentId?: string
+    dateFrom?: string
+    dateTo?: string
+    filteredCourseIds?: string[] | null
+    filteredProfileIds?: string[] | null
+    agentStudentProfileIds?: string[] | null
+    scope?: "all"
+}
+
+const EMPTY_APPLICATION_STATS: ApplicationListStats = {
+    total: 0,
+    pending: 0,
+    accepted: 0,
+}
+
+async function attachStudentCodes(
+    supabase: SupabaseClient<Database>,
+    profileIds: string[]
+) {
+    if (profileIds.length === 0) {
+        return new Map<string, string | null>()
+    }
+
+    const { data: students, error } = await supabase
+        .from("student")
+        .select("profile_id, student_code")
+        .in("profile_id", profileIds)
+
+    if (error) {
+        throw error
+    }
+
+    return new Map(
+        (students ?? []).map((student) => [student.profile_id, student.student_code])
+    )
+}
+
+function getRequiredDocumentTypeIds(
+    degree: {
+        requirements?: Array<{
+            requirement_type?: "REQUIRED" | "OPTIONAL" | null
+            document_type?: { id: string } | null
+        }> | null
+    } | null
+): string[] {
+    if (!degree?.requirements?.length) return []
+
+    return getMandatoryDocumentTypeIds(degree.requirements)
+}
+
+function computeDocumentVault(
+    profileId: string | undefined,
+    requiredTypeIds: string[],
+    uploadedByProfile: Map<string, Set<string>>
+) {
+    const total = requiredTypeIds.length
+
+    if (!profileId || total === 0) {
+        return {
+            documents_uploaded_count: 0,
+            total_required_documents: total,
+            document_vault_percentage: total === 0 ? 100 : 0,
+        }
+    }
+
+    const uploadedSet = uploadedByProfile.get(profileId) ?? new Set<string>()
+    const uploadedCount = requiredTypeIds.filter((id) => uploadedSet.has(id)).length
+
+    return {
+        documents_uploaded_count: uploadedCount,
+        total_required_documents: total,
+        document_vault_percentage: Math.round((uploadedCount / total) * 100),
+    }
+}
+
+async function buildUploadedDocumentsByProfile(
+    supabase: SupabaseClient<Database>,
+    profileIds: string[]
+) {
+    const uploadedByProfile = new Map<string, Set<string>>()
+
+    if (profileIds.length === 0) {
+        return uploadedByProfile
+    }
+
+    const { data: documents, error } = await supabase
+        .from("document")
+        .select("profile_id, document_type_id")
+        .in("profile_id", profileIds)
+        .not("document_type_id", "is", null)
+
+    if (error) {
+        throw error
+    }
+
+    for (const doc of documents ?? []) {
+        if (!doc.document_type_id) continue
+        const existing = uploadedByProfile.get(doc.profile_id) ?? new Set<string>()
+        existing.add(doc.document_type_id)
+        uploadedByProfile.set(doc.profile_id, existing)
+    }
+
+    return uploadedByProfile
+}
+
+async function buildOffersByApplicationId(
+    supabase: SupabaseClient<Database>,
+    applicationIds: string[]
+) {
+    const offerByApplicationId = new Map<string, Pick<Tables<"offer_letter">, "status">>()
+
+    if (applicationIds.length === 0) {
+        return offerByApplicationId
+    }
+
+    const { data: offers, error } = await supabase
+        .from("offer_letter")
+        .select("application_id, status")
+        .in("application_id", applicationIds)
+
+    if (error) {
+        throw error
+    }
+
+    for (const offer of offers ?? []) {
+        offerByApplicationId.set(offer.application_id, { status: offer.status })
+    }
+    return offerByApplicationId
+}
+
+async function attachCoursesToApplications(
+    supabase: SupabaseClient<Database>,
+    applications: ApplicationListRow[]
+): Promise<ApplicationListItem[]> {
+    const profileIds = [
+        ...new Set(
+            applications
+                .map((application) => application.student?.id)
+                .filter((id): id is string => Boolean(id))
+        ),
+    ]
+    const studentCodeByProfile = await attachStudentCodes(supabase, profileIds)
+    const applicationIds = applications.map((application) => application.id)
+    const offerByApplicationId = await buildOffersByApplicationId(supabase, applicationIds)
+    const uploadedByProfile = await buildUploadedDocumentsByProfile(supabase, profileIds)
+
+    const courseIds = [
+        ...new Set(applications.map((application) => application.course_id).filter(Boolean)),
+    ]
+
+    if (courseIds.length === 0) {
+        return applications.map((application) => {
+            const vault = computeDocumentVault(
+                application.student?.id,
+                [],
+                uploadedByProfile
+            )
+            const offer = offerByApplicationId.get(application.id)
+
+            return {
+                id: application.id,
+                application_no: application.application_no,
+                status: application.status,
+                created_at: application.created_at,
+                offer_letter: offer ?? null,
+                ...vault,
+                student: application.student
+                    ? {
+                          ...application.student,
+                          student_code:
+                              studentCodeByProfile.get(application.student.id) ?? null,
+                      }
+                    : null,
+                agent: application.agent,
+                course: null,
+            }
+        })
+    }
+
+    const { data: courses, error } = await supabase
+        .from("course")
+        .select(COURSE_SELECT)
+        .in("id", courseIds)
+
+    if (error) {
+        throw error
+    }
+
+    const coursesWithLevels = await attachLevelsToCourses(
+        supabase,
+        (courses ?? []) as unknown as CourseRow[]
+    )
+    const courseById = new Map(coursesWithLevels.map((course) => [course.id, course]))
+
+    return applications.map((application) => {
+        const course = courseById.get(application.course_id) ?? null
+        const degree = course?.degree as
+            | (Pick<Tables<"degree">, "id" | "name" | "fees" | "intake_date"> & {
+                  requirements?: Array<{ document_type?: { id: string } | null }> | null
+              })
+            | null
+        const requiredTypeIds = getRequiredDocumentTypeIds(degree)
+        const vault = computeDocumentVault(
+            application.student?.id,
+            requiredTypeIds,
+            uploadedByProfile
+        )
+        const offer = offerByApplicationId.get(application.id)
+
+        return {
+            id: application.id,
+            application_no: application.application_no,
+            status: application.status,
+            created_at: application.created_at,
+            offer_letter: offer ?? null,
+            ...vault,
+            student: application.student
+                ? {
+                      ...application.student,
+                      student_code:
+                          studentCodeByProfile.get(application.student.id) ?? null,
+                  }
+                : null,
+            agent: application.agent,
+            course: course
+                ? {
+                      id: course.id,
+                      name: course.name,
+                      deadline_date: course.deadline_date,
+                      degree: degree
+                          ? {
+                                id: degree.id,
+                                name: degree.name,
+                                fees: degree.fees,
+                                intake_date: degree.intake_date,
+                            }
+                          : null,
+                  }
+                : null,
+        }
+    })
+}
+
+async function resolveCourseIdsForDegree(
+    supabase: SupabaseClient<Database>,
+    degreeId: string
+) {
+    const { data: courses, error } = await supabase
+        .from("course")
+        .select("id")
+        .eq("degree_id", degreeId)
+
+    if (error) {
+        throw error
+    }
+
+    return (courses ?? []).map((course) => course.id)
+}
+
+async function resolveMatchingStudentProfileIds(
+    supabase: SupabaseClient<Database>,
+    searchTerm: string,
+    options: {
+        role: string
+        userId: string
+        studentId?: string
+        scope?: "all"
+    }
+) {
+    if (options.studentId) {
+        return [options.studentId]
+    }
+
+    const escaped = searchTerm.replace(/[%_,]/g, "\\$&")
+    const pattern = `%${escaped}%`
+
+    if (options.role === "STUDENT") {
+        const { data: profile, error } = await supabase
+            .from("profile")
+            .select("id, first_name, last_name, email")
+            .eq("id", options.userId)
+            .maybeSingle()
+
+        if (error) {
+            throw error
+        }
+
+        if (!profile) {
+            return []
+        }
+
+        const displayName = formatFullName(profile.first_name, profile.last_name)
+        const haystack = `${displayName} ${profile.email ?? ""}`.toLowerCase()
+        return haystack.includes(searchTerm.toLowerCase()) ? [profile.id] : []
+    }
+
+    let allowedProfileIds: string[] | null = null
+
+    if (options.role === "AGENT" && options.scope !== "all") {
+        const { data: agentRow, error: agentError } = await supabase
+            .from("agent")
+            .select("id")
+            .eq("profile_id", options.userId)
+            .maybeSingle()
+
+        if (agentError) {
+            throw agentError
+        }
+
+        if (!agentRow) {
+            return []
+        }
+
+        const { data: students, error: studentsError } = await supabase
+            .from("student")
+            .select("profile_id")
+            .eq("created_by_agent_id", agentRow.id)
+
+        if (studentsError) {
+            throw studentsError
+        }
+
+        allowedProfileIds = (students ?? [])
+            .map((student) => student.profile_id)
+            .filter(Boolean)
+
+        if (allowedProfileIds.length === 0) {
+            return []
+        }
+    }
+
+    let profileQuery = supabase
+        .from("profile")
+        .select("id")
+        .or(`first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern}`)
+
+    if (allowedProfileIds) {
+        profileQuery = profileQuery.in("id", allowedProfileIds)
+    }
+
+    const { data: profiles, error } = await profileQuery
+
+    if (error) {
+        throw error
+    }
+
+    return (profiles ?? []).map((profile) => profile.id)
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyApplicationFilters(query: any, ctx: ApplicationFilterContext) {
+    let nextQuery = query
+
+    if (ctx.studentId) {
+        nextQuery = nextQuery.eq("profile_id", ctx.studentId)
+    } else if (ctx.scope === "all") {
+        // All Application View — no role-based row restriction
+    } else if (ctx.role === "STUDENT") {
+        nextQuery = nextQuery.eq("profile_id", ctx.userId)
+    } else if (ctx.role === "AGENT") {
+        const studentProfileIds = ctx.agentStudentProfileIds ?? []
+        nextQuery = nextQuery.or(
+            buildAgentApplicationOrFilter(ctx.userId, studentProfileIds)
+        )
+    } else if (ctx.role === "UNIVERSITY") {
+        nextQuery = nextQuery.eq("university_id", ctx.userId)
+    }
+
+    if (ctx.dateFrom) {
+        nextQuery = nextQuery.gte("created_at", `${ctx.dateFrom}T00:00:00.000Z`)
+    }
+
+    if (ctx.dateTo) {
+        nextQuery = nextQuery.lte("created_at", `${ctx.dateTo}T23:59:59.999Z`)
+    }
+
+    if (ctx.filteredCourseIds) {
+        nextQuery = nextQuery.in("course_id", ctx.filteredCourseIds)
+    }
+
+    if (ctx.filteredProfileIds) {
+        nextQuery = nextQuery.in("profile_id", ctx.filteredProfileIds)
+    }
+
+    return nextQuery
+}
+
+async function fetchApplicationStats(
+    supabase: SupabaseClient<Database>,
+    ctx: ApplicationFilterContext
+): Promise<ApplicationListStats> {
+    const baseQuery = applyApplicationFilters(
+        supabase.from("application").select("id", { count: "exact", head: true }),
+        ctx
+    )
+
+    const [totalResult, pendingResult, acceptedResult] = await Promise.all([
+        baseQuery,
+        applyApplicationFilters(
+            supabase.from("application").select("id", { count: "exact", head: true }),
+            ctx
+        ).eq("status", "PENDING"),
+        applyApplicationFilters(
+            supabase.from("application").select("id", { count: "exact", head: true }),
+            ctx
+        ).eq("status", "APPROVED"),
+    ])
+
+    if (totalResult.error) throw totalResult.error
+    if (pendingResult.error) throw pendingResult.error
+    if (acceptedResult.error) throw acceptedResult.error
+
+    return {
+        total: totalResult.count ?? 0,
+        pending: pendingResult.count ?? 0,
+        accepted: acceptedResult.count ?? 0,
+    }
+}
+
+export type FetchApplicationsListOptions = ApplicationListQuery & {
+    userId: string
+    role: ApplicationProfileRole
+}
+
+export async function fetchApplicationsList(
+    supabase: SupabaseClient<Database>,
+    options: FetchApplicationsListOptions
+): Promise<ApplicationListResponse | { error: string }> {
+    const {
+        userId,
+        role,
+        student_id: studentId,
+        limit,
+        status,
+        degree_id: degreeId,
+        date_from: dateFrom,
+        date_to: dateTo,
+        q: searchTerm,
+        scope: listScope,
+    } = options
+
+    if (listScope === "all" && role === "STUDENT") {
+        return { error: "Forbidden" }
+    }
+
+    let filteredCourseIds: string[] | null = null
+    let filteredProfileIds: string[] | null = null
+    let agentStudentProfileIds: string[] | null = null
+
+    if (role === "AGENT" && !studentId && listScope !== "all") {
+        agentStudentProfileIds = await resolveAgentStudentProfileIds(supabase, userId)
+    }
+
+    if (degreeId) {
+        filteredCourseIds = await resolveCourseIdsForDegree(supabase, degreeId)
+        if (filteredCourseIds.length === 0) {
+            return { data: [], stats: EMPTY_APPLICATION_STATS, role }
+        }
+    }
+
+    if (searchTerm) {
+        filteredProfileIds = await resolveMatchingStudentProfileIds(supabase, searchTerm, {
+            role,
+            userId,
+            studentId,
+            scope: listScope,
+        })
+
+        if (filteredProfileIds.length === 0) {
+            return { data: [], stats: EMPTY_APPLICATION_STATS, role }
+        }
+    }
+
+    const filterContext: ApplicationFilterContext = {
+        userId,
+        role,
+        studentId,
+        dateFrom,
+        dateTo,
+        filteredCourseIds,
+        filteredProfileIds,
+        agentStudentProfileIds,
+        scope: listScope,
+    }
+
+    const stats = await fetchApplicationStats(supabase, filterContext)
+
+    let query = applyApplicationFilters(
+        supabase.from("application").select(APPLICATION_LIST_SELECT),
+        filterContext
+    ).order("created_at", { ascending: false })
+
+    if (status && status !== "all") {
+        query = query.eq("status", status)
+    }
+
+    if (limit) {
+        query = query.limit(limit)
+    }
+
+    const { data: applications, error } = await query
+
+    if (error) {
+        return { error: error.message }
+    }
+
+    const result = await attachCoursesToApplications(
+        supabase,
+        (applications ?? []) as unknown as ApplicationListRow[]
+    )
+
+    return { data: result, stats, role }
+}

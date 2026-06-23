@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
                 .maybeSingle()
 
             if (!agentRow) {
-                return err("Agent profile not found", 400)
+                return err("University Partner profile not found", 400)
             }
 
             const { data: studentRow } = await supabase
@@ -238,6 +238,7 @@ export async function GET(req: NextRequest) {
                         return {
                             requirement_id: requirement.id,
                             document_type_id: documentType.id,
+                            requirement_type: requirement.requirement_type ?? "REQUIRED",
                             name: documentType.name,
                             description: documentType.description,
                             code: documentType.code,
@@ -247,8 +248,11 @@ export async function GET(req: NextRequest) {
                     }
                 )
 
-                const total_required = required_documents.length
-                const uploaded_count = required_documents.filter(
+                const mandatory_documents = required_documents.filter(
+                    (item) => item.requirement_type === "REQUIRED"
+                )
+                const total_required = mandatory_documents.length
+                const uploaded_count = mandatory_documents.filter(
                     (item) => item.uploaded
                 ).length
                 const completion_percentage =

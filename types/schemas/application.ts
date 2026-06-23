@@ -1,4 +1,9 @@
 import { z } from "zod";
+import type { ReactFormExtendedApi } from "@tanstack/react-form";
+import type { Tables, Database } from "@/types/supabase";
+import type { StudentListItem } from "@/lib/student/list";
+
+export type ApplicationProfileRole = Database["public"]["Enums"]["role_enum"];
 
 export const ApplicationStatusFilterSchema = z.enum([
   "all",
@@ -47,3 +52,208 @@ export const CreateApplicationSchema = z.object({
 });
 
 export type CreateApplicationInput = z.infer<typeof CreateApplicationSchema>;
+
+export type ApplicationDocumentTypeSummary = Pick<Tables<"document_type">, "id" | "name">;
+
+export type ApplicationStudentDocument = Pick<
+  Tables<"document">,
+  "id" | "document_type_id" | "created_at"
+> & {
+  document_type: ApplicationDocumentTypeSummary | null;
+  document_files: Pick<Tables<"document_files">, "file_url">[];
+};
+
+export type ApplicationStudentListItem = StudentListItem & {
+  profile: NonNullable<StudentListItem["profile"]>;
+};
+
+export type ApplicationStudentDetail = Pick<
+  Tables<"profile">,
+  "id" | "email" | "avatar_url" | "gender" | "date_of_birth"
+> & {
+  name: string;
+  student: Pick<
+    Tables<"student">,
+    "student_code" | "nationality" | "country" | "state" | "city"
+  > | null;
+  education?: Array<{
+    qualification_degree: {
+      level: Pick<Tables<"levels">, "name"> | null;
+    } | null;
+  }>;
+};
+
+export type ApplicationMe = {
+  id: string;
+  role: ApplicationProfileRole;
+};
+
+export type ApplicationDuplicateRow = {
+  course?: Pick<Tables<"course">, "id"> | null;
+  status: Tables<"application">["status"];
+};
+
+export type ApplicationDetailProfile = Pick<
+  Tables<"profile">,
+  "id" | "first_name" | "last_name" | "avatar_url" | "email" | "gender" | "date_of_birth"
+>;
+
+export type ApplicationDetailAgent = Pick<
+  Tables<"profile">,
+  "id" | "first_name" | "last_name"
+>;
+
+export type ApplicationDetailDegree = Pick<
+  Tables<"degree">,
+  | "id"
+  | "name"
+  | "fees"
+  | "intake_date"
+  | "duration"
+  | "location"
+  | "language_of_study"
+  | "study_mode"
+>;
+
+export type ApplicationDetailCourse = Pick<
+  Tables<"course">,
+  "id" | "name" | "deadline_date"
+> & {
+  degree: ApplicationDetailDegree | null;
+};
+
+export type ApplicationDetailUniversity = Pick<
+  Tables<"profile">,
+  "id" | "first_name" | "last_name"
+>;
+
+export type ApplicationDetailDocument = Tables<"application_document"> & {
+  document:
+    | (Pick<Tables<"document">, "id" | "created_at"> & {
+        document_type: Pick<Tables<"document_type">, "id" | "name"> | null;
+        document_files: Pick<Tables<"document_files">, "file_url" | "type">[];
+        document_review: Pick<Tables<"document_review">, "status" | "feedback">[];
+      })
+    | null;
+};
+
+export type ApplicationDetailOfferLetter = Pick<Tables<"offer_letter">, "status">;
+
+export type ApplicationDetail = Tables<"application"> & {
+  offer_letter: ApplicationDetailOfferLetter | null;
+  student: ApplicationDetailProfile | null;
+  agent: ApplicationDetailAgent | null;
+  course: ApplicationDetailCourse | null;
+  university: ApplicationDetailUniversity | null;
+  documents: ApplicationDetailDocument[];
+};
+
+export type ApplicationListProfile = Pick<
+  Tables<"profile">,
+  "id" | "first_name" | "last_name" | "avatar_url" | "email"
+>;
+
+export type ApplicationListAgent = Pick<
+  Tables<"profile">,
+  "id" | "first_name" | "last_name"
+>;
+
+export type ApplicationListDegree = Pick<
+  Tables<"degree">,
+  "id" | "name" | "fees" | "intake_date"
+>;
+
+export type ApplicationListCourse = Pick<
+  Tables<"course">,
+  "id" | "name" | "deadline_date"
+> & {
+  degree: ApplicationListDegree | null;
+};
+
+export type ApplicationListItem = Pick<
+  Tables<"application">,
+  "id" | "application_no" | "status" | "created_at"
+> & {
+  offer_letter: ApplicationDetailOfferLetter | null;
+  documents_uploaded_count: number;
+  total_required_documents: number;
+  document_vault_percentage: number;
+  student:
+    | (ApplicationListProfile & {
+        student_code: Tables<"student">["student_code"] | null;
+      })
+    | null;
+  agent: ApplicationListAgent | null;
+  course: ApplicationListCourse | null;
+};
+
+export type ApplicationListResponse = {
+  data: ApplicationListItem[];
+  stats: ApplicationListStats;
+  role: ApplicationProfileRole;
+};
+
+export type ApplicationDashboardPageQuery = {
+  q: string;
+  status: string;
+  degree_id: string;
+  date_from: string;
+  date_to: string;
+};
+
+export type ApplicationDashboardPageData = {
+  applications: ApplicationListResponse;
+  query: ApplicationDashboardPageQuery;
+};
+
+export type ApplicationDetailPageData = {
+  detail: ApplicationDetail | null;
+  error: string | null;
+};
+
+export type CreateApplicationFormApi = Pick<
+  ReactFormExtendedApi<
+    CreateApplicationInput,
+    undefined,
+    typeof CreateApplicationSchema,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    unknown
+  >,
+  "setFieldValue" | "getFieldValue" | "store" | "Field" | "handleSubmit"
+>;
+
+export type ApplicationFormFieldRenderProps<TValue> = {
+  state: {
+    value: TValue;
+    meta: {
+      isValid: boolean;
+      errors?: unknown[];
+    };
+  };
+  form: {
+    state: {
+      isSubmitted: boolean;
+    };
+    getFieldValue: <TField extends keyof CreateApplicationInput>(
+      field: TField
+    ) => CreateApplicationInput[TField];
+  };
+  handleChange: (value: TValue) => void;
+};
+
+export function getApplicationFieldError(error: unknown): string | undefined {
+  if (error == null) return undefined;
+  if (typeof error === "string") return error;
+  if (typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === "string" ? message : undefined;
+  }
+  return undefined;
+}

@@ -196,7 +196,7 @@ function AgentStep1Form({
                 <form.Field name="agentFirstName">{(field) => {
                     const { isInvalid, error } = getFieldState(field)
                     return (
-                    <F isInvalid={isInvalid} error={error} label="Agent First Name">
+                    <F isInvalid={isInvalid} error={error} label="University Partner First Name">
                         <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. John" />
                     </F>
                     )
@@ -205,7 +205,7 @@ function AgentStep1Form({
                 <form.Field name="agentLastName">{(field) => {
                     const { isInvalid, error } = getFieldState(field)
                     return (
-                    <F isInvalid={isInvalid} error={error} label="Agent Last Name">
+                    <F isInvalid={isInvalid} error={error} label="University Partner Last Name">
                         <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. Smith" />
                     </F>
                     )

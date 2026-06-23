@@ -2,7 +2,7 @@
 
 import { withUniversityApplicationDetailLogic } from "./withUniversityApplicationDetailLogic"
 import { UniversityApplicationDetailView } from "./detail-view"
-import type { UniversityApplicationDetail } from "@/types/schemas/university-application"
+import type { UniversityApplicationDetailPageData } from "@/types/schemas/university-application"
 
 const UniversityApplicationDetailContent = withUniversityApplicationDetailLogic(
     UniversityApplicationDetailView
@@ -10,17 +10,17 @@ const UniversityApplicationDetailContent = withUniversityApplicationDetailLogic(
 
 type PageContentProps = {
     applicationId: string
-    initialDetail: UniversityApplicationDetail
+    initialData: UniversityApplicationDetailPageData
 }
 
 export function UniversityApplicationDetailPageContent({
     applicationId,
-    initialDetail,
+    initialData,
 }: PageContentProps) {
     return (
         <UniversityApplicationDetailContent
             applicationId={applicationId}
-            initialDetail={initialDetail}
+            initialData={initialData}
         />
     )
 }

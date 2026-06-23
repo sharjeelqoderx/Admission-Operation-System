@@ -115,7 +115,7 @@ export const UniversityProgramDetailView = memo(function UniversityProgramDetail
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
                     <DetailField label="Tuition Fees" value={detail.tuition_fees} />
                     <DetailField
-                        label="Agent Commission"
+                        label="University Partner Commission"
                         value={
                             detail.agent_commission != null
                                 ? `${detail.agent_commission}%`

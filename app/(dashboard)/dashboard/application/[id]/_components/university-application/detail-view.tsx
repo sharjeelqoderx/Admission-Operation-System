@@ -15,15 +15,17 @@ import {
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
+import { ErrorView } from "@/components/shared/error-view"
+import { PageLoader } from "@/components/shared/page-loader"
 import { StudentProgressCard } from "@/app/(dashboard)/dashboard/student/[student-id]/_components/university-student/progress-card"
 import { CreateOfferModal } from "@/app/(dashboard)/dashboard/all-application-view/_component/CreateOfferModal"
-import type { UniversityApplicationDetail } from "@/types/schemas/university-application"
+import type { UniversityApplicationDetailLogicProps } from "./withUniversityApplicationDetailLogic"
 
-type UniversityApplicationDetailViewProps = {
-    detail: UniversityApplicationDetail
-}
-
-function DocumentStatusIcon({ status }: { status: UniversityApplicationDetail["documents"][number]["status"] }) {
+function DocumentStatusIcon({
+    status,
+}: {
+    status: NonNullable<UniversityApplicationDetailLogicProps["detail"]>["documents"][number]["status"]
+}) {
     if (status === "verified") {
         return <CheckCircle2 className="size-5 text-brand-success" />
     }
@@ -37,8 +39,30 @@ function DocumentStatusIcon({ status }: { status: UniversityApplicationDetail["d
 
 export const UniversityApplicationDetailView = memo(function UniversityApplicationDetailView({
     detail,
-}: UniversityApplicationDetailViewProps) {
+    isLoading,
+    isError,
+    errorMessage,
+    onRetry,
+}: UniversityApplicationDetailLogicProps) {
     const [offerModalOpen, setOfferModalOpen] = useState(false)
+
+    if (isLoading) {
+        return <PageLoader label="Loading application details..." />
+    }
+
+    if (isError || !detail) {
+        return (
+            <div className="mx-auto flex max-w-[1400px] flex-col items-center justify-center gap-4 px-4 py-40 lg:px-8">
+                <ErrorView message={errorMessage} />
+                <div className="flex gap-3">
+                    <Link href="/dashboard/application">
+                        <Button variant="outline">Back to Applications</Button>
+                    </Link>
+                    <Button onClick={onRetry}>Retry</Button>
+                </div>
+            </div>
+        )
+    }
 
     const avatarSrc =
         detail.avatar_url ??
@@ -237,7 +261,7 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
                                     </Typography>
                                     {detail.submission_source.agent_name ? (
                                         <Typography as="p" font="sub-text" className="text-gray-600">
-                                            Agent: {detail.submission_source.agent_name}
+                                            University Partner: {detail.submission_source.agent_name}
                                         </Typography>
                                     ) : null}
                                 </div>

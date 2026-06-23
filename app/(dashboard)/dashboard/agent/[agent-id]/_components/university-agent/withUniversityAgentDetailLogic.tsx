@@ -12,7 +12,7 @@ export type UniversityAgentDetailLogicProps = {
 async function fetchUniversityAgentDetail(profileId: string) {
     const res = await fetch(`/api/university/agents/${profileId}`)
     const json = await res.json()
-    if (!res.ok) throw new Error(json?.error ?? "Failed to fetch agent detail")
+    if (!res.ok) throw new Error(json?.error ?? "Failed to fetch university partner detail")
     return json.data as UniversityAgentDetail
 }
 

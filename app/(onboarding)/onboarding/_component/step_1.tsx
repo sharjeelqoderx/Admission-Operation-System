@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import { useForm } from "@tanstack/react-form"
+import { useQueryClient } from "@tanstack/react-query"
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,46 +15,82 @@ import {
     SelectValue
 } from "@/components/ui/select"
 import { Typography } from "@/components/shared/Typography"
-import { F, DatePicker, GENDERS } from "./_shared"
+import { F, DatePicker } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
 import { profileStep1Schema } from "@/types/schemas/auth"
 import { ImageUploadCard } from "@/components/shared/image-upload-card"
 import { PageLoader } from "@/components/shared/page-loader"
 import { CountrySelect } from "@/components/shared/country-select"
+import { StateSelect } from "@/components/shared/state-select"
+import { CitySelect } from "@/components/shared/city-select"
 
-/* ---------------- FORM ---------------- */
+function genderFromTitle(title: string): "male" | "female" | undefined {
+    switch (title) {
+        case "Mr":
+            return "male"
+        case "Mrs":
+        case "Ms":
+            return "female"
+        default:
+            return undefined
+    }
+}
+
+const step1FormSchema = profileStep1Schema.extend({
+    title: z.enum(["Mr", "Mrs", "Ms"], { message: "Select title" }),
+}).superRefine((data, ctx) => {
+    const mappedGender = genderFromTitle(data.title)
+    if (!mappedGender || data.gender !== mappedGender) {
+        ctx.addIssue({
+            path: ["gender"],
+            code: "custom",
+            message: "Select a title to set gender",
+        })
+    }
+})
 
 function Step1Form({
     defaultValues,
     onNext,
 }: {
-    defaultValues: any
+    defaultValues: {
+        title: string
+        dob: string
+        gender: string
+        country: string
+        state: string
+        city: string
+        nationality: string
+        guardianEmail: string
+        guardianPhone: string
+        avatar_url: File | string | null
+    }
     onNext: () => void
 }) {
     const { me, profile: updateProfile } = useAuth()
     const { data: meData } = me
+    const queryClient = useQueryClient()
+    const [submitError, setSubmitError] = useState<string | null>(null)
 
     const form = useForm({
-        defaultValues: {
-            dob: defaultValues.dob,
-            gender: defaultValues.gender,
-            country: defaultValues.country,
-            state: defaultValues.state,
-            city: defaultValues.city,
-            nationality: defaultValues.nationality,
-            guardianEmail: defaultValues.guardianEmail,
-            guardianPhone: defaultValues.guardianPhone,
-            avatar_url: defaultValues.avatar_url as File | string | null,
-        },
-        validators: { onSubmit: profileStep1Schema },
+        defaultValues,
+        validators: { onSubmit: step1FormSchema },
 
         onSubmit: async ({ value }) => {
             if (!meData?.id) return
 
+            if (!form.state.isDirty) {
+                onNext()
+                return
+            }
+
             try {
+                setSubmitError(null)
                 const fd = new FormData()
+                if (value.title) fd.append("title", value.title)
                 fd.append("dob", value.dob)
-                fd.append("gender", value.gender)
+                const gender = genderFromTitle(value.title) ?? value.gender
+                fd.append("gender", gender)
                 fd.append("country", value.country)
                 fd.append("state", value.state)
                 fd.append("city", value.city)
@@ -62,10 +100,10 @@ function Step1Form({
                 if (value.avatar_url) fd.append("avatar_url", value.avatar_url)
 
                 await updateProfile.mutateAsync(fd)
-
+                await queryClient.invalidateQueries({ queryKey: ["me"] })
                 onNext()
             } catch (err) {
-                console.error(err)
+                setSubmitError(err instanceof Error ? err.message : "Something went wrong")
             }
         },
     })
@@ -77,22 +115,82 @@ function Step1Form({
                 form.handleSubmit()
             }}
         >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 min-w-0">
 
-                {/* ✅ IMAGE COMPONENT */}
                 <form.Field name="avatar_url">
                     {(field) => (
-                        <div className="sm:col-span-2">
+                        <div className="sm:col-span-2 w-full max-w-sm">
                             <ImageUploadCard
                                 value={field.state.value}
                                 onChange={field.handleChange}
                                 message="Upload profile picture"
+                                className="w-full min-h-[180px] max-h-[220px]"
                             />
                         </div>
                     )}
                 </form.Field>
 
-                {/* DOB */}
+                <form.Field name="title">
+                    {(field) => (
+                        <F
+                            label="Title"
+                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                            error={field.state.meta.errors?.[0]}
+                        >
+                            <Select
+                                value={field.state.value || undefined}
+                                onValueChange={(v) => {
+                                    field.handleChange(v)
+                                    const mappedGender = genderFromTitle(v)
+                                    if (mappedGender) {
+                                        form.setFieldValue("gender", mappedGender)
+                                    }
+                                }}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select title" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Mr">Mr</SelectItem>
+                                    <SelectItem value="Mrs">Mrs</SelectItem>
+                                    <SelectItem value="Ms">Ms</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </F>
+                    )}
+                </form.Field>
+
+                <form.Field name="gender">
+                    {(field) => (
+                        <form.Subscribe selector={(s) => s.values.title}>
+                            {(title) => {
+                                const derivedGender =
+                                    genderFromTitle(title) ?? field.state.value
+                                return (
+                                    <F
+                                        label="Gender"
+                                        isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                                        error={field.state.meta.errors?.[0]}
+                                    >
+                                        <Select
+                                            value={derivedGender || undefined}
+                                            disabled
+                                        >
+                                            <SelectTrigger className="w-full capitalize opacity-100">
+                                                <SelectValue placeholder="Select title first" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="male">Male</SelectItem>
+                                                <SelectItem value="female">Female</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </F>
+                                )
+                            }}
+                        </form.Subscribe>
+                    )}
+                </form.Field>
+
                 <form.Field name="dob">
                     {(field) => (
                         <F
@@ -108,33 +206,6 @@ function Step1Form({
                     )}
                 </form.Field>
 
-                {/* Gender */}
-                <form.Field name="gender">
-                    {(field) => (
-                        <F
-                            label="Gender"
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                        >
-                            <Select
-                                value={field.state.value}
-                                onValueChange={field.handleChange}
-                            >
-                                <SelectTrigger className="capitalize">
-                                    <SelectValue placeholder="Select gender" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {GENDERS.map((g) => (
-                                        <SelectItem className="capitalize" key={g} value={g}>
-                                            {g}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </F>
-                    )}
-                </form.Field>
-
                 <form.Field name="country">
                     {(field) => (
                         <F
@@ -144,86 +215,96 @@ function Step1Form({
                         >
                             <CountrySelect
                                 value={field.state.value}
-                                onValueChange={field.handleChange}
+                                onValueChange={(v) => {
+                                    const previousCountry = field.state.value
+                                    const currentNationality = form.getFieldValue("nationality")
+                                    field.handleChange(v)
+                                    form.setFieldValue("state", "")
+                                    form.setFieldValue("city", "")
+                                    if (
+                                        !currentNationality ||
+                                        currentNationality === previousCountry
+                                    ) {
+                                        form.setFieldValue("nationality", v)
+                                    }
+                                }}
                             />
                         </F>
                     )}
                 </form.Field>
 
-                <form.Field name="state">
-                    {(field) => (
-                        <F
-                            label="State"
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                        >
-                            <Input
-                                value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="Enter your state"
-                            />
-                        </F>
+                <form.Subscribe selector={(s) => s.values.country}>
+                    {(country) => (
+                        <form.Field name="state">
+                            {(field) => (
+                                <F
+                                    label="State"
+                                    isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                                    error={field.state.meta.errors?.[0]}
+                                >
+                                    <StateSelect
+                                        country={country}
+                                        value={field.state.value}
+                                        onValueChange={(v) => {
+                                            field.handleChange(v)
+                                            form.setFieldValue("city", "")
+                                        }}
+                                    />
+                                </F>
+                            )}
+                        </form.Field>
                     )}
-                </form.Field>
+                </form.Subscribe>
 
-                <form.Field name="city">
-                    {(field) => (
-                        <F
-                            label="City"
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                        >
-                            <Input
-                                value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="Enter your city"
-                            />
-                        </F>
+                <form.Subscribe selector={(s) => ({ country: s.values.country, state: s.values.state })}>
+                    {({ country, state }) => (
+                        <form.Field name="city">
+                            {(field) => (
+                                <F
+                                    label="City"
+                                    isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                                    error={field.state.meta.errors?.[0]}
+                                >
+                                    <CitySelect
+                                        country={country}
+                                        state={state}
+                                        value={field.state.value}
+                                        onValueChange={field.handleChange}
+                                    />
+                                </F>
+                            )}
+                        </form.Field>
                     )}
-                </form.Field>
+                </form.Subscribe>
 
                 <form.Field name="nationality">
                     {(field) => (
-                        <F
-                            label="Nationality"
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                        >
-                            <Input
-                                value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="Enter your nationality"
-                            />
-                        </F>
+                        <div className="sm:col-span-2">
+                            <F
+                                label="Nationality"
+                                isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                                error={field.state.meta.errors?.[0]}
+                            >
+                                <Input
+                                    value={field.state.value}
+                                    onChange={(e) => field.handleChange(e.target.value)}
+                                    placeholder="Auto-filled from country — edit if different"
+                                    className="w-full"
+                                />
+                            </F>
+                        </div>
                     )}
                 </form.Field>
 
-                {/* Guardian Email */}
-                <form.Field name="guardianEmail">
-                    {(field) => (
-                        <F
-                            label="Guardian Email"
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                        >
-                            <Input
-                                value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="Enter guardian email"
-                            />
-                        </F>
-                    )}
-                </form.Field>
-
-                {/* Guardian Phone */}
                 <form.Field name="guardianPhone">
                     {(field) => (
                         <F
-                            label="Guardian Phone"
+                            label="Parent/Guardian Phone"
                             isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
                             error={field.state.meta.errors?.[0]}
                         >
                             <PhoneInputComponent
+                                className="w-full"
                                 value={field.state.value}
                                 onChange={(value) => field.handleChange(value)}
                                 placeholder="Enter phone number"
@@ -232,16 +313,31 @@ function Step1Form({
                     )}
                 </form.Field>
 
+                <form.Field name="guardianEmail">
+                    {(field) => (
+                        <F
+                            label="Parent/Guardian Email"
+                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                            error={field.state.meta.errors?.[0]}
+                        >
+                            <Input
+                                value={field.state.value}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="Enter guardian email"
+                                className="w-full"
+                            />
+                        </F>
+                    )}
+                </form.Field>
+
             </div>
 
-            {/* ERROR */}
-            {updateProfile.isError && (
+            {(updateProfile.isError || submitError) && (
                 <Typography className="text-destructive mt-4 text-sm">
-                    {updateProfile.error?.message}
+                    {submitError ?? updateProfile.error?.message}
                 </Typography>
             )}
 
-            {/* SUBMIT */}
             <div className="mt-8">
                 <Button
                     type="submit"
@@ -255,8 +351,6 @@ function Step1Form({
     )
 }
 
-/* ---------------- WRAPPER ---------------- */
-
 export function Step1Basic({ onNext }: { onNext: () => void }) {
     const { me } = useAuth()
     const { data: meData, isLoading } = me
@@ -265,13 +359,23 @@ export function Step1Basic({ onNext }: { onNext: () => void }) {
         return <PageLoader label="Preparing your profile..." />
     }
 
+    const profileTitle = meData?.title ?? ""
+    const title =
+        profileTitle === "Mr" || profileTitle === "Mrs" || profileTitle === "Ms"
+            ? profileTitle
+            : ""
+
     const defaults = {
+        title,
         dob: meData?.profile?.dateOfBirth ?? "",
-        gender: (meData?.profile?.gender?.toLowerCase() as any) ?? "",
+        gender:
+            genderFromTitle(title) ??
+            (meData?.profile?.gender?.toLowerCase() as string) ??
+            "",
         country: meData?.profile?.country ?? "",
         state: meData?.profile?.state ?? "",
         city: meData?.profile?.city ?? "",
-        nationality: meData?.profile?.nationality ?? "",
+        nationality: meData?.profile?.nationality ?? meData?.profile?.country ?? "",
         guardianEmail: meData?.profile?.guardianEmail ?? "",
         guardianPhone: meData?.profile?.guardianPhone ?? "",
         avatar_url: meData?.avatarUrl ?? null,

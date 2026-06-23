@@ -175,7 +175,6 @@ export async function PATCH(
             guardian_phone: getString("guardian_phone"),
             avatar_url: getFile("avatar_url"),
             passport_file_url: getFile("passport_file_url"),
-            cv_file: getFile("cv_file"),
             academic,
         }
 
@@ -284,18 +283,7 @@ export async function PATCH(
             }
         }
 
-        // 4. Upsert CV + Passport documents if provided
-        if (data.cv_file instanceof File) {
-            await upsertStudentDocument({
-                supabase,
-                profileId: id,
-                uploadedByProfileId: user.id,
-                documentTypeId: STUDENT_DOCUMENT_TYPE_IDS.CV,
-                file: data.cv_file,
-                storageSubpath: "cv",
-            })
-        }
-
+        // 4. Upsert passport document if provided
         if (data.passport_file_url instanceof File) {
             await upsertStudentDocument({
                 supabase,

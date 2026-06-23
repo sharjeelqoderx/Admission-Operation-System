@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { BluryCard } from "@/components/shared/blury-card"
 import { PageLoader } from "@/components/shared/page-loader"
 import { StatusBadge } from "@/components/shared/StatusBadge"
+import { ApplicationStatusBadge } from "@/app/(dashboard)/dashboard/application/_components/application-status-badge"
+import { formatFullName } from "@/lib/utils/profile"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { formatIntakeDate } from "@/lib/utils/program"
 import {
@@ -91,6 +93,17 @@ export default function AllApplicationViewDetailsPage() {
     const degree = course?.degree
     const university = application.university
     const documents = application.documents || []
+    const studentName = formatFullName(student?.first_name, student?.last_name, "—")
+    const agentName = formatFullName(
+        application.agent?.first_name,
+        application.agent?.last_name,
+        "System"
+    )
+    const universityName = formatFullName(
+        university?.first_name,
+        university?.last_name,
+        "N/A"
+    )
 
     return (
         <div className="space-y-6 sm:space-y-8">
@@ -113,7 +126,10 @@ export default function AllApplicationViewDetailsPage() {
                                 {application.application_no || "APP-" + application.id.slice(0, 8).toUpperCase()}
                             </Typography>
                             <span className="text-gray-300 hidden xs:inline">•</span>
-                            <StatusBadge status={application.status} />
+                            <ApplicationStatusBadge
+                                status={application.status}
+                                offerLetter={application.offer_letter}
+                            />
                         </div>
                     </div>
                 </div>
@@ -131,14 +147,14 @@ export default function AllApplicationViewDetailsPage() {
                             <div className="size-20 sm:size-24 rounded-2xl overflow-hidden border-2 border-white shadow-sm shrink-0 bg-gray-50">
                                 <Avatar className="w-full h-full rounded-none">
                                     <AvatarImage src={student?.avatar_url} />
-                                    <AvatarFallback className="text-xl sm:text-2xl font-bold">{student?.name?.[0]}</AvatarFallback>
+                                    <AvatarFallback className="text-xl sm:text-2xl font-bold">{studentName[0]}</AvatarFallback>
                                 </Avatar>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6 flex-1 w-full">
                                 <div className="space-y-1">
                                     <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Full Name</Typography>
-                                    <Typography className="font-bold text-gray-900">{student?.name}</Typography>
+                                    <Typography className="font-bold text-gray-900">{studentName}</Typography>
                                 </div>
                                 <div className="space-y-1">
                                     <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email Address</Typography>
@@ -176,7 +192,7 @@ export default function AllApplicationViewDetailsPage() {
                                     <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">University</Typography>
                                     <div className="flex items-center gap-2">
                                         <Building2 className="size-4 text-gray-400" />
-                                        <Typography className="font-bold text-brand-secondary">{university?.name || "N/A"}</Typography>
+                                        <Typography className="font-bold text-brand-secondary">{universityName}</Typography>
                                     </div>
                                 </div>
                                 <div className="space-y-1">
@@ -271,7 +287,7 @@ export default function AllApplicationViewDetailsPage() {
                                 Submitted on {new Date(application.created_at).toLocaleDateString("en-US", { dateStyle: "long" })}
                             </Typography>
                             <Typography className="text-xs text-gray-500 font-medium mt-1">
-                                Submitted by: {application.agent?.name || "System"}
+                                Submitted by: {agentName}
                             </Typography>
                         </div>
                     </BluryCard>
@@ -328,7 +344,7 @@ export default function AllApplicationViewDetailsPage() {
                 open={offerModalOpen}
                 onOpenChange={setOfferModalOpen}
                 applicationId={id}
-                studentName={student?.name}
+                studentName={studentName}
                 onOfferCreated={handleOfferCreated}
             />
         </div>

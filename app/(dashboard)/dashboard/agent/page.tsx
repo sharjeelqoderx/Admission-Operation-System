@@ -31,7 +31,7 @@ export default async function AgentPage({ searchParams }: AgentPageProps) {
     }
 
     return (
-        <Suspense fallback={<PageLoader label="Loading agents..." />}>
+        <Suspense fallback={<PageLoader label="Loading university partners..." />}>
             <UniversityAgentListPageContent initialOverview={initialOverview} />
         </Suspense>
     )

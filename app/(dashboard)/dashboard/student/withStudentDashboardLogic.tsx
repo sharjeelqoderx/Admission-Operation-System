@@ -1,33 +1,39 @@
 "use client"
 
-import React, { useState, useMemo, useRef } from "react"
+import React, { useCallback, useRef, useState } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useAuth } from "@/hooks/useAuth"
+import { toast } from "sonner"
+import type { StudentDashboardPageData } from "@/lib/student/server"
+import type { StudentListItem, StudentsListResult } from "@/lib/student/list"
+import type { StudentDashboardStats } from "@/lib/student/list"
 
-export interface StudentDashboardProps {
-    students: any[]
+export type StudentDashboardViewProps = {
+    initialData: StudentDashboardPageData
+    stats: StudentDashboardStats
+    statsLoading: boolean
+    students: StudentListItem[]
+    pagination?: StudentsListResult["pagination"]
     isLoading: boolean
     isError: boolean
-    stats: {
-        total_students: number
-        active_applications: number
-        pending_actions: number
-    } | null
-    statsLoading: boolean
+    errorMessage: string
     handleSearch: (term: string) => void
+    handleStatusChange: (value: string) => void
+    handlePageChange: (page: number) => void
     handleDelete: (id: string, name: string) => Promise<void>
     deletingId: string | null
     q: string
+    status: string
     refetch: () => void
-    me: any
 }
 
-export function withStudentDashboardLogic<T extends StudentDashboardProps>(
+export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
     Component: React.ComponentType<T>
 ) {
-    return function WrappedComponent(props: any) {
-        const { me } = useAuth()
+    return function WrappedComponent({
+        initialData,
+        ...props
+    }: Pick<T, "initialData"> & Omit<T, keyof StudentDashboardViewProps | "initialData">) {
         const queryClient = useQueryClient()
         const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -35,33 +41,54 @@ export function withStudentDashboardLogic<T extends StudentDashboardProps>(
         const router = useRouter()
         const pathname = usePathname()
         const q = searchParams.get("q") || ""
+        const status = searchParams.get("status") || "all"
+        const page = searchParams.get("page") || "1"
 
         const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-        const handleSearch = (term: string) => {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current)
-            timeoutRef.current = setTimeout(() => {
-                const params = new URLSearchParams(searchParams.toString())
-                if (term) {
-                    params.set("q", term)
-                } else {
-                    params.delete("q")
-                }
-                router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-            }, 400)
-        }
+        const matchesInitialQuery =
+            q === initialData.query.q &&
+            status === initialData.query.status &&
+            page === initialData.query.page
 
-        const studentsQuery = useQuery({
-            queryKey: ["students", q],
-            queryFn: async () => {
-                const url = new URL("/api/student", window.location.origin)
-                if (q) url.searchParams.set("q", q)
-                const res = await fetch(url.toString())
-                if (!res.ok) throw new Error("Failed to fetch students")
-                const json = await res.json()
-                return json.data
+        const updateParams = useCallback(
+            (updates: Record<string, string>) => {
+                const params = new URLSearchParams(searchParams.toString())
+                Object.entries(updates).forEach(([key, value]) => {
+                    if (value && value !== "all") {
+                        params.set(key, value)
+                    } else {
+                        params.delete(key)
+                    }
+                })
+                router.replace(`${pathname}?${params.toString()}`, { scroll: false })
             },
-        })
+            [pathname, router, searchParams]
+        )
+
+        const handleSearch = useCallback(
+            (term: string) => {
+                if (timeoutRef.current) clearTimeout(timeoutRef.current)
+                timeoutRef.current = setTimeout(() => {
+                    updateParams({ q: term, page: "1" })
+                }, 400)
+            },
+            [updateParams]
+        )
+
+        const handleStatusChange = useCallback(
+            (value: string) => {
+                updateParams({ status: value, page: "1" })
+            },
+            [updateParams]
+        )
+
+        const handlePageChange = useCallback(
+            (newPage: number) => {
+                updateParams({ page: newPage.toString() })
+            },
+            [updateParams]
+        )
 
         const statsQuery = useQuery({
             queryKey: ["dashboard-stats"],
@@ -69,8 +96,29 @@ export function withStudentDashboardLogic<T extends StudentDashboardProps>(
                 const res = await fetch("/api/dashboard/stats")
                 if (!res.ok) throw new Error("Failed to fetch stats")
                 const json = await res.json()
-                return json.data
+                return json.data as StudentDashboardStats
             },
+            initialData: initialData.stats,
+        })
+
+        const studentsQuery = useQuery({
+            queryKey: ["students", q, status, page],
+            queryFn: async () => {
+                const url = new URL("/api/student", window.location.origin)
+                if (q) url.searchParams.set("q", q)
+                if (status !== "all") url.searchParams.set("status", status)
+                if (page) url.searchParams.set("page", page)
+                url.searchParams.set("limit", "10")
+
+                const res = await fetch(url.toString())
+                if (!res.ok) {
+                    const errorData = await res.json()
+                    throw new Error(errorData.error || "Failed to fetch students")
+                }
+                return res.json() as Promise<StudentsListResult>
+            },
+            initialData: matchesInitialQuery ? initialData.students : undefined,
+            retry: false,
         })
 
         const deleteStudent = useMutation({
@@ -88,29 +136,45 @@ export function withStudentDashboardLogic<T extends StudentDashboardProps>(
             },
         })
 
-        const handleDelete = async (id: string, name: string) => {
-            setDeletingId(id)
-            try {
-                await deleteStudent.mutateAsync(id)
-            } finally {
-                setDeletingId(null)
-            }
-        }
+        const handleDelete = useCallback(
+            async (id: string, name: string) => {
+                setDeletingId(id)
+                const toastId = toast.loading(`Deleting ${name}...`)
+                try {
+                    await deleteStudent.mutateAsync(id)
+                    toast.success(`${name} deleted successfully!`, { id: toastId })
+                } catch (e) {
+                    const message = e instanceof Error ? e.message : "Failed to delete student"
+                    toast.error(message, { id: toastId })
+                } finally {
+                    setDeletingId(null)
+                }
+            },
+            [deleteStudent]
+        )
 
-        const logicProps: StudentDashboardProps = {
-            students: studentsQuery.data || [],
-            isLoading: studentsQuery.isLoading,
+        const logicProps: StudentDashboardViewProps = {
+            initialData,
+            stats: statsQuery.data ?? initialData.stats,
+            statsLoading: statsQuery.isLoading && !statsQuery.data,
+            students: studentsQuery.data?.data ?? [],
+            pagination: studentsQuery.data?.pagination,
+            isLoading: studentsQuery.isLoading && !studentsQuery.data,
             isError: studentsQuery.isError,
-            stats: statsQuery.data || null,
-            statsLoading: statsQuery.isLoading,
+            errorMessage:
+                studentsQuery.error instanceof Error
+                    ? studentsQuery.error.message
+                    : "Failed to load students",
             handleSearch,
+            handleStatusChange,
+            handlePageChange,
             handleDelete,
             deletingId,
             q,
+            status,
             refetch: studentsQuery.refetch,
-            me: me.data
         }
 
-        return <Component {...(props as any)} {...logicProps} />
+        return <Component {...(props as T)} {...logicProps} />
     }
 }

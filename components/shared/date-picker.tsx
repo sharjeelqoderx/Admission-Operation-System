@@ -42,8 +42,8 @@ export function DatePicker({ value, onChange, placeholder = "Pick a date", class
                 <Button 
                     variant="outline" 
                     className={cn(
-                        "h-12 w-full rounded-sm border border-input bg-brand-input px-3 justify-start font-normal hover:bg-brand-input text-gray-900 transition-all",
-                        !parsed && "text-muted-foreground",
+                        "h-12 w-full rounded-sm border border-input bg-brand-input px-3 justify-start font-normal hover:bg-brand-input text-gray-900 hover:text-gray-900 transition-all",
+                        !parsed && "text-muted-foreground hover:text-gray-900",
                         className
                     )}
                 >

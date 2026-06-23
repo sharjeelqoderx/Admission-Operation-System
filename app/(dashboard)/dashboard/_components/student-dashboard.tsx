@@ -22,7 +22,7 @@ import {
     ApplicationsListTable,
     DocumentVaultCell,
     type ApplicationRow,
-} from "@/app/(dashboard)/dashboard/application/_component/ApplicationsListTable"
+} from "@/app/(dashboard)/dashboard/application/_components/applications-list-table"
 import { ApplicationStatus } from "@/components/shared/StatusBadge"
 import { type OfferRow } from "@/app/(dashboard)/dashboard/offer/_component/OfferTable"
 import type { CourseProgram } from "@/types/schemas/program"
@@ -239,7 +239,7 @@ export function StudentDashboard() {
                                                 </Link>
                                                 <div className="flex flex-col gap-1.5 shrink-0">
                                                     <StatusBadge status={app.status} />
-                                                    {app.offer_shared && (
+                                                    {app.offer_letter && (
                                                         <StatusBadge
                                                             status={ApplicationStatus.CONDITIONAL_LETTER_ISSUED}
                                                         />

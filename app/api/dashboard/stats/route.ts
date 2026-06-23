@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
             .maybeSingle()
 
         if (!agentRow) {
-            return NextResponse.json({ error: "Agent profile not found" }, { status: 400 })
+            return NextResponse.json({ error: "University Partner profile not found" }, { status: 400 })
         }
 
         // Run all counts in parallel

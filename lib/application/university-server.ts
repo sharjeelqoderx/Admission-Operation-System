@@ -9,6 +9,7 @@ import { resolveStudentPipelineStatus } from "@/lib/student/pipeline-status"
 import { resolveQualificationLabel } from "@/lib/education/resolve-qualification"
 import type {
     UniversityApplicationDetail,
+    UniversityApplicationDetailPageData,
     UniversityApplicationListItem,
     UniversityApplicationListResponse,
     UniversityApplicationTab,
@@ -344,7 +345,7 @@ export async function fetchUniversityApplicationList(params: {
 
         const agentLabel = isDirect
             ? "Direct Application"
-            : agentOrgByProfileId.get(application.submitted_by_profile_id!) ?? "Agent Partner"
+            : agentOrgByProfileId.get(application.submitted_by_profile_id!) ?? "University Partner"
 
         return mapListItem({
             application,
@@ -733,7 +734,9 @@ export async function fetchUniversityApplicationsForPage(params?: {
     })
 }
 
-export async function fetchUniversityApplicationDetailForPage(applicationId: string) {
+export async function fetchUniversityApplicationDetailForPage(
+    applicationId: string
+): Promise<UniversityApplicationDetailPageData> {
     const supabase = await createSupabaseServerClient()
     const {
         data: { user },
@@ -741,7 +744,10 @@ export async function fetchUniversityApplicationDetailForPage(applicationId: str
     } = await supabase.auth.getUser()
 
     if (error || !user) {
-        return null
+        return {
+            detail: null,
+            error: "Unauthorized",
+        }
     }
 
     const { data: profile } = await supabase
@@ -752,11 +758,26 @@ export async function fetchUniversityApplicationDetailForPage(applicationId: str
 
     const scope = await resolveUniversityScope(user.id, profile?.role ?? "")
     if (!scope) {
-        return null
+        return {
+            detail: null,
+            error: "Profile not found",
+        }
     }
 
-    return fetchUniversityApplicationDetail({
+    const detail = await fetchUniversityApplicationDetail({
         applicationId,
         universityId: scope.universityId,
     })
+
+    if (!detail) {
+        return {
+            detail: null,
+            error: "Application not found",
+        }
+    }
+
+    return {
+        detail,
+        error: null,
+    }
 }
