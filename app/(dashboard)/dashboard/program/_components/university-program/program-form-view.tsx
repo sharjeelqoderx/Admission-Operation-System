@@ -1,0 +1,317 @@
+"use client"
+
+import { memo, type ChangeEvent } from "react"
+import Link from "next/link"
+import { ChevronLeft } from "lucide-react"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Typography } from "@/components/shared/Typography"
+import { DatePicker } from "@/components/shared/date-picker"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { ErrorView } from "@/components/shared/error-view"
+import type { UniversityProgramUpsert } from "@/types/schemas/university-program"
+
+type DocumentTypeOption = {
+    id: string
+    name: string
+}
+
+type UniversityProgramFormViewProps = {
+    mode: "create" | "edit"
+    values: UniversityProgramUpsert
+    documentTypes: DocumentTypeOption[]
+    selectedDocumentTypeIds: string[]
+    isSubmitting: boolean
+    errorMessage: string | null
+    onChange: <K extends keyof UniversityProgramUpsert>(key: K, value: UniversityProgramUpsert[K]) => void
+    onToggleDocumentType: (documentTypeId: string) => void
+    onSubmit: () => void
+}
+
+function FieldLabel({ children }: { children: string }) {
+    return (
+        <Typography as="label" font="small" className="mb-2 block font-semibold text-brand-primary">
+            {children}
+        </Typography>
+    )
+}
+
+export const UniversityProgramFormView = memo(function UniversityProgramFormView({
+    mode,
+    values,
+    documentTypes,
+    selectedDocumentTypeIds,
+    isSubmitting,
+    errorMessage,
+    onChange,
+    onToggleDocumentType,
+    onSubmit,
+}: UniversityProgramFormViewProps) {
+    return (
+        <div className="mx-auto max-w-[1200px] space-y-8 px-4 pb-20 pt-4 lg:px-8">
+            <div className="flex items-center gap-3">
+                <Link href="/dashboard/program">
+                    <Button variant="outline" size="icon" className="size-9 rounded-full sm:size-10">
+                        <ChevronLeft className="size-5" />
+                    </Button>
+                </Link>
+                <Typography as="span" font="sub-text" className="font-medium text-gray-500">
+                    Back to Programs
+                </Typography>
+            </div>
+
+            <div className="space-y-2">
+                <Typography as="h2" font="sub-heading" className="font-bold text-brand-primary">
+                    Program Details
+                </Typography>
+                <Typography as="p" font="sub-text" className="max-w-3xl text-gray-500">
+                    {mode === "create"
+                        ? "Create a new academic program with tuition, commission, and admission requirements."
+                        : "Update program information, tuition settings, and admission requirements."}
+                </Typography>
+            </div>
+
+            {errorMessage ? <ErrorView message={errorMessage} /> : null}
+
+            <Card className="space-y-8 border-none bg-white/80 px-5 py-6 shadow-sm ring-1 ring-black/5 backdrop-blur-lg">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <div>
+                        <FieldLabel>Program Name</FieldLabel>
+                        <Input
+                            value={values.name}
+                            onChange={(event) => onChange("name", event.target.value)}
+                            placeholder="Enter Program name"
+                            className="h-11 bg-white"
+                        />
+                    </div>
+                    <div>
+                        <FieldLabel>Category</FieldLabel>
+                        <Input
+                            value={values.category ?? ""}
+                            onChange={(event) => onChange("category", event.target.value)}
+                            placeholder="Enter your Category"
+                            className="h-11 bg-white"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                    <div>
+                        <FieldLabel>Tuition Fees</FieldLabel>
+                        <Input
+                            value={values.tuition_fees ?? ""}
+                            onChange={(event) => onChange("tuition_fees", event.target.value)}
+                            placeholder="Enter tuition fees"
+                            className="h-11 bg-white"
+                        />
+                    </div>
+                    <div>
+                        <FieldLabel>Agent Commission</FieldLabel>
+                        <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={values.agent_commission ?? ""}
+                            onChange={(event) =>
+                                onChange(
+                                    "agent_commission",
+                                    event.target.value ? Number(event.target.value) : null
+                                )
+                            }
+                            placeholder="Enter Agent Percent"
+                            className="h-11 bg-white"
+                        />
+                    </div>
+                    <div>
+                        <FieldLabel>Location</FieldLabel>
+                        <Input
+                            value={values.location ?? ""}
+                            onChange={(event) => onChange("location", event.target.value)}
+                            placeholder="Enter Location"
+                            className="h-11 bg-white"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                    <div>
+                        <FieldLabel>Program Length</FieldLabel>
+                        <Input
+                            value={values.program_length ?? ""}
+                            onChange={(event) => onChange("program_length", event.target.value)}
+                            placeholder="Enter program length"
+                            className="h-11 bg-white"
+                        />
+                    </div>
+                    <div>
+                        <FieldLabel>Study Type</FieldLabel>
+                        <Select
+                            value={values.study_type ?? ""}
+                            onValueChange={(value) =>
+                                onChange("study_type", value as UniversityProgramUpsert["study_type"])
+                            }
+                        >
+                            <SelectTrigger className="h-11 bg-white">
+                                <SelectValue placeholder="Enter study type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="full_time">Full Time</SelectItem>
+                                <SelectItem value="part_time">Part Time</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <FieldLabel>Intake Date</FieldLabel>
+                        <DatePicker
+                            value={values.intake_date ?? ""}
+                            onChange={(value) => onChange("intake_date", value || null)}
+                            placeholder="Enter intake date"
+                            className="h-11 w-full"
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <FieldLabel>Application Deadline</FieldLabel>
+                    <DatePicker
+                        value={values.application_deadline ?? ""}
+                        onChange={(value) => onChange("application_deadline", value || null)}
+                        placeholder="Enter application deadline"
+                        className="h-11 w-full max-w-sm"
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Program Detail</FieldLabel>
+                    <textarea
+                        value={values.program_detail ?? ""}
+                        onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+                            onChange("program_detail", event.target.value)
+                        }
+                        placeholder="Enter program detail"
+                        className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Admission Requirements</FieldLabel>
+                    <textarea
+                        value={values.admission_requirements ?? ""}
+                        onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+                            onChange("admission_requirements", event.target.value)
+                        }
+                        placeholder="Enter admission requirements"
+                        className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                    />
+                </div>
+
+                <div>
+                    <FieldLabel>Perspectives</FieldLabel>
+                    <textarea
+                        value={values.perspectives ?? ""}
+                        onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+                            onChange("perspectives", event.target.value)
+                        }
+                        placeholder="Enter perspectives"
+                        className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <div>
+                        <FieldLabel>Your Prospect After Graduation</FieldLabel>
+                        <textarea
+                            value={values.prospects_after_graduation ?? ""}
+                            onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+                                onChange("prospects_after_graduation", event.target.value)
+                            }
+                            placeholder="Enter prospects after graduation"
+                            className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <FieldLabel>Our Competency Model</FieldLabel>
+                        <textarea
+                            value={values.competency_model ?? ""}
+                            onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+                                onChange("competency_model", event.target.value)
+                            }
+                            placeholder="Enter competency model"
+                            className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <div>
+                        <FieldLabel>Professional Skills</FieldLabel>
+                        <textarea
+                            value={values.professional_skills ?? ""}
+                            onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+                                onChange("professional_skills", event.target.value)
+                            }
+                            placeholder="Enter professional skills"
+                            className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                        />
+                    </div>
+                    <div>
+                        <FieldLabel>Management Skills</FieldLabel>
+                        <textarea
+                            value={values.management_skills ?? ""}
+                            onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+                                onChange("management_skills", event.target.value)
+                            }
+                            placeholder="Enter management skills"
+                            className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <FieldLabel>Upload Documents</FieldLabel>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {documentTypes.map((documentType) => {
+                            const isSelected = selectedDocumentTypeIds.includes(documentType.id)
+
+                            return (
+                                <button
+                                    key={documentType.id}
+                                    type="button"
+                                    onClick={() => onToggleDocumentType(documentType.id)}
+                                    className={
+                                        isSelected
+                                            ? "rounded-xl border-2 border-brand-byzantine bg-brand-byzantine/5 px-4 py-3 text-left"
+                                            : "rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-left"
+                                    }
+                                >
+                                    <Typography as="span" font="sub-text" className="font-semibold text-brand-primary">
+                                        {documentType.name}
+                                    </Typography>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11 rounded-xl border-brand-byzantine px-6 font-semibold text-brand-byzantine"
+                        onClick={onSubmit}
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting ? "Saving..." : "Save Program Info"}
+                    </Button>
+                </div>
+            </Card>
+        </div>
+    )
+})

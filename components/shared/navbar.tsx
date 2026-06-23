@@ -31,13 +31,25 @@ const getTitleFromPathname = (pathname: string): string => {
         return 'Student Profile';
     }
 
+    if (pathname.includes('/dashboard/agent/') && segments.length >= 3) {
+        return 'Agent Profile';
+    }
+
+    if (pathname === '/dashboard/agent') return 'Agent Profile';
+
     if (pathname.includes('/dashboard/document/student/')) {
         return 'All Documents';
     }
 
     if (pathname === '/dashboard/document/new') return 'Upload File';
-    if (pathname.includes('/dashboard/program/') && segments.length >= 3) return 'Program Details';
-    if (pathname.includes('/dashboard/application/') && segments.length >= 3) return 'Application Details';
+    if (pathname === '/dashboard/program') return 'All Programs';
+    if (pathname === '/dashboard/program/new') return 'Program Details';
+    if (pathname.includes('/dashboard/program/') && pathname.endsWith('/edit')) return 'Program Details';
+    if (pathname.includes('/dashboard/program/') && segments.length >= 3 && !pathname.endsWith('/edit')) {
+        return 'Program Details';
+    }
+    if (pathname.includes('/dashboard/application/') && segments.length >= 3) return 'Application Profile';
+    if (pathname === '/dashboard/application') return 'All Application';
     if (pathname.includes('/dashboard/all-application-view/') && segments.length >= 3) return 'Application Details';
     if (pathname.includes('/dashboard/offer/') && segments.length >= 3) return 'Offer Details';
     if (pathname === '/dashboard/templates') return 'Templates';
