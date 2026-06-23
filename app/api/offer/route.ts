@@ -5,6 +5,7 @@ import { CreateOfferSchema } from "@/types/schemas/offer";
 import { mapTemplateRow } from "@/lib/document-template/server";
 import { renderTemplateHtml } from "@/lib/document-template/variables";
 import { buildOfferTemplateVariables } from "@/lib/offer/build-offer-variables";
+import { fetchAdmissionRequirementsContext } from "@/lib/offer/admission-requirements-context";
 import {
     isMissingOfferTemplateColumnError,
     OFFER_LIST_SELECT_LEGACY,
@@ -175,7 +176,7 @@ export async function POST(req: NextRequest) {
                 profile_id,
                 submitted_by_profile_id,
                 university_id,
-                student:profile_id ( first_name, last_name, signature ),
+                student:profile_id ( first_name, last_name, signature, title, date_of_birth ),
                 course:course_id (
                     name,
                     degree:degree_id ( name, fees, intake_date )
@@ -201,23 +202,57 @@ export async function POST(req: NextRequest) {
         }
 
         const template = mapTemplateRow(templateRow);
-        const student = withProfileDisplayName(
-            application.student as {
-                first_name?: string | null
-                last_name?: string | null
-                signature?: string | null
-            } | null
-        );
+
+        type StudentProfileRelation = {
+            first_name?: string | null
+            last_name?: string | null
+            signature?: string | null
+            title?: string | null
+            date_of_birth?: string | null
+        } | null
+
+        const pickProfile = (
+            value: StudentProfileRelation | StudentProfileRelation[] | null | undefined
+        ): StudentProfileRelation =>
+            Array.isArray(value) ? value[0] ?? null : value ?? null
+
+        const studentProfile = pickProfile(
+            application.student as StudentProfileRelation | StudentProfileRelation[] | null
+        )
+
+        const student = withProfileDisplayName(studentProfile);
+
+        const { data: studentRecord } = await supabase
+            .from("student")
+            .select("address, city, state, country, zip_code")
+            .eq("profile_id", application.profile_id)
+            .maybeSingle();
+
         const university = withProfileDisplayName(
             application.university as { first_name?: string | null; last_name?: string | null } | null
         );
 
-        const variables = buildOfferTemplateVariables({
-            application_no: application.application_no,
-            student,
-            course: application.course as OfferApplicationCourse,
-            university,
-        });
+        const variables = buildOfferTemplateVariables(
+            {
+                application_no: application.application_no,
+                student: {
+                    ...student,
+                    title: studentProfile?.title ?? null,
+                    date_of_birth: studentProfile?.date_of_birth ?? null,
+                    address: studentRecord?.address ?? null,
+                    city: studentRecord?.city ?? null,
+                    state: studentRecord?.state ?? null,
+                    country: studentRecord?.country ?? null,
+                    zip_code: studentRecord?.zip_code ?? null,
+                },
+                course: application.course as OfferApplicationCourse,
+                university,
+            },
+            await fetchAdmissionRequirementsContext(supabase, {
+                applicationId: application.id,
+                profileId: application.profile_id,
+            })
+        );
 
         const renderedBodyHtml = renderTemplateHtml(template.body_html, variables);
 

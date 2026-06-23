@@ -1,13 +1,14 @@
 "use client"
 
-import { memo } from "react"
+import { memo, useMemo } from "react"
 import { Typography } from "@/components/shared/Typography"
-import { DocumentCenterLogoPlaceholder } from "./document-center-logo-placeholder"
+import { DocumentPageWatermark } from "./document-center-logo-placeholder"
 import {
     A4_DOCUMENT_CONTENT_CLASS,
+    A4_DOCUMENT_MULTI_PAGE_STACK_CLASS,
     A4_DOCUMENT_PAGE_CLASS,
     A4_DOCUMENT_SHEET_WRAPPER_CLASS,
-    hasCenterLogo,
+    splitTemplateBodyIntoPages,
 } from "@/lib/document-template/a4-document"
 import {
     renderTemplateHtml,
@@ -30,11 +31,13 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
     className,
     printable = false,
 }: DocumentTemplatePreviewProps) {
-    const renderedHtml = useSampleData
-        ? renderTemplateHtml(bodyHtml, TEMPLATE_PREVIEW_SAMPLE_DATA)
-        : bodyHtml
+    const pages = useMemo(() => {
+        const renderedHtml = useSampleData
+            ? renderTemplateHtml(bodyHtml, TEMPLATE_PREVIEW_SAMPLE_DATA)
+            : bodyHtml
 
-    const showCenterPlaceholder = !hasCenterLogo(renderedHtml)
+        return splitTemplateBodyIntoPages(renderedHtml)
+    }, [bodyHtml, useSampleData])
 
     return (
         <div className={cn("space-y-4", className)}>
@@ -42,17 +45,22 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
                 {title}
             </Typography>
             <div className={A4_DOCUMENT_SHEET_WRAPPER_CLASS}>
-                <div
-                    className={cn(
-                        A4_DOCUMENT_PAGE_CLASS,
-                        printable && "document-template-print-target"
-                    )}
-                >
-                    {showCenterPlaceholder ? <DocumentCenterLogoPlaceholder /> : null}
-                    <div
-                        className={cn("relative z-10", A4_DOCUMENT_CONTENT_CLASS)}
-                        dangerouslySetInnerHTML={{ __html: renderedHtml }}
-                    />
+                <div className={A4_DOCUMENT_MULTI_PAGE_STACK_CLASS}>
+                    {pages.map((pageHtml, index) => (
+                        <div
+                            key={`template-page-${index}`}
+                            className={cn(
+                                A4_DOCUMENT_PAGE_CLASS,
+                                printable && "document-template-print-target"
+                            )}
+                        >
+                            <DocumentPageWatermark />
+                            <div
+                                className={cn("relative z-10", A4_DOCUMENT_CONTENT_CLASS)}
+                                dangerouslySetInnerHTML={{ __html: pageHtml }}
+                            />
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

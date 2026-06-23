@@ -4,13 +4,25 @@ import { memo } from "react"
 import Image from "next/image"
 import {
     DEFAULT_PLACEHOLDER_LOGO_SRC,
+    DOCUMENT_PAGE_WATERMARK_CLASS,
     PLACEHOLDER_LOGO_SIZE_PX,
 } from "@/lib/document-template/a4-document"
+import { cn } from "@/lib/utils"
 
-export const DocumentCenterLogoPlaceholder = memo(function DocumentCenterLogoPlaceholder() {
+type DocumentPageWatermarkProps = {
+    className?: string
+}
+
+export const DocumentPageWatermark = memo(function DocumentPageWatermark({
+    className,
+}: DocumentPageWatermarkProps) {
     return (
         <div
-            className="document-center-logo-placeholder pointer-events-none absolute inset-0 z-0 flex items-center justify-center"
+            className={cn(
+                DOCUMENT_PAGE_WATERMARK_CLASS,
+                "pointer-events-none absolute inset-0 z-0 flex items-center justify-center",
+                className
+            )}
             aria-hidden
         >
             <Image
@@ -27,3 +39,6 @@ export const DocumentCenterLogoPlaceholder = memo(function DocumentCenterLogoPla
         </div>
     )
 })
+
+/** @deprecated Use DocumentPageWatermark */
+export const DocumentCenterLogoPlaceholder = DocumentPageWatermark

@@ -1,3 +1,9 @@
+import {
+    A4_DOCUMENT_PRINT_STYLES,
+    buildDocumentPageWatermarkHtml,
+    splitTemplateBodyIntoPages,
+} from "@/lib/document-template/a4-document"
+
 export function buildSignatureBlockHtml(options: {
     status: string
     fileUrl?: string | null
@@ -124,21 +130,27 @@ export function buildTemplateOfferLetterHtml(
 ): string {
     const title = options?.title ?? "Offer Letter"
     const signatureHtml = options?.signatureHtml ?? ""
+    const pages = splitTemplateBodyIntoPages(bodyHtml)
+
+    const pageSections = pages
+        .map((pageBody, index) => {
+            const isLastPage = index === pages.length - 1
+            const footerHtml = isLastPage ? signatureHtml : ""
+
+            return `<section class="a4-page">
+                ${buildDocumentPageWatermarkHtml()}
+                <div class="page-inner">
+                    <div class="page-body">${pageBody}${footerHtml}</div>
+                </div>
+            </section>`
+        })
+        .join("")
 
     return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><title>${title}</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #f3f4f6; display: flex; justify-content: center; padding: 40px 16px; font-family: Georgia, serif; }
-        @media print { body { background: white; padding: 0; } .page { box-shadow: none !important; } }
-        .page { background: white; max-width: 210mm; width: 100%; min-height: 297mm; padding: 20mm 15mm; box-shadow: 0 4px 32px rgba(0,0,0,0.12); border-radius: 8px; }
-        img { max-width: 100%; height: auto; }
-        table { width: 100%; border-collapse: collapse; }
-        td, th { border: 1px solid #e5e7eb; padding: 8px; }
-    </style>
+    <style>${A4_DOCUMENT_PRINT_STYLES}</style>
     </head><body>
-    <div class="page">
-        ${bodyHtml}
-        ${signatureHtml}
+    <div class="letter-shell">
+        ${pageSections}
     </div>
     </body></html>`
 }
