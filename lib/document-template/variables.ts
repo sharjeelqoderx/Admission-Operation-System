@@ -1,5 +1,13 @@
+import {
+    ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE,
+    buildAdmissionRequirementsChecklistPreviewHtml,
+} from "@/lib/document-template/admission-requirements-checklist"
+
 export const TEMPLATE_MERGE_VARIABLES = [
     { key: "student_name", label: "Student Name" },
+    { key: "student_title", label: "Student Title" },
+    { key: "student_address", label: "Student Address" },
+    { key: "student_date_of_birth", label: "Date of Birth" },
     { key: "student_signature", label: "Student Signature" },
     { key: "course_name", label: "Course Name" },
     { key: "degree_name", label: "Degree Name" },
@@ -8,6 +16,15 @@ export const TEMPLATE_MERGE_VARIABLES = [
     { key: "issue_date", label: "Issue Date" },
     { key: "fees", label: "Fees" },
     { key: "intake_date", label: "Intake Date" },
+] as const
+
+export const TEMPLATE_DYNAMIC_SECTIONS = [
+    {
+        key: ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE,
+        label: "Admission requirements checklist",
+        description:
+            "Auto-checks boxes when tuition payment, documents, APS, work experience, and English scores are verified for the student.",
+    },
 ] as const
 
 const STUDENT_SIGNATURE_PREVIEW_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="48" viewBox="0 0 160 48" aria-hidden="true"><path d="M8 32 C24 8, 40 40, 56 24 S88 8, 104 28 S128 36, 152 20" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round"/></svg>`
@@ -27,6 +44,9 @@ export function buildStudentSignatureHtml(
 
 export const TEMPLATE_PREVIEW_SAMPLE_DATA: Record<string, string> = {
     student_name: "John Doe",
+    student_title: "Mr.",
+    student_address: "123 Academic Street<br />Berlin, BE 10115<br />Germany",
+    student_date_of_birth: "January 15, 1998",
     student_signature: `<span class="document-student-signature-preview">${STUDENT_SIGNATURE_PREVIEW_SVG}</span>`,
     course_name: "Business Administration",
     degree_name: "Bachelor of Business",
@@ -39,6 +59,7 @@ export const TEMPLATE_PREVIEW_SAMPLE_DATA: Record<string, string> = {
     }),
     fees: "€ 12,500",
     intake_date: "October 2026",
+    [ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE]: buildAdmissionRequirementsChecklistPreviewHtml(),
 }
 
 export function extractTemplateVariables(html: string): string[] {

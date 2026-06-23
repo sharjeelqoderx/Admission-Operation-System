@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { mapTemplateRow } from "@/lib/document-template/server"
+import {
+    canManageDocumentTemplate,
+    mapTemplateRow,
+    softDeleteDocumentTemplate,
+} from "@/lib/document-template/server"
 import { extractTemplateVariables } from "@/lib/document-template/variables"
 import { DocumentTemplateUpdateSchema } from "@/types/schemas/document-template"
 
@@ -60,6 +64,40 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
+        const { data: profile } = await supabase
+            .from("profile")
+            .select("role")
+            .eq("id", user.id)
+            .maybeSingle()
+
+        const { data: existing, error: existingError } = await supabase
+            .from("document_template")
+            .select("id, created_by_profile_id")
+            .eq("id", id)
+            .eq("is_deleted", false)
+            .maybeSingle()
+
+        if (existingError) {
+            return NextResponse.json(
+                { error: "Failed to fetch document template", details: existingError.message },
+                { status: 500 }
+            )
+        }
+
+        if (!existing) {
+            return NextResponse.json({ error: "Document template not found" }, { status: 404 })
+        }
+
+        if (
+            !canManageDocumentTemplate({
+                role: profile?.role,
+                userId: user.id,
+                createdByProfileId: existing.created_by_profile_id,
+            })
+        ) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
+
         const json = await req.json()
         const validated = DocumentTemplateUpdateSchema.parse(json)
 
@@ -85,7 +123,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             .from("document_template")
             .update(updatePayload)
             .eq("id", id)
-            .eq("created_by_profile_id", user.id)
             .eq("is_deleted", false)
             .select("*")
             .maybeSingle()
@@ -130,29 +167,61 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const { data, error } = await supabase
-            .from("document_template")
-            .update({
-                is_deleted: true,
-                updated_at: new Date().toISOString(),
-            })
-            .eq("id", id)
-            .eq("created_by_profile_id", user.id)
-            .eq("is_deleted", false)
-            .select("id")
+        const { data: profile } = await supabase
+            .from("profile")
+            .select("role")
+            .eq("id", user.id)
             .maybeSingle()
 
-        if (error) {
+        const { data: existing, error: existingError } = await supabase
+            .from("document_template")
+            .select("id, created_by_profile_id")
+            .eq("id", id)
+            .eq("is_deleted", false)
+            .maybeSingle()
+
+        if (existingError) {
             return NextResponse.json(
-                { error: "Failed to delete document template", details: error.message },
-                { status: 400 }
+                { error: "Failed to fetch document template", details: existingError.message },
+                { status: 500 }
             )
         }
 
-        if (!data) {
+        if (!existing) {
             return NextResponse.json(
                 { error: "Document template not found or not deletable" },
                 { status: 404 }
+            )
+        }
+
+        if (
+            !canManageDocumentTemplate({
+                role: profile?.role,
+                userId: user.id,
+                createdByProfileId: existing.created_by_profile_id,
+            })
+        ) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
+
+        const deleteResult = await softDeleteDocumentTemplate(id)
+
+        if (deleteResult.error) {
+            const details = deleteResult.error.message
+
+            return NextResponse.json(
+                {
+                    error: "Failed to delete document template",
+                    details,
+                    hint:
+                        typeof details === "string" &&
+                        (details.includes("row-level security policy") ||
+                            details.includes("Could not find the function") ||
+                            details.includes("does not exist"))
+                            ? "Run migration 053_document_template_update_with_check_true.sql in the Supabase SQL editor."
+                            : undefined,
+                },
+                { status: 400 }
             )
         }
 

@@ -17,6 +17,8 @@ import {
     AlignCenter,
     AlignLeft,
     AlignRight,
+    Columns3,
+    ListChecks,
     Bold,
     Heading1,
     Heading2,
@@ -29,6 +31,7 @@ import {
     ListOrdered,
     Pilcrow,
     Redo2,
+    SeparatorHorizontal,
     Strikethrough,
     Table2,
     Type,
@@ -39,21 +42,22 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
-import { DocumentCenterLogoPlaceholder } from "./document-center-logo-placeholder"
+import { DocumentPageWatermark } from "./document-center-logo-placeholder"
 import {
     A4_DOCUMENT_CONTENT_CLASS,
     A4_DOCUMENT_PAGE_CLASS,
     A4_DOCUMENT_SHEET_WRAPPER_CLASS,
     DEFAULT_CENTER_LOGO_WIDTH,
-    DOCUMENT_CENTER_LOGO_CLASS,
-    DOCUMENT_HEADER_IMAGE_CLASS,
     DOCUMENT_IMAGE_CLASS,
-    buildCenterLogoBlock,
+    DOCUMENT_LOGO_LINE_CLASS,
     buildDocumentHeadingBlock,
-    buildImageHtml,
-    hasCenterLogo,
+    buildHeaderImageBlock,
+    buildLogoImageHtml,
+    buildLogoLineBlock,
 } from "@/lib/document-template/a4-document"
-import { TEMPLATE_MERGE_VARIABLES } from "@/lib/document-template/variables"
+import { DocumentPageBreak } from "@/lib/document-template/tiptap-document-page-break"
+import { TEMPLATE_DYNAMIC_SECTIONS, TEMPLATE_MERGE_VARIABLES } from "@/lib/document-template/variables"
+import { DocumentParagraph } from "@/lib/document-template/tiptap-document-paragraph"
 import { cn } from "@/lib/utils"
 
 type DocumentTemplateEditorProps = {
@@ -114,8 +118,8 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
     className,
 }: DocumentTemplateEditorProps) {
     const headerImageInputRef = useRef<HTMLInputElement>(null)
+    const logoImageInputRef = useRef<HTMLInputElement>(null)
     const inlineImageInputRef = useRef<HTMLInputElement>(null)
-    const centerLogoInputRef = useRef<HTMLInputElement>(null)
 
     const uploadImageMutation = useMutation({
         mutationFn: uploadTemplateImage,
@@ -125,7 +129,10 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         extensions: [
             StarterKit.configure({
                 heading: { levels: [1, 2, 3] },
+                paragraph: false,
             }),
+            DocumentParagraph,
+            DocumentPageBreak,
             Placeholder.configure({
                 placeholder:
                     "Start writing your A4 document… Use {{variable_name}} for dynamic fields.",
@@ -138,7 +145,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                 openOnClick: false,
             }),
             ImageResize.configure({
-                inline: false,
+                inline: true,
                 allowBase64: false,
                 minWidth: 48,
                 maxWidth: 680,
@@ -178,37 +185,54 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         editor.setEditable(editable)
     }, [editable, editor])
 
-    const upsertCenterLogo = useCallback(
+    const insertLogoRow = useCallback(
+        (align: "left" | "center" | "right" = "left") => {
+            editor?.chain().focus().insertContent(buildLogoLineBlock({ align })).run()
+        },
+        [editor]
+    )
+
+    const insertLogoAtCursor = useCallback(
         (url: string, width = DEFAULT_CENTER_LOGO_WIDTH) => {
             if (!editor) return
 
-            const html = editor.getHTML()
-            const centerLogoBlock = buildCenterLogoBlock(url, width)
+            const logoHtml = buildLogoImageHtml(url, width)
+            const { $from } = editor.state.selection
+            const parent = $from.parent
 
-            if (hasCenterLogo(html)) {
-                const updated = html.replace(
-                    /<p[^>]*>\s*<img[^>]*class="[^"]*(document-center-logo|document-default-icon)[^"]*"[^>]*>\s*<\/p>/i,
-                    centerLogoBlock
+            if (parent.type.name === "paragraph") {
+                const hasLogoLineClass = String(parent.attrs.class ?? "").includes(
+                    DOCUMENT_LOGO_LINE_CLASS
                 )
 
-                editor.commands.setContent(updated, { emitUpdate: true })
+                if (!hasLogoLineClass) {
+                    editor
+                        .chain()
+                        .focus()
+                        .updateAttributes("paragraph", {
+                            class: DOCUMENT_LOGO_LINE_CLASS,
+                        })
+                        .insertContent(logoHtml)
+                        .run()
+                    return
+                }
+
+                editor.chain().focus().insertContent(logoHtml).run()
                 return
             }
 
-            const headerMatch = html.match(
-                /<img[^>]*class="[^"]*document-header-image[^"]*"[^>]*>/i
-            )
+            editor
+                .chain()
+                .focus()
+                .insertContent(buildLogoLineBlock({ align: "left", logos: [{ url, width }] }))
+                .run()
+        },
+        [editor]
+    )
 
-            if (headerMatch) {
-                const insertPos = html.indexOf(headerMatch[0]) + headerMatch[0].length
-                editor.commands.setContent(
-                    `${html.slice(0, insertPos)}${centerLogoBlock}${html.slice(insertPos)}`,
-                    { emitUpdate: true }
-                )
-                return
-            }
-
-            editor.chain().focus().insertContentAt(0, centerLogoBlock).run()
+    const alignCurrentLogoRow = useCallback(
+        (align: "left" | "center" | "right") => {
+            editor?.chain().focus().setTextAlign(align).run()
         },
         [editor]
     )
@@ -217,18 +241,16 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         (url: string, options?: { asHeader?: boolean; width?: number }) => {
             if (!editor) return
 
-            const imageHtml = buildImageHtml(url, {
-                className: options?.asHeader ? DOCUMENT_HEADER_IMAGE_CLASS : DOCUMENT_IMAGE_CLASS,
-                alt: options?.asHeader ? "Document header" : "Document image",
-                width: options?.width,
-            })
-
             if (options?.asHeader) {
-                editor.chain().focus().insertContentAt(0, imageHtml).run()
+                editor
+                    .chain()
+                    .focus()
+                    .insertContentAt(0, buildHeaderImageBlock(url, options.width))
+                    .run()
                 return
             }
 
-            editor.chain().focus().insertContent(imageHtml).run()
+            editor.chain().focus().insertContent(buildLogoImageHtml(url, options?.width)).run()
         },
         [editor]
     )
@@ -236,21 +258,21 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
     const handleImageUpload = useCallback(
         async (
             file: File,
-            options?: { asHeader?: boolean; asCenterLogo?: boolean; width?: number }
+            options?: { asHeader?: boolean; asLogo?: boolean; width?: number }
         ) => {
             const toastId = toast.loading(
-                options?.asCenterLogo
-                    ? "Uploading center logo..."
-                    : options?.asHeader
-                      ? "Uploading header image..."
+                options?.asHeader
+                    ? "Uploading header image..."
+                    : options?.asLogo
+                      ? "Uploading logo..."
                       : "Uploading image..."
             )
 
             try {
                 const url = await uploadImageMutation.mutateAsync(file)
 
-                if (options?.asCenterLogo) {
-                    upsertCenterLogo(url, options.width)
+                if (options?.asLogo) {
+                    insertLogoAtCursor(url, options.width)
                 } else {
                     insertImage(url, options)
                 }
@@ -263,7 +285,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                 )
             }
         },
-        [insertImage, upsertCenterLogo, uploadImageMutation]
+        [insertImage, insertLogoAtCursor, uploadImageMutation]
     )
 
     const onHeaderImageSelected = useCallback(
@@ -286,12 +308,12 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         [handleImageUpload]
     )
 
-    const onCenterLogoSelected = useCallback(
+    const onLogoImageSelected = useCallback(
         async (event: React.ChangeEvent<HTMLInputElement>) => {
             const file = event.target.files?.[0]
             event.target.value = ""
             if (!file) return
-            await handleImageUpload(file, { asCenterLogo: true })
+            await handleImageUpload(file, { asLogo: true })
         },
         [handleImageUpload]
     )
@@ -300,7 +322,18 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         editor?.chain().focus().insertContent(buildDocumentHeadingBlock()).run()
     }, [editor])
 
+    const insertPageBreak = useCallback(() => {
+        editor?.chain().focus().insertDocumentPageBreak().run()
+    }, [editor])
+
     const insertVariable = useCallback(
+        (key: string) => {
+            editor?.chain().focus().insertContent(`{{${key}}}`).run()
+        },
+        [editor]
+    )
+
+    const insertDynamicSection = useCallback(
         (key: string) => {
             editor?.chain().focus().insertContent(`{{${key}}}`).run()
         },
@@ -324,7 +357,6 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
     }
 
     const isUploading = uploadImageMutation.isPending
-    const showCenterPlaceholder = !hasCenterLogo(editor.getHTML())
 
     return (
         <div className={cn("space-y-3", className)}>
@@ -476,17 +508,6 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                             size="xs"
                             className="gap-1.5"
                             disabled={isUploading}
-                            onClick={() => centerLogoInputRef.current?.click()}
-                        >
-                            <ImageIcon className="size-3.5" />
-                            Center logo
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="xs"
-                            className="gap-1.5"
-                            disabled={isUploading}
                             onClick={() => inlineImageInputRef.current?.click()}
                         >
                             <ImageIcon className="size-3.5" />
@@ -508,9 +529,80 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                         </ToolbarButton>
                     </div>
 
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Typography as="span" font="small" className="mr-1 text-muted-foreground uppercase">
+                            Pages
+                        </Typography>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            className="gap-1.5"
+                            onClick={insertPageBreak}
+                        >
+                            <SeparatorHorizontal className="size-3.5" />
+                            Page break
+                        </Button>
+                    </div>
+
                     <Typography as="p" font="small" className="text-muted-foreground">
-                        A faint center logo placeholder is shown until you upload a center logo.
-                        Click any image to resize it.
+                        Use Page break to start a new letter on the next page. One template can
+                        contain multiple pages — each page gets a centered background watermark in
+                        preview and PDF.
+                    </Typography>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Typography as="span" font="small" className="mr-1 text-muted-foreground uppercase">
+                            Logo placement
+                        </Typography>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            className="gap-1.5"
+                            onClick={() => insertLogoRow("left")}
+                        >
+                            <Columns3 className="size-3.5" />
+                            Logo row
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            className="gap-1.5"
+                            disabled={isUploading}
+                            onClick={() => logoImageInputRef.current?.click()}
+                        >
+                            <ImageIcon className="size-3.5" />
+                            Add logo
+                        </Button>
+                        <ToolbarButton
+                            label="Align logo row left"
+                            active={editor.isActive({ textAlign: "left" })}
+                            onClick={() => alignCurrentLogoRow("left")}
+                        >
+                            <AlignLeft className="size-3.5" />
+                        </ToolbarButton>
+                        <ToolbarButton
+                            label="Align logo row center"
+                            active={editor.isActive({ textAlign: "center" })}
+                            onClick={() => alignCurrentLogoRow("center")}
+                        >
+                            <AlignCenter className="size-3.5" />
+                        </ToolbarButton>
+                        <ToolbarButton
+                            label="Align logo row right"
+                            active={editor.isActive({ textAlign: "right" })}
+                            onClick={() => alignCurrentLogoRow("right")}
+                        >
+                            <AlignRight className="size-3.5" />
+                        </ToolbarButton>
+                    </div>
+
+                    <Typography as="p" font="small" className="text-muted-foreground">
+                        Use Logo row for one line with multiple logos. Click Add logo again in the
+                        same row to place more logos side by side. Click a logo to resize it or use
+                        the on-image placement controls for left, center, and right positioning.
                     </Typography>
 
                     <input
@@ -521,11 +613,11 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                         onChange={onHeaderImageSelected}
                     />
                     <input
-                        ref={centerLogoInputRef}
+                        ref={logoImageInputRef}
                         type="file"
                         accept="image/jpeg,image/png,image/webp,image/gif"
                         className="hidden"
-                        onChange={onCenterLogoSelected}
+                        onChange={onLogoImageSelected}
                     />
                     <input
                         ref={inlineImageInputRef}
@@ -564,12 +656,39 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                             ))}
                         </div>
                     </div>
+
+                    <div className="space-y-2">
+                        <Typography as="span" font="small" className="text-muted-foreground uppercase">
+                            Insert dynamic section
+                        </Typography>
+                        <div className="flex flex-wrap gap-2">
+                            {TEMPLATE_DYNAMIC_SECTIONS.map((section) => (
+                                <Button
+                                    key={section.key}
+                                    type="button"
+                                    variant="outline"
+                                    size="xs"
+                                    className="gap-1.5"
+                                    onClick={() => insertDynamicSection(section.key)}
+                                    title={section.description}
+                                >
+                                    <ListChecks className="size-3.5" />
+                                    {section.label}
+                                </Button>
+                            ))}
+                        </div>
+                        <Typography as="p" font="small" className="text-muted-foreground">
+                            Dynamic sections render full blocks in the letter. The requirements
+                            checklist auto-marks each box when the student has verified payment,
+                            documents, APS, work experience, or English scores.
+                        </Typography>
+                    </div>
                 </div>
             ) : null}
 
             <div className={A4_DOCUMENT_SHEET_WRAPPER_CLASS}>
                 <div className={A4_DOCUMENT_PAGE_CLASS}>
-                    {showCenterPlaceholder ? <DocumentCenterLogoPlaceholder /> : null}
+                    <DocumentPageWatermark />
                     <div className="relative z-10">
                         <EditorContent editor={editor} />
                     </div>

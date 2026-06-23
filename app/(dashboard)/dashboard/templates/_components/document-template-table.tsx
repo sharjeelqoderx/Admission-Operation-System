@@ -1,8 +1,7 @@
 "use client"
 
 import { memo } from "react"
-import { AlertCircle, Eye, FileText, Loader2, Pencil } from "lucide-react"
-// import { Trash2 } from "lucide-react"
+import { AlertCircle, Eye, FileText, Loader2, Pencil, Trash2 } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
@@ -31,6 +30,7 @@ type DocumentTemplateTableProps = {
 }
 
 const COLUMN_COUNT = 4
+const ACTION_COLUMN_WIDTH = "w-[190px]"
 
 function formatDate(value: string) {
     return new Date(value).toLocaleDateString("en-US", {
@@ -132,7 +132,7 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                             <TableHead className="w-[110px] px-4 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Updated
                             </TableHead>
-                            <TableHead className="w-[150px] px-4 py-4 text-right text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                            <TableHead className={`${ACTION_COLUMN_WIDTH} px-4 py-4 text-right text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase`}>
                                 Action
                             </TableHead>
                         </TableRow>
@@ -194,7 +194,7 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                         </Typography>
                                     </TableCell>
 
-                                    <TableCell className="w-[150px] px-3 py-5 whitespace-nowrap">
+                                    <TableCell className={`${ACTION_COLUMN_WIDTH} px-3 py-5 whitespace-nowrap`}>
                                         <div className="flex items-center justify-end gap-1.5">
                                             <Button
                                                 type="button"
@@ -216,7 +216,6 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                             >
                                                 <Pencil className="size-4" />
                                             </Button>
-                                            {/* Delete disabled — templates should not be removed from UI
                                             <Button
                                                 type="button"
                                                 variant="destructive"
@@ -228,7 +227,6 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                             >
                                                 <Trash2 className="size-4" />
                                             </Button>
-                                            */}
                                         </div>
                                     </TableCell>
                                 </TableRow>

@@ -595,21 +595,50 @@ export default function OfferDetailsPage() {
 
             await new Promise((resolve) => setTimeout(resolve, 300))
 
-            const pageElement = iframeDoc.querySelector(".page") as HTMLElement | null
-            if (!pageElement) throw new Error("Could not find conditional letter content")
+            const images = iframeDoc.getElementsByTagName("img")
+            if (images.length > 0) {
+                await Promise.all(
+                    Array.from(images).map((img) => {
+                        if (img.complete) return Promise.resolve()
+                        return new Promise<void>((resolve) => {
+                            img.onload = () => resolve()
+                            img.onerror = () => resolve()
+                        })
+                    })
+                )
+            }
 
-            const canvas = await html2canvas(pageElement, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: "#ffffff",
+            const pageElements = Array.from(
+                iframeDoc.querySelectorAll<HTMLElement>(".a4-page")
+            )
+            if (pageElements.length === 0) {
+                throw new Error("Could not find conditional letter content")
+            }
+
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4",
             })
 
-            const imgData = canvas.toDataURL("image/png")
-            const pdf = new jsPDF("p", "mm", "a4")
-            const pdfWidth = pdf.internal.pageSize.getWidth()
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-            pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight)
+            for (let index = 0; index < pageElements.length; index += 1) {
+                const pageElement = pageElements[index]
+                const canvas = await html2canvas(pageElement, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: "#ffffff",
+                    width: 794,
+                    height: 1123,
+                    windowWidth: 794,
+                    windowHeight: 1123,
+                })
+
+                const imgData = canvas.toDataURL("image/png")
+                if (index > 0) pdf.addPage()
+                pdf.addImage(imgData, "PNG", 0, 0, 210, 297)
+            }
+
             pdf.save(`conditional-letter-${applicationRef}.pdf`)
 
             document.body.removeChild(iframe)

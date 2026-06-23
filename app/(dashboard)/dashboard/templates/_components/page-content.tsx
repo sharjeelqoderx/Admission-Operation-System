@@ -1,19 +1,19 @@
 "use client"
 
-import { memo } from "react"
-import { ArrowLeft, Printer, Save } from "lucide-react"
+import { memo, useCallback, useState } from "react"
+import { ArrowLeft, Plus, Printer, Save } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
-// import {
-//     Dialog,
-//     DialogContent,
-//     DialogDescription,
-//     DialogFooter,
-//     DialogHeader,
-//     DialogTitle,
-// } from "@/components/ui/dialog"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { DocumentTemplateEditor } from "./document-template-editor"
 import { DocumentTemplatePreview } from "./document-template-preview"
@@ -28,7 +28,6 @@ type PageContentProps = {
     initialTemplates: DocumentTemplateListItem[]
 }
 
-/* Delete dialog disabled — templates should not be removed from UI
 type DeleteTemplateDialogProps = {
     template: DocumentTemplateListItem | null
     open: boolean
@@ -77,7 +76,6 @@ function DeleteTemplateDialog({
         </Dialog>
     )
 }
-*/
 
 function DocumentTemplatePageView({
     templates,
@@ -88,41 +86,42 @@ function DocumentTemplatePageView({
     title,
     bodyHtml,
     isSaving,
-    // isDeleting,
+    isDeleting,
     deletingId,
     formError,
     setTitle,
     setBodyHtml,
+    openCreate,
     openEdit,
     openView,
     backToList,
     saveTemplate,
-    // deleteTemplateById,
+    deleteTemplateById,
     refetchTemplates,
 }: DocumentTemplatePageLogicProps) {
-    // Delete flow disabled — templates should not be removed from UI
-    // const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplateListItem | null>(
-    //     null
-    // )
-    // const handleOpenDeleteDialog = useCallback((template: DocumentTemplateListItem) => {
-    //     setTemplateToDelete(template)
-    // }, [])
+    const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplateListItem | null>(
+        null
+    )
 
-    // const handleCloseDeleteDialog = useCallback(() => {
-    //     if (isDeleting) return
-    //     setTemplateToDelete(null)
-    // }, [isDeleting])
+    const handleOpenDeleteDialog = useCallback((template: DocumentTemplateListItem) => {
+        setTemplateToDelete(template)
+    }, [])
 
-    // const handleConfirmDelete = useCallback(async () => {
-    //     if (!templateToDelete) return
+    const handleCloseDeleteDialog = useCallback(() => {
+        if (isDeleting) return
+        setTemplateToDelete(null)
+    }, [isDeleting])
 
-    //     try {
-    //         await deleteTemplateById(templateToDelete.id)
-    //         setTemplateToDelete(null)
-    //     } catch {
-    //         // Error toast is handled in deleteTemplateById.
-    //     }
-    // }, [deleteTemplateById, templateToDelete])
+    const handleConfirmDelete = useCallback(async () => {
+        if (!templateToDelete) return
+
+        try {
+            await deleteTemplateById(templateToDelete.id)
+            setTemplateToDelete(null)
+        } catch {
+            // Error toast is handled in deleteTemplateById.
+        }
+    }, [deleteTemplateById, templateToDelete])
 
     const handlePrint = () => {
         window.print()
@@ -144,13 +143,14 @@ function DocumentTemplatePageView({
                             </Typography>
                             <Typography as="p" font="sub-text" className="text-muted-foreground">
                                 Create reusable document templates with dynamic fields like{" "}
-                                {"{{student_name}}"}, {"{{student_signature}}"}, and attach them to student offers later.
+                                {"{{student_name}}"}, {"{{student_signature}}"}, and dynamic sections
+                                like the admission requirements checklist for conditional letters.
                             </Typography>
                         </div>
-                        {/* <Button type="button" className="gap-2" onClick={openCreate}>
+                        <Button type="button" className="gap-2" onClick={openCreate}>
                             <Plus className="size-4" />
                             Create Template
-                        </Button> */}
+                        </Button>
                     </div>
                 </BluryCard>
 
@@ -163,13 +163,11 @@ function DocumentTemplatePageView({
                         deletingId={deletingId}
                         onView={openView}
                         onEdit={openEdit}
-                        // onDelete={handleOpenDeleteDialog}
-                        onDelete={() => {}}
+                        onDelete={handleOpenDeleteDialog}
                         onRetry={refetchTemplates}
                     />
                 </div>
 
-                {/* Delete dialog disabled — templates should not be removed from UI
                 <DeleteTemplateDialog
                     template={templateToDelete}
                     open={templateToDelete !== null}
@@ -179,7 +177,6 @@ function DocumentTemplatePageView({
                     }}
                     onConfirm={handleConfirmDelete}
                 />
-                */}
             </main>
         )
     }
