@@ -6,6 +6,7 @@ import {
     OFFER_DETAIL_SELECT_LEGACY,
     OFFER_DETAIL_SELECT_WITH_TEMPLATE,
 } from "@/lib/offer/select-fields";
+import { renderOfferBodyHtml } from "@/lib/offer/render-offer-body-html";
 
 export async function GET(
     req: NextRequest,
@@ -75,16 +76,42 @@ export async function GET(
             agent?: ProfileRelation | ProfileRelation[] | null
         }) | null
 
+        const mappedApplication = application
+            ? {
+                  ...application,
+                  student: withProfileDisplayName(pickProfile(application.student)),
+                  university: withProfileDisplayName(pickProfile(application.university)),
+                  agent: withProfileDisplayName(pickProfile(application.agent)),
+              }
+            : application
+
+        const renderedBodyHtml =
+            application && typeof application.id === "string" && typeof application.profile_id === "string"
+                ? await renderOfferBodyHtml(supabase, {
+                      bodyHtml: (offer as { body_html?: string | null }).body_html,
+                      documentTemplateId: (offer as { document_template_id?: string | null })
+                          .document_template_id,
+                      createdAt: offer.created_at,
+                      application: {
+                          id: application.id,
+                          application_no:
+                              typeof application.application_no === "string"
+                                  ? application.application_no
+                                  : null,
+                          profile_id: application.profile_id,
+                          student: application.student,
+                          course: application.course as Parameters<
+                              typeof renderOfferBodyHtml
+                          >[1]["application"]["course"],
+                          university: application.university,
+                      },
+                  })
+                : null
+
         const mappedOffer = {
             ...offer,
-            application: application
-                ? {
-                      ...application,
-                      student: withProfileDisplayName(pickProfile(application.student)),
-                      university: withProfileDisplayName(pickProfile(application.university)),
-                      agent: withProfileDisplayName(pickProfile(application.agent)),
-                  }
-                : application,
+            rendered_body_html: renderedBodyHtml,
+            application: mappedApplication,
         };
 
         return NextResponse.json(

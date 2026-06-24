@@ -28,12 +28,36 @@ function mapDocumentRow(row: DocumentRow): StudentDocumentSnapshot {
     }
 }
 
+type DegreeRequirementRow = {
+    document_type: { code: string | null } | { code: string | null }[] | null
+}
+
+function degreeRequiresWorkExperience(
+    requirements: DegreeRequirementRow[] | null | undefined
+): boolean {
+    if (!requirements?.length) return false
+
+    return requirements.some((requirement) => {
+        const documentType = Array.isArray(requirement.document_type)
+            ? requirement.document_type[0]
+            : requirement.document_type
+
+        return documentType?.code === "WORK_EXP_LETTER"
+    })
+}
+
 export async function fetchAdmissionRequirementsContext(
     supabase: AppSupabase,
     params: { applicationId: string; profileId: string }
 ): Promise<AdmissionRequirementsContext> {
-    const [{ data: paymentRows }, { data: studentRow }, { data: workExperienceRows }, { data: applicationDocuments }, { data: profileDocuments }] =
-        await Promise.all([
+    const [
+        { data: paymentRows },
+        { data: studentRow },
+        { data: workExperienceRows },
+        { data: applicationDocuments },
+        { data: profileDocuments },
+        { data: applicationRow },
+    ] = await Promise.all([
             supabase
                 .from("payment")
                 .select("status")
@@ -70,6 +94,19 @@ export async function fetchAdmissionRequirementsContext(
                     document_files ( id )
                 `)
                 .eq("profile_id", params.profileId),
+            supabase
+                .from("application")
+                .select(`
+                    course:course_id (
+                        degree:degree_id (
+                            requirements:degree_requirement (
+                                document_type:document_type_id ( code )
+                            )
+                        )
+                    )
+                `)
+                .eq("id", params.applicationId)
+                .maybeSingle(),
         ])
 
     const documentsById = new Map<string, StudentDocumentSnapshot>()
@@ -86,10 +123,23 @@ export async function fetchAdmissionRequirementsContext(
         documentsById.set(doc.id, mapDocumentRow(doc as DocumentRow))
     }
 
+    const course = applicationRow?.course as
+        | {
+              degree?: {
+                  requirements?: DegreeRequirementRow[] | null
+              } | null
+          }
+        | { degree?: { requirements?: DegreeRequirementRow[] | null } | null }[]
+        | null
+        | undefined
+
+    const degree = Array.isArray(course) ? course[0]?.degree : course?.degree
+
     return {
         paymentStatus: paymentRows?.[0]?.status ?? null,
         apsRequirement: studentRow?.aps_requirement ?? false,
         hasWorkExperience: (workExperienceRows?.length ?? 0) > 0,
+        requiresWorkExperience: degreeRequiresWorkExperience(degree?.requirements ?? null),
         documents: [...documentsById.values()],
     }
 }

@@ -216,7 +216,7 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                             >
                                                 <Pencil className="size-4" />
                                             </Button>
-                                            <Button
+                                            {/* <Button
                                                 type="button"
                                                 variant="destructive"
                                                 size="icon"
@@ -226,7 +226,7 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                                 onClick={() => onDelete(template)}
                                             >
                                                 <Trash2 className="size-4" />
-                                            </Button>
+                                            </Button> */}
                                         </div>
                                     </TableCell>
                                 </TableRow>

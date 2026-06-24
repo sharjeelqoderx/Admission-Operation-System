@@ -71,8 +71,10 @@ export const A4_DOCUMENT_CONTENT_CLASS = cn(
     "[&_img.document-logo]:max-h-[120px] [&_img.document-logo]:h-auto",
     "[&_img.document-image]:my-4 [&_img.document-image]:max-w-full [&_img.document-image]:h-auto",
     "[&_img.document-student-signature]:inline-block [&_img.document-student-signature]:max-w-[180px] [&_img.document-student-signature]:h-auto",
+    "[&_.document-requirements-checklist]:inline-block [&_.document-requirements-checklist]:max-w-full",
+    "[&_.document-requirements-checklist]:text-left [&_.document-requirements-checklist]:align-top",
     "[&_.document-requirements-checklist]:font-sans",
-    "[&_.requirement-checklist-row]:items-start",
+    "[&_.requirement-checklist-row]:items-start [&_.requirement-checklist-row]:gap-1 [&_.requirement-checklist-row]:py-0.5",
     "[&_.requirement-checkbox]:shrink-0",
     "[&_.document-page-break]:relative [&_.document-page-break]:my-8 [&_.document-page-break]:py-3",
     "[&_.document-page-break]:border-y-2 [&_.document-page-break]:border-dashed [&_.document-page-break]:border-slate-300",
@@ -158,6 +160,24 @@ export const A4_DOCUMENT_PRINT_STYLES = `
     img { max-width: 100%; height: auto; }
     table { width: 100%; border-collapse: collapse; }
     td, th { border: 1px solid #e5e7eb; padding: 8px; }
+    .document-requirements-checklist {
+        display: inline-block;
+        text-align: left;
+        vertical-align: top;
+        max-width: 100%;
+    }
+    .requirement-checklist-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 4px;
+        padding: 2px 0;
+    }
+    .template-aligned-block {
+        display: inline-block;
+        text-align: left;
+        vertical-align: top;
+        max-width: 100%;
+    }
     @media print {
         body { background: white; padding: 0; }
         .a4-page { box-shadow: none; border-radius: 0; }

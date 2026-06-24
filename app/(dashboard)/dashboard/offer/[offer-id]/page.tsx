@@ -337,7 +337,8 @@ export default function OfferDetailsPage() {
     const offerStatus = String(offer?.status ?? "PENDING").toUpperCase()
     const isOfferSigned = offerStatus === "ACCEPTED" && Boolean(offer?.file_url)
     const canAcceptAndSign = !isOfferSigned && offerStatus !== "REJECTED"
-    const hasConditionalLetter = Boolean(offer?.body_html)
+    const hasConditionalLetter = Boolean(offer?.rendered_body_html ?? offer?.body_html)
+    const conditionalLetterBodyHtml = offer?.rendered_body_html ?? offer?.body_html ?? ""
 
     const openSignModal = useCallback(() => {
         setHasSigned(false)
@@ -505,19 +506,19 @@ export default function OfferDetailsPage() {
     ])
 
     const handleViewConditionalLetter = useCallback(() => {
-        if (!offer?.body_html) {
+        if (!conditionalLetterBodyHtml) {
             toast.error("No conditional letter template is attached to this offer.")
             return
         }
 
         const signatureHtml = buildSignatureBlockHtml({
-            status: offer.status,
-            fileUrl: offer.file_url,
+            status: offer?.status ?? "PENDING",
+            fileUrl: offer?.file_url,
             studentName: student?.name,
             acceptedAt,
         })
 
-        const html = buildTemplateOfferLetterHtml(offer.body_html, {
+        const html = buildTemplateOfferLetterHtml(conditionalLetterBodyHtml, {
             title: `Conditional Letter – ${student?.name || "Applicant"}`,
             signatureHtml,
         })
@@ -527,10 +528,10 @@ export default function OfferDetailsPage() {
             win.document.write(html)
             win.document.close()
         }
-    }, [acceptedAt, offer, student?.name])
+    }, [acceptedAt, conditionalLetterBodyHtml, offer?.file_url, offer?.status, student?.name])
 
     const handleDownloadConditionalLetter = useCallback(async () => {
-        if (!offer?.body_html) {
+        if (!conditionalLetterBodyHtml) {
             toast.error("No conditional letter template is attached to this offer.")
             return
         }
@@ -586,7 +587,7 @@ export default function OfferDetailsPage() {
 
             iframeDoc.open()
             iframeDoc.write(
-                buildTemplateOfferLetterHtml(offer.body_html, {
+                buildTemplateOfferLetterHtml(conditionalLetterBodyHtml, {
                     title: `Conditional Letter – ${student?.name || "Applicant"}`,
                     signatureHtml,
                 })
@@ -650,7 +651,7 @@ export default function OfferDetailsPage() {
         } finally {
             setIsDownloadingConditionalLetter(false)
         }
-    }, [acceptedAt, applicationRef, offer, student?.name])
+    }, [acceptedAt, applicationRef, conditionalLetterBodyHtml, offer, student?.name])
 
     if (isDownloadingLetterHead) {
         return <PageLoader label="Generating letter head PDF..." />

@@ -147,10 +147,10 @@ function DocumentTemplatePageView({
                                 like the admission requirements checklist for conditional letters.
                             </Typography>
                         </div>
-                        <Button type="button" className="gap-2" onClick={openCreate}>
+                        {/* <Button type="button" className="gap-2" onClick={openCreate}>
                             <Plus className="size-4" />
                             Create Template
-                        </Button>
+                        </Button> */}
                     </div>
                 </BluryCard>
 

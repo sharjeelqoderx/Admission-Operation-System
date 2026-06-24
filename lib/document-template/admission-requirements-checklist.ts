@@ -39,6 +39,7 @@ export type AdmissionRequirementsContext = {
     paymentStatus: string | null
     apsRequirement: boolean
     hasWorkExperience: boolean
+    requiresWorkExperience: boolean
     documents: StudentDocumentSnapshot[]
 }
 
@@ -55,10 +56,33 @@ function isDocumentFulfilled(documents: StudentDocumentSnapshot[], codes: string
     )
 }
 
+export function resolveVisibleAdmissionRequirementIds(
+    context: AdmissionRequirementsContext
+): AdmissionRequirementId[] {
+    const alwaysVisible: AdmissionRequirementId[] = [
+        "tuition_payment",
+        "bachelor_authentication",
+        "entrance_qualification",
+        "english_b2",
+    ]
+
+    const conditional: AdmissionRequirementId[] = []
+
+    if (context.apsRequirement) {
+        conditional.push("aps_examination")
+    }
+
+    if (context.requiresWorkExperience || context.hasWorkExperience) {
+        conditional.push("work_experience")
+    }
+
+    return [...alwaysVisible, ...conditional]
+}
+
 export function evaluateAdmissionRequirements(
     context: AdmissionRequirementsContext
 ): AdmissionRequirementEvaluation[] {
-    const { paymentStatus, apsRequirement, hasWorkExperience, documents } = context
+    const { paymentStatus, documents } = context
 
     const fulfilledById: Record<AdmissionRequirementId, boolean> = {
         tuition_payment: paymentStatus === "CONFIRMED",
@@ -69,17 +93,20 @@ export function evaluateAdmissionRequirements(
             "SSC_CERTIFICATE",
             "SSC_MARKSHEET",
         ]),
-        aps_examination: !apsRequirement || isDocumentFulfilled(documents, ["APS"]),
-        work_experience:
-            hasWorkExperience || isDocumentFulfilled(documents, ["WORK_EXP_LETTER"]),
+        aps_examination: isDocumentFulfilled(documents, ["APS"]),
+        work_experience: isDocumentFulfilled(documents, ["WORK_EXP_LETTER"]),
         english_b2: isDocumentFulfilled(documents, ["LANGUAGE_SCORE"]),
     }
 
-    return ADMISSION_REQUIREMENT_ITEMS.map((item) => ({
-        id: item.id,
-        label: item.label,
-        fulfilled: fulfilledById[item.id],
-    }))
+    const visibleIds = resolveVisibleAdmissionRequirementIds(context)
+
+    return ADMISSION_REQUIREMENT_ITEMS.filter((item) => visibleIds.includes(item.id)).map(
+        (item) => ({
+            id: item.id,
+            label: item.label,
+            fulfilled: fulfilledById[item.id],
+        })
+    )
 }
 
 function buildCheckboxCell(checked: boolean) {
@@ -98,10 +125,10 @@ function buildCheckboxCell(checked: boolean) {
 
 function buildChecklistRow(item: AdmissionRequirementEvaluation) {
     return `
-        <div class="requirement-checklist-row" style="display:flex;align-items:flex-start;gap:12px;padding:7px 0;">
+        <span class="requirement-checklist-row" style="display:flex;align-items:flex-start;gap:4px;padding:2px 0;">
             ${buildCheckboxCell(item.fulfilled)}
-            <span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.45;color:#000000;">${item.label}</span>
-        </div>`
+            <span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.35;color:#000000;">${item.label}</span>
+        </span>`
 }
 
 export function buildAdmissionRequirementsChecklistHtml(
@@ -109,24 +136,23 @@ export function buildAdmissionRequirementsChecklistHtml(
 ) {
     const rows = evaluations.map((item) => buildChecklistRow(item)).join("")
 
-    return `<div class="document-requirements-checklist" style="margin:18px 0;">
-        <div style="display:flex;flex-direction:column;gap:0;">${rows}</div>
-    </div>`
+    return `<span class="document-requirements-checklist" style="display:inline-block;text-align:left;vertical-align:top;margin:10px 0;max-width:100%;">
+        <span class="document-requirements-checklist-rows" style="display:flex;flex-direction:column;gap:0;">${rows}</span>
+    </span>`
 }
 
 export function buildAdmissionRequirementsChecklistPreviewHtml() {
-    const previewEvaluations: AdmissionRequirementEvaluation[] = [
-        { id: "tuition_payment", label: ADMISSION_REQUIREMENT_ITEMS[0].label, fulfilled: true },
-        { id: "bachelor_authentication", label: ADMISSION_REQUIREMENT_ITEMS[1].label, fulfilled: true },
-        {
-            id: "entrance_qualification",
-            label: ADMISSION_REQUIREMENT_ITEMS[2].label,
-            fulfilled: false,
-        },
-        { id: "aps_examination", label: ADMISSION_REQUIREMENT_ITEMS[3].label, fulfilled: true },
-        { id: "work_experience", label: ADMISSION_REQUIREMENT_ITEMS[4].label, fulfilled: false },
-        { id: "english_b2", label: ADMISSION_REQUIREMENT_ITEMS[5].label, fulfilled: false },
-    ]
+    const previewEvaluations = evaluateAdmissionRequirements({
+        paymentStatus: "CONFIRMED",
+        apsRequirement: true,
+        hasWorkExperience: false,
+        requiresWorkExperience: true,
+        documents: [
+            { code: "BD_AD_DEGREE", reviewStatus: null, hasFiles: true },
+            { code: "BD_AD_TRANSCRIPT", reviewStatus: null, hasFiles: true },
+            { code: "APS", reviewStatus: null, hasFiles: true },
+        ],
+    })
 
     return buildAdmissionRequirementsChecklistHtml(previewEvaluations)
 }

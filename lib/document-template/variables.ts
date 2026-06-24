@@ -23,7 +23,7 @@ export const TEMPLATE_DYNAMIC_SECTIONS = [
         key: ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE,
         label: "Admission requirements checklist",
         description:
-            "Auto-checks boxes when tuition payment, documents, APS, work experience, and English scores are verified for the student.",
+            "Auto-checks boxes for tuition payment, documents, and English scores. APS and work experience rows appear only when required for the student or program (4–6 items).",
     },
 ] as const
 
@@ -67,11 +67,52 @@ export function extractTemplateVariables(html: string): string[] {
     return [...new Set([...matches].map((match) => match[1]))]
 }
 
+function getEnclosingTextAlign(
+    html: string,
+    variableOffset: number
+): "left" | "center" | "right" | null {
+    const before = html.slice(0, variableOffset)
+    const tagPattern = /<(p|div|h[1-6]|td|th|li|blockquote)(\s[^>]*)?>/gi
+    let lastTag: RegExpExecArray | null = null
+    let match: RegExpExecArray | null = null
+
+    while ((match = tagPattern.exec(before)) !== null) {
+        lastTag = match
+    }
+
+    if (!lastTag) return null
+
+    const attrs = lastTag[2] ?? ""
+    const styleMatch = attrs.match(/style="([^"]*)"/i)
+    const style = styleMatch?.[1] ?? attrs
+    const alignMatch = style.match(/text-align\s*:\s*(center|right|left)/i)
+
+    if (!alignMatch) return null
+
+    return alignMatch[1].toLowerCase() as "left" | "center" | "right"
+}
+
+function wrapForTextAlign(html: string, align: "center" | "right"): string {
+    if (html.includes('class="template-aligned-block"')) {
+        return html
+    }
+
+    return `<span class="template-aligned-block template-aligned-block--${align}" style="display:inline-block;text-align:left;vertical-align:top;max-width:100%;">${html}</span>`
+}
+
 export function renderTemplateHtml(
     bodyHtml: string,
     variables: Record<string, string>
 ): string {
-    return bodyHtml.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_full, key: string) => {
-        return variables[key] ?? `{{${key}}}`
+    return bodyHtml.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (full, key: string, offset: number) => {
+        const value = variables[key]
+        if (value == null) return full
+
+        const align = getEnclosingTextAlign(bodyHtml, offset)
+        if (align === "center" || align === "right") {
+            return wrapForTextAlign(value, align)
+        }
+
+        return value
     })
 }

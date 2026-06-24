@@ -108,6 +108,7 @@ export function buildOfferTemplateVariables(
                       paymentStatus: null,
                       apsRequirement: false,
                       hasWorkExperience: false,
+                      requiresWorkExperience: false,
                       documents: [],
                   })
               ),
