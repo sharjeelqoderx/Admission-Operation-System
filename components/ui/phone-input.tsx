@@ -3,7 +3,6 @@
 
 import PhoneInput from "react-phone-input-2"
 import "react-phone-input-2/lib/style.css"
-import { useEffect } from "react"
 import { cn } from "@/lib/utils"
 
 interface PhoneInputProps {
@@ -21,34 +20,6 @@ export function PhoneInputComponent({
     placeholder,
     disabled,
 }: PhoneInputProps) {
-    // Override react-phone-input-2 styles to match our design
-    useEffect(() => {
-        const style = document.createElement('style')
-        style.innerHTML = `
-            .react-tel-input {
-                width: 100% !important;
-            }
-            .react-tel-input .flag-dropdown {
-                border: 1px solid #e5e7eb !important;
-                background-color: #f8f9fc !important;
-                border-radius: 0.25rem 0 0 0.25rem !important;
-                height: 50px !important;
-                width: 55px !important;
-            }
-            .react-tel-input .form-control {
-                width: 100% !important;
-                min-width: 0 !important;
-                height: 50px !important;
-                border: 1px solid #e5e7eb !important;
-                background-color: #f8f9fc !important;
-                border-radius: 0 0.25rem 0.25rem 0 !important;
-                padding-left: 62px !important;
-            }
-        `
-        document.head.appendChild(style)
-        return () => style.remove()
-    }, [])
-
     const phoneInputProps = {
         country: "us",
         value,
@@ -61,7 +32,28 @@ export function PhoneInputComponent({
         enableTerritories: false,
         containerClass: "w-full",
         inputClass: "w-full",
-        inputStyle: { width: "100%" },
+        containerStyle: { width: "100%" },
+        inputStyle: { 
+            width: "100%", 
+            minWidth: 0, 
+            height: "50px", 
+            border: "none", 
+            backgroundColor: "#F4F4F4", 
+            background: "#F4F4F4",
+            borderRadius: "0 0.125rem 0.125rem 0",
+            paddingLeft: "62px",
+            paddingTop: "0.25rem",
+            paddingBottom: "0.25rem",
+            paddingRight: "0.625rem"
+        },
+        buttonStyle: {
+            border: "none",
+            backgroundColor: "#F4F4F4",
+            background: "#F4F4F4",
+            borderRadius: "0.125rem 0 0 0.125rem",
+            height: "50px",
+            width: "55px"
+        }
     } as any
 
     return (

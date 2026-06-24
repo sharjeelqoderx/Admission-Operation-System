@@ -209,12 +209,39 @@
 /* Phone Input Dropdown: Extreme Z-Index */
 .react-phone-input-2 {
   z-index: 9999999999 !important;
+  width: 100% !important;
 }
-.react-phone-input-2 .form-control {
+.react-phone-input-2 input.form-control {
   z-index: 9999999999 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 50px !important;
+  border: 0 !important;
+  border-style: none !important;
+  border-width: 0 !important;
+  background-color: #F4F4F4 !important;
+  background: #F4F4F4 !important;
+  border-radius: 0 0.125rem 0.125rem 0 !important;
+  padding-left: 62px !important;
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+  padding-right: 0.625rem !important;
+}
+.react-phone-input-2 input.form-control:focus {
+  box-shadow: 0 0 0 1px #9933FF !important;
+  border: 0 !important;
+  outline: none !important;
 }
 .react-phone-input-2 .flag-dropdown {
   z-index: 9999999999 !important;
+  border: 0 !important;
+  border-style: none !important;
+  border-width: 0 !important;
+  background-color: #F4F4F4 !important;
+  background: #F4F4F4 !important;
+  border-radius: 0.125rem 0 0 0.125rem !important;
+  height: 50px !important;
+  width: 55px !important;
 }
 .react-phone-input-2 .country-list {
   z-index: 99999999999 !important;

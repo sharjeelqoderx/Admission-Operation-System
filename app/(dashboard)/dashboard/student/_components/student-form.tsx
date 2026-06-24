@@ -1410,18 +1410,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                         )}
                                     </form.Field>
 
-                                <form.Field name="passport_file_url">
-                                    {(field) => (
-                                        <F field={field} label={mode === "create" ? "Passport (Required)" : "Passport"}>
-                                            <DocumentUploadField
-                                                id="passport_file_url"
-                                                value={field.state.value ?? null}
-                                                onChange={(file) => field.handleChange((file ?? undefined) as File | undefined)}
-                                                accept=".pdf,.doc,.docx,application/pdf,image/*"
-                                            />
-                                        </F>
-                                    )}
-                                </form.Field>
+
 
                                 <form.Field name="guardian_phone">
                                     {(field) => (

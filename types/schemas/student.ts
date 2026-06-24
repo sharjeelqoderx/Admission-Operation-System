@@ -126,7 +126,6 @@ export const StudentFormSchema = z.object({
 
 export const StudentCreateFormSchema = StudentFormSchema.extend({
     title: z.enum(["Mr", "Mrs", "Ms"], { message: "Title is required" }),
-    passport_file_url: requiredUploadFileSchema,
 }).superRefine((data, ctx) => {
     const mappedGender =
         data.title === "Mr"
