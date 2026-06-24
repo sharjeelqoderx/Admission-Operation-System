@@ -162,9 +162,9 @@ export const OfferTable = React.memo(function OfferTable({
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Program
                             </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                            {/* <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 University
-                            </TableHead>
+                            </TableHead> */}
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Status
                             </TableHead>
@@ -246,11 +246,11 @@ export const OfferTable = React.memo(function OfferTable({
                                             </div>
                                         </TableCell>
 
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
+                                        {/* <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <Typography as="span" className="text-sm font-light text-gray-600">
                                                 {offer.application?.university?.name ?? "—"}
                                             </Typography>
-                                        </TableCell>
+                                        </TableCell> */}
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <StatusBadge status={offer.status} />
