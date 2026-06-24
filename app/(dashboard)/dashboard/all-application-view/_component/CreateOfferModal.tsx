@@ -1,9 +1,7 @@
 "use client"
 
-import { memo, useCallback, useMemo, useState } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { FileText, Loader2 } from "lucide-react"
-import { toast } from "sonner"
+import { memo, useMemo } from "react"
+import { CheckCircle2, Circle, FileText, Loader2 } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,113 +13,84 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { ErrorView } from "@/components/shared/error-view"
-import type { DocumentTemplatesListResponse } from "@/types/schemas/document-template"
 import { cn } from "@/lib/utils"
+import {
+    withCreateOfferModalLogic,
+    type CreateOfferModalLogicProps,
+} from "./withCreateOfferModalLogic"
 
-async function fetchDocumentTemplates(): Promise<DocumentTemplatesListResponse> {
-    const res = await fetch("/api/document-template")
-    const json = await res.json()
-    if (!res.ok) {
-        throw new Error(json?.error ?? "Failed to fetch document templates")
+function ChecklistProgressBadge({
+    fulfilledCount,
+    totalCount,
+}: {
+    fulfilledCount: number
+    totalCount: number
+}) {
+    if (totalCount === 0) {
+        return (
+            <span className="inline-flex items-center rounded-full border border-white/60 bg-white/40 px-2.5 py-0.5">
+                <Typography as="span" className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                    No checklist
+                </Typography>
+            </span>
+        )
     }
-    return json
+
+    const allPassed = fulfilledCount === totalCount
+    const somePassed = fulfilledCount > 0
+
+    return (
+        <span
+            className={cn(
+                "inline-flex items-center rounded-full border px-2.5 py-0.5",
+                allPassed
+                    ? "border-green-200 bg-green-50 text-green-700"
+                    : somePassed
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : "border-gray-200 bg-gray-50 text-gray-600"
+            )}
+        >
+            <Typography
+                as="span"
+                className={cn(
+                    "text-[10px] font-bold uppercase tracking-wide",
+                    allPassed
+                        ? "text-green-700"
+                        : somePassed
+                          ? "text-amber-700"
+                          : "text-gray-600"
+                )}
+            >
+                {fulfilledCount}/{totalCount} requirements met
+            </Typography>
+        </span>
+    )
 }
 
-type CreateOfferModalProps = {
-    open: boolean
-    onOpenChange: (open: boolean) => void
-    applicationId: string
-    studentName?: string | null
-    onOfferCreated?: (offerId: string) => void
-}
-
-export const CreateOfferModal = memo(function CreateOfferModal({
+const CreateOfferModalView = memo(function CreateOfferModalView({
     open,
     onOpenChange,
-    applicationId,
     studentName,
-    onOfferCreated,
-}: CreateOfferModalProps) {
-    const queryClient = useQueryClient()
-    const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
-
-    const {
-        data: templatesResponse,
-        isLoading,
-        isError,
-        error,
-        refetch,
-    } = useQuery({
-        queryKey: ["document-templates"],
-        queryFn: fetchDocumentTemplates,
-        enabled: open,
-    })
-
-    const templates = useMemo(() => {
-        const rows = templatesResponse?.data
-        return Array.isArray(rows) ? rows : []
-    }, [templatesResponse?.data])
-
-    const createOfferMutation = useMutation({
-        mutationFn: async (documentTemplateId: string) => {
-            const res = await fetch("/api/offer", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    application_id: applicationId,
-                    document_template_id: documentTemplateId,
-                }),
-            })
-            const json = await res.json()
-            if (!res.ok) {
-                throw new Error(json.details ?? json.error ?? "Failed to create offer")
-            }
-            return json.data as { id: string }
-        },
-        onSuccess: (data) => {
-            toast.success("Offer created successfully")
-            queryClient.invalidateQueries({ queryKey: ["offers"] })
-            queryClient.invalidateQueries({ queryKey: ["applications"] })
-            setSelectedTemplateId(null)
-            onOpenChange(false)
-            onOfferCreated?.(data.id)
-        },
-        onError: (mutationError: Error) => {
-            toast.error(mutationError.message)
-        },
-    })
-
-    const handleOpenChange = useCallback(
-        (nextOpen: boolean) => {
-            if (!nextOpen) {
-                setSelectedTemplateId(null)
-            }
-            onOpenChange(nextOpen)
-        },
-        [onOpenChange]
-    )
-
-    const handleCreateOffer = useCallback(() => {
-        if (!selectedTemplateId) {
-            toast.error("Please select a template first")
-            return
-        }
-        createOfferMutation.mutate(selectedTemplateId)
-    }, [createOfferMutation, selectedTemplateId])
-
-    const handleRetry = useCallback(() => {
-        refetch()
-    }, [refetch])
-
+    templates,
+    checklistByTemplateId,
+    isLoading,
+    isError,
+    errorMessage,
+    onRetry,
+    selectedTemplateId,
+    onSelectTemplate,
+    onCreateOffer,
+    isCreating,
+}: CreateOfferModalLogicProps) {
     const modalDescription = useMemo(() => {
         if (studentName) {
-            return `Select an offer template to create an offer for ${studentName}.`
+            return `Select an offer template to create an offer for ${studentName}. Checklist progress reflects this student's approved documents and payment.`
         }
-        return "Select an offer template to create an offer for this application."
+        return "Select an offer template to create an offer for this application. Checklist progress reflects approved documents and payment."
     }, [studentName])
 
     return (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Create Offer</DialogTitle>
@@ -138,10 +107,8 @@ export const CreateOfferModal = memo(function CreateOfferModal({
                         </div>
                     ) : isError ? (
                         <div className="space-y-3">
-                            <ErrorView
-                                message={error instanceof Error ? error.message : "Failed to load templates"}
-                            />
-                            <Button type="button" variant="outline" onClick={handleRetry}>
+                            <ErrorView message={errorMessage} />
+                            <Button type="button" variant="outline" onClick={onRetry}>
                                 Retry
                             </Button>
                         </div>
@@ -159,35 +126,86 @@ export const CreateOfferModal = memo(function CreateOfferModal({
                         <div className="space-y-2">
                             {templates.map((template) => {
                                 const isSelected = selectedTemplateId === template.id
+                                const checklist = checklistByTemplateId[template.id]
+                                const fulfilledCount = checklist?.fulfilled_count ?? 0
+                                const totalCount = checklist?.total_count ?? template.checklist_items.length
+                                const items = checklist?.items ?? []
 
                                 return (
                                     <button
                                         key={template.id}
                                         type="button"
-                                        disabled={createOfferMutation.isPending}
-                                        onClick={() => setSelectedTemplateId(template.id)}
+                                        disabled={isCreating}
+                                        onClick={() => onSelectTemplate(template.id)}
                                         className={cn(
                                             "w-full text-left rounded-xl border p-4 transition-colors",
                                             "bg-white/50 hover:bg-white/80 border-white/60",
                                             "disabled:opacity-60 disabled:cursor-not-allowed",
-                                            isSelected && "border-brand-byzantine bg-brand-byzantine/5 ring-1 ring-brand-byzantine/30"
+                                            isSelected &&
+                                                "border-brand-byzantine bg-brand-byzantine/5 ring-1 ring-brand-byzantine/30"
                                         )}
                                     >
                                         <div className="flex items-start justify-between gap-3">
-                                            <div className="min-w-0">
-                                                <Typography as="p" className="text-sm font-bold text-gray-900">
-                                                    {template.title}
+                                            <div className="min-w-0 flex-1 space-y-2">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <Typography
+                                                        as="p"
+                                                        className="text-sm font-bold text-gray-900"
+                                                    >
+                                                        {template.title}
+                                                    </Typography>
+                                                    <ChecklistProgressBadge
+                                                        fulfilledCount={fulfilledCount}
+                                                        totalCount={totalCount}
+                                                    />
+                                                </div>
+                                                <Typography as="p" className="text-xs text-gray-500">
+                                                    Updated{" "}
+                                                    {new Date(template.updated_at).toLocaleDateString(
+                                                        "en-US",
+                                                        {
+                                                            month: "short",
+                                                            day: "numeric",
+                                                            year: "numeric",
+                                                        }
+                                                    )}
                                                 </Typography>
-                                                <Typography as="p" className="text-xs text-gray-500 mt-1">
-                                                    Updated {new Date(template.updated_at).toLocaleDateString("en-US", {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                        year: "numeric",
-                                                    })}
-                                                </Typography>
+                                                {items.length > 0 ? (
+                                                    <div className="rounded-lg border border-white/50 bg-white/35 p-3 space-y-1.5">
+                                                        {items.map((item) => (
+                                                            <div
+                                                                key={item.id}
+                                                                className="flex items-start gap-2 min-w-0"
+                                                            >
+                                                                {item.fulfilled ? (
+                                                                    <CheckCircle2 className="size-3.5 shrink-0 text-green-600 mt-0.5" />
+                                                                ) : (
+                                                                    <Circle className="size-3.5 shrink-0 text-gray-300 mt-0.5" />
+                                                                )}
+                                                                <Typography
+                                                                    as="p"
+                                                                    className={cn(
+                                                                        "text-[11px] leading-snug",
+                                                                        item.fulfilled
+                                                                            ? "text-gray-700"
+                                                                            : "text-gray-400"
+                                                                    )}
+                                                                >
+                                                                    {item.label}
+                                                                </Typography>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : null}
                                                 {(template.variables?.length ?? 0) > 0 && (
-                                                    <Typography as="p" className="text-[11px] text-gray-400 mt-2 truncate">
-                                                        Variables: {(template.variables ?? []).map((v) => `{{${v}}}`).join(", ")}
+                                                    <Typography
+                                                        as="p"
+                                                        className="text-[11px] text-gray-400 truncate"
+                                                    >
+                                                        Variables:{" "}
+                                                        {(template.variables ?? [])
+                                                            .map((v) => `{{${v}}}`)
+                                                            .join(", ")}
                                                     </Typography>
                                                 )}
                                             </div>
@@ -215,18 +233,18 @@ export const CreateOfferModal = memo(function CreateOfferModal({
                     <Button
                         type="button"
                         variant="outline"
-                        onClick={() => handleOpenChange(false)}
-                        disabled={createOfferMutation.isPending}
+                        onClick={() => onOpenChange(false)}
+                        disabled={isCreating}
                     >
                         Cancel
                     </Button>
                     <Button
                         type="button"
-                        onClick={handleCreateOffer}
-                        disabled={!selectedTemplateId || createOfferMutation.isPending || templates.length === 0}
+                        onClick={onCreateOffer}
+                        disabled={!selectedTemplateId || isCreating || templates.length === 0}
                         className="gap-2"
                     >
-                        {createOfferMutation.isPending ? (
+                        {isCreating ? (
                             <>
                                 <Loader2 className="size-4 animate-spin" />
                                 Creating...
@@ -240,3 +258,5 @@ export const CreateOfferModal = memo(function CreateOfferModal({
         </Dialog>
     )
 })
+
+export const CreateOfferModal = withCreateOfferModalLogic(CreateOfferModalView)

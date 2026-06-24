@@ -1,4 +1,5 @@
 import { z } from "zod"
+import type { AdmissionRequirementId } from "@/lib/document-template/checklist-items"
 
 export const DocumentTemplateFormSchema = z.object({
     title: z.string().trim().min(1, "Title is required").max(200, "Title is too long"),
@@ -15,7 +16,7 @@ export type DocumentTemplateListItem = {
     title: string
     body_html: string
     variables: string[]
-    checklist_items: string[]
+    checklist_items: AdmissionRequirementId[]
     checklist_profile: string | null
     created_by_profile_id: string
     created_at: string
