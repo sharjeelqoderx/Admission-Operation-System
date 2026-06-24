@@ -36,6 +36,7 @@ import type { CourseProgram } from "@/types/schemas/program"
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
 import { filterCoursesByQualificationLevel } from "@/lib/utils/levels"
 import { resolveCourseDocumentTypesForCourses } from "@/lib/utils/course-documents"
+import { resolveApsDocumentType, withApsRequiredDocument } from "@/lib/utils/aps"
 import {
     Dialog,
     DialogContent,
@@ -865,15 +866,6 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
         enabled: mode === "create" && user?.role === "AGENT",
     });
 
-    const { required: applicationRequiredDocTypes, optional: applicationOptionalDocTypes } = useMemo(
-        () => resolveCourseDocumentTypesForCourses(
-            courses,
-            selectedCourseIds,
-            allDocumentTypes
-        ),
-        [selectedCourseIds, courses, allDocumentTypes]
-    )
-
     const refetchDocuments = useCallback(async () => {
         if (!createdStudentId) return;
         setIsDocumentsLoading(true);
@@ -1140,6 +1132,18 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
             }
         },
     })
+
+    const studentCountry = useStore(form.store, (state) => state.values.country)
+
+    const { required: applicationRequiredDocTypes, optional: applicationOptionalDocTypes } = useMemo(
+        () =>
+            withApsRequiredDocument(
+                resolveCourseDocumentTypesForCourses(courses, selectedCourseIds, allDocumentTypes),
+                studentCountry,
+                resolveApsDocumentType(allDocumentTypes)
+            ),
+        [selectedCourseIds, courses, allDocumentTypes, studentCountry]
+    )
 
     const handleFormSubmit = useCallback(
         (e: React.FormEvent) => {

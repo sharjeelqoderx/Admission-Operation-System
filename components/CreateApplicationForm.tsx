@@ -39,6 +39,7 @@ import type { LevelOption } from "@/hooks/useLevels";
 import type { StudentListItem } from "@/lib/student/list";
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program";
 import { resolveCourseDocumentTypes } from "@/lib/utils/course-documents";
+import { withApsRequiredDocument } from "@/lib/utils/aps";
 import { useLevels } from "@/hooks/useLevels";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { ErrorView } from "@/components/shared/error-view";
@@ -346,26 +347,29 @@ export function CreateApplicationForm() {
             requirements: programDetailResponse?.data?.degree?.requirements ?? [],
         });
 
+        let result: { required: ApplicationDocumentTypeSummary[]; optional: ApplicationDocumentTypeSummary[] };
         if (fromCourse.required.length > 0 || fromCourse.optional.length > 0) {
-            return fromCourse;
+            result = fromCourse;
+        } else {
+            const seen = new Set<string>();
+            const fromDocuments = documents.reduce<ApplicationDocumentTypeSummary[]>((acc, d) => {
+                const typeId = d.document_type?.id ?? d.document_type_id;
+                const typeName = d.document_type?.name ?? "Document";
+                if (typeId && !seen.has(typeId)) {
+                    seen.add(typeId);
+                    acc.push({ id: typeId, name: typeName });
+                }
+                return acc;
+            }, []);
+
+            result = {
+                required: [],
+                optional: fromDocuments,
+            };
         }
 
-        const seen = new Set<string>();
-        const fromDocuments = documents.reduce<ApplicationDocumentTypeSummary[]>((acc, d) => {
-            const typeId = d.document_type?.id ?? d.document_type_id;
-            const typeName = d.document_type?.name ?? "Document";
-            if (typeId && !seen.has(typeId)) {
-                seen.add(typeId);
-                acc.push({ id: typeId, name: typeName });
-            }
-            return acc;
-        }, []);
-
-        return {
-            required: [],
-            optional: fromDocuments,
-        };
-    }, [programDetailResponse, documents]);
+        return withApsRequiredDocument(result, studentDetails?.student?.country);
+    }, [programDetailResponse, documents, studentDetails?.student?.country]);
 
     const selectedCourseDetail = useMemo((): CourseProgram | undefined => {
         const detail = programDetailResponse?.data as CourseProgram | undefined;

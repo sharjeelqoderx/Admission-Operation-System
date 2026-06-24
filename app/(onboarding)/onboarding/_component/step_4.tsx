@@ -16,6 +16,7 @@ import { useDegrees } from "@/hooks/useDegrees"
 import { useLevels } from "@/hooks/useLevels"
 import { filterCoursesByQualificationLevel } from "@/lib/utils/levels"
 import { resolveCourseDocumentTypes } from "@/lib/utils/course-documents"
+import { resolveApsDocumentType, withApsRequiredDocument } from "@/lib/utils/aps"
 import { formatProgramDate } from "@/lib/utils/program"
 import type { CourseProgram } from "@/types/schemas/program"
 import { FileText, Loader2, Plus } from "lucide-react"
@@ -598,17 +599,25 @@ export function Step4Application({ onBack }: { onBack: () => void }) {
         enabled: !!selectedCourseId,
     })
 
+    const studentCountry = meData?.profile?.country ?? ""
+
     const { required: applicationRequiredDocTypes, optional: applicationOptionalDocTypes } = useMemo(() => {
         if (!selectedCourseId) {
             return { required: [], optional: [] }
         }
 
         const course = courses.find((c) => c.id === selectedCourseId)
-        return resolveCourseDocumentTypes({
+        const fromCourse = resolveCourseDocumentTypes({
             requirements: course?.degree?.requirements ?? [],
             fallbackDocumentTypes: allDocumentTypes,
         })
-    }, [selectedCourseId, courses, allDocumentTypes])
+
+        return withApsRequiredDocument(
+            fromCourse,
+            studentCountry,
+            resolveApsDocumentType(allDocumentTypes)
+        )
+    }, [selectedCourseId, courses, allDocumentTypes, studentCountry])
 
     const { data: documents = [], isLoading: isDocumentsLoading, refetch: refetchDocuments } = useQuery({
         queryKey: ["onboarding-documents", studentProfileId],

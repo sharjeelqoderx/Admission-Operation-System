@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { fetchCourseProgramById } from "@/lib/api/course-program"
 import { getCourseDocumentTypeIds } from "@/lib/utils/course-documents"
+import { includeApsDocumentTypeIdIfRequired } from "@/lib/utils/aps"
 import { upsertStudentDocument } from "@/lib/supabase/upsert-student-document"
 import { STUDENT_DOCUMENT_TYPE_IDS } from "@/lib/constants/document-types"
 
@@ -17,6 +18,12 @@ export async function GET(
         const { "student-id": studentId } = await params
         const { searchParams } = new URL(req.url)
         const courseId = searchParams.get("course_id")
+
+        const { data: studentRow } = await supabase
+            .from("student")
+            .select("country, aps_requirement")
+            .eq("profile_id", studentId)
+            .maybeSingle()
 
         const { data: profile } = await supabase
             .from("profile")
@@ -61,6 +68,12 @@ export async function GET(
                 }>
             } | null)?.requirements ?? []
             requiredDocTypeIds = getCourseDocumentTypeIds(requirements)
+            if (requiredDocTypeIds.length > 0) {
+                requiredDocTypeIds = includeApsDocumentTypeIdIfRequired(
+                    requiredDocTypeIds,
+                    studentRow
+                )
+            }
         }
 
         let query = supabase
