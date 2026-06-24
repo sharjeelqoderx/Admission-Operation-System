@@ -6,6 +6,8 @@ import { mapTemplateRow } from "@/lib/document-template/server";
 import { renderTemplateHtml } from "@/lib/document-template/variables";
 import { buildOfferTemplateVariables } from "@/lib/offer/build-offer-variables";
 import { fetchAdmissionRequirementsContext } from "@/lib/offer/admission-requirements-context";
+import { buildChecklistProofsSnapshot } from "@/lib/document-template/checklist-items";
+import { resolveTemplateChecklistItems } from "@/lib/document-template/resolve-checklist-items";
 import {
     isMissingOfferTemplateColumnError,
     OFFER_LIST_SELECT_LEGACY,
@@ -179,7 +181,7 @@ export async function POST(req: NextRequest) {
                 student:profile_id ( first_name, last_name, signature, title, date_of_birth ),
                 course:course_id (
                     name,
-                    degree:degree_id ( name, fees, intake_date )
+                    degree:degree_id ( name, fees, intake_date, duration )
                 ),
                 university:university_id ( first_name, last_name )
             `)
@@ -232,6 +234,22 @@ export async function POST(req: NextRequest) {
             application.university as { first_name?: string | null; last_name?: string | null } | null
         );
 
+        const checklistItems = resolveTemplateChecklistItems({
+            checklistItems: templateRow.checklist_items,
+            checklistProfile:
+                typeof templateRow.checklist_profile === "string"
+                    ? templateRow.checklist_profile
+                    : null,
+        });
+        const requirementsContext = await fetchAdmissionRequirementsContext(supabase, {
+            applicationId: application.id,
+            profileId: application.profile_id,
+        });
+        const checklistProofs =
+            checklistItems.length > 0
+                ? buildChecklistProofsSnapshot(requirementsContext, checklistItems)
+                : null;
+
         const variables = buildOfferTemplateVariables(
             {
                 application_no: application.application_no,
@@ -248,10 +266,11 @@ export async function POST(req: NextRequest) {
                 course: application.course as OfferApplicationCourse,
                 university,
             },
-            await fetchAdmissionRequirementsContext(supabase, {
-                applicationId: application.id,
-                profileId: application.profile_id,
-            })
+            requirementsContext,
+            {
+                itemIds: checklistItems,
+                proofs: checklistProofs,
+            }
         );
 
         const renderedBodyHtml = renderTemplateHtml(template.body_html, variables);
@@ -260,12 +279,14 @@ export async function POST(req: NextRequest) {
             application_id: validated.application_id,
             document_template_id: validated.document_template_id,
             body_html: renderedBodyHtml,
+            checklist_items: checklistItems.length > 0 ? checklistItems : null,
+            checklist_proofs: checklistProofs,
             issued_by_profile_id: user.id,
             status: "PENDING" as const,
         };
 
         const insertSelect =
-            "id, status, created_at, body_html, document_template_id, application_id";
+            "id, status, created_at, body_html, document_template_id, application_id, checklist_items, checklist_proofs";
 
         let insertResult = await supabase
             .from("offer_letter")
@@ -357,6 +378,7 @@ type OfferApplicationCourse = {
         name?: string | null
         fees?: string | null
         intake_date?: string | null
+        duration?: string | null
     } | null
 } | null
 

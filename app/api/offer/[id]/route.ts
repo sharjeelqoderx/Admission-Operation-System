@@ -92,6 +92,8 @@ export async function GET(
                       documentTemplateId: (offer as { document_template_id?: string | null })
                           .document_template_id,
                       createdAt: offer.created_at,
+                      checklistItems: (offer as { checklist_items?: unknown }).checklist_items,
+                      checklistProofs: (offer as { checklist_proofs?: unknown }).checklist_proofs,
                       application: {
                           id: application.id,
                           application_no:

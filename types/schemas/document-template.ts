@@ -15,6 +15,8 @@ export type DocumentTemplateListItem = {
     title: string
     body_html: string
     variables: string[]
+    checklist_items: string[]
+    checklist_profile: string | null
     created_by_profile_id: string
     created_at: string
     updated_at: string

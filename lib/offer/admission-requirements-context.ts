@@ -5,7 +5,7 @@ import type { Database } from "@/types/supabase"
 import type {
     AdmissionRequirementsContext,
     StudentDocumentSnapshot,
-} from "@/lib/document-template/admission-requirements-checklist"
+} from "@/lib/document-template/checklist-items"
 
 type AppSupabase = SupabaseClient<Database>
 

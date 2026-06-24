@@ -1,5 +1,6 @@
 import {
-    ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE,
+    ADMISSION_REQUIREMENTS_CHECKLIST_DE_VARIABLE,
+    ADMISSION_REQUIREMENTS_CHECKLIST_EN_VARIABLE,
     buildAdmissionRequirementsChecklistPreviewHtml,
 } from "@/lib/document-template/admission-requirements-checklist"
 
@@ -16,14 +17,21 @@ export const TEMPLATE_MERGE_VARIABLES = [
     { key: "issue_date", label: "Issue Date" },
     { key: "fees", label: "Fees" },
     { key: "intake_date", label: "Intake Date" },
+    { key: "duration", label: "Course Duration" },
 ] as const
 
 export const TEMPLATE_DYNAMIC_SECTIONS = [
     {
-        key: ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE,
-        label: "Admission requirements checklist",
+        key: ADMISSION_REQUIREMENTS_CHECKLIST_DE_VARIABLE,
+        label: "Admission checklist (German)",
         description:
-            "Auto-checks boxes for tuition payment, documents, and English scores. APS and work experience rows appear only when required for the student or program (4–6 items).",
+            "German checklist rows from document_template.checklist_items (4–6 items). Document rows auto-check when approved; tuition uses payment proof.",
+    },
+    {
+        key: ADMISSION_REQUIREMENTS_CHECKLIST_EN_VARIABLE,
+        label: "Admission checklist (English)",
+        description:
+            "English checklist rows from document_template.checklist_items (4–6 items). Document rows auto-check when approved; tuition uses payment proof.",
     },
 ] as const
 
@@ -59,7 +67,10 @@ export const TEMPLATE_PREVIEW_SAMPLE_DATA: Record<string, string> = {
     }),
     fees: "€ 12,500",
     intake_date: "October 2026",
-    [ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE]: buildAdmissionRequirementsChecklistPreviewHtml(),
+    duration: "3 years",
+    [ADMISSION_REQUIREMENTS_CHECKLIST_DE_VARIABLE]: buildAdmissionRequirementsChecklistPreviewHtml("de"),
+    [ADMISSION_REQUIREMENTS_CHECKLIST_EN_VARIABLE]: buildAdmissionRequirementsChecklistPreviewHtml("en"),
+    admission_requirements_checklist: buildAdmissionRequirementsChecklistPreviewHtml("en"),
 }
 
 export function extractTemplateVariables(html: string): string[] {

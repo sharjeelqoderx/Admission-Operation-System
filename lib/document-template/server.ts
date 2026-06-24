@@ -4,6 +4,7 @@ import {
     createSupabaseServerClient,
     tryCreateSupabaseServiceClient,
 } from "@/lib/supabase/server"
+import { resolveTemplateChecklistItems } from "@/lib/document-template/resolve-checklist-items"
 import { extractTemplateVariables } from "@/lib/document-template/variables"
 import type { DocumentTemplateListItem } from "@/types/schemas/document-template"
 import type { Database } from "@/types/supabase"
@@ -82,11 +83,20 @@ function mapTemplateRow(row: DocumentTemplateRow): DocumentTemplateListItem {
     const extractedVariables = extractTemplateVariables(row.body_html)
     const variables = [...new Set([...storedVariables, ...extractedVariables])]
 
+    const checklistItems = resolveTemplateChecklistItems({
+        checklistItems: row.checklist_items,
+        checklistProfile:
+            typeof row.checklist_profile === "string" ? row.checklist_profile : null,
+    })
+
     return {
         id: row.id,
         title: row.title,
         body_html: row.body_html,
         variables,
+        checklist_items: checklistItems,
+        checklist_profile:
+            typeof row.checklist_profile === "string" ? row.checklist_profile : null,
         created_by_profile_id: row.created_by_profile_id,
         created_at: row.created_at,
         updated_at: row.updated_at,

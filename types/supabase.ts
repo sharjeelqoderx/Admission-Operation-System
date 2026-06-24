@@ -678,6 +678,8 @@ export type Database = {
       document_template: {
         Row: {
           body_html: string
+          checklist_items: Json
+          checklist_profile: string | null
           created_at: string
           created_by_profile_id: string
           id: string
@@ -688,6 +690,8 @@ export type Database = {
         }
         Insert: {
           body_html?: string
+          checklist_items?: Json
+          checklist_profile?: string | null
           created_at?: string
           created_by_profile_id: string
           id?: string
@@ -698,6 +702,8 @@ export type Database = {
         }
         Update: {
           body_html?: string
+          checklist_items?: Json
+          checklist_profile?: string | null
           created_at?: string
           created_by_profile_id?: string
           id?: string
@@ -991,6 +997,8 @@ export type Database = {
           accepted_at: string | null
           application_id: string
           body_html: string | null
+          checklist_items: Json | null
+          checklist_proofs: Json | null
           created_at: string
           document_template_id: string | null
           feedback: string | null
@@ -1005,6 +1013,8 @@ export type Database = {
           accepted_at?: string | null
           application_id: string
           body_html?: string | null
+          checklist_items?: Json | null
+          checklist_proofs?: Json | null
           created_at?: string
           document_template_id?: string | null
           feedback?: string | null
@@ -1019,6 +1029,8 @@ export type Database = {
           accepted_at?: string | null
           application_id?: string
           body_html?: string | null
+          checklist_items?: Json | null
+          checklist_proofs?: Json | null
           created_at?: string
           document_template_id?: string | null
           feedback?: string | null

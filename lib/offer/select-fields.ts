@@ -84,6 +84,8 @@ export const OFFER_DETAIL_SELECT_WITH_TEMPLATE = `
     issued_by_profile_id,
     body_html,
     document_template_id,
+    checklist_items,
+    checklist_proofs,
     application!inner (
         id,
         application_no,

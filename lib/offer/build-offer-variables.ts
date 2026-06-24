@@ -1,8 +1,11 @@
 import {
+    ADMISSION_REQUIREMENTS_CHECKLIST_DE_VARIABLE,
+    ADMISSION_REQUIREMENTS_CHECKLIST_EN_VARIABLE,
     ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE,
-    buildAdmissionRequirementsChecklistHtml,
-    evaluateAdmissionRequirements,
+    buildLocalizedChecklistHtml,
     type AdmissionRequirementsContext,
+    type AdmissionRequirementId,
+    type ChecklistProofs,
 } from "@/lib/document-template/admission-requirements-checklist"
 import { formatFullName } from "@/lib/utils/profile"
 import { formatIntakeDate } from "@/lib/utils/program"
@@ -45,6 +48,7 @@ export type OfferApplicationContext = {
             name?: string | null
             fees?: string | null
             intake_date?: string | null
+            duration?: string | null
         } | null
     } | null
     university?: {
@@ -54,9 +58,50 @@ export type OfferApplicationContext = {
     } | null
 }
 
+export type OfferChecklistOptions = {
+    itemIds?: AdmissionRequirementId[] | null
+    proofs?: ChecklistProofs | null
+}
+
+function buildChecklistVariables(
+    requirementsContext: AdmissionRequirementsContext | undefined,
+    checklistOptions?: OfferChecklistOptions
+) {
+    const context: AdmissionRequirementsContext =
+        requirementsContext ??
+        ({
+            paymentStatus: null,
+            apsRequirement: false,
+            hasWorkExperience: false,
+            requiresWorkExperience: false,
+            documents: [],
+        } satisfies AdmissionRequirementsContext)
+
+    const checklistParams = {
+        itemIds: checklistOptions?.itemIds,
+        storedProofs: checklistOptions?.proofs,
+    }
+
+    return {
+        [ADMISSION_REQUIREMENTS_CHECKLIST_DE_VARIABLE]: buildLocalizedChecklistHtml(context, {
+            ...checklistParams,
+            locale: "de",
+        }),
+        [ADMISSION_REQUIREMENTS_CHECKLIST_EN_VARIABLE]: buildLocalizedChecklistHtml(context, {
+            ...checklistParams,
+            locale: "en",
+        }),
+        [ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE]: buildLocalizedChecklistHtml(context, {
+            ...checklistParams,
+            locale: "en",
+        }),
+    }
+}
+
 export function buildOfferTemplateVariables(
     application: OfferApplicationContext,
-    requirementsContext?: AdmissionRequirementsContext
+    requirementsContext?: AdmissionRequirementsContext,
+    checklistOptions?: OfferChecklistOptions
 ): Record<string, string> {
     const studentName =
         application.student?.name ??
@@ -99,18 +144,7 @@ export function buildOfferTemplateVariables(
         }),
         fees: application.course?.degree?.fees ?? "—",
         intake_date: formatIntakeDate(application.course?.degree?.intake_date) ?? "—",
-        [ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE]: requirementsContext
-            ? buildAdmissionRequirementsChecklistHtml(
-                  evaluateAdmissionRequirements(requirementsContext)
-              )
-            : buildAdmissionRequirementsChecklistHtml(
-                  evaluateAdmissionRequirements({
-                      paymentStatus: null,
-                      apsRequirement: false,
-                      hasWorkExperience: false,
-                      requiresWorkExperience: false,
-                      documents: [],
-                  })
-              ),
+        duration: application.course?.degree?.duration?.trim() || "—",
+        ...buildChecklistVariables(requirementsContext, checklistOptions),
     }
 }

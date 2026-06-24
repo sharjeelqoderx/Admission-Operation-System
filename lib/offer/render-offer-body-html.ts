@@ -8,6 +8,11 @@ import {
     type OfferApplicationContext,
 } from "@/lib/offer/build-offer-variables"
 import { fetchAdmissionRequirementsContext } from "@/lib/offer/admission-requirements-context"
+import {
+    type AdmissionRequirementId,
+    type ChecklistProofs,
+} from "@/lib/document-template/checklist-items"
+import { resolveOfferChecklistItems, resolveTemplateChecklistItems } from "@/lib/document-template/resolve-checklist-items"
 import { withProfileDisplayName } from "@/lib/utils/profile"
 
 type AppSupabase = SupabaseClient<Database>
@@ -34,12 +39,22 @@ function formatIssueDate(value: string): string {
     })
 }
 
+function parseChecklistProofs(value: unknown): ChecklistProofs | null {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return null
+    }
+
+    return value as ChecklistProofs
+}
+
 export async function renderOfferBodyHtml(
     supabase: AppSupabase,
     params: {
         bodyHtml?: string | null
         documentTemplateId?: string | null
         createdAt?: string | null
+        checklistItems?: unknown
+        checklistProofs?: unknown
         application: {
             id: string
             application_no?: string | null
@@ -51,11 +66,13 @@ export async function renderOfferBodyHtml(
     }
 ): Promise<string | null> {
     let sourceHtml = params.bodyHtml?.trim() || null
+    let templateChecklistItems: AdmissionRequirementId[] = []
+    let templateChecklistProfile: string | null = null
 
     if (params.documentTemplateId) {
         const { data: templateRow } = await supabase
             .from("document_template")
-            .select("body_html")
+            .select("body_html, checklist_items, checklist_profile")
             .eq("id", params.documentTemplateId)
             .eq("is_deleted", false)
             .maybeSingle()
@@ -63,6 +80,16 @@ export async function renderOfferBodyHtml(
         if (templateRow?.body_html?.trim()) {
             sourceHtml = templateRow.body_html
         }
+
+        templateChecklistProfile =
+            typeof templateRow?.checklist_profile === "string"
+                ? templateRow.checklist_profile
+                : null
+
+        templateChecklistItems = resolveTemplateChecklistItems({
+            checklistItems: templateRow?.checklist_items,
+            checklistProfile: templateChecklistProfile,
+        })
     }
 
     if (!sourceHtml) {
@@ -93,6 +120,12 @@ export async function renderOfferBodyHtml(
         profileId: params.application.profile_id,
     })
 
+    const resolvedChecklistItems = resolveOfferChecklistItems({
+        offerChecklistItems: params.checklistItems,
+        templateChecklistItems,
+        templateChecklistProfile,
+    })
+
     const variables = buildOfferTemplateVariables(
         {
             application_no: params.application.application_no,
@@ -111,7 +144,11 @@ export async function renderOfferBodyHtml(
             course: params.application.course,
             university,
         },
-        requirementsContext
+        requirementsContext,
+        {
+            itemIds: resolvedChecklistItems,
+            proofs: parseChecklistProofs(params.checklistProofs),
+        }
     )
 
     if (params.createdAt) {

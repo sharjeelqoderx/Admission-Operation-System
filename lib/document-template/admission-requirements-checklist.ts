@@ -1,112 +1,48 @@
-export const ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE = "admission_requirements_checklist"
+import {
+    ADMISSION_REQUIREMENTS_CHECKLIST_DE_VARIABLE,
+    ADMISSION_REQUIREMENTS_CHECKLIST_EN_VARIABLE,
+    ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE,
+    ADMISSION_REQUIREMENT_ITEMS,
+    CHECKLIST_DYNAMIC_VARIABLES,
+    CHECKLIST_PROFILES,
+    buildChecklistProofsSnapshot,
+    evaluateAdmissionRequirements,
+    evaluateChecklistItemFulfillment,
+    isAdmissionRequirementId,
+    parseChecklistItems,
+    resolveChecklistItemIds,
+    resolveVisibleAdmissionRequirementIds,
+    type AdmissionRequirementEvaluation,
+    type AdmissionRequirementsContext,
+    type AdmissionRequirementId,
+    type ChecklistLocale,
+    type ChecklistProofs,
+    type StudentDocumentSnapshot,
+} from "@/lib/document-template/checklist-items"
 
-export const ADMISSION_REQUIREMENT_ITEMS = [
-    {
-        id: "tuition_payment",
-        label: "Proof of payment for tuition fees",
-    },
-    {
-        id: "bachelor_authentication",
-        label: "Authentication of Bachelor's Degree",
-    },
-    {
-        id: "entrance_qualification",
-        label: "Proof of university entrance qualification",
-    },
-    {
-        id: "aps_examination",
-        label: "Proof of successfully passed APS-examination",
-    },
-    {
-        id: "work_experience",
-        label: "Proof of qualified work experience",
-    },
-    {
-        id: "english_b2",
-        label: "Proof of English B2 certificate (IELTS or TOEFL)",
-    },
-] as const
-
-export type AdmissionRequirementId = (typeof ADMISSION_REQUIREMENT_ITEMS)[number]["id"]
-
-export type StudentDocumentSnapshot = {
-    code: string | null
-    reviewStatus: string | null
-    hasFiles: boolean
+export {
+    ADMISSION_REQUIREMENTS_CHECKLIST_DE_VARIABLE,
+    ADMISSION_REQUIREMENTS_CHECKLIST_EN_VARIABLE,
+    ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE,
+    ADMISSION_REQUIREMENT_ITEMS,
+    CHECKLIST_DYNAMIC_VARIABLES,
+    CHECKLIST_PROFILES,
+    buildChecklistProofsSnapshot,
+    evaluateAdmissionRequirements,
+    evaluateChecklistItemFulfillment,
+    isAdmissionRequirementId,
+    parseChecklistItems,
+    resolveChecklistItemIds,
+    resolveVisibleAdmissionRequirementIds,
 }
 
-export type AdmissionRequirementsContext = {
-    paymentStatus: string | null
-    apsRequirement: boolean
-    hasWorkExperience: boolean
-    requiresWorkExperience: boolean
-    documents: StudentDocumentSnapshot[]
-}
-
-export type AdmissionRequirementEvaluation = {
-    id: AdmissionRequirementId
-    label: string
-    fulfilled: boolean
-}
-
-/** Document counts as present when the student has uploaded the required file(s). */
-function isDocumentFulfilled(documents: StudentDocumentSnapshot[], codes: string[]) {
-    return documents.some(
-        (doc) => doc.code != null && codes.includes(doc.code) && doc.hasFiles
-    )
-}
-
-export function resolveVisibleAdmissionRequirementIds(
-    context: AdmissionRequirementsContext
-): AdmissionRequirementId[] {
-    const alwaysVisible: AdmissionRequirementId[] = [
-        "tuition_payment",
-        "bachelor_authentication",
-        "entrance_qualification",
-        "english_b2",
-    ]
-
-    const conditional: AdmissionRequirementId[] = []
-
-    if (context.apsRequirement) {
-        conditional.push("aps_examination")
-    }
-
-    if (context.requiresWorkExperience || context.hasWorkExperience) {
-        conditional.push("work_experience")
-    }
-
-    return [...alwaysVisible, ...conditional]
-}
-
-export function evaluateAdmissionRequirements(
-    context: AdmissionRequirementsContext
-): AdmissionRequirementEvaluation[] {
-    const { paymentStatus, documents } = context
-
-    const fulfilledById: Record<AdmissionRequirementId, boolean> = {
-        tuition_payment: paymentStatus === "CONFIRMED",
-        bachelor_authentication: isDocumentFulfilled(documents, ["BD_AD_DEGREE", "BD_AD_TRANSCRIPT"]),
-        entrance_qualification: isDocumentFulfilled(documents, [
-            "HSC_UGD_CERTIFICATE",
-            "HSC_UGD_MARKSHEET",
-            "SSC_CERTIFICATE",
-            "SSC_MARKSHEET",
-        ]),
-        aps_examination: isDocumentFulfilled(documents, ["APS"]),
-        work_experience: isDocumentFulfilled(documents, ["WORK_EXP_LETTER"]),
-        english_b2: isDocumentFulfilled(documents, ["LANGUAGE_SCORE"]),
-    }
-
-    const visibleIds = resolveVisibleAdmissionRequirementIds(context)
-
-    return ADMISSION_REQUIREMENT_ITEMS.filter((item) => visibleIds.includes(item.id)).map(
-        (item) => ({
-            id: item.id,
-            label: item.label,
-            fulfilled: fulfilledById[item.id],
-        })
-    )
+export type {
+    AdmissionRequirementEvaluation,
+    AdmissionRequirementId,
+    AdmissionRequirementsContext,
+    ChecklistLocale,
+    ChecklistProofs,
+    StudentDocumentSnapshot,
 }
 
 function buildCheckboxCell(checked: boolean) {
@@ -141,18 +77,42 @@ export function buildAdmissionRequirementsChecklistHtml(
     </span>`
 }
 
-export function buildAdmissionRequirementsChecklistPreviewHtml() {
-    const previewEvaluations = evaluateAdmissionRequirements({
-        paymentStatus: "CONFIRMED",
-        apsRequirement: true,
-        hasWorkExperience: false,
-        requiresWorkExperience: true,
-        documents: [
-            { code: "BD_AD_DEGREE", reviewStatus: null, hasFiles: true },
-            { code: "BD_AD_TRANSCRIPT", reviewStatus: null, hasFiles: true },
-            { code: "APS", reviewStatus: null, hasFiles: true },
-        ],
-    })
+export function buildLocalizedChecklistHtml(
+    context: AdmissionRequirementsContext,
+    options?: {
+        locale?: ChecklistLocale
+        itemIds?: AdmissionRequirementId[] | null
+        storedProofs?: ChecklistProofs | null
+        allowContextFallback?: boolean
+    }
+) {
+    const evaluations = evaluateAdmissionRequirements(context, options)
+    return buildAdmissionRequirementsChecklistHtml(evaluations)
+}
 
-    return buildAdmissionRequirementsChecklistHtml(previewEvaluations)
+export function buildAdmissionRequirementsChecklistPreviewHtml(locale: ChecklistLocale = "en") {
+    return buildLocalizedChecklistHtml(
+        {
+            paymentStatus: "CONFIRMED",
+            apsRequirement: true,
+            hasWorkExperience: false,
+            requiresWorkExperience: true,
+            documents: [
+                { code: "BD_AD_DEGREE", reviewStatus: "APPROVED", hasFiles: true },
+                { code: "BD_AD_TRANSCRIPT", reviewStatus: "APPROVED", hasFiles: true },
+                { code: "APS", reviewStatus: "APPROVED", hasFiles: true },
+            ],
+        },
+        {
+            locale,
+            itemIds: [
+                "tuition_payment",
+                "bachelor_authentication",
+                "entrance_qualification",
+                "aps_examination",
+                "work_experience",
+                "english_b2",
+            ],
+        }
+    )
 }
