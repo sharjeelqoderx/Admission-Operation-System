@@ -40,6 +40,7 @@ import type { StudentListItem } from "@/lib/student/list";
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program";
 import { resolveCourseDocumentTypes } from "@/lib/utils/course-documents";
 import { withApsRequiredDocument } from "@/lib/utils/aps";
+import { filterCoursesByQualificationLevel } from "@/lib/utils/levels";
 import { useLevels } from "@/hooks/useLevels";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { ErrorView } from "@/components/shared/error-view";
@@ -318,7 +319,28 @@ export function CreateApplicationForm() {
             return res.json();
         }
     });
-    const courses: CourseProgram[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
+    const allCourses: CourseProgram[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
+
+    const qualificationLevelName = useMemo(() => {
+        return studentDetails?.education?.[0]?.qualification_degree?.level?.name ?? null;
+    }, [studentDetails?.education]);
+
+    const courses = useMemo(() => {
+        const shouldFilterByQualification =
+            user?.role === "STUDENT" || (studentDetails && user?.role === "AGENT");
+
+        if (!shouldFilterByQualification) {
+            return allCourses;
+        }
+
+        if (!qualificationLevelName) {
+            return [];
+        }
+
+        return filterCoursesByQualificationLevel(allCourses, qualificationLevelName);
+    }, [allCourses, user?.role, studentDetails, qualificationLevelName]);
+
+    const hasQualification = Boolean(qualificationLevelName);
     const { data: levels = [] } = useLevels();
 
     const { data: programDetailResponse, isLoading: isCourseDetailLoading } = useQuery({
@@ -603,6 +625,7 @@ export function CreateApplicationForm() {
                     <Step2
                         form={form}
                         courses={courses}
+                        hasQualification={hasQualification}
                         students={students}
                         studentDetails={studentDetails}
                         selectedStudentId={selectedStudentId}
@@ -1180,6 +1203,7 @@ function SupportingDocumentsSection({
 function Step2({
     form,
     courses,
+    hasQualification,
     students,
     studentDetails,
     selectedStudentId,
@@ -1198,6 +1222,7 @@ function Step2({
 }: {
     form: CreateApplicationFormApi;
     courses: CourseProgram[];
+    hasQualification: boolean;
     students: StudentListItem[];
     studentDetails?: ApplicationStudentDetail;
     selectedStudentId: string;
@@ -1422,7 +1447,11 @@ function Step2({
                                             <div className="flex flex-col items-center gap-2">
                                                 <Search className="size-8 text-gray-300" />
                                                 <Typography as="p" className="text-sm font-medium text-gray-500">
-                                                    No courses found matching your filters.
+                                                    {!hasQualification
+                                                        ? "Add the student's highest degree in their academic background to view eligible courses."
+                                                        : courses.length === 0
+                                                          ? "No courses available for this qualification level."
+                                                          : "No courses found matching your filters."}
                                                 </Typography>
                                             </div>
                                         </TableCell>
