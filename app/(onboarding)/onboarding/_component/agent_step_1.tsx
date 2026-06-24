@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { F } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
 import { CountrySelect } from "@/components/shared/country-select"
+import { StateSelect } from "@/components/shared/state-select"
+import { CitySelect } from "@/components/shared/city-select"
 import { PageLoader } from "@/components/shared/page-loader"
 import { Typography } from "@/components/shared/Typography"
 
@@ -294,29 +296,53 @@ function AgentStep1Form({
                     <F isInvalid={isInvalid} error={error} label="Primary Base Country">
                         <CountrySelect
                             value={field.state.value}
-                            onValueChange={field.handleChange}
+                            onValueChange={(v) => {
+                                field.handleChange(v)
+                                form.setFieldValue("primaryBaseState", "")
+                                form.setFieldValue("primaryBaseCity", "")
+                            }}
                         />
                     </F>
                     )
                 }}</form.Field>
 
-                <form.Field name="primaryBaseState">{(field) => {
-                    const { isInvalid, error } = getFieldState(field)
-                    return (
-                    <F isInvalid={isInvalid} error={error} label="State">
-                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. California" />
-                    </F>
-                    )
-                }}</form.Field>
+                <form.Subscribe selector={(s) => s.values.primaryBaseCountry}>
+                    {(country) => (
+                        <form.Field name="primaryBaseState">{(field) => {
+                            const { isInvalid, error } = getFieldState(field)
+                            return (
+                            <F isInvalid={isInvalid} error={error} label="State">
+                                <StateSelect
+                                    country={country}
+                                    value={field.state.value}
+                                    onValueChange={(v) => {
+                                        field.handleChange(v)
+                                        form.setFieldValue("primaryBaseCity", "")
+                                    }}
+                                />
+                            </F>
+                            )
+                        }}</form.Field>
+                    )}
+                </form.Subscribe>
 
-                <form.Field name="primaryBaseCity">{(field) => {
-                    const { isInvalid, error } = getFieldState(field)
-                    return (
-                    <F isInvalid={isInvalid} error={error} label="City">
-                        <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="e.g. Los Angeles" />
-                    </F>
-                    )
-                }}</form.Field>
+                <form.Subscribe selector={(s) => ({ country: s.values.primaryBaseCountry, state: s.values.primaryBaseState })}>
+                    {({ country, state }) => (
+                        <form.Field name="primaryBaseCity">{(field) => {
+                            const { isInvalid, error } = getFieldState(field)
+                            return (
+                            <F isInvalid={isInvalid} error={error} label="City">
+                                <CitySelect
+                                    country={country}
+                                    state={state}
+                                    value={field.state.value}
+                                    onValueChange={field.handleChange}
+                                />
+                            </F>
+                            )
+                        }}</form.Field>
+                    )}
+                </form.Subscribe>
 
                 <div className="col-span-1 sm:col-span-2">
                     <form.Field name="website">{(field) => {

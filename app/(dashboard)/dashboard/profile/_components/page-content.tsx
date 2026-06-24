@@ -1423,7 +1423,14 @@ function ProfilePageView({ initialData }: PageContentProps) {
                                 {(field) => (
                                     <F field={field} label="Country">
                                         {isEditing ? (
-                                            <CountrySelect value={field.state.value} onValueChange={field.handleChange} />
+                                            <CountrySelect
+                                                value={field.state.value}
+                                                onValueChange={(v) => {
+                                                    field.handleChange(v)
+                                                    form.setFieldValue("state", "")
+                                                    form.setFieldValue("city", "")
+                                                }}
+                                            />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
                                                 <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
@@ -1432,32 +1439,52 @@ function ProfilePageView({ initialData }: PageContentProps) {
                                     </F>
                                 )}
                             </form.Field>
-                            <form.Field name="state">
-                                {(field) => (
-                                    <F field={field} label="State">
-                                        {isEditing ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your state" />
-                                        ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                            </div>
+                            <form.Subscribe selector={(s) => s.values.country}>
+                                {(country) => (
+                                    <form.Field name="state">
+                                        {(field) => (
+                                            <F field={field} label="State">
+                                                {isEditing ? (
+                                                    <StateSelect
+                                                        country={country}
+                                                        value={field.state.value}
+                                                        onValueChange={(v) => {
+                                                            field.handleChange(v)
+                                                            form.setFieldValue("city", "")
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                        <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                                    </div>
+                                                )}
+                                            </F>
                                         )}
-                                    </F>
+                                    </form.Field>
                                 )}
-                            </form.Field>
-                            <form.Field name="city">
-                                {(field) => (
-                                    <F field={field} label="City">
-                                        {isEditing ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your city" />
-                                        ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                            </div>
+                            </form.Subscribe>
+                            <form.Subscribe selector={(s) => ({ country: s.values.country, state: s.values.state })}>
+                                {({ country, state }) => (
+                                    <form.Field name="city">
+                                        {(field) => (
+                                            <F field={field} label="City">
+                                                {isEditing ? (
+                                                    <CitySelect
+                                                        country={country}
+                                                        state={state}
+                                                        value={field.state.value}
+                                                        onValueChange={field.handleChange}
+                                                    />
+                                                ) : (
+                                                    <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                        <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                                    </div>
+                                                )}
+                                            </F>
                                         )}
-                                    </F>
+                                    </form.Field>
                                 )}
-                            </form.Field>
+                            </form.Subscribe>
                             <form.Field name="other_contact_number">
                                 {(field) => (
                                     <F field={field} label="Alternate Phone">
