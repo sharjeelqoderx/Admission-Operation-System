@@ -39,7 +39,6 @@ import type { LevelOption } from "@/hooks/useLevels";
 import type { StudentListItem } from "@/lib/student/list";
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program";
 import { resolveCourseDocumentTypes } from "@/lib/utils/course-documents";
-import { getLevelPriority } from "@/lib/utils/levels";
 import { useLevels } from "@/hooks/useLevels";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { ErrorView } from "@/components/shared/error-view";
@@ -318,33 +317,7 @@ export function CreateApplicationForm() {
             return res.json();
         }
     });
-    let courses: CourseProgram[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
-
-    // Filter courses based on student's highest degree (if user is student or we have selected a student)
-    if (user?.role === "STUDENT" || (studentDetails && user?.role === "AGENT")) {
-        // Find the highest level from student's education
-        let highestLevelPriority = 0;
-
-        if (studentDetails?.education && Array.isArray(studentDetails.education)) {
-            for (const edu of studentDetails.education) {
-                if (edu?.qualification_degree?.level?.name) {
-                    const levelPriority = getLevelPriority(edu.qualification_degree.level.name);
-                    if (levelPriority > highestLevelPriority) {
-                        highestLevelPriority = levelPriority;
-                    }
-                }
-            }
-        }
-
-        if (highestLevelPriority > 0) {
-            // Filter courses where course's level priority is higher than highestLevelPriority
-            courses = courses.filter((course) => {
-                const courseLevelName = course?.degree?.level?.name;
-                const courseLevelPriority = getLevelPriority(courseLevelName);
-                return courseLevelPriority > highestLevelPriority;
-            });
-        }
-    }
+    const courses: CourseProgram[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
     const { data: levels = [] } = useLevels();
 
     const { data: programDetailResponse, isLoading: isCourseDetailLoading } = useQuery({
