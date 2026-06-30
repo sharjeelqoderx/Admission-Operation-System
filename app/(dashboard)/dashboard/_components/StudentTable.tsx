@@ -16,7 +16,6 @@ import {
     Table,
     TableHeader,
     TableBody,
-    TableFooter,
     TableRow,
     TableHead,
     TableCell,
@@ -157,9 +156,9 @@ export const StudentTable = React.memo(function StudentTable({
             blurAmount="backdrop-blur-lg"
             blendColorClass="bg-white/10"
             childClass="p-0!"
-            className="rounded-lg p-0"
+            className="rounded-lg p-0 min-w-0"
         >
-            <div className="w-full overflow-x-scroll rounded-xl max-w-full pb-2">
+            <div className="overflow-x-auto rounded-t-xl">
                 <Table className="w-full text-left border-collapse min-w-[1750px]">
                     <TableHeader className="sticky top-0 z-10">
                         <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
@@ -392,62 +391,73 @@ export const StudentTable = React.memo(function StudentTable({
                             })
                         )}
                     </TableBody>
-
-                    <TableFooter className="border-t-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
-                        <TableRow className="hover:bg-brand-secondary/10 border-0">
-                            <TableCell colSpan={COLUMN_COUNT} className="px-8 py-5">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1">
-                                        {pagination ? (
-                                            <>
-                                                <Typography as="span" className="text-[12px] font-light text-gray-500">
-                                                    Showing
-                                                </Typography>
-                                                <Typography as="span" className="text-[12px] font-bold text-brand-blue-text mx-1">
-                                                    {Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total)}–{Math.min(pagination.page * pagination.limit, pagination.total)}
-                                                </Typography>
-                                                <Typography as="span" className="text-[12px] font-light text-gray-500">
-                                                    of {pagination.total} entries
-                                                </Typography>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Typography as="span" className="text-[12px] font-light text-gray-500">
-                                                    Showing
-                                                </Typography>
-                                                <Typography as="span" className="text-[12px] font-bold text-brand-blue-text mx-1">
-                                                    {students.length}
-                                                </Typography>
-                                                <Typography as="span" className="text-[12px] font-light text-gray-500">
-                                                    entries
-                                                </Typography>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={() => pagination && onPageChange(pagination.page - 1)}
-                                            disabled={!pagination || pagination.page <= 1}
-                                        >
-                                            <ChevronLeft size={16} />
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={() => pagination && onPageChange(pagination.page + 1)}
-                                            disabled={!pagination || pagination.page >= pagination.totalPages}
-                                        >
-                                            <ChevronRight size={16} />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                    </TableFooter>
                 </Table>
+            </div>
+
+            <div className="border-t-2 border-brand-secondary/20 bg-brand-secondary/10 rounded-b-xl">
+                <div className="px-8 py-5">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1">
+                            {pagination ? (
+                                <>
+                                    <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                        Showing
+                                    </Typography>
+                                    <Typography as="span" className="text-[12px] font-bold text-brand-blue-text mx-1">
+                                        {pagination.total === 0
+                                            ? 0
+                                            : Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total)}
+                                        –
+                                        {Math.min(pagination.page * pagination.limit, pagination.total)}
+                                    </Typography>
+                                    <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                        of {pagination.total} entries
+                                    </Typography>
+                                </>
+                            ) : (
+                                <>
+                                    <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                        Showing
+                                    </Typography>
+                                    <Typography as="span" className="text-[12px] font-bold text-brand-blue-text mx-1">
+                                        {students.length}
+                                    </Typography>
+                                    <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                        entries
+                                    </Typography>
+                                </>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => pagination && onPageChange(pagination.page - 1)}
+                                disabled={!pagination || pagination.page <= 1}
+                            >
+                                <ChevronLeft size={16} />
+                            </Button>
+                            {pagination && pagination.totalPages > 0 && (
+                                <Typography as="span" className="text-[12px] font-medium text-gray-600 min-w-[72px] text-center">
+                                    {pagination.page} / {pagination.totalPages}
+                                </Typography>
+                            )}
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => pagination && onPageChange(pagination.page + 1)}
+                                disabled={
+                                    !pagination ||
+                                    pagination.totalPages === 0 ||
+                                    pagination.page >= pagination.totalPages
+                                }
+                            >
+                                <ChevronRight size={16} />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </BluryCard>
     )

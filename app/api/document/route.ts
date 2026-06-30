@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { DocumentFormSchema } from "@/types/schemas/document"
 import { formatFullName } from "@/lib/utils/profile"
+import { assertCanUploadStudentDocument } from "@/lib/document/agent-access"
 
 export async function GET(req: NextRequest) {
     try {
@@ -180,6 +181,23 @@ export async function POST(req: NextRequest) {
             files: files,
             comment: formData.get("comment") ?? undefined,
         })
+
+        const { data: profile } = await supabase
+            .from("profile")
+            .select("role")
+            .eq("id", user.id)
+            .single()
+
+        const canUpload = await assertCanUploadStudentDocument(
+            supabase,
+            user.id,
+            profile?.role,
+            validated.student_id
+        )
+
+        if (!canUpload) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
 
         await supabase
             .from("document")

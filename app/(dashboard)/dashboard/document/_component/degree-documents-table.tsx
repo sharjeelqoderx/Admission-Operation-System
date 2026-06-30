@@ -35,6 +35,41 @@ import {
     type PendingFilesMap,
 } from "./degree-documents-shared"
 
+function RejectionFeedback({ feedback }: { feedback: string }) {
+    return (
+        <TooltipProvider>
+            <Popover>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <PopoverTrigger asChild>
+                            <button
+                                type="button"
+                                className="size-8 rounded-lg border border-red-200 bg-red-50 flex items-center justify-center shrink-0"
+                                aria-label="View rejection reason"
+                            >
+                                <AlertCircle className="size-4 text-red-600" />
+                            </button>
+                        </PopoverTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[260px]">
+                        <Typography as="p" className="text-sm whitespace-pre-wrap">
+                            {feedback}
+                        </Typography>
+                    </TooltipContent>
+                </Tooltip>
+                <PopoverContent align="start" className="w-[300px]">
+                    <Typography as="p" font="text" className="font-semibold mb-2">
+                        Rejection Reason
+                    </Typography>
+                    <Typography as="p" className="text-sm text-gray-600 whitespace-pre-wrap">
+                        {feedback}
+                    </Typography>
+                </PopoverContent>
+            </Popover>
+        </TooltipProvider>
+    )
+}
+
 function NotePopover({
     note,
     documentId,
@@ -200,9 +235,18 @@ export function DegreeDocumentsTable({
                         const isLocked =
                             uploaded?.status === "APPROVED" ||
                             uploaded?.status === "VERIFIED"
+                        const isRejected = uploaded?.status === "REJECTED"
+                        const canUpload = !isLocked
+                        const rejectionFeedback = uploaded?.feedback?.trim() ?? ""
 
                         return (
-                            <TableRow key={requirement.requirement_id} className="align-top">
+                            <TableRow
+                                key={requirement.requirement_id}
+                                className={cn(
+                                    "align-top",
+                                    isRejected && "bg-red-50/40"
+                                )}
+                            >
                                 <TableCell className="text-sm text-gray-500 whitespace-nowrap">
                                     {uploaded?.updated_at
                                         ? new Date(uploaded.updated_at).toLocaleDateString()
@@ -234,18 +278,26 @@ export function DegreeDocumentsTable({
                                         <label
                                             htmlFor={`upload-${requirement.document_type_id}`}
                                             className={cn(
-                                                "size-10 rounded-lg border border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-brand-byzantine transition-colors",
-                                                isLocked && "opacity-50 cursor-not-allowed"
+                                                "size-10 rounded-lg border border-dashed flex items-center justify-center cursor-pointer transition-colors",
+                                                isRejected
+                                                    ? "border-red-300 bg-red-50 hover:border-red-400"
+                                                    : "border-gray-300 hover:border-brand-byzantine",
+                                                !canUpload && "opacity-50 cursor-not-allowed"
                                             )}
                                         >
-                                            <Upload className="size-4 text-gray-600" />
+                                            <Upload
+                                                className={cn(
+                                                    "size-4",
+                                                    isRejected ? "text-red-600" : "text-gray-600"
+                                                )}
+                                            />
                                         </label>
                                         <input
                                             id={`upload-${requirement.document_type_id}`}
                                             type="file"
                                             className="hidden"
                                             accept="image/*,application/pdf,.doc,.docx"
-                                            disabled={isLocked}
+                                            disabled={!canUpload}
                                             onChange={(e) => {
                                                 const file = e.target.files?.[0] ?? null
                                                 onPendingChange(
@@ -278,30 +330,44 @@ export function DegreeDocumentsTable({
                                                         View file
                                                     </a>
                                                 </>
+                                            ) : isRejected ? (
+                                                <Typography as="span" className="text-sm text-red-600 font-medium">
+                                                    Upload a corrected file to re-submit
+                                                </Typography>
                                             ) : (
-                                                <span className="text-sm text-gray-500">
+                                                <Typography as="span" className="text-sm text-gray-500">
                                                     No file selected
-                                                </span>
+                                                </Typography>
                                             )}
                                         </div>
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    {uploaded ? (
-                                        <Badge
-                                            variant="outline"
-                                            className={cn(
-                                                "text-[10px] uppercase tracking-wide",
-                                                getDocumentStatusBadgeClass(uploaded.status)
-                                            )}
-                                        >
-                                            {formatDocumentStatus(uploaded.status)}
-                                        </Badge>
-                                    ) : (
-                                        <Badge variant="secondary" className="text-xs">
-                                            {hasFile ? "Ready" : "Pending"}
-                                        </Badge>
-                                    )}
+                                    <div className="space-y-2">
+                                        {uploaded ? (
+                                            <Badge
+                                                variant="outline"
+                                                className={cn(
+                                                    "text-[10px] uppercase tracking-wide",
+                                                    getDocumentStatusBadgeClass(uploaded.status)
+                                                )}
+                                            >
+                                                {formatDocumentStatus(uploaded.status)}
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="secondary" className="text-xs">
+                                                {hasFile ? "Ready" : "Pending"}
+                                            </Badge>
+                                        )}
+                                        {isRejected && rejectionFeedback && (
+                                            <div className="flex items-start gap-2 max-w-[220px]">
+                                                <RejectionFeedback feedback={rejectionFeedback} />
+                                                <Typography as="p" className="text-[11px] text-red-600 leading-snug">
+                                                    {rejectionFeedback}
+                                                </Typography>
+                                            </div>
+                                        )}
+                                    </div>
                                 </TableCell>
                                 <TableCell>
                                     <NotePopover
@@ -321,7 +387,11 @@ export function DegreeDocumentsTable({
                                         <Button
                                             type="button"
                                             size="sm"
-                                            className="bg-brand-byzantine hover:bg-brand-byzantine/90"
+                                            className={cn(
+                                                isRejected
+                                                    ? "bg-red-600 hover:bg-red-700"
+                                                    : "bg-brand-byzantine hover:bg-brand-byzantine/90"
+                                            )}
                                             disabled={
                                                 isSaving[requirement.document_type_id]
                                             }
@@ -335,8 +405,12 @@ export function DegreeDocumentsTable({
                                             }
                                         >
                                             {isSaving[requirement.document_type_id]
-                                                ? "Saving..."
-                                                : "Save"}
+                                                ? isRejected
+                                                    ? "Re-submitting..."
+                                                    : "Saving..."
+                                                : isRejected
+                                                  ? "Re-submit"
+                                                  : "Save"}
                                         </Button>
                                     )}
                                 </TableCell>

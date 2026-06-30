@@ -28,10 +28,12 @@ import {
 } from "@/components/ui/tooltip"
 import {
     AlertCircle,
+    Check,
     ChevronLeft,
     ChevronRight,
     Eye,
     Loader2,
+    X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { AgentAllDocumentRow } from "@/types/schemas/document"
@@ -297,44 +299,71 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                                             </Typography>
                                         </TableCell>
 
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <div className="flex flex-wrap items-center gap-2">
+                                        <TableCell className="px-6 py-5 whitespace-nowrap overflow-visible">
+                                            <div className="flex flex-wrap items-center gap-2 p-0.5">
                                                 {canReview && (
                                                     <>
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            className="h-9 px-4 bg-brand-success hover:bg-brand-success/90 text-white rounded-lg font-bold text-[12px]"
-                                                            disabled={isReviewing}
-                                                            onClick={() => onApprove(row.document_id)}
-                                                        >
-                                                            {isReviewing ? "..." : "Approve"}
-                                                        </Button>
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-9 px-4 border-red-200 text-red-600 hover:bg-red-50 rounded-lg font-bold text-[12px]"
-                                                            disabled={isReviewing}
-                                                            onClick={() => onReject(row.document_id)}
-                                                        >
-                                                            Reject
-                                                        </Button>
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="icon"
+                                                                        className="size-9 bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                                                                        disabled={isReviewing}
+                                                                        aria-label="Approve document"
+                                                                        onClick={() => onApprove(row.document_id)}
+                                                                    >
+                                                                        {isReviewing ? (
+                                                                            <Loader2 className="size-4 animate-spin" />
+                                                                        ) : (
+                                                                            <Check className="size-4" />
+                                                                        )}
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>Approve</TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="size-9 border border-red-300 bg-white text-red-600 hover:bg-red-50 hover:border-red-400 rounded-lg"
+                                                                        disabled={isReviewing}
+                                                                        aria-label="Reject document"
+                                                                        onClick={() => onReject(row.document_id)}
+                                                                    >
+                                                                        <X className="size-4" />
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>Reject</TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
                                                     </>
                                                 )}
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="h-9 px-4 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px]"
-                                                    asChild
-                                                >
-                                                    <Link
-                                                        href={`/dashboard/document/student/${row.student_id}/${row.document_id}`}
-                                                    >
-                                                        <Eye className="size-3.5 mr-1.5" />
-                                                        View
-                                                    </Link>
-                                                </Button>
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="size-9 border border-gray-200 bg-white/80 text-gray-700 hover:bg-white hover:border-gray-300 rounded-lg"
+                                                                asChild
+                                                            >
+                                                                <Link
+                                                                    href={`/dashboard/document/student/${row.student_id}/${row.document_id}`}
+                                                                    aria-label="View document"
+                                                                >
+                                                                    <Eye className="size-4" />
+                                                                </Link>
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>View</TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
                                             </div>
                                         </TableCell>
                                     </TableRow>

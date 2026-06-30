@@ -18,6 +18,7 @@ export type DocumentInput = z.infer<typeof DocumentFormSchema>
 export type UploadedDocumentSummary = {
     document_id: string
     status: string
+    feedback: string | null
     note: string | null
     files: Array<{ file_url: string; type: string | null }>
     created_at: string

@@ -12,6 +12,23 @@ export async function assertAgentCanAccessStudentProfile(
     return studentProfileIds.includes(studentProfileId)
 }
 
+export async function assertCanUploadStudentDocument(
+    supabase: SupabaseServerClient,
+    userId: string,
+    role: string | null | undefined,
+    studentProfileId: string
+) {
+    if (role === "STUDENT") {
+        return userId === studentProfileId
+    }
+
+    if (role === "AGENT") {
+        return assertAgentCanAccessStudentProfile(supabase, userId, studentProfileId)
+    }
+
+    return role === "UNIVERSITY" || role === "ADMIN"
+}
+
 export async function assertAgentCanAccessDocument(
     supabase: SupabaseServerClient,
     agentProfileId: string,
