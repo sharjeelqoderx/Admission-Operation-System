@@ -83,6 +83,8 @@ export function DegreeDocumentsPanel({
                     queryKey: ["course-document-bundles"],
                 })
                 await queryClient.invalidateQueries({ queryKey: ["documents"] })
+                await queryClient.invalidateQueries({ queryKey: ["documents", "all"] })
+                await queryClient.invalidateQueries({ queryKey: ["documents", "students"] })
             } catch (e) {
                 setSaveError(
                     e instanceof Error ? e.message : "Failed to save documents"

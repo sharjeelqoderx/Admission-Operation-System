@@ -28,6 +28,7 @@ const statusStyles: Record<string, string> = {
     [DocStatus.PENDING]: "bg-yellow-500",
     [DocStatus.ACTION_REQUIRED]: "bg-orange-500",
     [DocStatus.REJECTED]: "bg-red-500",
+    APPROVED: "bg-green-600",
 }
 
 interface Props {

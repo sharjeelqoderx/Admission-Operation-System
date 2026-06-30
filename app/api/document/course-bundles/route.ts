@@ -18,14 +18,23 @@ type DocumentRow = {
     document_type_id: string | null
     created_at: string
     updated_at: string | null
-    document_review: Array<{ status: string; created_at: string }> | null
+    document_review: Array<{ status: string; created_at: string; feedback: string | null }> | null
     document_files: Array<{ file_url: string; type: string | null }> | null
 }
 
+function getLatestReview(reviews: DocumentRow["document_review"]) {
+    if (!reviews?.length) return null
+    return [...reviews].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0]
+}
+
 function mapUploadedDocument(doc: DocumentRow): UploadedDocumentSummary {
+    const review = getLatestReview(doc.document_review)
     return {
         document_id: doc.id,
-        status: doc.document_review?.[0]?.status ?? "PENDING",
+        status: review?.status ?? "PENDING",
+        feedback: review?.feedback ?? null,
         note: null,
         files: (doc.document_files ?? []).map((file) => ({
             file_url: file.file_url,
@@ -149,7 +158,7 @@ export async function GET(req: NextRequest) {
                 document_type_id,
                 created_at,
                 updated_at,
-                document_review(status, created_at),
+                document_review(status, created_at, feedback),
                 document_files(file_url, type)
             `)
             .eq("profile_id", profileId)

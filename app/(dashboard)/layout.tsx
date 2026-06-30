@@ -24,6 +24,7 @@ import {
   UserPlus,
   Eye,
   FileStack,
+  Files,
   // FileUp,
 } from 'lucide-react';
 
@@ -124,6 +125,12 @@ const sidebarRoutes = [
         href: '/dashboard/document',
         icon: Eye,
         allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+      },
+      {
+        label: 'View All Documents',
+        href: '/dashboard/document/all',
+        icon: Files,
+        allowFor: [Role.AGENT],
       },
     ],
   },

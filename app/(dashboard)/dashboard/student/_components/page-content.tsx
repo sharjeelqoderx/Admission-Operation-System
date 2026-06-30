@@ -123,12 +123,11 @@ function StudentDashboardView({
     refetch,
 }: StudentDashboardViewProps) {
     return (
-        <main className="relative">
-            <div className="max-w-[1400px] mx-auto">
+        <main className="relative min-w-0">
+            <div className="max-w-[1400px] mx-auto space-y-8 min-w-0">
                 <StatsDashboard stats={stats} statsLoading={statsLoading} />
-            </div>
-            <div className="-mx-4 sm:-mx-6 px-4 sm:px-6">
-                <div className="space-y-4 pt-8">
+
+                <div className="space-y-4 min-w-0">
                     <Typography as="h3" font="text-xl" className="text-brand-secondary">
                         Students list
                     </Typography>

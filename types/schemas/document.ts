@@ -18,6 +18,7 @@ export type DocumentInput = z.infer<typeof DocumentFormSchema>
 export type UploadedDocumentSummary = {
     document_id: string
     status: string
+    feedback: string | null
     note: string | null
     files: Array<{ file_url: string; type: string | null }>
     created_at: string
@@ -86,3 +87,40 @@ export const SaveDegreeDocumentsSchema = z.object({
 })
 
 export type SaveDegreeDocumentsInput = z.infer<typeof SaveDegreeDocumentsSchema>
+
+export const DocumentReviewActionSchema = z
+    .object({
+        status: z.enum(["APPROVED", "REJECTED"]),
+        feedback: z.string().optional(),
+    })
+    .superRefine((data, ctx) => {
+        if (data.status === "REJECTED" && !data.feedback?.trim()) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Rejection reason is required",
+                path: ["feedback"],
+            })
+        }
+    })
+
+export type DocumentReviewActionInput = z.infer<typeof DocumentReviewActionSchema>
+
+export type AgentAllDocumentRow = {
+    document_id: string
+    review_id: string | null
+    document_name: string
+    status: string
+    feedback: string | null
+    student_id: string
+    student_name: string
+    student_code: string | null
+    student_country: string | null
+    campus: string | null
+    uploaded_at: string
+    uploaded_by_name: string | null
+    file_count: number
+}
+
+export type AgentAllDocumentsResponse = {
+    data: AgentAllDocumentRow[]
+}

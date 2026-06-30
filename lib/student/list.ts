@@ -121,7 +121,7 @@ export async function fetchStudentsListForAgent(
         total: students.length,
         page,
         limit,
-        totalPages: Math.ceil(students.length / limit) || 0,
+        totalPages: students.length > 0 ? Math.max(1, Math.ceil(students.length / limit)) : 0,
     }
 
     const start = (page - 1) * limit
