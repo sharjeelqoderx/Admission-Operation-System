@@ -57,6 +57,23 @@ function normalizeLevelName(levelName?: string | null): string {
   return levelName?.trim().toLowerCase() ?? ""
 }
 
+/** When true, every course is eligible (e.g. Studienkolleg / Foundation). */
+export function shouldShowAllCoursesForQualification(
+  qualificationLevelName?: string | null,
+  qualificationDegreeName?: string | null
+): boolean {
+  const level = normalizeLevelName(qualificationLevelName)
+  const degreeName = normalizeLevelName(qualificationDegreeName)
+
+  if (level === "foundation" || level.includes("studienkolleg")) return true
+  if (degreeName.includes("studienkolleg")) return true
+
+  // Degree selected but no mapped academic level — show full catalog
+  if (!qualificationLevelName?.trim() && qualificationDegreeName?.trim()) return true
+
+  return false
+}
+
 /** Maps highest qualification level to eligible course level(s). */
 export function getTargetCourseLevelNames(
   qualificationLevelName?: string | null
@@ -90,8 +107,18 @@ export function filterCoursesByQualificationLevel<
   T extends { degree?: { level?: { name?: string | null } | null } | null },
 >(
   courses: T[],
-  qualificationLevelName?: string | null
+  qualificationLevelName?: string | null,
+  qualificationDegreeName?: string | null
 ): T[] {
+  if (
+    shouldShowAllCoursesForQualification(
+      qualificationLevelName,
+      qualificationDegreeName
+    )
+  ) {
+    return courses
+  }
+
   const targetLevelNames = getTargetCourseLevelNames(qualificationLevelName)
   if (targetLevelNames.length === 0) return []
 

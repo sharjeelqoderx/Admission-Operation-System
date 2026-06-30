@@ -571,6 +571,9 @@ export function Step4Application({ onBack }: { onBack: () => void }) {
     const qualificationLevelName = qualificationId
         ? degrees.find((d) => d.id === qualificationId)?.level?.name
         : null
+    const qualificationDegreeName = qualificationId
+        ? degrees.find((d) => d.id === qualificationId)?.name
+        : null
 
     const { data: programsResponse } = useQuery({
         queryKey: ["programs"],
@@ -584,8 +587,15 @@ export function Step4Application({ onBack }: { onBack: () => void }) {
     const courses: CourseProgram[] = Array.isArray(programsResponse?.data) ? programsResponse.data : []
 
     const eligibleCourses = useMemo(
-        () => (qualificationId ? filterCoursesByQualificationLevel(courses, qualificationLevelName) : []),
-        [courses, qualificationId, qualificationLevelName]
+        () =>
+            qualificationId
+                ? filterCoursesByQualificationLevel(
+                      courses,
+                      qualificationLevelName,
+                      qualificationDegreeName
+                  )
+                : [],
+        [courses, qualificationId, qualificationLevelName, qualificationDegreeName]
     )
 
     const { data: allDocumentTypes = [] } = useQuery({

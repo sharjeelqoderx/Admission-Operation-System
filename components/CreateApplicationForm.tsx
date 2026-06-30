@@ -325,6 +325,14 @@ export function CreateApplicationForm() {
         return studentDetails?.education?.[0]?.qualification_degree?.level?.name ?? null;
     }, [studentDetails?.education]);
 
+    const qualificationDegreeName = useMemo(() => {
+        const degree = studentDetails?.education?.[0]?.qualification_degree as
+            | { name?: string | null }
+            | null
+            | undefined
+        return degree?.name ?? null
+    }, [studentDetails?.education]);
+
     const courses = useMemo(() => {
         const shouldFilterByQualification =
             user?.role === "STUDENT" || (studentDetails && user?.role === "AGENT");
@@ -333,14 +341,18 @@ export function CreateApplicationForm() {
             return allCourses;
         }
 
-        if (!qualificationLevelName) {
+        if (!qualificationLevelName && !qualificationDegreeName) {
             return [];
         }
 
-        return filterCoursesByQualificationLevel(allCourses, qualificationLevelName);
-    }, [allCourses, user?.role, studentDetails, qualificationLevelName]);
+        return filterCoursesByQualificationLevel(
+            allCourses,
+            qualificationLevelName,
+            qualificationDegreeName
+        );
+    }, [allCourses, user?.role, studentDetails, qualificationLevelName, qualificationDegreeName]);
 
-    const hasQualification = Boolean(qualificationLevelName);
+    const hasQualification = Boolean(qualificationLevelName || qualificationDegreeName);
     const { data: levels = [] } = useLevels();
 
     const { data: programDetailResponse, isLoading: isCourseDetailLoading } = useQuery({

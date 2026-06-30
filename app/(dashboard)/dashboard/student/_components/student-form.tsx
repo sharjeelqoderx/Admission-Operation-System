@@ -1663,13 +1663,14 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                     selector={(state) => state.values.academic_background[0]?.qualification}
                                 >
                                     {(qualificationId) => {
-                                        const qualificationLevelName = qualificationId
-                                            ? degrees.find((d) => d.id === qualificationId)?.level?.name
+                                        const selectedDegree = qualificationId
+                                            ? degrees.find((d) => d.id === qualificationId)
                                             : null;
                                         const eligibleCourses = qualificationId
                                             ? filterCoursesByQualificationLevel(
                                                   courses,
-                                                  qualificationLevelName
+                                                  selectedDegree?.level?.name,
+                                                  selectedDegree?.name
                                               )
                                             : [];
 
