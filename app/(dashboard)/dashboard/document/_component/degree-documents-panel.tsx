@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { useCourseDocumentBundles } from "@/hooks/useCourseDocumentBundles"
+import { useAuth } from "@/hooks/useAuth"
+import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
 import { formatStudyMode } from "@/lib/utils/program"
 import { ChevronLeft, Clock, GraduationCap, MapPin } from "lucide-react"
 import { DegreeDocumentsTable } from "./degree-documents-table"
@@ -31,6 +33,8 @@ export function DegreeDocumentsPanel({
     variant = "page",
 }: Props) {
     const queryClient = useQueryClient()
+    const { me } = useAuth()
+    const readOnly = isUniversityViewOnly(me.data?.role)
     const { data, isLoading, isError, error } = useCourseDocumentBundles(studentId)
 
     const [pendingFiles, setPendingFiles] = useState<PendingFilesMap>({})
@@ -201,6 +205,7 @@ export function DegreeDocumentsPanel({
                     onPendingChange={handlePendingChange}
                     isSaving={isSaving}
                     onSaveRow={handleSaveRow}
+                    readOnly={readOnly}
                 />
             </div>
 

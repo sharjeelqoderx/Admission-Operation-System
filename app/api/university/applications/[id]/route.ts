@@ -32,6 +32,7 @@ export async function GET(
         const data = await fetchUniversityApplicationDetail({
             applicationId: id,
             universityId: profile.role === "UNIVERSITY" ? user.id : null,
+            viewerRole: profile.role,
         })
 
         if (!data) {

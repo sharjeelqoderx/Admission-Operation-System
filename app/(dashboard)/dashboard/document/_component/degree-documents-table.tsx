@@ -192,6 +192,7 @@ type Props = {
         files: File[],
         note: string
     ) => void
+    readOnly?: boolean
 }
 
 export function DegreeDocumentsTable({
@@ -200,6 +201,7 @@ export function DegreeDocumentsTable({
     onPendingChange,
     isSaving,
     onSaveRow,
+    readOnly = false,
 }: Props) {
     if (bundle.required_documents.length === 0) {
         return (
@@ -216,10 +218,16 @@ export function DegreeDocumentsTable({
                     <TableRow>
                         <TableHead className="font-semibold text-gray-700">Last Updated</TableHead>
                         <TableHead className="font-semibold text-gray-700 min-w-[200px]">Document</TableHead>
-                        <TableHead className="font-semibold text-gray-700 min-w-[280px]">Upload</TableHead>
+                        <TableHead className="font-semibold text-gray-700 min-w-[280px]">
+                            {readOnly ? "File" : "Upload"}
+                        </TableHead>
                         <TableHead className="font-semibold text-gray-700">Status</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Note</TableHead>
-                        <TableHead className="font-semibold text-gray-700">Actions</TableHead>
+                        {!readOnly ? (
+                            <>
+                                <TableHead className="font-semibold text-gray-700">Note</TableHead>
+                                <TableHead className="font-semibold text-gray-700">Actions</TableHead>
+                            </>
+                        ) : null}
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -236,7 +244,7 @@ export function DegreeDocumentsTable({
                             uploaded?.status === "APPROVED" ||
                             uploaded?.status === "VERIFIED"
                         const isRejected = uploaded?.status === "REJECTED"
-                        const canUpload = !isLocked
+                        const canUpload = !readOnly && !isLocked
                         const rejectionFeedback = uploaded?.feedback?.trim() ?? ""
 
                         return (
@@ -274,73 +282,90 @@ export function DegreeDocumentsTable({
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    <div className="flex items-center gap-3">
-                                        <label
-                                            htmlFor={`upload-${requirement.document_type_id}`}
-                                            className={cn(
-                                                "size-10 rounded-lg border border-dashed flex items-center justify-center cursor-pointer transition-colors",
-                                                isRejected
-                                                    ? "border-red-300 bg-red-50 hover:border-red-400"
-                                                    : "border-gray-300 hover:border-brand-byzantine",
-                                                !canUpload && "opacity-50 cursor-not-allowed"
-                                            )}
-                                        >
-                                            <Upload
+                                    {readOnly ? (
+                                        uploaded?.files?.[0] ? (
+                                            <a
+                                                href={uploaded.files[0].file_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-sm font-medium text-brand-byzantine underline"
+                                            >
+                                                View file
+                                            </a>
+                                        ) : (
+                                            <Typography as="span" className="text-sm text-gray-500">
+                                                —
+                                            </Typography>
+                                        )
+                                    ) : (
+                                        <div className="flex items-center gap-3">
+                                            <label
+                                                htmlFor={`upload-${requirement.document_type_id}`}
                                                 className={cn(
-                                                    "size-4",
-                                                    isRejected ? "text-red-600" : "text-gray-600"
+                                                    "size-10 rounded-lg border border-dashed flex items-center justify-center cursor-pointer transition-colors",
+                                                    isRejected
+                                                        ? "border-red-300 bg-red-50 hover:border-red-400"
+                                                        : "border-gray-300 hover:border-brand-byzantine",
+                                                    !canUpload && "opacity-50 cursor-not-allowed"
                                                 )}
+                                            >
+                                                <Upload
+                                                    className={cn(
+                                                        "size-4",
+                                                        isRejected ? "text-red-600" : "text-gray-600"
+                                                    )}
+                                                />
+                                            </label>
+                                            <input
+                                                id={`upload-${requirement.document_type_id}`}
+                                                type="file"
+                                                className="hidden"
+                                                accept="image/*,application/pdf,.doc,.docx"
+                                                disabled={!canUpload}
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0] ?? null
+                                                    onPendingChange(
+                                                        requirement.document_type_id,
+                                                        { ...entry, front: file }
+                                                    )
+                                                }}
                                             />
-                                        </label>
-                                        <input
-                                            id={`upload-${requirement.document_type_id}`}
-                                            type="file"
-                                            className="hidden"
-                                            accept="image/*,application/pdf,.doc,.docx"
-                                            disabled={!canUpload}
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0] ?? null
-                                                onPendingChange(
-                                                    requirement.document_type_id,
-                                                    { ...entry, front: file }
-                                                )
-                                            }}
-                                        />
-                                        <div className="flex flex-col min-w-0">
-                                            {entry.front ? (
-                                                <>
-                                                    <span className="text-sm font-medium text-emerald-600 truncate">
-                                                        {entry.front.name}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500">
-                                                        {(entry.front.size / 1024 / 1024).toFixed(2)} MB
-                                                    </span>
-                                                </>
-                                            ) : uploaded?.files?.[0] ? (
-                                                <>
-                                                    <span className="text-sm font-medium text-blue-600">
-                                                        Uploaded
-                                                    </span>
-                                                    <a
-                                                        href={uploaded.files[0].file_url}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="text-xs text-brand-byzantine underline"
-                                                    >
-                                                        View file
-                                                    </a>
-                                                </>
-                                            ) : isRejected ? (
-                                                <Typography as="span" className="text-sm text-red-600 font-medium">
-                                                    Upload a corrected file to re-submit
-                                                </Typography>
-                                            ) : (
-                                                <Typography as="span" className="text-sm text-gray-500">
-                                                    No file selected
-                                                </Typography>
-                                            )}
+                                            <div className="flex flex-col min-w-0">
+                                                {entry.front ? (
+                                                    <>
+                                                        <span className="text-sm font-medium text-emerald-600 truncate">
+                                                            {entry.front.name}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500">
+                                                            {(entry.front.size / 1024 / 1024).toFixed(2)} MB
+                                                        </span>
+                                                    </>
+                                                ) : uploaded?.files?.[0] ? (
+                                                    <>
+                                                        <span className="text-sm font-medium text-blue-600">
+                                                            Uploaded
+                                                        </span>
+                                                        <a
+                                                            href={uploaded.files[0].file_url}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-xs text-brand-byzantine underline"
+                                                        >
+                                                            View file
+                                                        </a>
+                                                    </>
+                                                ) : isRejected ? (
+                                                    <Typography as="span" className="text-sm text-red-600 font-medium">
+                                                        Upload a corrected file to re-submit
+                                                    </Typography>
+                                                ) : (
+                                                    <Typography as="span" className="text-sm text-gray-500">
+                                                        No file selected
+                                                    </Typography>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </TableCell>
                                 <TableCell>
                                     <div className="space-y-2">
@@ -369,51 +394,55 @@ export function DegreeDocumentsTable({
                                         )}
                                     </div>
                                 </TableCell>
-                                <TableCell>
-                                    <NotePopover
-                                        note={entry.note}
-                                        documentId={uploaded?.document_id}
-                                        onSave={(note) =>
-                                            onPendingChange(
-                                                requirement.document_type_id,
-                                                { ...entry, note }
-                                            )
-                                        }
-                                        isDisabled={isLocked}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    {entry.front && (
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            className={cn(
-                                                isRejected
-                                                    ? "bg-red-600 hover:bg-red-700"
-                                                    : "bg-brand-byzantine hover:bg-brand-byzantine/90"
+                                {!readOnly ? (
+                                    <>
+                                        <TableCell>
+                                            <NotePopover
+                                                note={entry.note}
+                                                documentId={uploaded?.document_id}
+                                                onSave={(note) =>
+                                                    onPendingChange(
+                                                        requirement.document_type_id,
+                                                        { ...entry, note }
+                                                    )
+                                                }
+                                                isDisabled={isLocked}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            {entry.front && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    className={cn(
+                                                        isRejected
+                                                            ? "bg-red-600 hover:bg-red-700"
+                                                            : "bg-brand-byzantine hover:bg-brand-byzantine/90"
+                                                    )}
+                                                    disabled={
+                                                        isSaving[requirement.document_type_id]
+                                                    }
+                                                    onClick={() =>
+                                                        onSaveRow(
+                                                            bundle.degree.id,
+                                                            requirement.document_type_id,
+                                                            entry.front ? [entry.front] : [],
+                                                            entry.note
+                                                        )
+                                                    }
+                                                >
+                                                    {isSaving[requirement.document_type_id]
+                                                        ? isRejected
+                                                            ? "Re-submitting..."
+                                                            : "Saving..."
+                                                        : isRejected
+                                                          ? "Re-submit"
+                                                          : "Save"}
+                                                </Button>
                                             )}
-                                            disabled={
-                                                isSaving[requirement.document_type_id]
-                                            }
-                                            onClick={() =>
-                                                onSaveRow(
-                                                    bundle.degree.id,
-                                                    requirement.document_type_id,
-                                                    entry.front ? [entry.front] : [],
-                                                    entry.note
-                                                )
-                                            }
-                                        >
-                                            {isSaving[requirement.document_type_id]
-                                                ? isRejected
-                                                    ? "Re-submitting..."
-                                                    : "Saving..."
-                                                : isRejected
-                                                  ? "Re-submit"
-                                                  : "Save"}
-                                        </Button>
-                                    )}
-                                </TableCell>
+                                        </TableCell>
+                                    </>
+                                ) : null}
                             </TableRow>
                         )
                     })}

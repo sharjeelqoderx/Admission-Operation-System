@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, ChevronDown, Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -111,16 +111,6 @@ export function Navbar({
             </div>
 
             <div className="flex items-center gap-3 sm:gap-4">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="relative text-gray-600 hover:text-brand-byzantine"
-                    aria-label="Notifications"
-                >
-                    <Bell className="w-5 h-5" />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-brand-byzantine rounded-full" />
-                </Button>
-
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="h-14 gap-3 px-4 py-2 border border-brand-byzantine rounded-xl hover:bg-brand-byzantine/10 bg-brand-byzantine/5 transition-colors">

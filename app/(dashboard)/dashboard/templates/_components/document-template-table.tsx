@@ -27,6 +27,7 @@ type DocumentTemplateTableProps = {
     onEdit: (template: DocumentTemplateListItem) => void
     onDelete: (template: DocumentTemplateListItem) => void
     onRetry: () => void
+    viewOnly?: boolean
 }
 
 const COLUMN_COUNT = 4
@@ -58,6 +59,7 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
     onEdit,
     onDelete,
     onRetry,
+    viewOnly = false,
 }: DocumentTemplateTableProps) {
     if (isLoading) {
         return (
@@ -199,23 +201,26 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                size="icon"
-                                                className={actionIconButtonClassName}
+                                                size="sm"
+                                                className="h-9 gap-1.5 rounded-lg px-3"
                                                 aria-label={`View ${template.title}`}
                                                 onClick={() => onView(template)}
                                             >
                                                 <Eye className="size-4" />
+                                                View
                                             </Button>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="icon"
-                                                className={actionIconButtonClassName}
-                                                aria-label={`Edit ${template.title}`}
-                                                onClick={() => onEdit(template)}
-                                            >
-                                                <Pencil className="size-4" />
-                                            </Button>
+                                            {!viewOnly ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className={actionIconButtonClassName}
+                                                    aria-label={`Edit ${template.title}`}
+                                                    onClick={() => onEdit(template)}
+                                                >
+                                                    <Pencil className="size-4" />
+                                                </Button>
+                                            ) : null}
                                             {/* <Button
                                                 type="button"
                                                 variant="destructive"

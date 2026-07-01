@@ -25,6 +25,8 @@ export async function GET(req: NextRequest) {
         const data = await fetchUniversityAgentList({
             q: searchParams.get("q") ?? undefined,
             status: searchParams.get("status") ?? undefined,
+            country: searchParams.get("country") ?? undefined,
+            sortBy: searchParams.get("sortBy") ?? undefined,
             page: Number(searchParams.get("page") ?? "1"),
             limit: Number(searchParams.get("limit") ?? "10"),
         })

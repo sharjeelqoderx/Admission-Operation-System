@@ -37,7 +37,7 @@ export default function AllApplicationViewDetailsPage() {
 
     const canCreateOffer =
         me.isSuccess &&
-        (me.data?.role === "UNIVERSITY" || me.data?.role === "AGENT" || me.data?.role === "ADMIN")
+        (me.data?.role === "AGENT" || me.data?.role === "ADMIN")
 
     const { data: application, isLoading, isError } = useQuery({
         queryKey: ["application", id, "all"],

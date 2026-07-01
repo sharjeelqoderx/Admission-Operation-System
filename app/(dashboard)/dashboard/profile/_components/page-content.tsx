@@ -40,6 +40,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
+import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import {
     type AcademicFormItem,
@@ -395,6 +396,7 @@ function ProfilePageView({ initialData }: PageContentProps) {
 
     const role = user?.role
     const isStudent = role === "STUDENT"
+    const isUniversityViewOnlyRole = isUniversityViewOnly(role)
     const isEditingBasic = isStudent ? editingSection === "basic" : isEditing
     const isEditingStudentDetails = editingSection === "student-details"
     const isEditingAcademic = editingSection === "academic"
@@ -419,7 +421,7 @@ function ProfilePageView({ initialData }: PageContentProps) {
                         Manage your personal information and academic background.
                     </Typography>
                 </div>
-                {!isStudent && !isEditing && (
+                {!isStudent && !isUniversityViewOnlyRole && !isEditing && (
                     <ProfileEditButton onClick={() => setIsEditing(true)} />
                 )}
             </div>
@@ -1615,7 +1617,7 @@ function ProfilePageView({ initialData }: PageContentProps) {
                     </BluryCard>
                 )}
  
-                {!isStudent && (
+                {!isStudent && !isUniversityViewOnlyRole && (
                 <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4 pb-12">
                     {isEditing && (
                         <Button

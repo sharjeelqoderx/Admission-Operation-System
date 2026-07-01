@@ -13,6 +13,9 @@ export default async function DashboardPage() {
 
     if (role === "UNIVERSITY") {
         const initialOverview = await fetchUniversityOverviewForPage()
+        if (!initialOverview) {
+            redirect("/login")
+        }
         return <UniversityOverviewPageContent initialOverview={initialOverview} />
     }
 

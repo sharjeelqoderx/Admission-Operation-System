@@ -2,7 +2,7 @@
 
 import { memo } from "react"
 import Link from "next/link"
-import { Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Eye, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Typography } from "@/components/shared/Typography"
 import { AgentKycBadge } from "@/components/shared/agent-kyc-badge"
@@ -33,10 +33,15 @@ type UniversityAgentListTableProps = {
     }
     isLoading?: boolean
     statusValue: string
+    countryValue: string
+    sortBy: string
     activeTab: string
     onStatusChange: (value: string) => void
+    onCountryChange: (value: string) => void
+    onSortByChange: (value: string) => void
     onTabChange: (value: string) => void
     onPageChange: (page: number) => void
+    allCountries: string[]
 }
 
 const tabs = ["University Partners", "Country", "KYC Status", "Students Count"]
@@ -46,10 +51,15 @@ export const UniversityAgentListTable = memo(function UniversityAgentListTable({
     pagination,
     isLoading = false,
     statusValue,
+    countryValue,
+    sortBy,
     activeTab,
     onStatusChange,
+    onCountryChange,
+    onSortByChange,
     onTabChange,
     onPageChange,
+    allCountries,
 }: UniversityAgentListTableProps) {
     const showingCount = agents.length
     const totalCount = pagination?.total ?? showingCount
@@ -77,19 +87,52 @@ export const UniversityAgentListTable = memo(function UniversityAgentListTable({
                     })}
                 </div>
 
-                <Select value={statusValue} onValueChange={onStatusChange}>
-                    <SelectTrigger className="h-11 w-full border-none bg-white shadow-sm ring-1 ring-black/5 lg:w-56">
-                        <SelectValue placeholder="KYC Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="under-review">Under Review</SelectItem>
-                        <SelectItem value="resubmission">Resubmission</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                    </SelectContent>
-                </Select>
+                <div className="flex flex-wrap items-center gap-2">
+                    {activeTab === "KYC Status" && (
+                        <Select value={statusValue} onValueChange={onStatusChange}>
+                            <SelectTrigger className="h-11 w-full border-none bg-white shadow-sm ring-1 ring-black/5 lg:w-56">
+                                <SelectValue placeholder="KYC Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="under-review">Under Review</SelectItem>
+                                <SelectItem value="resubmission">Resubmission</SelectItem>
+                                <SelectItem value="approved">Approved</SelectItem>
+                                <SelectItem value="rejected">Rejected</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
+
+                    {activeTab === "Country" && (
+                        <Select value={countryValue} onValueChange={onCountryChange}>
+                            <SelectTrigger className="h-11 w-full border-none bg-white shadow-sm ring-1 ring-black/5 lg:w-56">
+                                <SelectValue placeholder="Country" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Countries</SelectItem>
+                                {allCountries.map((country) => (
+                                    <SelectItem key={country} value={country}>
+                                        {country}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+
+                    {activeTab === "Students Count" && (
+                        <Select value={sortBy} onValueChange={onSortByChange}>
+                            <SelectTrigger className="h-11 w-full border-none bg-white shadow-sm ring-1 ring-black/5 lg:w-56">
+                                <SelectValue placeholder="Sort by" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="default">Default</SelectItem>
+                                <SelectItem value="students-count-asc">Students Count (Low to High)</SelectItem>
+                                <SelectItem value="students-count-desc">Students Count (High to Low)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    )}
+                </div>
             </div>
 
             <Card className="overflow-hidden border-none bg-white shadow-sm ring-1 ring-black/5">
@@ -158,20 +201,13 @@ export const UniversityAgentListTable = memo(function UniversityAgentListTable({
                                             </Typography>
                                         </TableCell>
                                         <TableCell className="px-6 py-5">
-                                            <div className="flex items-center gap-3 text-gray-500">
-                                                <Link
-                                                    href={`/dashboard/agent/${agent.profile_id}`}
-                                                    className="hover:text-brand-blue"
-                                                >
-                                                    <Eye className="size-4" />
-                                                </Link>
-                                                <button type="button" className="cursor-not-allowed opacity-40">
-                                                    <Pencil className="size-4" />
-                                                </button>
-                                                <button type="button" className="cursor-not-allowed opacity-40">
-                                                    <Trash2 className="size-4" />
-                                                </button>
-                                            </div>
+                                            <Link
+                                                href={`/dashboard/agent/${agent.profile_id}`}
+                                                className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-byzantine hover:text-brand-blue"
+                                            >
+                                                <Eye className="size-4" />
+                                                View
+                                            </Link>
                                         </TableCell>
                                     </TableRow>
                                 ))
