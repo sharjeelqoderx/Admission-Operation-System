@@ -15,7 +15,11 @@ export default async function EditProgramPage({ params }: EditProgramPageProps) 
         redirect("/login")
     }
 
-    if (role !== "UNIVERSITY" && role !== "ADMIN") {
+    if (role === "UNIVERSITY") {
+        redirect(`/dashboard/program/${programId}`)
+    }
+
+    if (role !== "ADMIN") {
         redirect(`/dashboard/program/${programId}`)
     }
 

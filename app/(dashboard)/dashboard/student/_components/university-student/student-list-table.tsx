@@ -2,7 +2,7 @@
 
 import { memo } from "react"
 import Link from "next/link"
-import { Eye, Pencil, Search, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Eye, Search, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Typography } from "@/components/shared/Typography"
@@ -181,20 +181,13 @@ export const UniversityStudentListTable = memo(function UniversityStudentListTab
                                             </Typography>
                                         </TableCell>
                                         <TableCell className="px-6 py-5">
-                                            <div className="flex items-center gap-3 text-gray-500">
-                                                <Link
-                                                    href={`/dashboard/student/${student.profile_id}`}
-                                                    className="hover:text-brand-blue"
-                                                >
-                                                    <Eye className="size-4" />
-                                                </Link>
-                                                <button type="button" className="cursor-not-allowed opacity-40">
-                                                    <Pencil className="size-4" />
-                                                </button>
-                                                <button type="button" className="cursor-not-allowed opacity-40">
-                                                    <Trash2 className="size-4" />
-                                                </button>
-                                            </div>
+                                            <Link
+                                                href={`/dashboard/student/${student.profile_id}`}
+                                                className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-byzantine hover:text-brand-blue"
+                                            >
+                                                <Eye className="size-4" />
+                                                View
+                                            </Link>
                                         </TableCell>
                                     </TableRow>
                                 ))

@@ -60,6 +60,10 @@ export function withUniversityApplicationPageLogic(
             queryKey: ["university-applications", q, tab, page],
             queryFn: () => fetchUniversityApplications({ q, tab, page }),
             initialData: initialOverview,
+            staleTime: 60000, // 1 minute
+            gcTime: 300000, // 5 minutes
+            refetchOnWindowFocus: false,
+            refetchOnReconnect: true,
         })
 
         const updateParams = useCallback(

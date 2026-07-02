@@ -10,21 +10,31 @@ import type { UniversityAgentListResponse } from "@/types/schemas/university-age
 type UniversityAgentPageViewProps = {
     overview: UniversityAgentListResponse
     statusValue: string
+    countryValue: string
+    sortBy: string
     activeTab: string
     isFetching: boolean
     onStatusChange: (value: string) => void
+    onCountryChange: (value: string) => void
+    onSortByChange: (value: string) => void
     onTabChange: (value: string) => void
     onPageChange: (page: number) => void
+    allCountries: string[]
 }
 
 const UniversityAgentPageView = memo(function UniversityAgentPageView({
     overview,
     statusValue,
+    countryValue,
+    sortBy,
     activeTab,
     isFetching,
     onStatusChange,
+    onCountryChange,
+    onSortByChange,
     onTabChange,
     onPageChange,
+    allCountries,
 }: UniversityAgentPageViewProps) {
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
@@ -45,10 +55,15 @@ const UniversityAgentPageView = memo(function UniversityAgentPageView({
                 pagination={overview.pagination}
                 isLoading={isFetching}
                 statusValue={statusValue}
+                countryValue={countryValue}
+                sortBy={sortBy}
                 activeTab={activeTab}
                 onStatusChange={onStatusChange}
+                onCountryChange={onCountryChange}
+                onSortByChange={onSortByChange}
                 onTabChange={onTabChange}
                 onPageChange={onPageChange}
+                allCountries={allCountries}
             />
         </div>
     )

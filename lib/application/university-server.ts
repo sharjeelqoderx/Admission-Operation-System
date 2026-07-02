@@ -7,6 +7,7 @@ import { formatIntakeDate } from "@/lib/utils/program"
 import { formatLocation } from "@/lib/utils/location"
 import { resolveStudentPipelineStatus } from "@/lib/student/pipeline-status"
 import { resolveQualificationLabel } from "@/lib/education/resolve-qualification"
+import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
 import type {
     UniversityApplicationDetail,
     UniversityApplicationDetailPageData,
@@ -256,6 +257,7 @@ export async function fetchUniversityApplicationList(params: {
     const searchTerm = params.q?.trim().toLowerCase() ?? ""
     const tab = params.tab ?? "all"
 
+    // First fetch ALL applications to calculate tab counts (this is necessary for count accuracy)
     let applicationsQuery = supabase
         .from("application")
         .select(
@@ -267,30 +269,31 @@ export async function fetchUniversityApplicationList(params: {
         applicationsQuery = applicationsQuery.eq("university_id", params.universityId)
     }
 
-    const { data: applications, error: applicationsError } = await applicationsQuery
+    const { data: allApplications, error: applicationsError } = await applicationsQuery
 
     if (applicationsError) {
         throw new Error(applicationsError.message)
     }
 
-    const applicationRows = (applications ?? []) as ApplicationRow[]
-    const applicationIds = applicationRows.map((application) => application.id)
-    const profileIds = [...new Set(applicationRows.map((application) => application.profile_id))]
-    const agentProfileIds = [
+    const allApplicationRows = (allApplications ?? []) as ApplicationRow[]
+    const allApplicationIds = allApplicationRows.map((application) => application.id)
+    const allProfileIds = [...new Set(allApplicationRows.map((application) => application.profile_id))]
+    const allAgentProfileIds = [
         ...new Set(
-            applicationRows
+            allApplicationRows
                 .map((application) => application.submitted_by_profile_id)
                 .filter((id): id is string => Boolean(id))
         ),
     ]
-    const courseIds = [...new Set(applicationRows.map((application) => application.course_id))]
+    const allCourseIds = [...new Set(allApplicationRows.map((application) => application.course_id))]
 
+    // Fetch all related data once for counts and list
     const { data: offers, error: offersError } = await supabase
         .from("offer_letter")
         .select("application_id, status, created_at, accepted_at")
         .in(
             "application_id",
-            applicationIds.length > 0 ? applicationIds : ["00000000-0000-0000-0000-000000000000"]
+            allApplicationIds.length > 0 ? allApplicationIds : ["00000000-0000-0000-0000-000000000000"]
         )
 
     if (offersError) {
@@ -304,7 +307,7 @@ export async function fetchUniversityApplicationList(params: {
     const { data: profiles, error: profilesError } = await supabase
         .from("profile")
         .select("id, first_name, last_name, email, avatar_url")
-        .in("id", profileIds.length > 0 ? profileIds : ["00000000-0000-0000-0000-000000000000"])
+        .in("id", allProfileIds.length > 0 ? allProfileIds : ["00000000-0000-0000-0000-000000000000"])
 
     if (profilesError) {
         throw new Error(profilesError.message)
@@ -317,7 +320,7 @@ export async function fetchUniversityApplicationList(params: {
     const { data: students, error: studentsError } = await supabase
         .from("student")
         .select("profile_id, student_code")
-        .in("profile_id", profileIds.length > 0 ? profileIds : ["00000000-0000-0000-0000-000000000000"])
+        .in("profile_id", allProfileIds.length > 0 ? allProfileIds : ["00000000-0000-0000-0000-000000000000"])
 
     if (studentsError) {
         throw new Error(studentsError.message)
@@ -330,10 +333,11 @@ export async function fetchUniversityApplicationList(params: {
         ])
     )
 
-    const courseById = await loadCoursesById(supabase, courseIds)
-    const agentOrgByProfileId = await loadAgentOrganizations(supabase, agentProfileIds)
+    const courseById = await loadCoursesById(supabase, allCourseIds)
+    const agentOrgByProfileId = await loadAgentOrganizations(supabase, allAgentProfileIds)
 
-    let listItems = applicationRows.map((application) => {
+    // Create all list items for filtering/counting
+    const allListItems = allApplicationRows.map((application) => {
         const profile = profileById.get(application.profile_id)
         const studentName = formatFullName(profile?.first_name, profile?.last_name)
         const course = courseById.get(application.course_id)
@@ -358,9 +362,10 @@ export async function fetchUniversityApplicationList(params: {
         })
     })
 
+    // Calculate tab counts
     const tabCounts = {
-        all: listItems.length,
-        pending_review: applicationRows.filter((application) => {
+        all: allListItems.length,
+        pending_review: allApplicationRows.filter((application) => {
             const offer = offerByApplicationId.get(application.id)
             const pipelineStatus = resolveStudentPipelineStatus({
                 applicationStatus: application.status,
@@ -369,7 +374,7 @@ export async function fetchUniversityApplicationList(params: {
             })
             return matchesTab("pending-review", pipelineStatus, application.status, application.updated_at, offer)
         }).length,
-        awaiting_signature: applicationRows.filter((application) => {
+        awaiting_signature: allApplicationRows.filter((application) => {
             const offer = offerByApplicationId.get(application.id)
             const pipelineStatus = resolveStudentPipelineStatus({
                 applicationStatus: application.status,
@@ -378,7 +383,7 @@ export async function fetchUniversityApplicationList(params: {
             })
             return matchesTab("awaiting-signature", pipelineStatus, application.status, application.updated_at, offer)
         }).length,
-        recently_completed: applicationRows.filter((application) => {
+        recently_completed: allApplicationRows.filter((application) => {
             const offer = offerByApplicationId.get(application.id)
             const pipelineStatus = resolveStudentPipelineStatus({
                 applicationStatus: application.status,
@@ -389,8 +394,11 @@ export async function fetchUniversityApplicationList(params: {
         }).length,
     }
 
+    // Apply filters
+    let filteredItems = allListItems
+
     if (searchTerm) {
-        listItems = listItems.filter((item) => {
+        filteredItems = filteredItems.filter((item) => {
             const haystack = [
                 item.student_name,
                 item.student_code,
@@ -407,8 +415,8 @@ export async function fetchUniversityApplicationList(params: {
     }
 
     if (tab !== "all") {
-        listItems = listItems.filter((item) => {
-            const originalApplication = applicationRows.find((row) => row.id === item.id)
+        filteredItems = filteredItems.filter((item) => {
+            const originalApplication = allApplicationRows.find((row) => row.id === item.id)
             if (!originalApplication) return false
 
             const offer = offerByApplicationId.get(originalApplication.id)
@@ -422,10 +430,11 @@ export async function fetchUniversityApplicationList(params: {
         })
     }
 
-    const total = listItems.length
+    // Apply pagination
+    const total = filteredItems.length
     const totalPages = Math.max(Math.ceil(total / limit), 1)
     const start = (page - 1) * limit
-    const paginatedItems = listItems.slice(start, start + limit)
+    const paginatedItems = filteredItems.slice(start, start + limit)
 
     return {
         tab_counts: tabCounts,
@@ -442,6 +451,7 @@ export async function fetchUniversityApplicationList(params: {
 export async function fetchUniversityApplicationDetail(params: {
     applicationId: string
     universityId?: string | null
+    viewerRole?: string | null
 }): Promise<UniversityApplicationDetail | null> {
     const supabase = await createSupabaseServerClient()
 
@@ -681,7 +691,9 @@ export async function fetchUniversityApplicationDetail(params: {
                   agent_name: agentName,
               },
         can_approve_for_signature:
-            applicationRow.status === "PENDING" && !offerRow,
+            !isUniversityViewOnly(params.viewerRole) &&
+            applicationRow.status === "PENDING" &&
+            !offerRow,
         has_offer: Boolean(offerRow),
     }
 }
@@ -767,6 +779,7 @@ export async function fetchUniversityApplicationDetailForPage(
     const detail = await fetchUniversityApplicationDetail({
         applicationId,
         universityId: scope.universityId,
+        viewerRole: profile?.role ?? null,
     })
 
     if (!detail) {

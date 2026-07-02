@@ -18,6 +18,8 @@ import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
 import { PageLoader } from "@/components/shared/page-loader"
 import { StudentProgressCard } from "@/app/(dashboard)/dashboard/student/[student-id]/_components/university-student/progress-card"
+import { useAuth } from "@/hooks/useAuth"
+import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
 import { CreateOfferModal } from "@/app/(dashboard)/dashboard/all-application-view/_component/CreateOfferModal"
 import type { UniversityApplicationDetailLogicProps } from "./withUniversityApplicationDetailLogic"
 
@@ -45,6 +47,10 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
     onRetry,
 }: UniversityApplicationDetailLogicProps) {
     const [offerModalOpen, setOfferModalOpen] = useState(false)
+    const { me } = useAuth()
+    const viewOnly = isUniversityViewOnly(me.data?.role)
+    const canShowApproveButton =
+        detail?.can_approve_for_signature && !viewOnly && me.isSuccess
 
     if (isLoading) {
         return <PageLoader label="Loading application details..." />
@@ -114,7 +120,7 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
                     </div>
                 </div>
 
-                {detail.can_approve_for_signature ? (
+                {canShowApproveButton ? (
                     <Button
                         className="h-11 rounded-xl bg-brand-byzantine px-6 font-semibold hover:bg-brand-byzantine/90"
                         onClick={handleOpenOfferModal}
@@ -271,12 +277,14 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
                 </div>
             </div>
 
-            <CreateOfferModal
-                open={offerModalOpen}
-                onOpenChange={setOfferModalOpen}
-                applicationId={detail.id}
-                studentName={detail.student_name}
-            />
+            {!viewOnly ? (
+                <CreateOfferModal
+                    open={offerModalOpen}
+                    onOpenChange={setOfferModalOpen}
+                    applicationId={detail.id}
+                    studentName={detail.student_name}
+                />
+            ) : null}
         </div>
     )
 })

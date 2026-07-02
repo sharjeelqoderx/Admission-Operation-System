@@ -1,77 +1,115 @@
-import { memo } from "react"
+import { memo, useMemo } from "react"
+import type { LucideIcon } from "lucide-react"
+import {
+    Activity,
+    Award,
+    BookOpen,
+    FileText,
+    GraduationCap,
+    Handshake,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Card } from "@/components/ui/card"
+import { BluryCard } from "@/components/shared/blury-card"
 import { Typography } from "@/components/shared/Typography"
-import { OverviewMetricBadge } from "@/components/shared/overview-metric-badge"
-import type { UniversityOverview } from "@/types/schemas/university-overview"
+import type { UniversityOverviewStats } from "@/types/schemas/university-overview"
 
 type OverviewStatCardsProps = {
-    cards: UniversityOverview["summaryCards"]
+    stats: UniversityOverviewStats
 }
 
-export const OverviewStatCards = memo(function OverviewStatCards({
-    cards,
-}: OverviewStatCardsProps) {
+type StatCardConfig = {
+    key: keyof UniversityOverviewStats
+    label: string
+    icon: LucideIcon
+    accent: string
+    featured?: boolean
+}
+
+const STAT_CARDS: StatCardConfig[] = [
+    {
+        key: "total_students",
+        label: "Total Students",
+        icon: GraduationCap,
+        accent: "text-brand-blue",
+    },
+    {
+        key: "total_university_partners",
+        label: "Total University Partners",
+        icon: Handshake,
+        accent: "text-brand-secondary",
+    },
+    {
+        key: "active_applications",
+        label: "Active Applications",
+        icon: Activity,
+        accent: "text-brand-byzantine",
+        featured: true,
+    },
+    {
+        key: "total_applications",
+        label: "Total Applications",
+        icon: FileText,
+        accent: "text-brand-byzantine",
+    },
+    {
+        key: "programs",
+        label: "Programs",
+        icon: BookOpen,
+        accent: "text-brand-blue",
+    },
+    {
+        key: "total_offers",
+        label: "Total Offers",
+        icon: Award,
+        accent: "text-brand-success",
+    },
+]
+
+export const OverviewStatCards = memo(function OverviewStatCards({ stats }: OverviewStatCardsProps) {
+    const cards = useMemo(
+        () =>
+            STAT_CARDS.map((card) => ({
+                ...card,
+                value: (stats[card.key] ?? 0).toLocaleString(),
+            })),
+        [stats]
+    )
+
     return (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {cards.map((card) => {
-                const isHighlight = card.variant === "highlight"
+                const Icon = card.icon
+                const isFeatured = card.featured
 
+                // All cards now have hover state with purple gradient, white by default
                 return (
-                    <Card
+                    <div
                         key={card.key}
-                        className={cn(
-                            "relative overflow-hidden border-none px-5 py-5 shadow-sm ring-1 ring-black/5",
-                            isHighlight
-                                ? "bg-gradient-to-br from-brand-byzantine to-[#7B2FD4] text-white"
-                                : "bg-white"
-                        )}
+                        className="group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:bg-gradient-to-br hover:from-brand-byzantine hover:to-[#7B2FD4] hover:border-brand-byzantine/30 hover:shadow-lg hover:shadow-brand-byzantine/20"
                     >
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="absolute -right-6 -top-6 size-24 rounded-full bg-white/10 blur-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                        <div className="relative p-5 md:p-6">
+                            <div className="mb-5 flex items-start justify-between gap-3">
+                                <div className="w-fit rounded-xl border border-gray-200 bg-gray-50 p-2.5 transition-all duration-300 group-hover:border-white/30 group-hover:bg-white/15">
+                                    <Icon className={cn("size-7 opacity-85 transition-colors duration-300", card.accent, "group-hover:text-white")} />
+                                </div>
+                            </div>
                             <Typography
                                 as="p"
-                                font="small"
-                                className={cn(
-                                    "tracking-[0.14em] text-[11px] font-semibold uppercase",
-                                    isHighlight ? "text-white/85" : "text-gray-500"
-                                )}
+                                font="sub-text"
+                                className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 transition-colors duration-300 group-hover:text-white/80"
                             >
                                 {card.label}
                             </Typography>
-                            {card.badge ? (
-                                <OverviewMetricBadge
-                                    label={card.badge.label}
-                                    tone={card.badge.tone}
-                                    showTrendIcon={card.badge.tone === "success" && card.badge.label.startsWith("+")}
-                                />
-                            ) : card.subtitle && !isHighlight ? (
-                                <Typography as="span" font="sub-text" className="text-gray-500">
-                                    {card.subtitle}
-                                </Typography>
-                            ) : null}
-                        </div>
-
-                        <Typography
-                            as="p"
-                            font="text-xl"
-                            className={cn(
-                                "mt-4 font-bold tracking-tight",
-                                isHighlight ? "text-white" : "text-brand-primary"
-                            )}
-                        >
-                            {card.value}
-                        </Typography>
-
-                        {card.subtitle && isHighlight ? (
                             <Typography
                                 as="p"
-                                font="small"
-                                className="mt-2 uppercase tracking-[0.12em] text-white/80"
+                                font="title"
+                                className="mt-2 font-bold tracking-tight text-brand-primary transition-colors duration-300 group-hover:text-white"
                             >
-                                {card.subtitle}
+                                {card.value}
                             </Typography>
-                        ) : null}
-                    </Card>
+                        </div>
+                    </div>
                 )
             })}
         </div>

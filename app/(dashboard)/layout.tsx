@@ -99,7 +99,7 @@ const sidebarRoutes = [
     label: 'Templates',
     href: '/dashboard/templates',
     icon: FileStack,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.ADMIN],
+    allowFor: [Role.AGENT, Role.ADMIN],
   },
 
   {
@@ -112,19 +112,19 @@ const sidebarRoutes = [
   {
     label: 'All Documents',
     icon: Folder,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+    allowFor: [Role.AGENT, Role.STUDENT],
     children: [
       // {
       //   label: 'Upload Document',
       //   href: '/dashboard/document/new',
       //   icon: FileUp,
-      //   allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+      //   allowFor: [Role.AGENT, Role.STUDENT],
       // },
       {
         label: 'View Documents',
         href: '/dashboard/document',
         icon: Eye,
-        allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+        allowFor: [Role.AGENT, Role.STUDENT],
       },
       {
         label: 'View All Documents',

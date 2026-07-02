@@ -221,6 +221,8 @@ function mapAgentListItem(
 export async function fetchUniversityAgentList(params: {
     q?: string
     status?: string
+    country?: string
+    sortBy?: string
     page?: number
     limit?: number
 }): Promise<UniversityAgentListResponse> {
@@ -229,6 +231,8 @@ export async function fetchUniversityAgentList(params: {
     const limit = params.limit ?? 10
     const searchTerm = params.q?.trim().toLowerCase() ?? ""
     const statusFilter = params.status?.toLowerCase() ?? "all"
+    const countryFilter = params.country?.toLowerCase() ?? "all"
+    const sortByParam = params.sortBy?.toLowerCase() ?? "default"
 
     const { data: agents, error } = await supabase
         .from("agent")
@@ -306,6 +310,18 @@ export async function fetchUniversityAgentList(params: {
         listItems = listItems.filter(
             (item) => item.kyc_status.toLowerCase().replace(/\s+/g, "-") === statusFilter
         )
+    }
+
+    if (countryFilter !== "all") {
+        listItems = listItems.filter(
+            (item) => item.country?.toLowerCase() === countryFilter
+        )
+    }
+
+    if (sortByParam === "students-count-asc") {
+        listItems.sort((a, b) => a.students_count - b.students_count)
+    } else if (sortByParam === "students-count-desc") {
+        listItems.sort((a, b) => b.students_count - a.students_count)
     }
 
     const total = listItems.length

@@ -9,17 +9,33 @@ import type { UniversityAgentListResponse } from "@/types/schemas/university-age
 export type UniversityAgentPageLogicProps = {
     overview: UniversityAgentListResponse
     statusValue: string
+    countryValue: string
+    sortBy: string
     activeTab: string
     isFetching: boolean
     onStatusChange: (value: string) => void
+    onCountryChange: (value: string) => void
+    onSortByChange: (value: string) => void
     onTabChange: (value: string) => void
     onPageChange: (page: number) => void
+    allCountries: string[]
 }
 
-async function fetchUniversityAgents(params: { status?: string; page?: string }) {
+async function fetchUniversityAgents(params: { 
+    status?: string; 
+    page?: string;
+    country?: string;
+    sortBy?: string;
+}) {
     const url = new URL("/api/university/agents", window.location.origin)
     if (params.status && params.status !== "all") {
         url.searchParams.set("status", params.status)
+    }
+    if (params.country && params.country !== "all") {
+        url.searchParams.set("country", params.country)
+    }
+    if (params.sortBy && params.sortBy !== "default") {
+        url.searchParams.set("sortBy", params.sortBy)
     }
     if (params.page) url.searchParams.set("page", params.page)
     url.searchParams.set("limit", "10")
@@ -42,20 +58,30 @@ export function withUniversityAgentPageLogic(
         const pathname = usePathname()
         const searchParams = useSearchParams()
         const status = searchParams.get("status") ?? "all"
+        const country = searchParams.get("country") ?? "all"
+        const sortBy = searchParams.get("sortBy") ?? "default"
         const page = searchParams.get("page") ?? "1"
         const [activeTab, setActiveTab] = useState("University Partners")
 
         const agentsQuery = useQuery({
-            queryKey: ["university-agents", status, page],
-            queryFn: () => fetchUniversityAgents({ status, page }),
+            queryKey: ["university-agents", status, country, sortBy, page],
+            queryFn: () => fetchUniversityAgents({ status, country, sortBy, page }),
             initialData: initialOverview,
         })
+
+        const allCountries = useMemo(() => {
+            const countries = new Set<string>()
+            initialOverview.data.forEach(agent => {
+                if (agent.country) countries.add(agent.country)
+            })
+            return Array.from(countries).sort()
+        }, [initialOverview.data])
 
         const updateParams = useCallback(
             (updates: Record<string, string | null>) => {
                 const params = new URLSearchParams(searchParams.toString())
                 Object.entries(updates).forEach(([key, value]) => {
-                    if (value && value !== "all") params.set(key, value)
+                    if (value && value !== "all" && value !== "default") params.set(key, value)
                     else params.delete(key)
                 })
                 router.replace(`${pathname}?${params.toString()}`, { scroll: false })
@@ -77,11 +103,16 @@ export function withUniversityAgentPageLogic(
             <Component
                 overview={overview}
                 statusValue={status}
+                countryValue={country}
+                sortBy={sortBy}
                 activeTab={activeTab}
                 isFetching={agentsQuery.isFetching}
                 onStatusChange={(value) => updateParams({ status: value, page: "1" })}
+                onCountryChange={(value) => updateParams({ country: value, page: "1" })}
+                onSortByChange={(value) => updateParams({ sortBy: value, page: "1" })}
                 onTabChange={setActiveTab}
                 onPageChange={(nextPage) => updateParams({ page: String(nextPage) })}
+                allCountries={allCountries}
             />
         )
     }

@@ -12,10 +12,12 @@ import type {
 
 type UniversityProgramListCardProps = {
     program: UniversityProgramListItem
+    viewOnly?: boolean
 }
 
 export const UniversityProgramListCard = memo(function UniversityProgramListCard({
     program,
+    viewOnly = false,
 }: UniversityProgramListCardProps) {
     const metaParts = [
         program.level_name,
@@ -99,14 +101,16 @@ export const UniversityProgramListCard = memo(function UniversityProgramListCard
                                 View
                             </Typography>
                         </Link>
-                        <Link
-                            href={`/dashboard/program/${program.id}/edit`}
-                            className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-byzantine px-6 font-semibold text-white shadow-sm transition-colors hover:bg-brand-byzantine/90"
-                        >
-                            <Typography as="span" font="text" className="font-semibold text-white">
-                                Edit Program
-                            </Typography>
-                        </Link>
+                        {!viewOnly ? (
+                            <Link
+                                href={`/dashboard/program/${program.id}/edit`}
+                                className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-byzantine px-6 font-semibold text-white shadow-sm transition-colors hover:bg-brand-byzantine/90"
+                            >
+                                <Typography as="span" font="text" className="font-semibold text-white">
+                                    Edit Program
+                                </Typography>
+                            </Link>
+                        ) : null}
                     </div>
                 </div>
             </div>
@@ -119,6 +123,7 @@ type UniversityProgramListProps = {
     pagination: UniversityProgramListResponse["pagination"]
     isLoading?: boolean
     onPageChange: (page: number) => void
+    viewOnly?: boolean
 }
 
 export const UniversityProgramList = memo(function UniversityProgramList({
@@ -126,6 +131,7 @@ export const UniversityProgramList = memo(function UniversityProgramList({
     pagination,
     isLoading = false,
     onPageChange,
+    viewOnly = false,
 }: UniversityProgramListProps) {
     if (isLoading) {
         return (
@@ -146,7 +152,7 @@ export const UniversityProgramList = memo(function UniversityProgramList({
     return (
         <div className="space-y-5">
             {programs.map((program) => (
-                <UniversityProgramListCard key={program.id} program={program} />
+                <UniversityProgramListCard key={program.id} program={program} viewOnly={viewOnly} />
             ))}
 
             <div className="flex items-center justify-between pt-2">

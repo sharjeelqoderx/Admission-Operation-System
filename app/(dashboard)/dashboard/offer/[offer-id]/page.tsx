@@ -706,29 +706,27 @@ export default function OfferDetailsPage() {
                         </div>
                     </div>
 
-                    {canAcceptAndSign && (
-                        <>
-                            {me.data?.role === "AGENT" ? (
-                                <Button
-                                    type="button"
-                                    className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
-                                    onClick={handleCopySignLink}
-                                >
-                                    {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                                    {copied ? "Copied!" : "Copy Sign Link"}
-                                </Button>
-                            ) : (
-                                <Button
-                                    type="button"
-                                    className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
-                                    onClick={openSignModal}
-                                >
-                                    <FileCheck className="size-4" />
-                                    Accept & Sign
-                                </Button>
-                            )}
-                        </>
-                    )}
+                    {canAcceptAndSign && me.data?.role === "AGENT" ? (
+                        <Button
+                            type="button"
+                            className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
+                            onClick={handleCopySignLink}
+                        >
+                            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                            {copied ? "Copied!" : "Copy Sign Link"}
+                        </Button>
+                    ) : null}
+
+                    {canAcceptAndSign && me.data?.role === "STUDENT" ? (
+                        <Button
+                            type="button"
+                            className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
+                            onClick={openSignModal}
+                        >
+                            <FileCheck className="size-4" />
+                            Accept & Sign
+                        </Button>
+                    ) : null}
                 </div>
             </div>
 

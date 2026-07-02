@@ -3,6 +3,7 @@
 import type { ComponentType } from "react"
 import { useQuery } from "@tanstack/react-query"
 import type { UniversityOverview } from "@/types/schemas/university-overview"
+import { normalizeUniversityOverview } from "@/types/schemas/university-overview"
 
 export type UniversityOverviewLogicProps = {
     overview: UniversityOverview
@@ -17,6 +18,14 @@ async function fetchUniversityOverview(): Promise<UniversityOverview> {
     return json.data as UniversityOverview
 }
 
+function selectOverview(overview: UniversityOverview | undefined): UniversityOverview {
+    if (!overview) {
+        throw new Error("University overview data is unavailable")
+    }
+
+    return normalizeUniversityOverview(overview)
+}
+
 export function withUniversityOverviewLogic(
     Component: ComponentType<UniversityOverviewLogicProps>
 ) {
@@ -26,9 +35,9 @@ export function withUniversityOverviewLogic(
         initialOverview: UniversityOverview
     }) {
         const overviewQuery = useQuery({
-            queryKey: ["university-overview"],
-            queryFn: fetchUniversityOverview,
-            initialData: initialOverview,
+            queryKey: ["university-overview", "v2"],
+            queryFn: async () => selectOverview(await fetchUniversityOverview()),
+            initialData: selectOverview(initialOverview),
         })
 
         return <Component overview={overviewQuery.data} />

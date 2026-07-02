@@ -3,6 +3,8 @@
 import React, { useCallback, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import { useAuth } from "@/hooks/useAuth"
+import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
 import type {
     DocumentTemplateListItem,
     DocumentTemplatesListResponse,
@@ -55,6 +57,8 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         initialTemplates: DocumentTemplateListItem[]
     }) {
         const queryClient = useQueryClient()
+        const { me } = useAuth()
+        const viewOnly = isUniversityViewOnly(me.data?.role)
         const [mode, setMode] = useState<DocumentTemplatePageMode>("list")
         const [activeTemplate, setActiveTemplate] = useState<DocumentTemplateListItem | null>(null)
         const [title, setTitle] = useState("")
@@ -139,17 +143,10 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         }, [])
 
         const openCreate = useCallback(() => {
+            if (viewOnly) return
             resetEditorState()
             setMode("create")
-        }, [resetEditorState])
-
-        const openEdit = useCallback((template: DocumentTemplateListItem) => {
-            setActiveTemplate(template)
-            setTitle(template.title)
-            setBodyHtml(template.body_html || EMPTY_TEMPLATE_HTML)
-            setFormError(null)
-            setMode("edit")
-        }, [])
+        }, [resetEditorState, viewOnly])
 
         const openView = useCallback((template: DocumentTemplateListItem) => {
             setActiveTemplate(template)
@@ -158,6 +155,21 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             setFormError(null)
             setMode("view")
         }, [])
+
+        const openEdit = useCallback(
+            (template: DocumentTemplateListItem) => {
+                if (viewOnly) {
+                    openView(template)
+                    return
+                }
+                setActiveTemplate(template)
+                setTitle(template.title)
+                setBodyHtml(template.body_html || EMPTY_TEMPLATE_HTML)
+                setFormError(null)
+                setMode("edit")
+            },
+            [openView, viewOnly]
+        )
 
         const backToList = useCallback(() => {
             resetEditorState()

@@ -9,7 +9,11 @@ export default async function NewProgramPage() {
         redirect("/login")
     }
 
-    if (role !== "UNIVERSITY" && role !== "ADMIN") {
+    if (role === "UNIVERSITY") {
+        redirect("/dashboard/program")
+    }
+
+    if (role !== "ADMIN") {
         redirect("/dashboard/program")
     }
 
