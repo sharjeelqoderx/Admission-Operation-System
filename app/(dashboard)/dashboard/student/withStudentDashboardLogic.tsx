@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useCallback, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { StudentDashboardPageData } from "@/lib/student/server"
 import type { StudentListItem, StudentsListResult } from "@/lib/student/list"
@@ -15,6 +15,7 @@ export type StudentDashboardViewProps = {
     students: StudentListItem[]
     pagination?: StudentsListResult["pagination"]
     isLoading: boolean
+    isFetching: boolean
     isError: boolean
     errorMessage: string
     handleSearch: (term: string) => void
@@ -42,14 +43,29 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
         const pathname = usePathname()
         const q = searchParams.get("q") || ""
         const status = searchParams.get("status") || "all"
-        const page = searchParams.get("page") || "1"
+        const urlPage = parseInt(searchParams.get("page") || "1", 10) || 1
 
+        const [page, setPage] = useState(urlPage)
+        const pendingPageRef = useRef<number | null>(null)
         const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+        useEffect(() => {
+            const syncedPage = parseInt(searchParams.get("page") || "1", 10) || 1
+            if (pendingPageRef.current !== null) {
+                if (syncedPage === pendingPageRef.current) {
+                    pendingPageRef.current = null
+                }
+                return
+            }
+            setPage(syncedPage)
+        }, [searchParams])
+
+        const pageStr = String(page)
 
         const matchesInitialQuery =
             q === initialData.query.q &&
             status === initialData.query.status &&
-            page === initialData.query.page
+            pageStr === initialData.query.page
 
         const updateParams = useCallback(
             (updates: Record<string, string>) => {
@@ -70,6 +86,8 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
             (term: string) => {
                 if (timeoutRef.current) clearTimeout(timeoutRef.current)
                 timeoutRef.current = setTimeout(() => {
+                    pendingPageRef.current = 1
+                    setPage(1)
                     updateParams({ q: term, page: "1" })
                 }, 400)
             },
@@ -78,6 +96,8 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
 
         const handleStatusChange = useCallback(
             (value: string) => {
+                pendingPageRef.current = 1
+                setPage(1)
                 updateParams({ status: value, page: "1" })
             },
             [updateParams]
@@ -85,7 +105,9 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
 
         const handlePageChange = useCallback(
             (newPage: number) => {
-                updateParams({ page: newPage.toString() })
+                pendingPageRef.current = newPage
+                setPage(newPage)
+                updateParams({ page: String(newPage) })
             },
             [updateParams]
         )
@@ -107,7 +129,7 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
                 const url = new URL("/api/student", window.location.origin)
                 if (q) url.searchParams.set("q", q)
                 if (status !== "all") url.searchParams.set("status", status)
-                if (page) url.searchParams.set("page", page)
+                url.searchParams.set("page", pageStr)
                 url.searchParams.set("limit", "10")
 
                 const res = await fetch(url.toString())
@@ -118,6 +140,7 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
                 return res.json() as Promise<StudentsListResult>
             },
             initialData: matchesInitialQuery ? initialData.students : undefined,
+            placeholderData: keepPreviousData,
             retry: false,
         })
 
@@ -153,13 +176,17 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
             [deleteStudent]
         )
 
+        const queryPagination = studentsQuery.data?.pagination
+        const pagination = queryPagination ? { ...queryPagination, page } : undefined
+
         const logicProps: StudentDashboardViewProps = {
             initialData,
             stats: statsQuery.data ?? initialData.stats,
             statsLoading: statsQuery.isLoading && !statsQuery.data,
             students: studentsQuery.data?.data ?? [],
-            pagination: studentsQuery.data?.pagination,
+            pagination,
             isLoading: studentsQuery.isLoading && !studentsQuery.data,
+            isFetching: studentsQuery.isFetching,
             isError: studentsQuery.isError,
             errorMessage:
                 studentsQuery.error instanceof Error

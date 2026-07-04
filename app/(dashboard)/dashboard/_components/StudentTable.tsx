@@ -56,6 +56,7 @@ export type StudentRow = {
 type Props = {
     students: StudentRow[]
     isLoading: boolean
+    isFetching?: boolean
     isError: boolean
     errorMessage?: string
     deletingId: string | null
@@ -92,6 +93,7 @@ function formatDateOfBirth(value: string | null | undefined) {
 export const StudentTable = React.memo(function StudentTable({
     students,
     isLoading,
+    isFetching = false,
     isError,
     errorMessage,
     deletingId,
@@ -158,7 +160,12 @@ export const StudentTable = React.memo(function StudentTable({
             childClass="p-0!"
             className="rounded-lg p-0 min-w-0"
         >
-            <div className="overflow-x-auto rounded-t-xl">
+            <div
+                className={cn(
+                    "overflow-x-auto rounded-t-xl transition-opacity duration-200",
+                    isFetching && "pointer-events-none opacity-50"
+                )}
+            >
                 <Table className="w-full text-left border-collapse min-w-[1750px]">
                     <TableHeader className="sticky top-0 z-10">
                         <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
@@ -430,6 +437,9 @@ export const StudentTable = React.memo(function StudentTable({
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
+                            {isFetching && (
+                                <Loader2 className="size-4 animate-spin text-brand-secondary" />
+                            )}
                             <Button
                                 variant="outline"
                                 size="icon"
