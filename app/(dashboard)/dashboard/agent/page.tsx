@@ -15,9 +15,8 @@ type AgentPageProps = {
 export default async function AgentPage({ searchParams }: AgentPageProps) {
     const role = await getDashboardRole()
 
-    if (role !== "UNIVERSITY") {
-        redirect("/dashboard")
-    }
+    // University Partners page is currently disabled — redirect all roles
+    redirect("/dashboard")
 
     const params = await searchParams
     const initialOverview = await fetchUniversityAgentsForPage({
