@@ -56,8 +56,16 @@ export const UniversityStudentListTable = memo(function UniversityStudentListTab
     onTabChange,
     onPageChange,
 }: UniversityStudentListTableProps) {
-    const showingCount = students.length
-    const totalCount = pagination?.total ?? showingCount
+    const totalCount = pagination?.total ?? students.length
+    const showingFrom =
+        pagination && totalCount > 0
+            ? Math.min((pagination.page - 1) * pagination.limit + 1, totalCount)
+            : students.length > 0
+              ? 1
+              : 0
+    const showingTo = pagination
+        ? Math.min(pagination.page * pagination.limit, totalCount)
+        : students.length
 
     return (
         <div className="space-y-5">
@@ -198,14 +206,14 @@ export const UniversityStudentListTable = memo(function UniversityStudentListTab
 
                 <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
                     <Typography as="span" font="sub-text" className="text-gray-500">
-                        Showing {showingCount} of {totalCount.toLocaleString()} entries
+                        Showing {showingFrom}–{showingTo} of {totalCount.toLocaleString()} entries
                     </Typography>
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
                             disabled={!pagination || pagination.page <= 1}
                             onClick={() => pagination && onPageChange(pagination.page - 1)}
-                            className="flex size-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 disabled:opacity-40"
+                            className="flex size-8 items-center justify-center rounded-lg border border-gray-200 cursor-pointer bg-white text-gray-600 disabled:opacity-40"
                         >
                             <ChevronLeft className="size-4" />
                         </button>
@@ -213,7 +221,7 @@ export const UniversityStudentListTable = memo(function UniversityStudentListTab
                             type="button"
                             disabled={!pagination || pagination.page >= pagination.totalPages}
                             onClick={() => pagination && onPageChange(pagination.page + 1)}
-                            className="flex size-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 disabled:opacity-40"
+                            className="flex size-8 items-center justify-center rounded-lg border border-gray-200 cursor-pointer bg-white text-gray-600 disabled:opacity-40"
                         >
                             <ChevronRight className="size-4" />
                         </button>

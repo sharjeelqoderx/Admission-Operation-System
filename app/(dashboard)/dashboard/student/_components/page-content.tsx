@@ -111,6 +111,7 @@ function StudentDashboardView({
     students,
     pagination,
     isLoading,
+    isFetching,
     isError,
     errorMessage,
     handleSearch,
@@ -164,6 +165,7 @@ function StudentDashboardView({
                         students={students}
                         pagination={pagination}
                         isLoading={isLoading}
+                        isFetching={isFetching}
                         isError={isError}
                         errorMessage={errorMessage}
                         onDelete={handleDelete}

@@ -56,10 +56,12 @@ export function withUniversityStudentPageLogic(
         const page = searchParams.get("page") ?? "1"
         const [activeTab, setActiveTab] = useState("All Students")
 
+        const matchesInitialQuery = page === String(initialOverview.pagination.page)
+
         const studentsQuery = useQuery({
             queryKey: ["university-students", q, status, page],
             queryFn: () => fetchUniversityStudents({ q, status, page }),
-            initialData: initialOverview,
+            initialData: matchesInitialQuery ? initialOverview : undefined,
         })
 
         const updateParams = useCallback(
@@ -77,15 +79,20 @@ export function withUniversityStudentPageLogic(
             [pathname, router, searchParams]
         )
 
-        const overview = useMemo(
-            () =>
-                studentsQuery.data ?? {
-                    stats: initialOverview.stats,
-                    data: [],
-                    pagination: initialOverview.pagination,
-                },
-            [initialOverview.pagination, initialOverview.stats, studentsQuery.data]
-        )
+        const currentPage = parseInt(page, 10) || 1
+
+        const overview = useMemo(() => {
+            const data = studentsQuery.data ?? {
+                stats: initialOverview.stats,
+                data: [],
+                pagination: initialOverview.pagination,
+            }
+
+            return {
+                ...data,
+                pagination: { ...data.pagination, page: currentPage },
+            }
+        }, [currentPage, initialOverview.pagination, initialOverview.stats, studentsQuery.data])
 
         return (
             <Component
