@@ -5,7 +5,6 @@ import Image from "next/image"
 import Link from "next/link"
 import {
     AlertTriangle,
-    Building2,
     CheckCircle2,
     ChevronLeft,
     FileText,
@@ -250,30 +249,7 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
                 <div className="space-y-6">
                     <StudentProgressCard progress={detail.progress} />
 
-                    {detail.submission_source ? (
-                        <Card className="border-none bg-brand-byzantine/10 px-5 py-5 shadow-sm ring-1 ring-brand-byzantine/20">
-                            <Typography
-                                as="p"
-                                font="small"
-                                className="font-bold uppercase tracking-[0.14em] text-brand-byzantine"
-                            >
-                                Submission Source
-                            </Typography>
-                            <div className="mt-4 flex items-start gap-3">
-                                <Building2 className="mt-1 size-5 text-brand-byzantine" />
-                                <div className="space-y-1">
-                                    <Typography as="p" font="text" className="font-semibold text-brand-primary">
-                                        {detail.submission_source.organization}
-                                    </Typography>
-                                    {detail.submission_source.agent_name ? (
-                                        <Typography as="p" font="sub-text" className="text-gray-600">
-                                            University Partner: {detail.submission_source.agent_name}
-                                        </Typography>
-                                    ) : null}
-                                </div>
-                            </div>
-                        </Card>
-                    ) : null}
+
                 </div>
             </div>
 

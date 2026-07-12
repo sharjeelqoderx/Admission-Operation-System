@@ -122,7 +122,6 @@ export const UniversityStudentListTable = memo(function UniversityStudentListTab
                                 {[
                                     "Student Name",
                                     "Program",
-                                    "Applied Through",
                                     "Status",
                                     "Submission Date",
                                     "Action",
