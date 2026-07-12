@@ -146,7 +146,7 @@ const sidebarRoutes = [
     label: 'Payments',
     href: '/dashboard/payment',
     icon: Wallet,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+    allowFor: [Role.AGENT, Role.STUDENT],
   },
 
   {

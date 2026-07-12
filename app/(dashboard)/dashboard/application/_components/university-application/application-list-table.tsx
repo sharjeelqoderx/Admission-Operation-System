@@ -115,7 +115,6 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                 {[
                                     "Student Name",
                                     "Program",
-                                    "University Partner Name",
                                     "Status",
                                     "Submission Date",
                                     "Action",
@@ -187,11 +186,6 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                                 </Typography>
                                                 <Typography as="p" font="sub-text" className="text-gray-500">
                                                     {application.intake_label ?? "—"}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell className="px-6 py-5">
-                                                <Typography as="span" font="sub-text" className="text-gray-700">
-                                                    {application.agent_name}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell className="px-6 py-5">
