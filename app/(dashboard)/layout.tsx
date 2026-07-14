@@ -67,19 +67,19 @@ const sidebarRoutes = [
     ],
   },
 
-  {
-    label: 'University Partners',
-    icon: UserCircle,
-    allowFor: [Role.UNIVERSITY],
-    children: [
-      {
-        label: 'View Partners',
-        href: '/dashboard/agent',
-        icon: UserCircle,
-        allowFor: [Role.UNIVERSITY],
-      },
-    ],
-  },
+  // {
+  //   label: 'University Partners',
+  //   icon: UserCircle,
+  //   allowFor: [Role.UNIVERSITY],
+  //   children: [
+  //     {
+  //       label: 'View Partners',
+  //       href: '/dashboard/agent',
+  //       icon: UserCircle,
+  //       allowFor: [Role.UNIVERSITY],
+  //     },
+  //   ],
+  // },
 
   {
     label: 'All Applications',
@@ -146,7 +146,7 @@ const sidebarRoutes = [
     label: 'Payments',
     href: '/dashboard/payment',
     icon: Wallet,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+    allowFor: [Role.AGENT, Role.STUDENT],
   },
 
   {

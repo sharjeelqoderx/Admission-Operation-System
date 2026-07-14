@@ -122,7 +122,6 @@ export const UniversityStudentListTable = memo(function UniversityStudentListTab
                                 {[
                                     "Student Name",
                                     "Program",
-                                    "Applied Through",
                                     "Status",
                                     "Submission Date",
                                     "Action",
@@ -173,11 +172,6 @@ export const UniversityStudentListTable = memo(function UniversityStudentListTab
                                             </Typography>
                                             <Typography as="p" font="sub-text" className="text-gray-500">
                                                 {student.intake_label ?? "—"}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell className="px-6 py-5">
-                                            <Typography as="span" font="sub-text" className="text-gray-700">
-                                                {student.applied_through}
                                             </Typography>
                                         </TableCell>
                                         <TableCell className="px-6 py-5">

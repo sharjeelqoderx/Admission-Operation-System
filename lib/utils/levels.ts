@@ -134,3 +134,30 @@ export function getNextPossibleLevelPriorities(
   const allPriorities = Array.from(new Set(Object.values(LEVEL_PRIORITY)));
   return allPriorities.filter((p) => p > highestPriority).sort((a, b) => a - b);
 }
+
+/** Returns Tailwind classes for a level badge pill based on the level name. */
+export function getLevelBadgeStyle(levelName?: string | null): string {
+  if (!levelName) return "bg-gray-100 text-gray-500"
+  const lower = levelName.toLowerCase()
+
+  if (lower.includes("phd") || lower.includes("doctorate"))
+    return "bg-purple-100 text-purple-700"
+  if (lower.includes("mba"))
+    return "bg-rose-100 text-rose-700"
+  if (lower.includes("master") || lower.includes("msc") || lower.includes("mphil"))
+    return "bg-blue-100 text-blue-700"
+  if (lower.includes("bachelor") || lower.includes("bsc") || lower.includes("ba") || lower.includes("bba") || lower.includes("btech") || lower.includes("bcom"))
+    return "bg-emerald-100 text-emerald-700"
+  if (lower.includes("foundation") || lower.includes("studienkolleg"))
+    return "bg-amber-100 text-amber-700"
+  if (lower.includes("intermediate") || lower.includes("a level"))
+    return "bg-orange-100 text-orange-700"
+  if (lower.includes("diploma"))
+    return "bg-teal-100 text-teal-700"
+  if (lower.includes("associate"))
+    return "bg-cyan-100 text-cyan-700"
+  if (lower.includes("matric") || lower.includes("high school") || lower.includes("o level"))
+    return "bg-gray-100 text-gray-600"
+
+  return "bg-indigo-100 text-indigo-700"
+}

@@ -33,12 +33,6 @@ const STAT_CARDS: StatCardConfig[] = [
         accent: "text-brand-blue",
     },
     {
-        key: "total_university_partners",
-        label: "Total University Partners",
-        icon: Handshake,
-        accent: "text-brand-secondary",
-    },
-    {
         key: "active_applications",
         label: "Active Applications",
         icon: Activity,
@@ -76,7 +70,7 @@ export const OverviewStatCards = memo(function OverviewStatCards({ stats }: Over
     )
 
     return (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {cards.map((card) => {
                 const Icon = card.icon
                 const isFeatured = card.featured
