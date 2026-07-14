@@ -34,7 +34,7 @@ import { isFileWithinSizeLimit, MAX_FILE_SIZE_ERROR_MESSAGE } from "@/lib/consta
 import { useLevels } from "@/hooks/useLevels"
 import type { CourseProgram } from "@/types/schemas/program"
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
-import { filterCoursesByQualificationLevel } from "@/lib/utils/levels"
+import { filterCoursesByQualificationLevel, getLevelBadgeStyle } from "@/lib/utils/levels"
 import { resolveCourseDocumentTypesForCourses } from "@/lib/utils/course-documents"
 import { resolveApsDocumentType, withApsRequiredDocument } from "@/lib/utils/aps"
 import {

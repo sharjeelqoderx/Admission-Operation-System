@@ -40,7 +40,7 @@ import type { StudentListItem } from "@/lib/student/list";
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program";
 import { resolveCourseDocumentTypes } from "@/lib/utils/course-documents";
 import { withApsRequiredDocument } from "@/lib/utils/aps";
-import { filterCoursesByQualificationLevel } from "@/lib/utils/levels";
+import { filterCoursesByQualificationLevel, getLevelBadgeStyle } from "@/lib/utils/levels";
 import { useLevels } from "@/hooks/useLevels";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { ErrorView } from "@/components/shared/error-view";
@@ -1412,9 +1412,16 @@ function Step2({
                                         return (
                                             <TableRow key={course.id} className="hover:bg-white/20 transition-colors border-b-white/10">
                                                 <TableCell className="px-8 py-6">
-                                                    <div className="flex flex-col">
-                                                        <Typography as="span" className="text-[13px] font-bold text-gray-900 leading-snug">{course.name}</Typography>
-                                                        <Typography as="span" className="text-[10px] text-gray-500 font-medium mt-0.5">{course.degree?.name ?? "N/A"}</Typography>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            {course.degree?.level?.name && (
+                                                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${getLevelBadgeStyle(course.degree.level.name)}`}>
+                                                                    {course.degree.level.name}
+                                                                </span>
+                                                            )}
+                                                            <Typography as="span" className="text-[13px] font-bold text-gray-900 leading-snug">{course.name}</Typography>
+                                                        </div>
+                                                        <Typography as="span" className="text-[10px] text-gray-500 font-medium">{course.degree?.name ?? "N/A"}</Typography>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="px-8 py-6">

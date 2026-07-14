@@ -24,7 +24,6 @@ import {
     CheckCircle2,
     X,
     CreditCard,
-    ArrowRight,
     Copy,
     Check
 } from "lucide-react"
@@ -985,20 +984,7 @@ export default function OfferDetailsPage() {
                         </BluryCard>
                     )}
 
-                    {offer.status === "ACCEPTED" && offer.file_url && (
-                        <Button
-                            className="w-full rounded-2xl h-12 text-sm font-bold gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 shadow-lg shadow-brand-byzantine/20"
-                            onClick={() =>
-                                toast("Coming soon", {
-                                    description: "Payment portal is under development.",
-                                })
-                            }
-                        >
-                            <CreditCard className="size-4" />
-                            Continue to payment
-                            <ArrowRight className="size-4" />
-                        </Button>
-                    )}
+
                 </div>
             </div>
 

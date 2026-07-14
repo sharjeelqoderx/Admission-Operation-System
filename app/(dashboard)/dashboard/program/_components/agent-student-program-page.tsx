@@ -10,7 +10,7 @@ import { Search, SlidersHorizontal, AlertCircle } from "lucide-react"
 import { ProgramCard, InfiniteLoader } from "../_component/ProgramCard"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useLevels } from "@/hooks/useLevels"
-import { getLevelPriority } from "@/lib/utils/levels"
+import { getLevelPriority, getLevelBadgeStyle } from "@/lib/utils/levels"
 import { Button } from "@/components/ui/button"
 import { PageLoader } from "@/components/shared/page-loader"
 import type { ProgramListResponse } from "@/types/schemas/program"
@@ -127,8 +127,9 @@ export function AgentStudentProgramPage() {
         router.push(`${pathname}?${params.toString()}`)
     }
 
-    const allPrograms = useMemo(() => {
+    const allProgramsResult = useMemo(() => {
         let programs = data?.pages.flatMap((page) => page.data) ?? [];
+        let highestLevelName: string | null = null;
 
         if (user?.data?.role === "STUDENT") {
             // Find highest level priority from student's education
@@ -139,6 +140,7 @@ export function AgentStudentProgramPage() {
                         const levelPriority = getLevelPriority(edu.qualification_degree.level.name);
                         if (levelPriority > highestLevelPriority) {
                             highestLevelPriority = levelPriority;
+                            highestLevelName = edu.qualification_degree.level.name;
                         }
                     }
                 }
@@ -154,8 +156,11 @@ export function AgentStudentProgramPage() {
             }
         }
 
-        return programs;
+        return { programs, highestLevelName };
     }, [data, user, studentDetails])
+
+    const allPrograms = allProgramsResult.programs;
+    const highestLevelName = allProgramsResult.highestLevelName;
 
     const isPageLoading = levelsLoading || isLoading || (isFetching && !isFetchingNextPage)
 
@@ -168,6 +173,15 @@ export function AgentStudentProgramPage() {
                 <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
                     Browse through our extensive academic catalog. Find the right program that fits your career goals across multiple campuses and universities.
                 </Typography>
+                {user?.data?.role === "STUDENT" && highestLevelName && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <Typography as="span" font="small" className="text-gray-500">Your current qualification:</Typography>
+                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${getLevelBadgeStyle(highestLevelName)}`}>
+                            {highestLevelName}
+                        </span>
+                        <Typography as="span" font="small" className="text-gray-400">— showing eligible programs above this level</Typography>
+                    </div>
+                )}
             </div>
 
             <div className="flex flex-col md:flex-row gap-4 sticky top-4 z-10">
@@ -192,7 +206,9 @@ export function AgentStudentProgramPage() {
                                 <SelectItem value="ALL">All Levels</SelectItem>
                                 {levels.map((level) => (
                                     <SelectItem key={level.id} value={level.id}>
-                                        {level.name}
+                                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${getLevelBadgeStyle(level.name)}`}>
+                                            {level.name}
+                                        </span>
                                     </SelectItem>
                                 ))}
                             </SelectContent>
