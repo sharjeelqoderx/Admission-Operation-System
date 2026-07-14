@@ -167,7 +167,7 @@ const sidebarRoutes = [
     label: 'University Partner Profile',
     href: '/dashboard/profile',
     icon: UserCircle,
-    allowFor: [Role.AGENT, Role.STUDENT],
+    allowFor: [Role.AGENT, Role.STUDENT, Role.UNIVERSITY],
   },
 ];
 
@@ -278,7 +278,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               key={route.href}
               href={route.href}
               icon={<Icon className="w-5 h-5" />}
-              label={route.label === 'University Partner Profile' && role === Role.STUDENT ? 'Student Profile' : route.label}
+              label={
+                route.label === 'University Partner Profile'
+                  ? role === Role.STUDENT
+                    ? 'Student Profile'
+                    : role === Role.UNIVERSITY
+                      ? 'University Profile'
+                      : route.label
+                  : route.label
+              }
               isActive={isRouteActive(pathname, route.href)}
             />
           );
