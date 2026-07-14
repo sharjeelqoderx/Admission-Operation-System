@@ -442,7 +442,7 @@ BEGIN
     (
         admin_uid, '00000000-0000-0000-0000-000000000000',
         'authenticated', 'authenticated',
-        'sharjeel.genzsolution@gmail.com', admin_hash, NOW(), NOW(), NOW(),
+        'sharjeel.qoderx@gmail.com', admin_hash, NOW(), NOW(), NOW(),
         '{"provider":"email","providers":["email"]}',
         '{"full_name":"FHM Administrator","role":"ADMIN"}',
         FALSE
@@ -459,8 +459,8 @@ BEGIN
 
     INSERT INTO profile (id, name, email, phone, role)
     VALUES
-        (admin_uid, 'FHM Administrator',               'sharjeel.genzsolution@gmail.com', '+4930000001', 'ADMIN'),
-        (uni_uid,   'Fachhochschule des Mittelstands',  'fhm@gmail.com',                   '+4952195210', 'UNIVERSITY')
+        (admin_uid, 'FHM Administrator',               'sharjeel.qoderx@gmail.com', '+4930000001', 'ADMIN'),
+        (uni_uid,   'Fachhochschule des Mittelstands',  'fhm@gmail.com',             '+4952195210', 'UNIVERSITY')
     ON CONFLICT (id) DO UPDATE SET
         name  = EXCLUDED.name,
         email = EXCLUDED.email,
