@@ -175,11 +175,6 @@ export const UniversityStudentListTable = memo(function UniversityStudentListTab
                                             </Typography>
                                         </TableCell>
                                         <TableCell className="px-6 py-5">
-                                            <Typography as="span" font="sub-text" className="text-gray-700">
-                                                {student.applied_through}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell className="px-6 py-5">
                                             <StudentPipelineBadge status={student.pipeline_status} />
                                         </TableCell>
                                         <TableCell className="px-6 py-5">
