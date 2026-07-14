@@ -301,12 +301,11 @@ END $$;
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  INSERT INTO profile (id, name, first_name, last_name, email, phone, role)
+  -- first_name/last_name/title are added in later migrations; keep this aligned with the profile columns created here.
+  INSERT INTO profile (id, name, email, phone, role)
   VALUES (
     NEW.id,
     NEW.raw_user_meta_data->>'full_name',
-    NEW.raw_user_meta_data->>'first_name',
-    NEW.raw_user_meta_data->>'last_name',
     NEW.email,
     NEW.raw_user_meta_data->>'phone',
     COALESCE((NEW.raw_user_meta_data->>'role')::role_enum, 'STUDENT')
@@ -451,7 +450,7 @@ BEGIN
     (
         uni_uid, '00000000-0000-0000-0000-000000000000',
         'authenticated', 'authenticated',
-        'sharjeel.qoderx@gmail.com', uni_hash, NOW(), NOW(), NOW(),
+        'fhm@gmail.com', uni_hash, NOW(), NOW(), NOW(),
         '{"provider":"email","providers":["email"]}',
         '{"full_name":"Fachhochschule des Mittelstands","role":"UNIVERSITY"}',
         FALSE
@@ -461,7 +460,7 @@ BEGIN
     INSERT INTO profile (id, name, email, phone, role)
     VALUES
         (admin_uid, 'FHM Administrator',               'sharjeel.genzsolution@gmail.com', '+4930000001', 'ADMIN'),
-        (uni_uid,   'Fachhochschule des Mittelstands',  'sharjeel.qoderx@gmail.com',       '+4952195210', 'UNIVERSITY')
+        (uni_uid,   'Fachhochschule des Mittelstands',  'fhm@gmail.com',                   '+4952195210', 'UNIVERSITY')
     ON CONFLICT (id) DO UPDATE SET
         name  = EXCLUDED.name,
         email = EXCLUDED.email,
