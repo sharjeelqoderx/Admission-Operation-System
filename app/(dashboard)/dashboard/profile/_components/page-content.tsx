@@ -1,7 +1,8 @@
 "use client"
 
 import React, { memo, useEffect, useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useAuth } from "@/hooks/useAuth"
 import { useForm } from "@tanstack/react-form"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
@@ -224,17 +225,9 @@ type PageContentProps = {
 function ProfilePageView({ initialData }: PageContentProps) {
     const queryClient = useQueryClient()
     const [showSuccess, setShowSuccess] = useState(false)
-    const { data: user = initialData, isError } = useQuery({
-        queryKey: ["me"],
-        queryFn: async () => {
-            const res = await fetch("/api/me")
-            if (!res.ok) throw new Error("Failed to fetch profile")
-            const json = await res.json()
-            return json.data as ProfilePageData
-        },
-        initialData,
-        refetchOnMount: false,
-    })
+    const { me } = useAuth()
+    const user = (me.data as ProfilePageData | undefined) ?? initialData
+    const isError = me.isError
 
     const mutation = useMutation({
         mutationFn: async (fd: FormData) => {

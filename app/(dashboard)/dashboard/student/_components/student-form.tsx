@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm, useStore } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useAuth } from "@/hooks/useAuth"
 import { StudentCreateFormSchema, StudentFormSchema, type StudentInput } from "@/types/schemas/student"
 import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
@@ -833,16 +834,8 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
     const [pendingFiles, setPendingFiles] = useState<Record<string, { front: File | null; back: File | null }>>({});
     const [isUploading, setIsUploading] = useState<Record<string, boolean>>({});
 
-    const { data: user } = useQuery({
-        queryKey: ["me"],
-        queryFn: async () => {
-            const res = await fetch("/api/me");
-            if (!res.ok) throw new Error("Failed to fetch profile");
-            const json = await res.json();
-            return json.data;
-        },
-        initialData: initialUser ?? undefined,
-    });
+    const { me } = useAuth()
+    const user = me.data ?? initialUser ?? undefined
 
     const { data: programsResponse } = useQuery({
         queryKey: ["programs"],

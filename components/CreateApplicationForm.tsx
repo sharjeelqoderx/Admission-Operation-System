@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Search, CheckSquare, FileText, GraduationCap, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { FilePreview } from "@/components/shared/FilePreview";
 import ImageUploadCard from "@/components/shared/image-upload-card";
@@ -189,15 +190,8 @@ export function CreateApplicationForm() {
 
 
 
-    const { data: user } = useQuery({
-        queryKey: ["me"],
-        queryFn: async () => {
-            const res = await fetch("/api/me");
-            if (!res.ok) throw new Error("Failed to fetch profile");
-            const json = await res.json();
-            return json.data as ApplicationMe;
-        },
-    });
+    const { me } = useAuth();
+    const user = me.data;
 
     const { data: studentsResponse } = useQuery({
         queryKey: ["students"],

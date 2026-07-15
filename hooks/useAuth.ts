@@ -215,7 +215,7 @@ export function useAuth() {
                 throw error
             }
         },
-        enabled: sessionActive,
+        enabled: clientReady && sessionActive,
         staleTime: 0,
         gcTime: 0,
         refetchOnMount: "always",

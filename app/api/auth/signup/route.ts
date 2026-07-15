@@ -3,6 +3,14 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { signupSchema } from "@/types/schemas/auth"
 
+function getAuthErrorMessage(error: { message?: string } | null | undefined) {
+    const message = error?.message?.trim()
+    if (!message || message === "{}") {
+        return "Signup failed. Unable to send verification email. Configure custom SMTP in your Supabase Auth settings."
+    }
+    return message
+}
+
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
@@ -20,7 +28,9 @@ export async function POST(req: NextRequest) {
             .eq("email", normalizedEmail)
             .maybeSingle()
 
-        if (profileCheckError) return err(profileCheckError.message, 500)
+        if (profileCheckError) {
+            return err(profileCheckError.message || "Failed to check existing account", 500)
+        }
         if (existingProfile) return err("An account with this email already exists", 409)
 
         const origin = req.headers.get("origin") ?? process.env.APP_URL ?? "https://fhm-admission-op-system.vercel.app"
@@ -29,16 +39,24 @@ export async function POST(req: NextRequest) {
             password,
             options: {
                 emailRedirectTo: `${origin}/api/auth/callback`,
-                data: { title, full_name: fullName, first_name: firstName, last_name: lastName, phone, role },
+                data: {
+                    title,
+                    full_name: fullName,
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone,
+                    role,
+                },
             },
         })
 
         if (authError) {
-            const message = authError.message.toLowerCase()
+            console.error("[SIGNUP_AUTH_ERROR]", authError)
+            const message = getAuthErrorMessage(authError).toLowerCase()
             if (message.includes("already registered") || message.includes("already exists")) {
                 return err("An account with this email already exists", 409)
             }
-            return err(authError.message, 500)
+            return err(getAuthErrorMessage(authError), 500)
         }
         if (!authData.user) return err("User creation failed", 500)
 
@@ -61,7 +79,12 @@ export async function POST(req: NextRequest) {
             experience: null,
             message: "OTP sent to your email. Please verify your account.",
         }, 201)
-    } catch {
-        return err("Internal server error", 500)
+    } catch (error) {
+        console.error("[SIGNUP_ERROR]", error)
+        const message =
+            error instanceof Error && error.message.trim() && error.message !== "{}"
+                ? error.message
+                : "Internal server error"
+        return err(message, 500)
     }
 }

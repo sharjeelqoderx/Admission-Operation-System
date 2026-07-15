@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { useAuth } from "@/hooks/useAuth"
 import { Typography } from "@/components/shared/Typography"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -28,26 +29,19 @@ export function AgentStudentProgramPage() {
     const [localSearch, setLocalSearch] = useState(urlSearch)
     const debouncedSearch = useDebounce(localSearch, 600)
 
-    // Fetch user
-    const { data: user } = useQuery({
-        queryKey: ["me"],
-        queryFn: async () => {
-            const res = await fetch("/api/me")
-            if (!res.ok) throw new Error("Failed to fetch user")
-            return res.json()
-        },
-    })
+    const { me } = useAuth()
+    const user = me.data
 
     // Fetch student details if user is student
     const { data: studentDetails } = useQuery({
-        queryKey: ["student", user?.data?.id],
+        queryKey: ["student", user?.id],
         queryFn: async () => {
-            if (!user?.data?.id) return null
-            const res = await fetch(`/api/student/${user.data.id}`)
+            if (!user?.id) return null
+            const res = await fetch(`/api/student/${user.id}`)
             if (!res.ok) throw new Error("Failed to fetch student")
             return res.json()
         },
-        enabled: !!user?.data?.id && user?.data?.role === "STUDENT",
+        enabled: !!user?.id && user?.role === "STUDENT",
     })
 
     const { data: levels = [], isLoading: levelsLoading } = useLevels()
@@ -131,7 +125,7 @@ export function AgentStudentProgramPage() {
         let programs = data?.pages.flatMap((page) => page.data) ?? [];
         let highestLevelName: string | null = null;
 
-        if (user?.data?.role === "STUDENT") {
+        if (user?.role === "STUDENT") {
             // Find highest level priority from student's education
             let highestLevelPriority = 0;
             if (studentDetails?.data?.education && Array.isArray(studentDetails.data.education)) {
@@ -173,7 +167,7 @@ export function AgentStudentProgramPage() {
                 <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
                     Browse through our extensive academic catalog. Find the right program that fits your career goals across multiple campuses and universities.
                 </Typography>
-                {user?.data?.role === "STUDENT" && highestLevelName && (
+                {user?.role === "STUDENT" && highestLevelName && (
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                         <Typography as="span" font="small" className="text-gray-500">Your current qualification:</Typography>
                         <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${getLevelBadgeStyle(highestLevelName)}`}>
