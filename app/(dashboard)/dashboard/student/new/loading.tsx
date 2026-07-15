@@ -1,5 +1,5 @@
 import { PageLoader } from "@/components/shared/page-loader"
 
-export default function NewStudentLoading() {
-    return <PageLoader label="Loading form..." />
+export default function Loading() {
+    return <PageLoader className="min-h-[60vh]" />
 }

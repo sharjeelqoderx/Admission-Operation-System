@@ -7,26 +7,8 @@ import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
-import { PageLoader } from "@/components/shared/page-loader"
-import {
-    Download,
-    Eye,
-    Mail,
-    GraduationCap,
-    Calendar,
-    ChevronLeft,
-    Building2,
-    Clock,
-    MessageSquare,
-    FileCheck,
-    AlertCircle,
-    CheckCircle2,
-    X,
-    CreditCard,
-    ArrowRight,
-    Check,
-    Loader2
-} from "lucide-react"
+import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { Download, Eye, Mail, GraduationCap, Calendar, ChevronLeft, Building2, Clock, MessageSquare, FileCheck, AlertCircle, CheckCircle2, X, CreditCard, ArrowRight, Check } from "lucide-react"
 import { toast } from "sonner"
 import {
     formatIntakeDate,
@@ -693,11 +675,11 @@ function SignPageContent() {
     ])
 
     if (isDownloadingConditionalLetter) {
-        return <PageLoader label="Generating conditional letter PDF..." />
+        return <PageLoader />
     }
 
     if (!offerId || isLoading) {
-        return <PageLoader label="Loading offer details..." />
+        return <PageLoader />
     }
 
     if (isError || !offer) {
@@ -998,7 +980,7 @@ function SignPageContent() {
                             >
                                 {isSubmitting ? (
                                     <>
-                                        <Loader2 className="size-4 animate-spin mr-2" />
+                                        <Spinner size="sm" className="mr-2" />
                                         Saving...
                                     </>
                                 ) : (
@@ -1015,7 +997,7 @@ function SignPageContent() {
 
 export default function SignPage() {
     return (
-        <Suspense fallback={<PageLoader label="Loading offer details..." />}>
+        <Suspense fallback={<PageLoader />}>
             <SignPageContent />
         </Suspense>
     )

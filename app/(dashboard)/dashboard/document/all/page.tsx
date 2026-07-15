@@ -14,12 +14,12 @@ export default function AllDocumentsPage() {
     const { data: user, isLoading } = me
 
     if (isLoading) {
-        return <PageLoader label="Loading documents..." />
+        return <PageLoader />
     }
 
     if (user?.role !== "AGENT") {
         router.replace("/dashboard/document")
-        return <PageLoader label="Redirecting..." />
+        return <PageLoader />
     }
 
     return <AllDocumentsView />

@@ -93,7 +93,7 @@ export function AgentStudentDetailPage({ studentId: id }: AgentStudentDetailPage
 
     const studentApplications = Array.isArray(applicationsData) ? applicationsData : []
 
-    if (isLoading) return <PageLoader label="Loading profile..." />
+    if (isLoading) return <PageLoader />
     if (isError || !student) return (
         <div className="py-20 text-center">
             <Typography as="p" font="sub-text" className="font-bold text-gray-500">Student not found.</Typography>
@@ -293,11 +293,8 @@ export function AgentStudentDetailPage({ studentId: id }: AgentStudentDetailPage
                             <TableBody className="divide-y divide-white/10">
                                 {appsLoading ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="px-8 py-10 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <div className="size-4 border-2 border-gray-300 border-t-[#9B51E0] rounded-full animate-spin" />
-                                                <Typography as="span" className="text-sm text-gray-400">Loading applications...</Typography>
-                                            </div>
+                                        <TableCell colSpan={5} className="px-8 py-10">
+                                            <PageLoader className="min-h-0 py-2" size="sm" />
                                         </TableCell>
                                     </TableRow>
                                 ) : studentApplications.length === 0 ? (

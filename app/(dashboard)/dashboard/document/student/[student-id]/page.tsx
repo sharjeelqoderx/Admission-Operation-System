@@ -24,7 +24,7 @@ export default function StudentDocumentsPage({ params }: PageProps) {
     })
 
     if (isLoading) {
-        return <PageLoader label="Loading student documents..." />
+        return <PageLoader />
     }
 
     return (

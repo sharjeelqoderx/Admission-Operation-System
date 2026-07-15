@@ -33,7 +33,7 @@ export default async function ProgramPage({ searchParams }: ProgramPageProps) {
         }
 
         return (
-            <Suspense fallback={<PageLoader label="Loading programs..." />}>
+            <Suspense fallback={<PageLoader />}>
                 <UniversityProgramListPageContent initialOverview={initialOverview} />
             </Suspense>
         )

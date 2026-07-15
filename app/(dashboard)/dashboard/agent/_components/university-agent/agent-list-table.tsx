@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Eye, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Typography } from "@/components/shared/Typography"
+import { PageLoader } from "@/components/shared/page-loader"
 import { AgentKycBadge } from "@/components/shared/agent-kyc-badge"
 import {
     Select,
@@ -162,10 +163,8 @@ export const UniversityAgentListTable = memo(function UniversityAgentListTable({
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="px-6 py-12 text-center">
-                                        <Typography as="span" font="sub-text" className="text-gray-500">
-                                            Loading university partners...
-                                        </Typography>
+                                    <TableCell colSpan={5} className="px-6 py-12">
+                                        <PageLoader className="min-h-0" />
                                     </TableCell>
                                 </TableRow>
                             ) : agents.length === 0 ? (

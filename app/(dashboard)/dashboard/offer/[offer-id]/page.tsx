@@ -653,15 +653,15 @@ export default function OfferDetailsPage() {
     }, [acceptedAt, applicationRef, conditionalLetterBodyHtml, offer, student?.name])
 
     if (isDownloadingLetterHead) {
-        return <PageLoader label="Generating letter head PDF..." />
+        return <PageLoader />
     }
 
     if (isDownloadingConditionalLetter) {
-        return <PageLoader label="Generating conditional letter PDF..." />
+        return <PageLoader />
     }
 
     if (!offerId || isLoading) {
-        return <PageLoader label="Loading offer details..." />
+        return <PageLoader />
     }
 
     if (isError || !offer) {

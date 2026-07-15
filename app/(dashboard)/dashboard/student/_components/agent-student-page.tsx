@@ -260,7 +260,7 @@ export function AgentStudentPage() {
     })
 
     if (me.isLoading) {
-        return <PageLoader label="Loading students..." />
+        return <PageLoader />
     }
 
     return (

@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient, tryCreateSupabaseServiceClient } from "@/lib/supabase/server";
-import { withProfileDisplayName } from "@/lib/utils/profile";
-import { CreateOfferSchema } from "@/types/schemas/offer";
+import {
+    createSupabaseServerClient,
+    tryCreateSupabaseServiceClient,
+} from "@/lib/supabase/server";
+import { CreateOfferSchema, OfferListQuerySchema } from "@/types/schemas/offer";
 import { mapTemplateRow } from "@/lib/document-template/server";
 import { renderTemplateHtml } from "@/lib/document-template/variables";
 import { buildOfferTemplateVariables } from "@/lib/offer/build-offer-variables";
 import { fetchAdmissionRequirementsContext } from "@/lib/offer/admission-requirements-context";
 import { buildChecklistProofsSnapshot } from "@/lib/document-template/checklist-items";
 import { resolveTemplateChecklistItems } from "@/lib/document-template/resolve-checklist-items";
-import {
-    isMissingOfferTemplateColumnError,
-    OFFER_LIST_SELECT_LEGACY,
-    OFFER_LIST_SELECT_WITH_TEMPLATE,
-} from "@/lib/offer/select-fields";
-import { resolveAgentStudentProfileIds } from "@/lib/api/agent-applications";
+import { fetchOffersList } from "@/lib/offer/list";
+import { isMissingOfferTemplateColumnError } from "@/lib/offer/select-fields";
+import { withProfileDisplayName } from "@/lib/utils/profile";
 
 export async function GET(req: NextRequest) {
     try {
@@ -45,85 +44,30 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        const primaryResult = await supabase
-            .from("offer_letter")
-            .select(OFFER_LIST_SELECT_WITH_TEMPLATE)
-            .order("created_at", { ascending: true })
+        const { searchParams } = new URL(req.url)
+        const queryParse = OfferListQuerySchema.safeParse({
+            q: searchParams.get("q") ?? undefined,
+            page: searchParams.get("page") ?? undefined,
+            limit: searchParams.get("limit") ?? undefined,
+        })
 
-        const offersResult =
-            primaryResult.error && isMissingOfferTemplateColumnError(primaryResult.error.message)
-                ? await supabase
-                      .from("offer_letter")
-                      .select(OFFER_LIST_SELECT_LEGACY)
-                      .order("created_at", { ascending: true })
-                : primaryResult
-
-        const { data: offers, error } = offersResult
-
-        if (error) {
-            console.error(
-                "GET /api/offer error:",
-                error
-            );
-
+        if (!queryParse.success) {
             return NextResponse.json(
                 {
-                    error: "Failed to fetch offers",
-                    details: error.message,
+                    error: "Invalid query parameters",
+                    details: queryParse.error.flatten(),
                 },
-                { status: 500 }
-            );
+                { status: 400 }
+            )
         }
 
-        let filtered = (offers ?? []).map((offer: any) => ({
-            ...offer,
-            application: offer.application
-                ? {
-                      ...offer.application,
-                      student: withProfileDisplayName(offer.application.student),
-                      university: withProfileDisplayName(offer.application.university),
-                  }
-                : offer.application,
-        }));
+        const result = await fetchOffersList({
+            ...queryParse.data,
+            userId: user.id,
+            role: profile.role,
+        })
 
-        switch (profile.role) {
-            case "STUDENT":
-                filtered = filtered.filter(
-                    (offer: any) =>
-                        offer.application?.profile_id ===
-                        user.id
-                );
-                break;
-
-            case "AGENT": {
-                const studentProfileIds = await resolveAgentStudentProfileIds(supabase, user.id);
-                filtered = filtered.filter((offer: any) => {
-                    const application = offer.application;
-                    if (!application) return false;
-
-                    return (
-                        application.submitted_by_profile_id === user.id ||
-                        studentProfileIds.includes(application.profile_id)
-                    );
-                });
-                break;
-            }
-
-            case "UNIVERSITY":
-                filtered = filtered.filter(
-                    (offer: any) =>
-                        offer.application
-                            ?.university_id === user.id
-                );
-                break;
-
-            // ADMIN gets all
-        }
-
-        return NextResponse.json(
-            { data: filtered },
-            { status: 200 }
-        );
+        return NextResponse.json(result, { status: 200 })
     } catch (e) {
         console.error(
             "GET /api/offer error:",
@@ -178,12 +122,12 @@ export async function POST(req: NextRequest) {
                 profile_id,
                 submitted_by_profile_id,
                 university_id,
-                student:profile_id ( first_name, last_name, signature, title, date_of_birth ),
+                student:profile!profile_id ( first_name, last_name, title, date_of_birth ),
                 course:course_id (
                     name,
                     degree:degree_id ( name, fees, intake_date, duration )
                 ),
-                university:university_id ( first_name, last_name )
+                university:profile!university_id ( first_name, last_name )
             `)
             .eq("id", validated.application_id)
             .single();
@@ -208,7 +152,6 @@ export async function POST(req: NextRequest) {
         type StudentProfileRelation = {
             first_name?: string | null
             last_name?: string | null
-            signature?: string | null
             title?: string | null
             date_of_birth?: string | null
         } | null

@@ -7,6 +7,87 @@ export const CreateOfferSchema = z.object({
 
 export type CreateOfferInput = z.infer<typeof CreateOfferSchema>
 
+export const OfferListQuerySchema = z.object({
+    q: z.string().optional().default(""),
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(10),
+})
+
+export type OfferListQuery = z.infer<typeof OfferListQuerySchema>
+
+export const offerListItemSchema = z.object({
+    id: z.string().uuid(),
+    status: z.string(),
+    created_at: z.string(),
+    application: z
+        .object({
+            id: z.string().uuid(),
+            application_no: z.string().nullable(),
+            profile_id: z.string().uuid().optional(),
+            submitted_by_profile_id: z.string().uuid().nullable().optional(),
+            university_id: z.string().uuid().optional(),
+            student: z
+                .object({
+                    id: z.string().uuid(),
+                    name: z.string().nullable(),
+                    avatar_url: z.string().nullable(),
+                    email: z.string().nullable(),
+                })
+                .nullable()
+                .optional(),
+            course: z
+                .object({
+                    id: z.string().uuid(),
+                    name: z.string().nullable(),
+                    degree: z
+                        .object({
+                            id: z.string().uuid(),
+                            name: z.string(),
+                        })
+                        .nullable()
+                        .optional(),
+                })
+                .nullable()
+                .optional(),
+            university: z
+                .object({
+                    id: z.string().uuid(),
+                    name: z.string().nullable(),
+                })
+                .nullable()
+                .optional(),
+        })
+        .nullable()
+        .optional(),
+})
+
+export const offerListPaginationSchema = z.object({
+    total: z.number().int().nonnegative(),
+    page: z.number().int().min(1),
+    limit: z.number().int().min(1),
+    totalPages: z.number().int().nonnegative(),
+})
+
+export const offerListResponseSchema = z.object({
+    data: z.array(offerListItemSchema),
+    pagination: offerListPaginationSchema,
+})
+
+export type OfferListItem = z.infer<typeof offerListItemSchema>
+export type OfferListPagination = z.infer<typeof offerListPaginationSchema>
+export type OfferListResponse = z.infer<typeof offerListResponseSchema>
+
+export const offerDashboardPageDataSchema = z.object({
+    offers: offerListResponseSchema,
+    query: z.object({
+        q: z.string(),
+        page: z.string(),
+        limit: z.string(),
+    }),
+})
+
+export type OfferDashboardPageData = z.infer<typeof offerDashboardPageDataSchema>
+
 export const OfferChecklistPreviewQuerySchema = z.object({
     application_id: z.string().uuid("Invalid application id"),
 })

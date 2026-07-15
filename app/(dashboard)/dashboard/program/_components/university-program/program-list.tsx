@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Typography } from "@/components/shared/Typography"
+import { PageLoader } from "@/components/shared/page-loader"
 import type {
     UniversityProgramListItem,
     UniversityProgramListResponse,
@@ -134,11 +135,7 @@ export const UniversityProgramList = memo(function UniversityProgramList({
     viewOnly = false,
 }: UniversityProgramListProps) {
     if (isLoading) {
-        return (
-            <Typography as="p" font="sub-text" className="py-12 text-center text-gray-500">
-                Loading programs...
-            </Typography>
-        )
+        return <PageLoader className="py-12" />
     }
 
     if (programs.length === 0) {

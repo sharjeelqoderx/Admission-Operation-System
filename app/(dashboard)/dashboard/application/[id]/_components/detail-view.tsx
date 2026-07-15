@@ -35,7 +35,7 @@ const ApplicationDetailView = memo(function ApplicationDetailView({
     const router = useRouter()
 
     if (isLoading) {
-        return <PageLoader label="Loading application details..." />
+        return <PageLoader />
     }
 
     if (isError || !application) {

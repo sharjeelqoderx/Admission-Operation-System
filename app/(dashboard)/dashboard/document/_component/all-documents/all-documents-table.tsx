@@ -32,9 +32,9 @@ import {
     ChevronLeft,
     ChevronRight,
     Eye,
-    Loader2,
     X,
 } from "lucide-react"
+import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { cn } from "@/lib/utils"
 import type { AgentAllDocumentRow } from "@/types/schemas/document"
 
@@ -124,12 +124,7 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                 childClass="p-0!"
                 className="rounded-lg p-0"
             >
-                <div className="flex flex-col items-center justify-center py-24 gap-3">
-                    <Loader2 className="size-8 text-brand-secondary animate-spin" />
-                    <Typography as="p" className="text-sm font-medium text-gray-500">
-                        Loading documents...
-                    </Typography>
-                </div>
+                <PageLoader className="py-24" />
             </BluryCard>
         )
     }
@@ -315,7 +310,7 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                                                                         onClick={() => onApprove(row.document_id)}
                                                                     >
                                                                         {isReviewing ? (
-                                                                            <Loader2 className="size-4 animate-spin" />
+                                                                            <Spinner size="sm" />
                                                                         ) : (
                                                                             <Check className="size-4" />
                                                                         )}

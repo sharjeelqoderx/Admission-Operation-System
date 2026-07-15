@@ -60,7 +60,7 @@ const StatsDashboard = memo(function StatsDashboard({
                 </Link>
             </div>
 
-            <div className="flex flex-col md:flex-row items-center gap-16">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-16">
                 <div className="flex items-center gap-6">
                     <div className="size-14 border-x border-white/40 rounded-l-lg rounded-r-lg bg-white/20 flex items-center justify-center">
                         <GraduationCap className="size-7 text-gray-800" />

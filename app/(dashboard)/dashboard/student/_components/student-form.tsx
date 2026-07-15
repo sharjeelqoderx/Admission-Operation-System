@@ -25,7 +25,8 @@ import { DatePicker } from "@/components/shared/date-picker"
 import { CountrySelect } from "@/components/shared/country-select"
 import { StateSelect } from "@/components/shared/state-select"
 import { CitySelect } from "@/components/shared/city-select"
-import { Building, ChevronDown, School, FileUp, FileText, Plus, Loader2, Upload, X, ClipboardList } from "lucide-react"
+import { Building, ChevronDown, School, FileUp, FileText, Plus, Upload, X, ClipboardList } from "lucide-react"
+import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { resolveGradeType, type GradeType } from "@/types/schemas/academic"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import { toast } from "sonner"
@@ -334,7 +335,7 @@ function SupportingDocumentUploadModal({
                     >
                         {uploadMutation.isPending ? (
                             <>
-                                <Loader2 className="size-4 animate-spin" />
+                                <Spinner size="sm" />
                                 Uploading...
                             </>
                         ) : (
@@ -505,10 +506,10 @@ function SupportingDocumentsSection({
                                 className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border-2 border-purple-400 bg-purple-50/30 shadow-md cursor-not-allowed group"
                             >
                                 <div className="absolute top-3 left-3 z-10">
-                                    <Loader2 className="size-4 text-purple-500 animate-spin" />
+                                    <Spinner size="sm" />
                                 </div>
                                 <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                    <Loader2 className="size-10 text-purple-500 animate-spin" />
+                                    <Spinner size="lg" className="size-10" />
                                 </div>
                                 <div>
                                     <RequiredDocumentTitle name={rt.name} />
@@ -727,12 +728,7 @@ function SupportingDocumentsSection({
                 </div>
 
                 {isRequiredDocsLoading || isDocumentsLoading ? (
-                    <div className="flex flex-col items-center justify-center gap-3 py-14 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                        <Loader2 className="size-8 text-brand-byzantine animate-spin" />
-                        <Typography as="p" className="text-sm font-medium text-gray-600">
-                            Loading required documents...
-                        </Typography>
-                    </div>
+                    <PageLoader className="py-14 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200" />
                 ) : requiredDocTypes.length > 0 || optionalDocTypes.length > 0 ? (
                     <div className="space-y-6">
                         {requiredDocTypes.length > 0 && (

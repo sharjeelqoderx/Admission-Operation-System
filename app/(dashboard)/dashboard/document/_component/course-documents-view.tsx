@@ -35,7 +35,7 @@ export function CourseDocumentsView({
     } = useCourseDocumentBundles(resolvedProfileId)
 
     if ((!profileId && userLoading) || isLoading) {
-        return <PageLoader label="Loading course documents..." />
+        return <PageLoader />
     }
 
     if (isError) {

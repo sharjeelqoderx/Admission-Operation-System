@@ -142,26 +142,26 @@ const sidebarRoutes = [
     allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT, Role.ADMIN],
   },
 
-  {
-    label: 'Payments',
-    href: '/dashboard/payment',
-    icon: Wallet,
-    allowFor: [Role.AGENT, Role.STUDENT],
-  },
+  // {
+  //   label: 'Payments',
+  //   href: '/dashboard/payment',
+  //   icon: Wallet,
+  //   allowFor: [Role.AGENT, Role.STUDENT],
+  // },
 
-  {
-    label: 'Commissions',
-    href: '/dashboard/commission',
-    icon: BarChart3,
-    allowFor: [Role.AGENT],
-  },
+  // {
+  //   label: 'Commissions',
+  //   href: '/dashboard/commission',
+  //   icon: BarChart3,
+  //   allowFor: [Role.AGENT],
+  // },
 
-  {
-    label: 'Messages',
-    href: '/dashboard/chat',
-    icon: MessageSquare,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
-  },
+  // {
+  //   label: 'Messages',
+  //   href: '/dashboard/chat',
+  //   icon: MessageSquare,
+  //   allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+  // },
 
   {
     label: 'University Partner Profile',
@@ -218,12 +218,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { me } = useAuth();
-  const { data: currentUser, isLoading, status } = me;
+  const { data: currentUser, isLoading } = me;
 
   const handleCloseSidebar = () => setSidebarOpen(false);
 
-  if (isLoading || status === 'pending') {
-    return <PageLoader label="Loading dashboard..." />;
+  // Only block the shell on the initial auth load — not on background refetches.
+  if (isLoading && !currentUser) {
+    return <PageLoader fullScreen />;
   }
 
   const role = (currentUser?.role as Role) ?? Role.STUDENT;

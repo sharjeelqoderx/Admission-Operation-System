@@ -6,14 +6,14 @@ import { Typography } from "@/components/shared/Typography";
 import { BluryCard } from "@/components/shared/blury-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, CheckSquare, FileText, GraduationCap, User } from "lucide-react";
+import { Search, CheckSquare, FileText, GraduationCap, User, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { FilePreview } from "@/components/shared/FilePreview";
 import ImageUploadCard from "@/components/shared/image-upload-card";
-import { Plus, Loader2 } from "lucide-react";
+import { Spinner } from "@/components/shared/page-loader";
 
 import {
     Select,
@@ -914,7 +914,7 @@ function SupportingDocumentUploadModal({
                     >
                         {uploadMutation.isPending ? (
                             <>
-                                <Loader2 className="size-4 animate-spin" />
+                                <Spinner size="sm" />
                                 Uploading...
                             </>
                         ) : (
@@ -1501,7 +1501,7 @@ function Step2({
                 >
                     {isChecking ? (
                         <>
-                            <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <Spinner size="sm" />
                             Checking...
                         </>
                     ) : (

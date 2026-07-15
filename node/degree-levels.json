@@ -1,0 +1,152 @@
+{
+    "records": [
+        {
+            "id": "69bbe9c164032db45aa2090e",
+            "field_322": "Bachelor",
+            "field_322_raw": "Bachelor",
+            "field_323": "69bbe9c164032db45aa2090e",
+            "field_323_raw": "69bbe9c164032db45aa2090e",
+            "field_324": "03/19/2026 5:19am",
+            "field_324_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "05",
+                "minutes": "19",
+                "am_pm": "AM",
+                "unix_timestamp": 1773922740000,
+                "iso_timestamp": "2026-03-19T12:19:00.000Z",
+                "timestamp": "03/19/2026 05:19 am",
+                "time": 319,
+                "time_formatted": "05:19am",
+                "proper_unix_timestamp": 1773922740000,
+                "proper_iso_timestamp": "2026-03-19T12:19:00.000Z"
+            },
+            "field_325": "03/19/2026 5:19am",
+            "field_325_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "05",
+                "minutes": "19",
+                "am_pm": "AM",
+                "unix_timestamp": 1773922740000,
+                "iso_timestamp": "2026-03-19T12:19:00.000Z",
+                "timestamp": "03/19/2026 05:19 am",
+                "time": 319,
+                "time_formatted": "05:19am",
+                "proper_unix_timestamp": 1773922740000,
+                "proper_iso_timestamp": "2026-03-19T12:19:00.000Z"
+            }
+        },
+        {
+            "id": "69bbe9d4e8aa308c22fd0bf1",
+            "field_322": "Foundation",
+            "field_322_raw": "Foundation",
+            "field_323": "69bbe9d4e8aa308c22fd0bf1",
+            "field_323_raw": "69bbe9d4e8aa308c22fd0bf1",
+            "field_324": "03/19/2026 5:19am",
+            "field_324_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "05",
+                "minutes": "19",
+                "am_pm": "AM",
+                "unix_timestamp": 1773922740000,
+                "iso_timestamp": "2026-03-19T12:19:00.000Z",
+                "timestamp": "03/19/2026 05:19 am",
+                "time": 319,
+                "time_formatted": "05:19am",
+                "proper_unix_timestamp": 1773922740000,
+                "proper_iso_timestamp": "2026-03-19T12:19:00.000Z"
+            },
+            "field_325": "03/19/2026 5:19am",
+            "field_325_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "05",
+                "minutes": "19",
+                "am_pm": "AM",
+                "unix_timestamp": 1773922740000,
+                "iso_timestamp": "2026-03-19T12:19:00.000Z",
+                "timestamp": "03/19/2026 05:19 am",
+                "time": 319,
+                "time_formatted": "05:19am",
+                "proper_unix_timestamp": 1773922740000,
+                "proper_iso_timestamp": "2026-03-19T12:19:00.000Z"
+            }
+        },
+        {
+            "id": "69bbe9d4f3ec448e4ddaa7c1",
+            "field_322": "Master",
+            "field_322_raw": "Master",
+            "field_323": "69bbe9d4f3ec448e4ddaa7c1",
+            "field_323_raw": "69bbe9d4f3ec448e4ddaa7c1",
+            "field_324": "03/19/2026 5:19am",
+            "field_324_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "05",
+                "minutes": "19",
+                "am_pm": "AM",
+                "unix_timestamp": 1773922740000,
+                "iso_timestamp": "2026-03-19T12:19:00.000Z",
+                "timestamp": "03/19/2026 05:19 am",
+                "time": 319,
+                "time_formatted": "05:19am",
+                "proper_unix_timestamp": 1773922740000,
+                "proper_iso_timestamp": "2026-03-19T12:19:00.000Z"
+            },
+            "field_325": "03/19/2026 5:19am",
+            "field_325_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "05",
+                "minutes": "19",
+                "am_pm": "AM",
+                "unix_timestamp": 1773922740000,
+                "iso_timestamp": "2026-03-19T12:19:00.000Z",
+                "timestamp": "03/19/2026 05:19 am",
+                "time": 319,
+                "time_formatted": "05:19am",
+                "proper_unix_timestamp": 1773922740000,
+                "proper_iso_timestamp": "2026-03-19T12:19:00.000Z"
+            }
+        },
+        {
+            "id": "69bbe9d4680ccc622c2b8264",
+            "field_322": "MBA",
+            "field_322_raw": "MBA",
+            "field_323": "69bbe9d4680ccc622c2b8264",
+            "field_323_raw": "69bbe9d4680ccc622c2b8264",
+            "field_324": "03/19/2026 5:19am",
+            "field_324_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "05",
+                "minutes": "19",
+                "am_pm": "AM",
+                "unix_timestamp": 1773922740000,
+                "iso_timestamp": "2026-03-19T12:19:00.000Z",
+                "timestamp": "03/19/2026 05:19 am",
+                "time": 319,
+                "time_formatted": "05:19am",
+                "proper_unix_timestamp": 1773922740000,
+                "proper_iso_timestamp": "2026-03-19T12:19:00.000Z"
+            },
+            "field_325": "03/19/2026 5:19am",
+            "field_325_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "05",
+                "minutes": "19",
+                "am_pm": "AM",
+                "unix_timestamp": 1773922740000,
+                "iso_timestamp": "2026-03-19T12:19:00.000Z",
+                "timestamp": "03/19/2026 05:19 am",
+                "time": 319,
+                "time_formatted": "05:19am",
+                "proper_unix_timestamp": 1773922740000,
+                "proper_iso_timestamp": "2026-03-19T12:19:00.000Z"
+            }
+        }
+    ]
+}

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { resolveAgentStudentProfileIds } from "@/lib/api/agent-applications"
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server"
 import { formatFullName } from "@/lib/utils/profile"
 import type { AgentAllDocumentRow } from "@/types/schemas/document"
 
@@ -34,19 +33,15 @@ export async function GET() {
             .from("profile")
             .select("role")
             .eq("id", user.id)
-            .single()
+            .maybeSingle()
 
         if (profile?.role !== "AGENT") {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        const studentProfileIds = await resolveAgentStudentProfileIds(supabase, user.id)
+        const serviceSupabase = createSupabaseServiceClient()
 
-        if (!studentProfileIds.length) {
-            return NextResponse.json({ data: [] }, { status: 200 })
-        }
-
-        const { data: documents, error: docsError } = await supabase
+        const { data: documents, error: docsError } = await serviceSupabase
             .from("document")
             .select(`
                 id,
@@ -58,7 +53,6 @@ export async function GET() {
                 uploaded_by:uploaded_by_profile_id(first_name, last_name),
                 profile:profile_id(first_name, last_name, avatar_url, email)
             `)
-            .in("profile_id", studentProfileIds)
             .order("created_at", { ascending: false })
 
         if (docsError) {
@@ -69,21 +63,46 @@ export async function GET() {
             )
         }
 
-        const { data: students, error: studentsError } = await supabase
-            .from("student")
-            .select("profile_id, student_code, country")
-            .in("profile_id", studentProfileIds)
+        const profileIds = [
+            ...new Set((documents ?? []).map((document) => document.profile_id).filter(Boolean)),
+        ]
 
-        if (studentsError) {
-            console.error("GET /api/document/all students error:", studentsError)
+        const [studentsResult, applicationsResult] = await Promise.all([
+            profileIds.length > 0
+                ? serviceSupabase
+                      .from("student")
+                      .select("profile_id, student_code, country")
+                      .in("profile_id", profileIds)
+                : Promise.resolve({ data: [], error: null }),
+            profileIds.length > 0
+                ? serviceSupabase
+                      .from("application")
+                      .select(`
+                        profile_id,
+                        created_at,
+                        course:course_id (
+                            degree:degree_id (location, name)
+                        )
+                    `)
+                      .in("profile_id", profileIds)
+                      .order("created_at", { ascending: false })
+                : Promise.resolve({ data: [], error: null }),
+        ])
+
+        if (studentsResult.error) {
+            console.error("GET /api/document/all students error:", studentsResult.error)
             return NextResponse.json(
-                { error: "Failed to fetch student details", details: studentsError },
+                { error: "Failed to fetch student details", details: studentsResult.error },
                 { status: 500 }
             )
         }
 
+        if (applicationsResult.error) {
+            console.error("GET /api/document/all applications error:", applicationsResult.error)
+        }
+
         const studentMeta = new Map(
-            (students ?? []).map((student) => [
+            (studentsResult.data ?? []).map((student) => [
                 student.profile_id,
                 {
                     student_code: student.student_code,
@@ -92,27 +111,14 @@ export async function GET() {
             ])
         )
 
-        const { data: applications, error: applicationsError } = await supabase
-            .from("application")
-            .select(`
-                profile_id,
-                created_at,
-                course:course_id (
-                    degree:degree_id (location, name)
-                )
-            `)
-            .in("profile_id", studentProfileIds)
-            .order("created_at", { ascending: false })
-
-        if (applicationsError) {
-            console.error("GET /api/document/all applications error:", applicationsError)
-        }
-
         const campusByProfile = new Map<string, string>()
-        for (const application of applications ?? []) {
+        for (const application of applicationsResult.data ?? []) {
             if (campusByProfile.has(application.profile_id)) continue
-            const degree = (application.course as { degree?: { location?: string | null; name?: string } | null } | null)
-                ?.degree
+            const degree = (
+                application.course as {
+                    degree?: { location?: string | null; name?: string } | null
+                } | null
+            )?.degree
             const campus = degree?.location?.trim() || degree?.name?.trim() || null
             if (campus) {
                 campusByProfile.set(application.profile_id, campus)

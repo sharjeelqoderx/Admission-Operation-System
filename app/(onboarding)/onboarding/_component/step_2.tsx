@@ -282,7 +282,7 @@ export function Step2Academic({ onBack, onNext }: { onBack: () => void; onNext: 
     const { me } = useAuth()
     const { data: meData, isLoading } = me
 
-    if (isLoading) return <PageLoader label="Loading academic details..." />
+    if (isLoading) return <PageLoader />
 
     const academics: AcademicFormItem[] = meData?.academic?.length
         ? meData.academic.map(mapAcademicToFormItem)

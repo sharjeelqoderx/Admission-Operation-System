@@ -133,7 +133,7 @@ export function AgentStudentProgramDetailPage() {
         [course?.deadline_date, degree?.language_of_study, degree?.study_mode, levelLabel]
     )
 
-    if (isLoading) return <PageLoader label="Loading program details..." />
+    if (isLoading) return <PageLoader />
 
     if (isError || !course) {
         return (

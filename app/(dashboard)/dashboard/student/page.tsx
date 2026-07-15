@@ -36,7 +36,7 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
         }
 
         return (
-            <Suspense fallback={<PageLoader label="Loading students..." />}>
+            <Suspense fallback={<PageLoader />}>
                 <UniversityStudentListPageContent initialOverview={initialOverview} />
             </Suspense>
         )

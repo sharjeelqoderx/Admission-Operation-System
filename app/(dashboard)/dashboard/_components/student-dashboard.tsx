@@ -24,7 +24,7 @@ import {
     type ApplicationRow,
 } from "@/app/(dashboard)/dashboard/application/_components/applications-list-table"
 import { ApplicationStatus } from "@/components/shared/StatusBadge"
-import { type OfferRow } from "@/app/(dashboard)/dashboard/offer/_component/OfferTable"
+import type { OfferListItem } from "@/types/schemas/offer"
 import type { CourseProgram } from "@/types/schemas/program"
 import { deriveProgramCategory } from "@/lib/utils/program"
 
@@ -36,13 +36,13 @@ export function StudentDashboard() {
     const { me } = useAuth()
     const meData = me.data
 
-    const { data: offersData, isLoading: offersLoading } = useQuery<OfferRow[]>({
+    const { data: offersData, isLoading: offersLoading } = useQuery<OfferListItem[]>({
         queryKey: ["offers", "recent"],
         queryFn: async () => {
             const res = await fetch("/api/offer")
             if (!res.ok) throw new Error("Failed to fetch offers")
             const json = await res.json()
-            return (json.data ?? []) as OfferRow[]
+            return (json.data ?? []) as OfferListItem[]
         },
     })
 

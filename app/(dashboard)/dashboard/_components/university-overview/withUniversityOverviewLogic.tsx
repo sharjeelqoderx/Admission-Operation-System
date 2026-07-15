@@ -35,7 +35,7 @@ export function withUniversityOverviewLogic(
         initialOverview: UniversityOverview
     }) {
         const overviewQuery = useQuery({
-            queryKey: ["university-overview", "v2"],
+            queryKey: ["university-overview", "v3"],
             queryFn: async () => selectOverview(await fetchUniversityOverview()),
             initialData: selectOverview(initialOverview),
         })

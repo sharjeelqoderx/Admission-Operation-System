@@ -225,7 +225,7 @@ export function AgentStudentProgramPage() {
             </div>
 
             {isPageLoading ? (
-                <PageLoader label={isLoading ? "Loading programs..." : "Searching programs..."} />
+                <PageLoader />
             ) : isError ? (
                 <div className="flex flex-col items-center justify-center py-32 text-center space-y-4">
                     <div className="size-16 rounded-2xl bg-red-50 flex items-center justify-center">

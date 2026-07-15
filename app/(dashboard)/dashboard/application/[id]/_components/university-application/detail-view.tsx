@@ -52,7 +52,7 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
         detail?.can_approve_for_signature && !viewOnly && me.isSuccess
 
     if (isLoading) {
-        return <PageLoader label="Loading application details..." />
+        return <PageLoader />
     }
 
     if (isError || !detail) {

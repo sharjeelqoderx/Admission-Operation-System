@@ -4,7 +4,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { COURSE_SELECT, attachLevelsToCourses, type CourseRow } from "@/lib/api/course-program"
 import { formatFullName } from "@/lib/utils/profile"
 import { resolveStudentPipelineStatus } from "@/lib/student/pipeline-status"
-import type { UniversityOverview } from "@/types/schemas/university-overview"
+import type {
+    OverviewChartPoint,
+    OverviewTrendPoint,
+    UniversityOverview,
+} from "@/types/schemas/university-overview"
+import type { StudentPipelineStatus } from "@/types/schemas/university-student"
 
 type ApplicationRow = {
     id: string
@@ -24,6 +29,25 @@ type OfferRow = {
 
 const EMPTY_UUID = "00000000-0000-0000-0000-000000000000"
 const RECENT_LIMIT = 5
+const TREND_MONTHS = 6
+
+const APPLICATION_STATUS_ORDER = ["PENDING", "NEEDS_REVISION", "APPROVED", "REJECTED"] as const
+const OFFER_STATUS_ORDER = ["PENDING", "ACCEPTED", "REJECTED"] as const
+const PIPELINE_STATUS_ORDER: StudentPipelineStatus[] = [
+    "Created",
+    "Contract Sent",
+    "Signed",
+    "Completed",
+]
+const PROGRAM_STATUS_ORDER = ["ACTIVE", "INACTIVE"] as const
+const DOCUMENT_STATUS_ORDER = [
+    "PENDING",
+    "VERIFIED",
+    "APPROVED",
+    "NEEDS_REVISION",
+    "ACTION_REQUIRED",
+    "REJECTED",
+] as const
 
 function formatSubmissionDate(value?: string | null) {
     if (!value) return null
@@ -63,6 +87,87 @@ function isActiveApplication(applicationStatus: string, pipelineStatus: string) 
     }
 
     return pipelineStatus !== "Completed" && pipelineStatus !== "Signed"
+}
+
+function formatStatusLabel(status: string) {
+    return status
+        .toLowerCase()
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ")
+}
+
+function countByKey(items: string[]): Map<string, number> {
+    const counts = new Map<string, number>()
+    for (const item of items) {
+        counts.set(item, (counts.get(item) ?? 0) + 1)
+    }
+    return counts
+}
+
+function toOrderedChartPoints(
+    counts: Map<string, number>,
+    order: readonly string[],
+    formatLabel: (key: string) => string = formatStatusLabel
+): OverviewChartPoint[] {
+    const known = new Set(order)
+    const points: OverviewChartPoint[] = order.map((key) => ({
+        name: formatLabel(key),
+        value: counts.get(key) ?? 0,
+    }))
+
+    for (const [key, value] of counts.entries()) {
+        if (!known.has(key) && value > 0) {
+            points.push({ name: formatLabel(key), value })
+        }
+    }
+
+    return points.filter((point) => point.value > 0)
+}
+
+function buildMonthlyTrend(
+    applications: ApplicationRow[],
+    offers: OfferRow[]
+): OverviewTrendPoint[] {
+    const now = new Date()
+    const buckets: Array<OverviewTrendPoint & { key: string }> = []
+
+    for (let offset = TREND_MONTHS - 1; offset >= 0; offset -= 1) {
+        const date = new Date(now.getFullYear(), now.getMonth() - offset, 1)
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+        buckets.push({
+            key,
+            month: date.toLocaleDateString("en-US", { month: "short", year: "2-digit" }),
+            applications: 0,
+            offers: 0,
+        })
+    }
+
+    const indexByKey = new Map(buckets.map((bucket, index) => [bucket.key, index] as const))
+
+    for (const application of applications) {
+        const created = new Date(application.created_at)
+        if (Number.isNaN(created.getTime())) continue
+        const key = `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, "0")}`
+        const index = indexByKey.get(key)
+        if (index === undefined) continue
+        buckets[index].applications += 1
+    }
+
+    for (const offer of offers) {
+        const created = new Date(offer.created_at)
+        if (Number.isNaN(created.getTime())) continue
+        const key = `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, "0")}`
+        const index = indexByKey.get(key)
+        if (index === undefined) continue
+        buckets[index].offers += 1
+    }
+
+    return buckets.map(({ month, applications: applicationCount, offers: offerCount }) => ({
+        month,
+        applications: applicationCount,
+        offers: offerCount,
+    }))
 }
 
 async function loadCoursesById(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, courseIds: string[]) {
@@ -107,8 +212,10 @@ export async function fetchUniversityOverview(universityId: string): Promise<Uni
         templatesRecentResult,
         programsCountResult,
         programsRecentResult,
+        programsStatusResult,
         documentsCountResult,
         documentsRecentResult,
+        documentsStatusResult,
         profilesResult,
         agentsResult,
         courseById,
@@ -137,6 +244,10 @@ export async function fetchUniversityOverview(universityId: string): Promise<Uni
             .eq("profile_id", universityId)
             .order("created_at", { ascending: false })
             .limit(RECENT_LIMIT),
+        supabase
+            .from("program")
+            .select("status")
+            .eq("profile_id", universityId),
         profileIds.length > 0
             ? supabase
                   .from("document")
@@ -159,6 +270,12 @@ export async function fetchUniversityOverview(universityId: string): Promise<Uni
             : Promise.resolve({ data: [], error: null }),
         profileIds.length > 0
             ? supabase
+                  .from("document")
+                  .select("id, document_review(status, created_at)")
+                  .in("profile_id", profileIds)
+            : Promise.resolve({ data: [], error: null }),
+        profileIds.length > 0
+            ? supabase
                   .from("profile")
                   .select("id, first_name, last_name")
                   .in("id", profileIds)
@@ -172,8 +289,10 @@ export async function fetchUniversityOverview(universityId: string): Promise<Uni
     if (templatesRecentResult.error) throw new Error(templatesRecentResult.error.message)
     if (programsCountResult.error) throw new Error(programsCountResult.error.message)
     if (programsRecentResult.error) throw new Error(programsRecentResult.error.message)
+    if (programsStatusResult.error) throw new Error(programsStatusResult.error.message)
     if (documentsCountResult.error) throw new Error(documentsCountResult.error.message)
     if (documentsRecentResult.error) throw new Error(documentsRecentResult.error.message)
+    if (documentsStatusResult.error) throw new Error(documentsStatusResult.error.message)
     if (profilesResult.error) throw new Error(profilesResult.error.message)
     if (agentsResult.error) throw new Error(agentsResult.error.message)
 
@@ -289,20 +408,67 @@ export async function fetchUniversityOverview(universityId: string): Promise<Uni
             }
         })
 
+    const stats = {
+        total_students: profileIds.length,
+        total_university_partners: totalUniversityPartners,
+        active_applications: activeApplications,
+        total_applications: applicationRows.length,
+        templates: templatesCountResult.count ?? 0,
+        programs: programsCountResult.count ?? 0,
+        total_documents: documentsCountResult.count ?? 0,
+        total_offers: offers.length,
+    }
+
+    const documentStatuses = (documentsStatusResult.data ?? []).map((document) => {
+        const reviews = document.document_review as { status: string; created_at: string }[] | null
+        if (!reviews?.length) return "PENDING"
+        const latestReview = [...reviews].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0]
+        return latestReview?.status ?? "PENDING"
+    })
+
+    const charts = {
+        overview: [
+            { name: "Students", value: stats.total_students },
+            { name: "Active Apps", value: stats.active_applications },
+            { name: "Applications", value: stats.total_applications },
+            { name: "Programs", value: stats.programs },
+            { name: "Documents", value: stats.total_documents },
+            { name: "Offers", value: stats.total_offers },
+            { name: "Partners", value: stats.total_university_partners },
+            { name: "Templates", value: stats.templates },
+        ],
+        applications_by_status: toOrderedChartPoints(
+            countByKey(applicationRows.map((application) => application.status)),
+            APPLICATION_STATUS_ORDER
+        ),
+        pipeline: toOrderedChartPoints(
+            countByKey(applicationItems.map((item) => item.pipelineStatus)),
+            PIPELINE_STATUS_ORDER,
+            (key) => key
+        ),
+        offers_by_status: toOrderedChartPoints(
+            countByKey(offers.map((offer) => offer.status)),
+            OFFER_STATUS_ORDER
+        ),
+        programs_by_status: toOrderedChartPoints(
+            countByKey((programsStatusResult.data ?? []).map((program) => program.status)),
+            PROGRAM_STATUS_ORDER
+        ),
+        documents_by_status: toOrderedChartPoints(
+            countByKey(documentStatuses),
+            DOCUMENT_STATUS_ORDER
+        ),
+        monthly_trend: buildMonthlyTrend(applicationRows, offers),
+    }
+
     return {
         title: "University Dashboard",
         subtitle:
-            "Overview of students, applications, programs, documents, and offers across your institution.",
-        stats: {
-            total_students: profileIds.length,
-            total_university_partners: totalUniversityPartners,
-            active_applications: activeApplications,
-            total_applications: applicationRows.length,
-            templates: templatesCountResult.count ?? 0,
-            programs: programsCountResult.count ?? 0,
-            total_documents: documentsCountResult.count ?? 0,
-            total_offers: offers.length,
-        },
+            "Charts across students, applications, programs, documents, and offers for your institution.",
+        stats,
+        charts,
         recent: {
             students: recentStudents,
             applications: recentApplications,

@@ -10,7 +10,7 @@ export default function DocumentPage() {
     const { data: user, isLoading } = me
 
     if (isLoading) {
-        return <PageLoader label="Loading documents..." />
+        return <PageLoader />
     }
 
     if (user?.role === "AGENT") {

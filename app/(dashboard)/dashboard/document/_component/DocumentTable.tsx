@@ -14,7 +14,8 @@ import {
     TableCell,
 } from "@/components/ui/table"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { ChevronLeft, ChevronRight, AlertCircle, Loader2, FileText } from "lucide-react"
+import { ChevronLeft, ChevronRight, AlertCircle, FileText } from "lucide-react"
+import { PageLoader } from "@/components/shared/page-loader"
 import Link from "next/link"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { cn } from "@/lib/utils"
@@ -74,12 +75,7 @@ export const DocumentTable = React.memo(function DocumentTable({
                 childClass="p-0!"
                 className="rounded-lg p-0"
             >
-                <div className="flex flex-col items-center justify-center py-24 gap-3">
-                    <Loader2 className="size-8 text-brand-secondary animate-spin" />
-                    <Typography as="p" className="text-sm font-medium text-gray-500">
-                        Loading students...
-                    </Typography>
-                </div>
+                <PageLoader className="py-24" />
             </BluryCard>
         )
     }

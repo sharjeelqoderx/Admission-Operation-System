@@ -13,7 +13,8 @@ import {
     TableCell,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, AlertCircle, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, AlertCircle } from "lucide-react"
+import { PageLoader } from "@/components/shared/page-loader"
 import Link from "next/link"
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
 import { cn } from "@/lib/utils"
@@ -137,12 +138,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                 childClass="p-0!"
                 className="rounded-lg p-0"
             >
-                <div className="flex flex-col items-center justify-center py-24 gap-3">
-                    <Loader2 className="size-8 text-brand-secondary animate-spin" />
-                    <Typography as="p" className="text-sm font-medium text-gray-500">
-                        Loading applications...
-                    </Typography>
-                </div>
+                <PageLoader className="py-24" />
             </BluryCard>
         )
     }

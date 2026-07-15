@@ -29,7 +29,7 @@ export const AllDocumentsPageContent = memo(function AllDocumentsPageContent({
                     View All Documents
                 </Typography>
                 <Typography as="p" font="sub-text" className="text-gray-600">
-                    Review, approve, or reject documents across all your students in one place.
+                    Review, approve, or reject all uploaded student documents in one place.
                 </Typography>
             </BluryCard>
 

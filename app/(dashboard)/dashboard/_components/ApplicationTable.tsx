@@ -14,7 +14,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Typography } from "@/components/shared/Typography"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { PageLoader } from "@/components/shared/page-loader"
-import { Loader2 } from "lucide-react"
+
 
 export type ApplicationRow = {
     id: string
@@ -62,7 +62,7 @@ export const ApplicationTable = React.memo(function ApplicationTable({ applicati
                         {isLoading ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="px-8 py-12 text-center">
-                                    <PageLoader label="Loading applications..." className="min-h-[200px]" />
+                                    <PageLoader className="min-h-[200px]" />
                                 </TableCell>
                             </TableRow>
                         ) : applications.length === 0 ? (

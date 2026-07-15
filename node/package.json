@@ -1,0 +1,14 @@
+{
+  "name": "knack-supabase-import",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Import Knack JSON exports into Supabase",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "import": "node index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.104.0"
+  }
+}

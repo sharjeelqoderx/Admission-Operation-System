@@ -7,9 +7,9 @@ import {
     ChevronLeft,
     ChevronRight,
     AlertCircle,
-    Loader2,
     Search,
 } from "lucide-react"
+import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { formatLocation } from "@/lib/utils/location"
 import { requiresApsRequirement } from "@/lib/utils/aps"
 import {
@@ -110,12 +110,7 @@ export const StudentTable = React.memo(function StudentTable({
                 childClass="p-0!"
                 className="rounded-lg p-0"
             >
-                <div className="flex flex-col items-center justify-center py-24 gap-3">
-                    <Loader2 className="size-8 text-brand-secondary animate-spin" />
-                    <Typography as="p" className="text-sm font-medium text-gray-500">
-                        Loading students...
-                    </Typography>
-                </div>
+                <PageLoader className="py-24" />
             </BluryCard>
         )
     }
@@ -437,9 +432,7 @@ export const StudentTable = React.memo(function StudentTable({
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                            {isFetching && (
-                                <Loader2 className="size-4 animate-spin text-brand-secondary" />
-                            )}
+                            {isFetching && <Spinner size="sm" />}
                             <Button
                                 variant="outline"
                                 size="icon"

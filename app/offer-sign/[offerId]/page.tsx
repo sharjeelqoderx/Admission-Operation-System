@@ -690,11 +690,11 @@ export default function OfferSignPage() {
     ])
 
     if (isDownloadingConditionalLetter) {
-        return <PageLoader label="Generating conditional letter PDF..." />
+        return <PageLoader />
     }
 
     if (!offerId || isLoading) {
-        return <PageLoader label="Loading offer details..." />
+        return <PageLoader />
     }
 
     if (isError || !offer) {

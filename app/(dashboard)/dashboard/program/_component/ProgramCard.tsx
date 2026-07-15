@@ -3,7 +3,8 @@
 import { memo, useCallback, useState } from "react"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
-import { MapPin, Clock, Globe, BookOpen, Layers, Loader2, GraduationCap } from "lucide-react"
+import { MapPin, Clock, Globe, BookOpen, Layers, GraduationCap } from "lucide-react"
+import { PageLoader } from "@/components/shared/page-loader"
 import Link from "next/link"
 import { BluryCard } from "@/components/shared/blury-card"
 import type { CourseProgram } from "@/types/schemas/program"
@@ -161,12 +162,5 @@ export function ProgramSkeleton() {
 }
 
 export function InfiniteLoader() {
-    return (
-        <div className="flex flex-col items-center justify-center py-10 gap-3">
-            <Loader2 className="size-8 text-brand-byzantine animate-spin" />
-            <Typography font="small" className="text-gray-400 uppercase tracking-widest">
-                Loading more programs...
-            </Typography>
-        </div>
-    )
+    return <PageLoader className="py-10" />
 }

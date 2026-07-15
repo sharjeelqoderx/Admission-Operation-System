@@ -77,7 +77,7 @@ export default function AllApplicationViewDetailsPage() {
         setOfferModalOpen(true)
     }, [])
 
-    if (isLoading) return <PageLoader label="Loading application details..." />
+    if (isLoading) return <PageLoader />
 
     if (isError || !application) {
         return (
