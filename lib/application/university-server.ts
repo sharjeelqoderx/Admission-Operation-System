@@ -204,9 +204,10 @@ async function loadAgentOrganizations(
         return new Map<string, string>()
     }
 
+    // Live DB may not have agency_name — use contact person (or default) instead.
     const { data, error } = await supabase
         .from("agent")
-        .select("profile_id, agency_name")
+        .select("profile_id, contact_person_first_name, contact_person_last_name")
         .in("profile_id", agentProfileIds)
 
     if (error) {
@@ -214,7 +215,13 @@ async function loadAgentOrganizations(
     }
 
     return new Map(
-        (data ?? []).map((agent) => [agent.profile_id, agent.agency_name ?? "Education Partner"])
+        (data ?? []).map((agent) => [
+            agent.profile_id,
+            formatFullName(
+                agent.contact_person_first_name,
+                agent.contact_person_last_name
+            ) || "Education Partner",
+        ])
     )
 }
 

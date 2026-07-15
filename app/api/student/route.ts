@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
         })
 
         if ("error" in result) {
-            return NextResponse.json({ error: result.error }, { status: 400 })
+            const status = result.error === "Forbidden" ? 403 : 400
+            return NextResponse.json({ error: result.error }, { status })
         }
 
         return NextResponse.json({ data: result.data, pagination: result.pagination }, { status: 200 })

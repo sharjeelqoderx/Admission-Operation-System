@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Typography } from "@/components/shared/Typography"
 import { PageLoader } from "@/components/shared/page-loader"
 import { StudentPipelineBadge } from "@/components/shared/student-pipeline-badge"
+import { cn } from "@/lib/utils"
 import {
     Select,
     SelectContent,
@@ -43,7 +44,7 @@ type UniversityStudentListTableProps = {
     onPageChange: (page: number) => void
 }
 
-const tabs = ["All Students", "Program", "Applied", "Submission Date"]
+const tabs = ["All Students", "Program", "Applied", "Submission Date"] as const
 
 export const UniversityStudentListTable = memo(function UniversityStudentListTable({
     students,
@@ -94,7 +95,7 @@ export const UniversityStudentListTable = memo(function UniversityStudentListTab
                 </Select>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-6 border-b border-gray-200">
                 {tabs.map((tab) => {
                     const isActive = activeTab === tab
 
@@ -103,13 +104,22 @@ export const UniversityStudentListTable = memo(function UniversityStudentListTab
                             key={tab}
                             type="button"
                             onClick={() => onTabChange(tab)}
-                            className={
+                            className={cn(
+                                "pb-3 transition-colors",
                                 isActive
-                                    ? "rounded-full bg-brand-secondary px-5 py-2 text-xs font-semibold text-white"
-                                    : "rounded-full bg-[#8ba4d5]/35 px-5 py-2 text-xs font-semibold text-brand-primary"
-                            }
+                                    ? "border-b-2 border-brand-blue text-brand-blue"
+                                    : "border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+                            )}
                         >
-                            {tab}
+                            <Typography
+                                as="span"
+                                className={cn(
+                                    "text-sm whitespace-nowrap",
+                                    isActive ? "font-semibold" : "font-medium"
+                                )}
+                            >
+                                {tab}
+                            </Typography>
                         </button>
                     )
                 })}
@@ -142,13 +152,13 @@ export const UniversityStudentListTable = memo(function UniversityStudentListTab
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="px-6 py-12">
+                                    <TableCell colSpan={5} className="px-6 py-12">
                                         <PageLoader className="min-h-0" />
                                     </TableCell>
                                 </TableRow>
                             ) : students.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="px-6 py-12 text-center">
+                                    <TableCell colSpan={5} className="px-6 py-12 text-center">
                                         <Typography as="span" font="sub-text" className="text-gray-500">
                                             No students found.
                                         </Typography>

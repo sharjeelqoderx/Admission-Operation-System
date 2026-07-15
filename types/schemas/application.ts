@@ -14,7 +14,8 @@ export const ApplicationStatusFilterSchema = z.enum([
 ]);
 
 export const ApplicationListQuerySchema = z.object({
-  student_id: z.string().uuid().optional(),
+  // Profile IDs may be UUID-shaped but not always RFC-compliant (version/variant).
+  student_id: z.string().trim().min(1).optional(),
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
   status: ApplicationStatusFilterSchema.optional(),

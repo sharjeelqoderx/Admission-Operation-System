@@ -13,13 +13,6 @@ import { Input } from "@/components/ui/input"
 import { StudentTable } from "../../_components/StudentTable"
 import { PageLoader } from "@/components/shared/page-loader"
 import { BluryCard } from "@/components/shared/blury-card"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useAuth } from "@/hooks/useAuth"
@@ -203,6 +196,7 @@ function StudentListSection() {
                     />
                 </div>
 
+                {/* Status filter — hidden for now
                 <div className="relative w-full sm:w-64">
                     <Select value={status} onValueChange={handleStatusChange}>
                         <SelectTrigger className="w-full">
@@ -216,6 +210,7 @@ function StudentListSection() {
                         </SelectContent>
                     </Select>
                 </div>
+                */}
             </div>
 
             {/* Tabs */}

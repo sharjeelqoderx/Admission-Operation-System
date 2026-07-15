@@ -9,13 +9,6 @@ import { Input } from "@/components/ui/input"
 import { StudentTable } from "../../_components/StudentTable"
 import { BluryCard } from "@/components/shared/blury-card"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import {
     withStudentDashboardLogic,
     type StudentDashboardViewProps,
 } from "../withStudentDashboardLogic"
@@ -146,6 +139,7 @@ function StudentDashboardView({
                             />
                         </div>
 
+                        {/* Status filter — hidden for now
                         <div className="relative w-full sm:w-64">
                             <Select value={status} onValueChange={handleStatusChange}>
                                 <SelectTrigger className="w-full">
@@ -159,6 +153,7 @@ function StudentDashboardView({
                                 </SelectContent>
                             </Select>
                         </div>
+                        */}
                     </div>
 
                     <StudentTable

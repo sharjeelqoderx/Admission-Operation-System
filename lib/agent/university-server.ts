@@ -18,7 +18,7 @@ const KYC_DOCUMENT_CODES = ["AGENT_REGISTRATION", "AGENT_ID_FRONT", "AGENT_ID_BA
 type AgentRow = {
     id: string
     profile_id: string
-    agency_name: string | null
+    agency_name?: string | null
     country: string | null
     state: string | null
     city: string | null
@@ -239,7 +239,6 @@ export async function fetchUniversityAgentList(params: {
         .select(`
             id,
             profile_id,
-            agency_name,
             country,
             state,
             city,
@@ -343,7 +342,6 @@ export async function fetchUniversityAgentDetail(profileId: string): Promise<Uni
         .select(`
             id,
             profile_id,
-            agency_name,
             country,
             state,
             city,
@@ -466,7 +464,7 @@ export async function fetchUniversityAgentDetail(profileId: string): Promise<Uni
         students_count: students.length,
         enrolled_count: enrolledCount,
         agency_info: {
-            agency_name: agentRow.agency_name,
+            agency_name: getAgencyLabel(agentRow) || null,
             address:
                 agentRow.address ??
                 formatLocation({

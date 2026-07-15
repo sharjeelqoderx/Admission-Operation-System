@@ -5,7 +5,7 @@ import { CreateApplicationSchema, ApplicationListQuerySchema } from "@/types/sch
 import type { ApplicationProfileRole } from "@/types/schemas/application"
 
 async function canAccessStudentApplications(
-    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    _supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
     userId: string,
     role: string | undefined,
     studentId: string
@@ -14,28 +14,8 @@ async function canAccessStudentApplications(
         return userId === studentId
     }
 
-    if (role === "AGENT") {
-        const { data: agentRow } = await supabase
-            .from("agent")
-            .select("id")
-            .eq("profile_id", userId)
-            .maybeSingle()
-
-        if (!agentRow) {
-            return false
-        }
-
-        const { data: studentRow } = await supabase
-            .from("student")
-            .select("id")
-            .eq("profile_id", studentId)
-            .eq("created_by_agent_id", agentRow.id)
-            .maybeSingle()
-
-        return Boolean(studentRow)
-    }
-
-    return role === "UNIVERSITY" || role === "ADMIN"
+    // Agents have staff-wide visibility (same as all-apps / students / offers).
+    return role === "AGENT" || role === "UNIVERSITY" || role === "ADMIN"
 }
 
 export async function GET(req: NextRequest) {

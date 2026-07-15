@@ -1,7 +1,10 @@
-import { NextRequest, NextResponse } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { NextResponse } from "next/server"
+import {
+    createSupabaseServerClient,
+    createSupabaseServiceClient,
+} from "@/lib/supabase/server"
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
     try {
         const supabase = await createSupabaseServerClient()
 
@@ -23,36 +26,29 @@ export async function GET(_req: NextRequest) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        const { data: agentRow } = await supabase
-            .from("agent")
-            .select("id")
-            .eq("profile_id", user.id)
-            .maybeSingle()
-
-        if (!agentRow) {
-            return NextResponse.json(
-                { error: "University Partner profile not found" },
-                { status: 400 }
-            )
-        }
+        // Agents see system-wide ops stats (same visibility as all-apps / offers / docs).
+        const db = createSupabaseServiceClient()
 
         const [studentsResult, applicationsResult, pendingResult] = await Promise.all([
-            supabase
-                .from("student")
-                .select("id", { count: "exact", head: true })
-                .eq("created_by_agent_id", agentRow.id),
-
-            supabase
+            db.from("student").select("id", { count: "exact", head: true }),
+            db.from("application").select("id", { count: "exact", head: true }),
+            db
                 .from("application")
                 .select("id", { count: "exact", head: true })
-                .eq("submitted_by_profile_id", user.id),
-
-            supabase
-                .from("application")
-                .select("id", { count: "exact", head: true })
-                .eq("submitted_by_profile_id", user.id)
                 .eq("status", "PENDING"),
         ])
+
+        if (studentsResult.error || applicationsResult.error || pendingResult.error) {
+            console.error("GET /api/dashboard/stats query error:", {
+                students: studentsResult.error?.message,
+                applications: applicationsResult.error?.message,
+                pending: pendingResult.error?.message,
+            })
+            return NextResponse.json(
+                { error: "Failed to fetch dashboard stats" },
+                { status: 500 }
+            )
+        }
 
         return NextResponse.json(
             {
