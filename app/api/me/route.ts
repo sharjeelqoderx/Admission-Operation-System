@@ -10,13 +10,16 @@ export async function GET() {
 
         if (error || !user) return err("Unauthorized", 401)
 
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
             .from("profile")
             .select("*")
             .eq("id", user.id)
             .maybeSingle()
 
-        const role = profile?.role ?? "STUDENT"
+        if (profileError) return err(profileError.message, 500)
+        if (!profile) return err("Profile not found", 404)
+
+        const role = profile.role
 
         let extraData: any = {}
 
@@ -126,21 +129,21 @@ export async function GET() {
 
         return ok({
             id: user.id,
-            email: profile?.email ?? user.email ?? "",
+            email: profile.email ?? user.email ?? "",
             fullName: formatFullName(
-                profile?.first_name,
-                profile?.last_name,
+                profile.first_name,
+                profile.last_name,
                 user.user_metadata?.full_name ?? "User"
             ),
-            firstName: profile?.first_name ?? user.user_metadata?.first_name ?? "",
-            lastName: profile?.last_name ?? user.user_metadata?.last_name ?? "",
-            title: profile?.title ?? "",
-            phone: profile?.phone ?? "",
-            avatarUrl: profile?.avatar_url ?? "",
+            firstName: profile.first_name ?? "",
+            lastName: profile.last_name ?? "",
+            title: profile.title ?? "",
+            phone: profile.phone ?? "",
+            avatarUrl: profile.avatar_url ?? "",
             role,
             profile: {
-                dateOfBirth: profile?.date_of_birth ?? "",
-                gender: profile?.gender ?? "",
+                dateOfBirth: profile.date_of_birth ?? "",
+                gender: profile.gender ?? "",
                 country: extraData.country ?? "",
                 state: extraData.state ?? "",
                 city: extraData.city ?? "",
