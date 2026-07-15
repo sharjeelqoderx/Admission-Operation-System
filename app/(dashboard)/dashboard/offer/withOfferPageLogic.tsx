@@ -105,13 +105,10 @@ export function withOfferPageLogic(Component: ComponentType<OfferPageLogicProps>
             retry: false,
         })
 
-        const isFetchingRef = useRef(false)
-        isFetchingRef.current = offersQuery.isFetching
-
         const handlePageChange = useCallback(
             (newPage: number) => {
-                if (isFetchingRef.current) return
                 if (newPage === page) return
+                if (newPage < 1) return
 
                 pendingPageRef.current = newPage
                 setPage(newPage)

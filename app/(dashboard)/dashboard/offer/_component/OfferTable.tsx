@@ -289,24 +289,40 @@ export const OfferTable = React.memo(function OfferTable({
                                             {startIndex}–{endIndex}
                                         </Typography>
                                         <Typography as="span" className="text-[12px] font-light text-gray-500">
-                                            of {total} entries
+                                            of
+                                        </Typography>
+                                        <Typography as="span" className="mx-1 text-[12px] font-bold text-brand-blue-text">
+                                            {total}
+                                        </Typography>
+                                        <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                            total
                                         </Typography>
                                     </div>
 
                                     <div className="flex items-center gap-2">
                                         <Button
+                                            type="button"
                                             variant="outline"
                                             size="icon"
                                             onClick={() => onPageChange(Math.max(1, page - 1))}
-                                            disabled={isFetching || page <= 1}
+                                            disabled={page <= 1}
                                         >
                                             <ChevronLeft size={16} />
                                         </Button>
+                                        <Typography
+                                            as="span"
+                                            className="min-w-[72px] text-center text-[12px] font-medium text-gray-600"
+                                        >
+                                            {page} / {Math.max(totalPages, 1)}
+                                        </Typography>
                                         <Button
+                                            type="button"
                                             variant="outline"
                                             size="icon"
-                                            onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                                            disabled={isFetching || page >= totalPages || total === 0}
+                                            onClick={() =>
+                                                onPageChange(Math.min(Math.max(totalPages, 1), page + 1))
+                                            }
+                                            disabled={page >= totalPages || total === 0}
                                         >
                                             <ChevronRight size={16} />
                                         </Button>

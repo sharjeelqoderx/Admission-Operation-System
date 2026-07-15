@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url)
         const queryParse = ApplicationListQuerySchema.safeParse({
             student_id: searchParams.get("student_id") ?? undefined,
+            page: searchParams.get("page") ?? undefined,
             limit: searchParams.get("limit") ?? undefined,
             status: searchParams.get("status") ?? undefined,
             degree_id: searchParams.get("degree_id") ?? undefined,

@@ -15,7 +15,8 @@ export const ApplicationStatusFilterSchema = z.enum([
 
 export const ApplicationListQuerySchema = z.object({
   student_id: z.string().uuid().optional(),
-  limit: z.coerce.number().int().positive().optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
   status: ApplicationStatusFilterSchema.optional(),
   degree_id: z.string().uuid().optional(),
   date_from: z
@@ -37,6 +38,15 @@ export type ApplicationListStats = {
   pending: number
   accepted: number
 }
+
+export const applicationListPaginationSchema = z.object({
+  total: z.number().int().nonnegative(),
+  page: z.number().int().min(1),
+  limit: z.number().int().min(1),
+  totalPages: z.number().int().nonnegative(),
+})
+
+export type ApplicationListPagination = z.infer<typeof applicationListPaginationSchema>
 
 export const CreateApplicationSchema = z.object({
   profile_id: z.string().min(1, "Please select a student"),
@@ -191,6 +201,7 @@ export type ApplicationListResponse = {
   data: ApplicationListItem[];
   stats: ApplicationListStats;
   role: ApplicationProfileRole;
+  pagination?: ApplicationListPagination;
 };
 
 export type ApplicationDashboardPageQuery = {
@@ -199,6 +210,8 @@ export type ApplicationDashboardPageQuery = {
   degree_id: string;
   date_from: string;
   date_to: string;
+  page: string;
+  limit: string;
 };
 
 export type ApplicationDashboardPageData = {
