@@ -18,6 +18,7 @@ import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import Link from "next/link"
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
 import { cn } from "@/lib/utils"
+import { Role } from "@/types/enums/role"
 import { Progress } from "@/components/ui/progress"
 import type {
     ApplicationListItem,
@@ -112,7 +113,7 @@ export function DocumentVaultCell({
 
 export const ApplicationsListTable = React.memo(function ApplicationsListTable({
     applications,
-    role = "AGENT",
+    role = Role.AGENT,
     isLoading,
     isFetching = false,
     isError,
@@ -122,10 +123,10 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
     showPagination = true,
     viewBasePath = "/dashboard/application",
 }: Props) {
-    const isStudent = role === "STUDENT"
-    const isAgent = role === "AGENT"
+    const isStudent = role === Role.STUDENT
+    const isAgent = role === Role.AGENT
     const showStudentColumn = !isStudent
-    const showAgentColumn = role === "UNIVERSITY"
+    const showAgentColumn = role === Role.ADMIN || role === Role.SUPER_ADMIN
     const showApplicationNoColumn = isStudent || isAgent
     const showExtendedProgramColumns = isStudent || isAgent
 

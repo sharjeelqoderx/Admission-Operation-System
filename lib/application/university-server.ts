@@ -15,6 +15,7 @@ import type {
     UniversityApplicationListResponse,
     UniversityApplicationTab,
 } from "@/types/schemas/university-application"
+import { Role } from "@/types/enums/role"
 
 type ApplicationRow = {
     id: string
@@ -706,11 +707,11 @@ export async function fetchUniversityApplicationDetail(params: {
 }
 
 async function resolveUniversityScope(userId: string, role: string) {
-    if (role === "ADMIN") {
+    if (role === Role.SUPER_ADMIN) {
         return { universityId: null as string | null }
     }
 
-    if (role === "UNIVERSITY") {
+    if (role === Role.ADMIN) {
         return { universityId: userId }
     }
 

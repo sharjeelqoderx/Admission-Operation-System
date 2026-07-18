@@ -6,6 +6,7 @@ import type {
     ApplicationProfileRole,
 } from "@/types/schemas/application"
 import type { Database } from "@/types/supabase"
+import { Role } from "@/types/enums/role"
 
 const APPLICATION_DETAIL_SELECT = `
     *,
@@ -79,7 +80,7 @@ export async function fetchApplicationDetail(
 ): Promise<ApplicationDetail | { error: string }> {
     const { userId, role, applicationId, scope } = options
 
-    if (scope === "all" && role === "STUDENT") {
+    if (scope === "all" && role === Role.STUDENT) {
         return { error: "Forbidden" }
     }
 
@@ -96,11 +97,11 @@ export async function fetchApplicationDetail(
 
     const row = application as unknown as ApplicationDetailQueryRow
 
-    if (role === "STUDENT" && row.profile_id !== userId) {
+    if (role === Role.STUDENT && row.profile_id !== userId) {
         return { error: "Application not found" }
     }
 
-    if (role === "AGENT" && scope !== "all") {
+    if (role === Role.AGENT && scope !== "all") {
         const allowed = await canAgentAccessApplication(supabase, userId, {
             profile_id: row.profile_id,
             submitted_by_profile_id: row.submitted_by_profile_id,
@@ -111,7 +112,7 @@ export async function fetchApplicationDetail(
         }
     }
 
-    if (role === "UNIVERSITY" && scope !== "all" && row.university_id !== userId) {
+    if (role === Role.ADMIN && scope !== "all" && row.university_id !== userId) {
         return { error: "Application not found" }
     }
 

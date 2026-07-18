@@ -11,8 +11,7 @@ const buttonVariants = cva(
       variant: {
         default: "bg-brand-byzantine text-base text-primary-foreground [a]:hover:bg-brand-byzantine/80",
         outline:
-          // "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-          "bg-white/20 text-brand-secondary hover:bg-white/40 hover:text-brand-secondary rounded-lg font-bold transition-all border-y-0 border-x border-white/40 rounded-l-lg rounded-r-lg",
+          "bg-white/20 text-brand-secondary hover:bg-white/40 hover:text-brand-secondary rounded-lg font-bold transition-all border-y-0 border border-white/40 rounded-l-lg rounded-r-lg",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:

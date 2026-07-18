@@ -28,6 +28,7 @@ import {
     Check
 } from "lucide-react"
 import { toast } from "sonner"
+import { Role } from "@/types/enums/role"
 import { useAuth } from "@/hooks/useAuth"
 import {
     formatIntakeDate,
@@ -705,7 +706,7 @@ export default function OfferDetailsPage() {
                         </div>
                     </div>
 
-                    {canAcceptAndSign && me.data?.role === "AGENT" ? (
+                    {canAcceptAndSign && me.data?.role === Role.AGENT ? (
                         <Button
                             type="button"
                             className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"
@@ -716,7 +717,7 @@ export default function OfferDetailsPage() {
                         </Button>
                     ) : null}
 
-                    {canAcceptAndSign && me.data?.role === "STUDENT" ? (
+                    {canAcceptAndSign && me.data?.role === Role.STUDENT ? (
                         <Button
                             type="button"
                             className="w-full sm:w-auto shrink-0 gap-2 bg-brand-byzantine hover:bg-brand-byzantine/90 text-white px-6"

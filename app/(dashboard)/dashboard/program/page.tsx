@@ -1,10 +1,9 @@
-import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityProgramsForPage } from "@/lib/program/university-server"
-import { PageLoader } from "@/components/shared/page-loader"
 import { AgentStudentProgramPage } from "./_components/agent-student-program-page"
 import { UniversityProgramListPageContent } from "./_components/university-program/page-content"
+import { Role } from "@/types/enums/role"
 
 type ProgramPageProps = {
     searchParams: Promise<{
@@ -20,7 +19,7 @@ export default async function ProgramPage({ searchParams }: ProgramPageProps) {
         redirect("/login")
     }
 
-    if (role === "UNIVERSITY" || role === "ADMIN") {
+    if (role === Role.ADMIN || role === Role.SUPER_ADMIN) {
         const params = await searchParams
         const initialOverview = await fetchUniversityProgramsForPage({
             q: params.q,
@@ -33,9 +32,10 @@ export default async function ProgramPage({ searchParams }: ProgramPageProps) {
         }
 
         return (
-            <Suspense fallback={<PageLoader />}>
-                <UniversityProgramListPageContent initialOverview={initialOverview} />
-            </Suspense>
+            <UniversityProgramListPageContent
+                initialOverview={initialOverview}
+                canManagePrograms={role !== Role.ADMIN}
+            />
         )
     }
 

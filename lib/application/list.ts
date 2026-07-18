@@ -20,6 +20,7 @@ import type {
     ApplicationProfileRole,
 } from "@/types/schemas/application"
 import type { Database, Tables } from "@/types/supabase"
+import { Role } from "@/types/enums/role"
 
 const APPLICATION_LIST_SELECT = `
     id,
@@ -318,7 +319,7 @@ async function resolveMatchingStudentProfileIds(
     const escaped = searchTerm.replace(/[%_,]/g, "\\$&")
     const pattern = `%${escaped}%`
 
-    if (options.role === "STUDENT") {
+    if (options.role === Role.STUDENT) {
         const { data: profile, error } = await supabase
             .from("profile")
             .select("id, first_name, last_name, email")
@@ -340,7 +341,7 @@ async function resolveMatchingStudentProfileIds(
 
     let allowedProfileIds: string[] | null = null
 
-    if (options.role === "AGENT" && options.scope !== "all") {
+    if (options.role === Role.AGENT && options.scope !== "all") {
         const { data: agentRow, error: agentError } = await supabase
             .from("agent")
             .select("id")
@@ -399,14 +400,14 @@ function applyApplicationFilters(query: any, ctx: ApplicationFilterContext) {
         nextQuery = nextQuery.eq("profile_id", ctx.studentId)
     } else if (ctx.scope === "all") {
         // All Application View — no role-based row restriction
-    } else if (ctx.role === "STUDENT") {
+    } else if (ctx.role === Role.STUDENT) {
         nextQuery = nextQuery.eq("profile_id", ctx.userId)
-    } else if (ctx.role === "AGENT") {
+    } else if (ctx.role === Role.AGENT) {
         const studentProfileIds = ctx.agentStudentProfileIds ?? []
         nextQuery = nextQuery.or(
             buildAgentApplicationOrFilter(ctx.userId, studentProfileIds)
         )
-    } else if (ctx.role === "UNIVERSITY") {
+    } else if (ctx.role === Role.ADMIN) {
         nextQuery = nextQuery.eq("university_id", ctx.userId)
     }
 
@@ -484,7 +485,7 @@ export async function fetchApplicationsList(
         scope: listScope,
     } = options
 
-    if (listScope === "all" && role === "STUDENT") {
+    if (listScope === "all" && role === Role.STUDENT) {
         return { error: "Forbidden" }
     }
 
@@ -512,7 +513,7 @@ export async function fetchApplicationsList(
     let filteredProfileIds: string[] | null = null
     let agentStudentProfileIds: string[] | null = null
 
-    if (role === "AGENT" && !studentId && listScope !== "all") {
+    if (role === Role.AGENT && !studentId && listScope !== "all") {
         agentStudentProfileIds = await resolveAgentStudentProfileIds(supabase, userId)
     }
 

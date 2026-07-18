@@ -6,6 +6,7 @@ import {
     resolveHighestQualificationName,
     resolveQualificationsById,
 } from "@/lib/student/qualifications"
+import { Role } from "@/types/enums/role"
 
 export type StudentListPagination = {
     total: number
@@ -64,7 +65,7 @@ export async function fetchStudentsListForAgent(
         .eq("id", userId)
         .maybeSingle()
 
-    if (profile?.role !== "AGENT") {
+    if (profile?.role !== Role.AGENT) {
         return { error: "Forbidden" }
     }
 
@@ -219,7 +220,7 @@ export async function fetchStudentDashboardStats(
         .eq("id", userId)
         .maybeSingle()
 
-    if (profile?.role !== "AGENT") {
+    if (profile?.role !== Role.AGENT) {
         return null
     }
 

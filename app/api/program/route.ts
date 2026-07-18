@@ -101,6 +101,7 @@ export async function GET(req: NextRequest) {
             let query = supabase
                 .from("course")
                 .select(COURSE_SELECT, { count: "exact" })
+                .eq("is_deleted", false)
 
             if (filterDegreeIds) {
                 query = query.in("degree_id", filterDegreeIds)

@@ -10,6 +10,7 @@ import type {
     UniversityOverview,
 } from "@/types/schemas/university-overview"
 import type { StudentPipelineStatus } from "@/types/schemas/university-student"
+import { Role } from "@/types/enums/role"
 
 type ApplicationRow = {
     id: string
@@ -188,14 +189,21 @@ async function loadCoursesById(supabase: Awaited<ReturnType<typeof createSupabas
     return new Map(courses.map((course) => [course.id, course]))
 }
 
-export async function fetchUniversityOverview(universityId: string): Promise<UniversityOverview> {
+export async function fetchUniversityOverview(
+    universityId?: string | null
+): Promise<UniversityOverview> {
     const supabase = await createSupabaseServerClient()
 
-    const { data: applications, error: applicationsError } = await supabase
+    let applicationsQuery = supabase
         .from("application")
         .select("id, profile_id, application_no, status, created_at, course_id")
-        .eq("university_id", universityId)
         .order("created_at", { ascending: false })
+
+    if (universityId) {
+        applicationsQuery = applicationsQuery.eq("university_id", universityId)
+    }
+
+    const { data: applications, error: applicationsError } = await applicationsQuery
 
     if (applicationsError) {
         throw new Error(applicationsError.message)
@@ -205,6 +213,22 @@ export async function fetchUniversityOverview(universityId: string): Promise<Uni
     const applicationIds = applicationRows.map((application) => application.id)
     const profileIds = [...new Set(applicationRows.map((application) => application.profile_id))]
     const courseIds = [...new Set(applicationRows.map((application) => application.course_id))]
+
+    let programsCountQuery = supabase
+        .from("program")
+        .select("id", { count: "exact", head: true })
+    let programsRecentQuery = supabase
+        .from("program")
+        .select("id, name, category, status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(RECENT_LIMIT)
+    let programsStatusQuery = supabase.from("program").select("status")
+
+    if (universityId) {
+        programsCountQuery = programsCountQuery.eq("profile_id", universityId)
+        programsRecentQuery = programsRecentQuery.eq("profile_id", universityId)
+        programsStatusQuery = programsStatusQuery.eq("profile_id", universityId)
+    }
 
     const [
         offersResult,
@@ -234,20 +258,9 @@ export async function fetchUniversityOverview(universityId: string): Promise<Uni
             .eq("is_deleted", false)
             .order("updated_at", { ascending: false })
             .limit(RECENT_LIMIT),
-        supabase
-            .from("program")
-            .select("id", { count: "exact", head: true })
-            .eq("profile_id", universityId),
-        supabase
-            .from("program")
-            .select("id, name, category, status, created_at")
-            .eq("profile_id", universityId)
-            .order("created_at", { ascending: false })
-            .limit(RECENT_LIMIT),
-        supabase
-            .from("program")
-            .select("status")
-            .eq("profile_id", universityId),
+        programsCountQuery,
+        programsRecentQuery,
+        programsStatusQuery,
         profileIds.length > 0
             ? supabase
                   .from("document")
@@ -298,7 +311,7 @@ export async function fetchUniversityOverview(universityId: string): Promise<Uni
 
     const totalUniversityPartners = (agentsResult.data ?? []).filter((agent) => {
         const profile = Array.isArray(agent.profile) ? agent.profile[0] : agent.profile
-        return profile?.role === "AGENT"
+        return profile?.role === Role.AGENT
     }).length
 
     const offers = (offersResult.data ?? []) as OfferRow[]
@@ -497,9 +510,9 @@ export async function fetchUniversityOverviewForPage(): Promise<UniversityOvervi
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== "UNIVERSITY") {
+    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
         return null
     }
 
-    return fetchUniversityOverview(user.id)
+    return fetchUniversityOverview(profile.role === Role.ADMIN ? user.id : null)
 }

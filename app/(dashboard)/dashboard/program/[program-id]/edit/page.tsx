@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityProgramDetailForPage } from "@/lib/program/university-server"
 import { UniversityProgramFormPageContent } from "../../_components/university-program/form-page-content"
+import { Role } from "@/types/enums/role"
 
 type EditProgramPageProps = {
     params: Promise<{ "program-id": string }>
@@ -15,11 +16,7 @@ export default async function EditProgramPage({ params }: EditProgramPageProps) 
         redirect("/login")
     }
 
-    if (role === "UNIVERSITY") {
-        redirect(`/dashboard/program/${programId}`)
-    }
-
-    if (role !== "ADMIN") {
+    if (role !== Role.ADMIN && role !== Role.SUPER_ADMIN) {
         redirect(`/dashboard/program/${programId}`)
     }
 

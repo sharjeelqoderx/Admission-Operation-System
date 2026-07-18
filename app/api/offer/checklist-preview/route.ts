@@ -4,6 +4,7 @@ import { fetchApplicationDetail } from "@/lib/application/detail"
 import { buildOfferChecklistPreviewForApplication } from "@/lib/offer/offer-checklist-preview"
 import { OfferChecklistPreviewQuerySchema } from "@/types/schemas/offer"
 import type { ApplicationProfileRole } from "@/types/schemas/application"
+import { Role } from "@/types/enums/role"
 
 export async function GET(req: NextRequest) {
     try {
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Profile not found" }, { status: 404 })
         }
 
-        if (profile.role !== "UNIVERSITY" && profile.role !== "AGENT" && profile.role !== "ADMIN") {
+        if (profile.role !== Role.ADMIN && profile.role !== Role.AGENT && profile.role !== Role.SUPER_ADMIN) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 

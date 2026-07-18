@@ -17,6 +17,7 @@ import { DatePicker } from "@/components/shared/date-picker"
 import { PageLoader } from "@/components/shared/page-loader"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import { ApplicationsListTable } from "@/app/(dashboard)/dashboard/application/_components/applications-list-table"
+import { Role } from "@/types/enums/role"
 import {
     withAllApplicationViewLogic,
     type AllApplicationViewLogicProps,
@@ -146,7 +147,7 @@ const AllApplicationView = memo(function AllApplicationView({
             </div>
 
             <div className="flex flex-nowrap items-center gap-3 overflow-x-auto p-1">
-                {role !== "STUDENT" && (
+                {role !== Role.STUDENT && (
                     <div className="relative min-w-[220px] flex-1">
                         <Search className="absolute left-3 top-1/2 z-10 -translate-y-1/2 size-4 text-gray-400" />
                         <Input

@@ -15,9 +15,10 @@ import type {
     OfferListResponse,
 } from "@/types/schemas/offer"
 import type { Database } from "@/types/supabase"
+import { Role } from "@/types/enums/role"
 
 type DbClient = SupabaseClient<Database>
-type OfferRole = "STUDENT" | "AGENT" | "UNIVERSITY" | "ADMIN"
+type OfferRole = Role.STUDENT | Role.AGENT | Role.ADMIN | Role.SUPER_ADMIN
 
 function matchesSearch(offer: OfferListItem, searchTerm: string) {
     if (!searchTerm) return true
@@ -38,12 +39,12 @@ function matchesSearch(offer: OfferListItem, searchTerm: string) {
 
 function applyRoleFilter(offers: OfferListItem[], role: OfferRole, userId: string) {
     switch (role) {
-        case "STUDENT":
+        case Role.STUDENT:
             return offers.filter((offer) => offer.application?.profile_id === userId)
-        case "UNIVERSITY":
+        case Role.ADMIN:
             return offers.filter((offer) => offer.application?.university_id === userId)
-        case "AGENT":
-        case "ADMIN":
+        case Role.AGENT:
+        case Role.SUPER_ADMIN:
         default:
             return offers
     }
@@ -153,7 +154,7 @@ export async function fetchOffersList(
 
     const userClient = await createSupabaseServerClient()
     const readClient =
-        options.role === "STUDENT" ? userClient : createSupabaseServiceClient()
+        options.role === Role.STUDENT ? userClient : createSupabaseServiceClient()
 
     const mapped = mapOfferRows(await fetchRawOffers(readClient as DbClient))
     const roleFiltered = applyRoleFilter(mapped, options.role, options.userId)

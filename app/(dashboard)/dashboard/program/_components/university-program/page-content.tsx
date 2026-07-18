@@ -6,30 +6,31 @@ import { Plus, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
-import { useAuth } from "@/hooks/useAuth"
-import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
-import { UniversityProgramList } from "./program-list"
+import { UniversityProgramList as ProgramList } from "./program-list"
 import { withUniversityProgramPageLogic } from "./withUniversityProgramPageLogic"
 import type { UniversityProgramListResponse } from "@/types/schemas/university-program"
 
 type UniversityProgramPageViewProps = {
     overview: UniversityProgramListResponse
+    canManagePrograms: boolean
     searchValue: string
     isFetching: boolean
+    deletingId: string | null
     onSearchChange: (value: string) => void
     onPageChange: (page: number) => void
+    onDelete: (id: string) => void
 }
 
 const UniversityProgramPageView = memo(function UniversityProgramPageView({
     overview,
+    canManagePrograms,
     searchValue,
     isFetching,
+    deletingId,
     onSearchChange,
     onPageChange,
+    onDelete,
 }: UniversityProgramPageViewProps) {
-    const { me } = useAuth()
-    const viewOnly = isUniversityViewOnly(me.data?.role)
-
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -43,13 +44,13 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
                     </Typography>
                 </div>
 
-                {!viewOnly ? (
-                    <Link href="/dashboard/program/new">
-                        <Button className="h-11 rounded-xl bg-white px-5 font-semibold text-brand-primary shadow-sm ring-1 ring-black/5 hover:bg-gray-50">
-                            <Plus className="mr-2 size-4" />
+                {canManagePrograms ? (
+                    <Button asChild variant="default" size="default">
+                        <Link href="/dashboard/program/new">
+                            <Plus />
                             Add New Program
-                        </Button>
-                    </Link>
+                        </Link>
+                    </Button>
                 ) : null}
             </div>
 
@@ -63,12 +64,14 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
                 />
             </div>
 
-            <UniversityProgramList
+            <ProgramList
                 programs={overview.data}
                 pagination={overview.pagination}
                 isLoading={isFetching}
+                deletingId={deletingId}
+                canManagePrograms={canManagePrograms}
                 onPageChange={onPageChange}
-                viewOnly={viewOnly}
+                onDelete={onDelete}
             />
         </div>
     )
@@ -78,8 +81,17 @@ const UniversityProgramPageContent = withUniversityProgramPageLogic(UniversityPr
 
 type PageContentProps = {
     initialOverview: UniversityProgramListResponse
+    canManagePrograms: boolean
 }
 
-export function UniversityProgramListPageContent({ initialOverview }: PageContentProps) {
-    return <UniversityProgramPageContent initialOverview={initialOverview} />
+export function UniversityProgramListPageContent({
+    initialOverview,
+    canManagePrograms,
+}: PageContentProps) {
+    return (
+        <UniversityProgramPageContent
+            initialOverview={initialOverview}
+            canManagePrograms={canManagePrograms}
+        />
+    )
 }

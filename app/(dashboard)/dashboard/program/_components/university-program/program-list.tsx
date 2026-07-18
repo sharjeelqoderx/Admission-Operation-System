@@ -1,11 +1,20 @@
 "use client"
 
-import { memo } from "react"
+import { memo, useState } from "react"
 import Link from "next/link"
-import { Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react"
+import { Clock, MapPin, ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { PageLoader } from "@/components/shared/page-loader"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import type {
     UniversityProgramListItem,
     UniversityProgramListResponse,
@@ -13,13 +22,28 @@ import type {
 
 type UniversityProgramListCardProps = {
     program: UniversityProgramListItem
-    viewOnly?: boolean
+    canManagePrograms: boolean
+    isDeleting: boolean
+    onDelete: (id: string) => void
+}
+
+function formatTimestamp(value: string) {
+    return new Date(value).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    })
 }
 
 export const UniversityProgramListCard = memo(function UniversityProgramListCard({
     program,
-    viewOnly = false,
+    canManagePrograms,
+    isDeleting,
+    onDelete,
 }: UniversityProgramListCardProps) {
+    const [deleteOpen, setDeleteOpen] = useState(false)
     const metaParts = [
         program.level_name,
         program.intake_label,
@@ -33,9 +57,23 @@ export const UniversityProgramListCard = memo(function UniversityProgramListCard
         : null
 
     return (
-        <Card className="border-none bg-white/80 px-5 py-6 shadow-sm ring-1 ring-black/5 backdrop-blur-lg">
+        <Card className="relative border-none bg-white/80 px-5 py-6 shadow-sm ring-1 ring-black/5 backdrop-blur-lg">
+            {canManagePrograms ? (
+                <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute right-4 top-4 z-10"
+                    aria-label={`Delete ${program.name}`}
+                    disabled={isDeleting}
+                    onClick={() => setDeleteOpen(true)}
+                >
+                    <Trash2 />
+                </Button>
+            ) : null}
+
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex-1 space-y-4">
+                <div className="flex-1 space-y-4 pr-12">
                     <Typography as="p" font="sub-text" className="text-gray-500">
                         {metaParts.join(" • ")}
                     </Typography>
@@ -69,9 +107,22 @@ export const UniversityProgramListCard = memo(function UniversityProgramListCard
                             </div>
                         ) : null}
                     </div>
+
+                    <div className="flex flex-wrap gap-x-5 gap-y-1">
+                        <Typography as="span" font="small" className="text-gray-500">
+                            Created: {formatTimestamp(program.created_at)}
+                        </Typography>
+                        <Typography as="span" font="small" className="text-gray-500">
+                            Updated: {formatTimestamp(program.updated_at)}
+                        </Typography>
+                    </div>
                 </div>
 
-                <div className="flex w-full flex-col items-stretch gap-4 lg:w-[280px] lg:items-end">
+                <div
+                    className={`flex w-full flex-col items-stretch gap-4 lg:w-[280px] lg:items-end ${
+                        canManagePrograms ? "pt-12" : ""
+                    }`}
+                >
                     <div className="flex flex-wrap gap-2 lg:justify-end">
                         {tuitionLabel ? (
                             <Typography
@@ -102,7 +153,7 @@ export const UniversityProgramListCard = memo(function UniversityProgramListCard
                                 View
                             </Typography>
                         </Link>
-                        {!viewOnly ? (
+                        {canManagePrograms ? (
                             <Link
                                 href={`/dashboard/program/${program.id}/edit`}
                                 className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-byzantine px-6 font-semibold text-white shadow-sm transition-colors hover:bg-brand-byzantine/90"
@@ -115,24 +166,65 @@ export const UniversityProgramListCard = memo(function UniversityProgramListCard
                     </div>
                 </div>
             </div>
+
+            {canManagePrograms ? (
+                <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                    <DialogContent showCloseButton={!isDeleting}>
+                        <DialogHeader>
+                            <DialogTitle asChild>
+                                <Typography as="h2" font="title">
+                                    Delete program?
+                                </Typography>
+                            </DialogTitle>
+                            <DialogDescription asChild>
+                                <Typography as="p" font="sub-text">
+                                    {`"${program.name}" will be removed from program listings. Existing historical records will remain intact.`}
+                                </Typography>
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={isDeleting}
+                                onClick={() => setDeleteOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                disabled={isDeleting}
+                                onClick={() => onDelete(program.id)}
+                            >
+                                {isDeleting ? "Deleting..." : "Delete Program"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            ) : null}
         </Card>
     )
 })
 
-type UniversityProgramListProps = {
+export type UniversityProgramListProps = {
     programs: UniversityProgramListItem[]
     pagination: UniversityProgramListResponse["pagination"]
     isLoading?: boolean
+    deletingId: string | null
+    canManagePrograms: boolean
     onPageChange: (page: number) => void
-    viewOnly?: boolean
+    onDelete: (id: string) => void
 }
 
-export const UniversityProgramList = memo(function UniversityProgramList({
+export const UniversityProgramList = memo<UniversityProgramListProps>(function UniversityProgramList({
     programs,
     pagination,
     isLoading = false,
+    deletingId,
+    canManagePrograms,
     onPageChange,
-    viewOnly = false,
+    onDelete,
 }: UniversityProgramListProps) {
     if (isLoading) {
         return <PageLoader className="py-12" />
@@ -149,7 +241,13 @@ export const UniversityProgramList = memo(function UniversityProgramList({
     return (
         <div className="space-y-5">
             {programs.map((program) => (
-                <UniversityProgramListCard key={program.id} program={program} viewOnly={viewOnly} />
+                <UniversityProgramListCard
+                    key={program.id}
+                    program={program}
+                    canManagePrograms={canManagePrograms}
+                    isDeleting={deletingId === program.id}
+                    onDelete={onDelete}
+                />
             ))}
 
             <div className="flex items-center justify-between pt-2">

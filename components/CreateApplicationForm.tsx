@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { FilePreview } from "@/components/shared/FilePreview";
 import ImageUploadCard from "@/components/shared/image-upload-card";
 import { Spinner } from "@/components/shared/page-loader";
+import { Role } from "@/types/enums/role";
 
 import {
     Select,
@@ -142,7 +143,7 @@ function applyCourseToForm(
 }
 
 function buildFlowSteps(role: ApplicationProfileRole | undefined, courseIdFromParams: string | null): FlowStep[] {
-    const isStudent = role === "STUDENT";
+    const isStudent = role === Role.STUDENT;
     const steps: FlowStep[] = [];
 
     if (!(isStudent && courseIdFromParams)) {
@@ -195,7 +196,7 @@ export function CreateApplicationForm() {
 
     const { data: studentsResponse } = useQuery({
         queryKey: ["students"],
-        enabled: user?.role === "AGENT",
+        enabled: user?.role === Role.AGENT,
         queryFn: async () => {
             const res = await fetch("/api/student?limit=100");
             if (!res.ok) throw new Error("Failed to fetch students");
@@ -247,7 +248,7 @@ export function CreateApplicationForm() {
     }) as CreateApplicationFormApi;
 
     useEffect(() => {
-        if (user?.role === "STUDENT") {
+        if (user?.role === Role.STUDENT) {
             form.setFieldValue("profile_id", user.id);
         } else if (studentIdParam) {
             form.setFieldValue("profile_id", studentIdParam);
@@ -329,7 +330,7 @@ export function CreateApplicationForm() {
 
     const courses = useMemo(() => {
         const shouldFilterByQualification =
-            user?.role === "STUDENT" || (studentDetails && user?.role === "AGENT");
+            user?.role === Role.STUDENT || (studentDetails && user?.role === Role.AGENT);
 
         if (!shouldFilterByQualification) {
             return allCourses;
@@ -544,7 +545,7 @@ export function CreateApplicationForm() {
     };
 
     useEffect(() => {
-        if (user?.role !== "STUDENT" || !courseIdParam || !isCourseFromParamValid) return;
+        if (user?.role !== Role.STUDENT || !courseIdParam || !isCourseFromParamValid) return;
         setStep(3);
     }, [user?.role, courseIdParam, isCourseFromParamValid]);
     return (
@@ -680,7 +681,7 @@ function Step1({ form, students, studentDetails, role, isStepAttempted, onNext }
     return (
         <div className="space-y-8">
             <div className="space-y-2">
-                {role !== "STUDENT" && (
+                {role !== Role.STUDENT && (
                     <form.Field name="profile_id">
                         {(field: ApplicationFormFieldRenderProps<string>) => (
                             <F field={field} label="Select Student" isStepAttempted={isStepAttempted}>

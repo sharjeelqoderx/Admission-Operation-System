@@ -10,6 +10,7 @@ import type {
     ApplicationListResponse,
     ApplicationProfileRole,
 } from "@/types/schemas/application"
+import { Role } from "@/types/enums/role"
 
 const DEFAULT_APPLICATION_LIST_QUERY = {
     q: "",
@@ -24,7 +25,7 @@ const DEFAULT_APPLICATION_LIST_QUERY = {
 const EMPTY_APPLICATIONS: ApplicationListResponse = {
     data: [],
     stats: { total: 0, pending: 0, accepted: 0 },
-    role: "AGENT",
+    role: Role.AGENT,
     pagination: {
         total: 0,
         page: 1,

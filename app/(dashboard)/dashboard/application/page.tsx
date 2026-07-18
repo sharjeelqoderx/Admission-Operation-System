@@ -5,6 +5,7 @@ import { fetchApplicationDashboardPageData } from "@/lib/application/server"
 import { PageContent } from "./_components/page-content"
 import { UniversityApplicationListPageContent } from "./_components/university-application/page-content"
 import type { UniversityApplicationTab } from "@/types/schemas/university-application"
+import { Role } from "@/types/enums/role"
 
 type ApplicationPageProps = {
     searchParams: Promise<{
@@ -27,7 +28,7 @@ export default async function ApplicationPage({ searchParams }: ApplicationPageP
 
     const params = await searchParams
 
-    if (role === "UNIVERSITY" || role === "ADMIN") {
+    if (role === Role.ADMIN || role === Role.SUPER_ADMIN) {
         const tab = (params.tab ?? "all") as UniversityApplicationTab
 
         const initialOverview = await fetchUniversityApplicationsForPage({

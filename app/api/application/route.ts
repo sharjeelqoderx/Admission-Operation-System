@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { fetchApplicationsList } from "@/lib/application/list"
 import { CreateApplicationSchema, ApplicationListQuerySchema } from "@/types/schemas/application"
 import type { ApplicationProfileRole } from "@/types/schemas/application"
+import { Role } from "@/types/enums/role"
 
 async function canAccessStudentApplications(
     _supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
@@ -10,12 +11,12 @@ async function canAccessStudentApplications(
     role: string | undefined,
     studentId: string
 ) {
-    if (role === "STUDENT") {
+    if (role === Role.STUDENT) {
         return userId === studentId
     }
 
     // Agents have staff-wide visibility (same as all-apps / students / offers).
-    return role === "AGENT" || role === "UNIVERSITY" || role === "ADMIN"
+    return role === Role.AGENT || role === Role.ADMIN || role === Role.SUPER_ADMIN
 }
 
 export async function GET(req: NextRequest) {
@@ -67,7 +68,7 @@ export async function GET(req: NextRequest) {
 
         const role = profile.role as ApplicationProfileRole
 
-        if (queryParse.data.scope === "all" && role === "STUDENT") {
+        if (queryParse.data.scope === "all" && role === Role.STUDENT) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
@@ -148,6 +149,7 @@ export async function POST(req: NextRequest) {
             .from("course")
             .select("id")
             .eq("id", validatedData.course_id)
+            .eq("is_deleted", false)
             .maybeSingle()
 
         if (!course) {

@@ -12,6 +12,7 @@ import type {
     UniversityAgentListItem,
     UniversityAgentListResponse,
 } from "@/types/schemas/university-agent"
+import { Role } from "@/types/enums/role"
 
 const KYC_DOCUMENT_CODES = ["AGENT_REGISTRATION", "AGENT_ID_FRONT", "AGENT_ID_BACK"] as const
 
@@ -270,7 +271,7 @@ export async function fetchUniversityAgentList(params: {
         }
         const profile = Array.isArray(row.profile) ? row.profile[0] ?? null : row.profile
         return { ...row, profile }
-    }).filter((agent) => !agent.profile || agent.profile.role === "AGENT")
+    }).filter((agent) => !agent.profile || agent.profile.role === Role.AGENT)
 
     const profileIds = agentRows.map((agent) => agent.profile_id)
     const agentIds = agentRows.map((agent) => agent.id)
@@ -372,7 +373,7 @@ export async function fetchUniversityAgentDetail(profileId: string): Promise<Uni
         profile: AgentRow["profile"] | AgentRow["profile"][] | null
     }
     const profile = Array.isArray(row.profile) ? row.profile[0] ?? null : row.profile
-    if (!profile || profile.role !== "AGENT") return null
+    if (!profile || profile.role !== Role.AGENT) return null
 
     const agentRow: AgentRow = { ...row, profile }
 
@@ -505,6 +506,16 @@ export async function fetchUniversityAgentsForPage(params?: {
 
     if (error || !user) return null
 
+    const { data: profile } = await supabase
+        .from("profile")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle()
+
+    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+        return null
+    }
+
     return fetchUniversityAgentList({
         q: params?.q,
         status: params?.status,
@@ -521,6 +532,16 @@ export async function fetchUniversityAgentDetailForPage(profileId: string) {
     } = await supabase.auth.getUser()
 
     if (error || !user) return null
+
+    const { data: profile } = await supabase
+        .from("profile")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle()
+
+    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+        return null
+    }
 
     return fetchUniversityAgentDetail(profileId)
 }

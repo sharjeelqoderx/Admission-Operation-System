@@ -414,25 +414,34 @@ export type Database = {
       }
       course: {
         Row: {
+          created_at: string
           deadline_date: string | null
           degree_id: string | null
           id: string
+          is_deleted: boolean
           name: string
           program_id: string | null
+          updated_at: string
         }
         Insert: {
+          created_at?: string
           deadline_date?: string | null
           degree_id?: string | null
           id?: string
+          is_deleted?: boolean
           name: string
           program_id?: string | null
+          updated_at?: string
         }
         Update: {
+          created_at?: string
           deadline_date?: string | null
           degree_id?: string | null
           id?: string
+          is_deleted?: boolean
           name?: string
           program_id?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -1451,6 +1460,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_profile_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["role_enum"]
+      }
       soft_delete_document_template: {
         Args: { template_id: string }
         Returns: undefined
@@ -1474,7 +1487,7 @@ export type Database = {
       offer_status_enum: "PENDING" | "ACCEPTED" | "REJECTED"
       payment_status_enum: "PENDING" | "CONFIRMED" | "FAILED"
       program_status_enum: "ACTIVE" | "INACTIVE"
-      role_enum: "STUDENT" | "AGENT" | "UNIVERSITY" | "ADMIN"
+      role_enum: "STUDENT" | "AGENT" | "ADMIN" | "SUPER_ADMIN"
       study_mode_enum: "full_time" | "part_time"
     }
     CompositeTypes: {
@@ -1621,7 +1634,7 @@ export const Constants = {
       offer_status_enum: ["PENDING", "ACCEPTED", "REJECTED"],
       payment_status_enum: ["PENDING", "CONFIRMED", "FAILED"],
       program_status_enum: ["ACTIVE", "INACTIVE"],
-      role_enum: ["STUDENT", "AGENT", "UNIVERSITY", "ADMIN"],
+      role_enum: ["STUDENT", "AGENT", "ADMIN", "SUPER_ADMIN"],
       study_mode_enum: ["full_time", "part_time"],
     },
   },

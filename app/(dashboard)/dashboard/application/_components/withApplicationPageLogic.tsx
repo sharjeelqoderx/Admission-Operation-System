@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import type { ApplicationDashboardPageData, ApplicationListResponse } from "@/types/schemas/application"
 import type { ApplicationListStats } from "@/types/schemas/application"
 import type { ApplicationProfileRole } from "@/types/schemas/application"
+import { Role } from "@/types/enums/role"
 
 export type ApplicationPageLogicProps = {
     role?: ApplicationProfileRole
@@ -104,8 +105,8 @@ export function withApplicationPageLogic(Component: ComponentType<ApplicationPag
         })
 
         const role = response?.role ?? initialData.applications.role
-        const canCreateApplication = role === "AGENT" || role === "STUDENT"
-        const showStudentSearch = role !== "STUDENT"
+        const canCreateApplication = role === Role.AGENT || role === Role.STUDENT
+        const showStudentSearch = role !== Role.STUDENT
 
         const applications = useMemo(
             () => (Array.isArray(response?.data) ? response.data : []),

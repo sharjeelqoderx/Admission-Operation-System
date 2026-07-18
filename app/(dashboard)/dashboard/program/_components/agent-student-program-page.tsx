@@ -15,6 +15,7 @@ import { getLevelPriority, getLevelBadgeStyle } from "@/lib/utils/levels"
 import { Button } from "@/components/ui/button"
 import { PageLoader } from "@/components/shared/page-loader"
 import type { ProgramListResponse } from "@/types/schemas/program"
+import { Role } from "@/types/enums/role"
 
 export function AgentStudentProgramPage() {
     const searchParams = useSearchParams()
@@ -41,7 +42,7 @@ export function AgentStudentProgramPage() {
             if (!res.ok) throw new Error("Failed to fetch student")
             return res.json()
         },
-        enabled: !!user?.id && user?.role === "STUDENT",
+        enabled: !!user?.id && user?.role === Role.STUDENT,
     })
 
     const { data: levels = [], isLoading: levelsLoading } = useLevels()
@@ -125,7 +126,7 @@ export function AgentStudentProgramPage() {
         let programs = data?.pages.flatMap((page) => page.data) ?? [];
         let highestLevelName: string | null = null;
 
-        if (user?.role === "STUDENT") {
+        if (user?.role === Role.STUDENT) {
             // Find highest level priority from student's education
             let highestLevelPriority = 0;
             if (studentDetails?.data?.education && Array.isArray(studentDetails.data.education)) {
@@ -167,7 +168,7 @@ export function AgentStudentProgramPage() {
                 <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
                     Browse through our extensive academic catalog. Find the right program that fits your career goals across multiple campuses and universities.
                 </Typography>
-                {user?.role === "STUDENT" && highestLevelName && (
+                {user?.role === Role.STUDENT && highestLevelName && (
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                         <Typography as="span" font="small" className="text-gray-500">Your current qualification:</Typography>
                         <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${getLevelBadgeStyle(highestLevelName)}`}>

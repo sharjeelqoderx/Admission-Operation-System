@@ -1,13 +1,11 @@
 "use client"
 
 import { memo, useCallback, useState } from "react"
-import { ArrowLeft, Printer, Save } from "lucide-react"
+import { ArrowLeft, Plus, Printer, Save } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/hooks/useAuth"
-import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
 import {
     Dialog,
     DialogContent,
@@ -28,6 +26,8 @@ import type { DocumentTemplateListItem } from "@/types/schemas/document-template
 
 type PageContentProps = {
     initialTemplates: DocumentTemplateListItem[]
+    canCreateTemplate: boolean
+    canDeleteTemplate: boolean
 }
 
 type DeleteTemplateDialogProps = {
@@ -81,6 +81,8 @@ function DeleteTemplateDialog({
 
 function DocumentTemplatePageView({
     templates,
+    canCreateTemplate,
+    canDeleteTemplate,
     isLoading,
     isError,
     errorMessage,
@@ -101,9 +103,6 @@ function DocumentTemplatePageView({
     deleteTemplateById,
     refetchTemplates,
 }: DocumentTemplatePageLogicProps) {
-    const { me } = useAuth()
-    const viewOnly = isUniversityViewOnly(me.data?.role)
-
     const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplateListItem | null>(
         null
     )
@@ -152,10 +151,12 @@ function DocumentTemplatePageView({
                                 like the admission requirements checklist for conditional letters.
                             </Typography>
                         </div>
-                        {/* <Button type="button" className="gap-2" onClick={openCreate}>
-                            <Plus className="size-4" />
-                            Create Template
-                        </Button> */}
+                        {canCreateTemplate ? (
+                            <Button type="button" onClick={openCreate}>
+                                <Plus className="size-4" />
+                                Create Template
+                            </Button>
+                        ) : null}
                     </div>
                 </BluryCard>
 
@@ -170,11 +171,12 @@ function DocumentTemplatePageView({
                         onEdit={openEdit}
                         onDelete={handleOpenDeleteDialog}
                         onRetry={refetchTemplates}
-                        viewOnly={viewOnly}
+                        viewOnly={false}
+                        canDelete={canDeleteTemplate}
                     />
                 </div>
 
-                {!viewOnly ? (
+                {canDeleteTemplate ? (
                     <DeleteTemplateDialog
                         template={templateToDelete}
                         open={templateToDelete !== null}
@@ -189,7 +191,7 @@ function DocumentTemplatePageView({
         )
     }
 
-    const isViewMode = mode === "view" || viewOnly
+    const isViewMode = mode === "view"
     const heading =
         mode === "create"
             ? "Create Document Template"
@@ -275,6 +277,16 @@ const DocumentTemplatePageContent = memo(
 
 DocumentTemplatePageContent.displayName = "DocumentTemplatePageContent"
 
-export function PageContent({ initialTemplates }: PageContentProps) {
-    return <DocumentTemplatePageContent initialTemplates={initialTemplates} />
+export function PageContent({
+    initialTemplates,
+    canCreateTemplate,
+    canDeleteTemplate,
+}: PageContentProps) {
+    return (
+        <DocumentTemplatePageContent
+            initialTemplates={initialTemplates}
+            canCreateTemplate={canCreateTemplate}
+            canDeleteTemplate={canDeleteTemplate}
+        />
+    )
 }

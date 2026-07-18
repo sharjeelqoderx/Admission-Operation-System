@@ -28,6 +28,7 @@ import { CitySelect } from "@/components/shared/city-select"
 import { Building, ChevronDown, School, FileUp, FileText, Plus, Upload, X, ClipboardList } from "lucide-react"
 import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { resolveGradeType, type GradeType } from "@/types/schemas/academic"
+import { Role } from "@/types/enums/role"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import { toast } from "sonner"
 import { FilePreview } from "@/components/shared/FilePreview"
@@ -852,7 +853,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
             const json = await res.json();
             return (json.data ?? []) as { id: string; name: string }[];
         },
-        enabled: mode === "create" && user?.role === "AGENT",
+        enabled: mode === "create" && user?.role === Role.AGENT,
     });
 
     const refetchDocuments = useCallback(async () => {
@@ -1078,7 +1079,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
         },
 
         onSubmit: async ({ value }) => {
-            if (mode === "create" && user?.role === "AGENT") {
+            if (mode === "create" && user?.role === Role.AGENT) {
                 if (selectedCourseIds.length > 0) {
                     const missingDocs = applicationRequiredDocTypes.filter(
                         (docType) =>
@@ -1633,7 +1634,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                         </div>
 
                         {/* ── Section: Create Application ── */}
-                        {mode === "create" && user?.role === "AGENT" && (
+                        {mode === "create" && user?.role === Role.AGENT && (
                             <div className="space-y-6">
                                 <div className="space-y-2">
                                     <div className="flex flex-wrap items-center gap-2 pb-2">
@@ -1726,7 +1727,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                     >
                                         {mutation.isPending
                                             ? "Processing..."
-                                            : mode === "create" && user?.role === "AGENT"
+                                            : mode === "create" && user?.role === Role.AGENT
                                                 ? selectedCourseIds.length > 0
                                                     ? "Create Student & Application"
                                                     : "Create Student"

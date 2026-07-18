@@ -4,8 +4,10 @@ import { ok, err } from "@/lib/api"
 import {
     fetchUniversityProgramDetail,
     saveUniversityProgramForPage,
+    softDeleteUniversityProgram,
 } from "@/lib/program/university-server"
 import { universityProgramUpsertSchema } from "@/types/schemas/university-program"
+import { Role } from "@/types/enums/role"
 
 async function assertUniversityOrAdmin() {
     const supabase = await createSupabaseServerClient()
@@ -24,7 +26,7 @@ async function assertUniversityOrAdmin() {
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== "UNIVERSITY" && profile?.role !== "ADMIN") {
+    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
         return { error: err("Forbidden", 403) }
     }
 
@@ -78,5 +80,23 @@ export async function PATCH(
     } catch (e: unknown) {
         const message = e instanceof Error ? e.message : "Internal server error"
         return err(message, 500)
+    }
+}
+
+export async function DELETE(
+    _req: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const auth = await assertUniversityOrAdmin()
+        if ("error" in auth && auth.error) return auth.error
+
+        const { id } = await params
+        const result = await softDeleteUniversityProgram(id)
+
+        return ok(result)
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : "Internal server error"
+        return err(message, message === "Program not found" ? 404 : 500)
     }
 }

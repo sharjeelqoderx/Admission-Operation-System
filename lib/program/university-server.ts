@@ -9,6 +9,7 @@ import type {
     UniversityProgramListResponse,
     UniversityProgramUpsert,
 } from "@/types/schemas/university-program"
+import { Role } from "@/types/enums/role"
 
 function formatDeadlineLabel(value?: string | null) {
     if (!value) return "Rolling"
@@ -66,6 +67,8 @@ function mapListItem(
         tuition_fees: typeof degree?.fees === "string" ? degree.fees : null,
         agent_commission:
             typeof degree?.agent_commission === "number" ? degree.agent_commission : null,
+        created_at: course.created_at,
+        updated_at: course.updated_at,
     }
 }
 
@@ -85,6 +88,8 @@ export async function fetchUniversityProgramList(params: {
             `
             id,
             name,
+            created_at,
+            updated_at,
             degree_id,
             deadline_date,
             program_id,
@@ -106,7 +111,8 @@ export async function fetchUniversityProgramList(params: {
         `,
             { count: "exact" }
         )
-        .order("name", { ascending: true })
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: false })
 
     if (error) {
         throw new Error(error.message)
@@ -190,6 +196,7 @@ export async function fetchUniversityProgramDetail(
         `
         )
         .eq("id", courseId)
+        .eq("is_deleted", false)
         .maybeSingle()
 
     if (error || !course) {
@@ -465,8 +472,32 @@ export async function updateUniversityProgram(params: {
     return { courseId: params.courseId, programId }
 }
 
+export async function softDeleteUniversityProgram(courseId: string) {
+    const writeClient = await getProgramWriteClient()
+    const { data, error } = await writeClient
+        .from("course")
+        .update({
+            is_deleted: true,
+            updated_at: new Date().toISOString(),
+        })
+        .eq("id", courseId)
+        .eq("is_deleted", false)
+        .select("id")
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    if (!data) {
+        throw new Error("Program not found")
+    }
+
+    return { courseId: data.id }
+}
+
 async function resolveOwnerProfileId(userId: string, role: string, payload: UniversityProgramUpsert) {
-    if (role === "UNIVERSITY") {
+    if (role === Role.ADMIN) {
         return userId
     }
 
@@ -478,7 +509,7 @@ async function resolveOwnerProfileId(userId: string, role: string, payload: Univ
     const { data: universityProfile } = await supabase
         .from("profile")
         .select("id")
-        .eq("role", "UNIVERSITY")
+        .eq("role", Role.ADMIN)
         .limit(1)
         .maybeSingle()
 
@@ -504,7 +535,7 @@ export async function fetchUniversityProgramsForPage(params?: { q?: string; page
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== "UNIVERSITY" && profile?.role !== "ADMIN") {
+    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
         return null
     }
 
@@ -526,7 +557,7 @@ export async function fetchUniversityProgramDetailForPage(courseId: string) {
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== "UNIVERSITY" && profile?.role !== "ADMIN") {
+    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
         return null
     }
 
@@ -553,7 +584,7 @@ export async function saveUniversityProgramForPage(params: {
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== "UNIVERSITY" && profile?.role !== "ADMIN") {
+    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
         throw new Error("Forbidden")
     }
 

@@ -1,6 +1,7 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createSupabaseServiceClient } from "@/lib/supabase/server"
 import { resolveAgentStudentProfileIds } from "@/lib/api/agent-applications"
+import { Role } from "@/types/enums/role"
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>
 
@@ -19,15 +20,15 @@ export async function assertCanUploadStudentDocument(
     role: string | null | undefined,
     studentProfileId: string
 ) {
-    if (role === "STUDENT") {
+    if (role === Role.STUDENT) {
         return userId === studentProfileId
     }
 
-    if (role === "AGENT") {
+    if (role === Role.AGENT) {
         return assertAgentCanAccessStudentProfile(supabase, userId, studentProfileId)
     }
 
-    return role === "UNIVERSITY" || role === "ADMIN"
+    return role === Role.ADMIN || role === Role.SUPER_ADMIN
 }
 
 export async function assertAgentCanAccessDocument(

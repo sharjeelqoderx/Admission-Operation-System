@@ -4,6 +4,7 @@ import { ok, err } from "@/lib/api"
 import { agentProfileSchema } from "@/types/schemas/auth"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { assertFilesWithinSizeLimit } from "@/lib/constants/file-upload"
+import { Role } from "@/types/enums/role"
 
 const BUCKET = "student-admission"
 
@@ -137,7 +138,7 @@ export async function POST(req: NextRequest) {
                 ...(data.last_name && { last_name: data.last_name }),
                 ...(data.title && { title: data.title }),
                 gender: data.gender,
-                role: "AGENT",
+                role: Role.AGENT,
             })
             .eq("id", user.id)
         if (profileError) return err(profileError.message, 500)

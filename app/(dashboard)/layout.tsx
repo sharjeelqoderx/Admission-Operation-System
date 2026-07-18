@@ -8,6 +8,7 @@ import { SidebarGroup } from '@/components/shared/sidebar-group';
 import { Navbar } from '@/components/shared/navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/shared/page-loader';
+import { Role } from '@/types/enums/role';
 import {
   LayoutGrid,
   Users2,
@@ -32,25 +33,18 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-export enum Role {
-  UNIVERSITY = 'UNIVERSITY',
-  STUDENT = 'STUDENT',
-  AGENT = 'AGENT',
-  ADMIN = 'ADMIN',
-}
-
 const sidebarRoutes = [
   {
     label: 'Dashboard',
     href: '/dashboard',
     icon: LayoutGrid,
-    allowFor: [Role.UNIVERSITY, Role.STUDENT, Role.AGENT],
+    allowFor: [Role.ADMIN, Role.SUPER_ADMIN, Role.STUDENT, Role.AGENT],
   },
 
   {
     label: 'All Students',
     icon: Users2,
-    allowFor: [Role.UNIVERSITY, Role.AGENT],
+    allowFor: [Role.ADMIN, Role.SUPER_ADMIN, Role.AGENT],
     children: [
       {
         label: 'Add Student',
@@ -62,7 +56,7 @@ const sidebarRoutes = [
         label: 'View Student',
         href: '/dashboard/student',
         icon: Eye,
-        allowFor: [Role.AGENT, Role.UNIVERSITY],
+        allowFor: [Role.AGENT, Role.ADMIN, Role.SUPER_ADMIN],
       },
     ],
   },
@@ -70,13 +64,13 @@ const sidebarRoutes = [
   // {
   //   label: 'University Partners',
   //   icon: UserCircle,
-  //   allowFor: [Role.UNIVERSITY],
+  //   allowFor: [Role.ADMIN],
   //   children: [
   //     {
   //       label: 'View Partners',
   //       href: '/dashboard/agent',
   //       icon: UserCircle,
-  //       allowFor: [Role.UNIVERSITY],
+  //       allowFor: [Role.ADMIN],
   //     },
   //   ],
   // },
@@ -85,28 +79,28 @@ const sidebarRoutes = [
     label: 'All Applications',
     href: '/dashboard/application',
     icon: FileText,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT, Role.ADMIN],
+    allowFor: [Role.ADMIN, Role.AGENT, Role.STUDENT, Role.SUPER_ADMIN],
   },
 
   {
     label: 'All Application View',
     href: '/dashboard/all-application-view',
     icon: Eye,
-    allowFor: [Role.AGENT, Role.ADMIN],
+    allowFor: [Role.AGENT],
   },
 
   {
     label: 'Templates',
     href: '/dashboard/templates',
     icon: FileStack,
-    allowFor: [Role.AGENT, Role.ADMIN],
+    allowFor: [Role.AGENT, Role.SUPER_ADMIN],
   },
 
   {
     label: 'Programs',
     href: '/dashboard/program',
     icon: BarChart3,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT, Role.ADMIN],
+    allowFor: [Role.ADMIN, Role.AGENT, Role.STUDENT, Role.SUPER_ADMIN],
   },
 
   {
@@ -139,7 +133,7 @@ const sidebarRoutes = [
     label: 'Offers',
     href: '/dashboard/offer',
     icon: Award,
-    allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT, Role.ADMIN],
+    allowFor: [Role.ADMIN, Role.AGENT, Role.STUDENT, Role.SUPER_ADMIN],
   },
 
   // {
@@ -160,14 +154,14 @@ const sidebarRoutes = [
   //   label: 'Messages',
   //   href: '/dashboard/chat',
   //   icon: MessageSquare,
-  //   allowFor: [Role.UNIVERSITY, Role.AGENT, Role.STUDENT],
+  //   allowFor: [Role.ADMIN, Role.AGENT, Role.STUDENT],
   // },
 
   {
     label: 'University Partner Profile',
     href: '/dashboard/profile',
     icon: UserCircle,
-    allowFor: [Role.AGENT, Role.STUDENT, Role.UNIVERSITY],
+    allowFor: [Role.AGENT, Role.STUDENT, Role.ADMIN, Role.SUPER_ADMIN],
   },
 ];
 
@@ -283,8 +277,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 route.label === 'University Partner Profile'
                   ? role === Role.STUDENT
                     ? 'Student Profile'
-                    : role === Role.UNIVERSITY
+                    : role === Role.ADMIN
                       ? 'University Profile'
+                      : role === Role.SUPER_ADMIN
+                        ? 'Admin Profile'
                       : route.label
                   : route.label
               }
@@ -297,7 +293,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
         <Navbar
           userName={currentUser?.fullName ?? 'John Doe'}
-          userRole={currentUser?.role ?? 'STUDENT'}
+          userRole={currentUser?.role ?? Role.STUDENT}
           userImage={currentUser?.avatarUrl ?? undefined}
 
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}

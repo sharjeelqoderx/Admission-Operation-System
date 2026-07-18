@@ -10,6 +10,7 @@ import {
     OFFER_DETAIL_SELECT_WITH_TEMPLATE,
 } from "@/lib/offer/select-fields";
 import { renderOfferBodyHtml } from "@/lib/offer/render-offer-body-html";
+import { Role } from "@/types/enums/role";
 
 function canReadOffer(
     role: string | undefined,
@@ -21,15 +22,15 @@ function canReadOffer(
 ) {
     if (!application) return false
 
-    if (role === "STUDENT") {
+    if (role === Role.STUDENT) {
         return application.profile_id === userId
     }
 
-    if (role === "UNIVERSITY") {
+    if (role === Role.ADMIN) {
         return application.university_id === userId
     }
 
-    return role === "AGENT" || role === "ADMIN"
+    return role === Role.AGENT || role === Role.SUPER_ADMIN
 }
 
 export async function GET(
@@ -61,7 +62,7 @@ export async function GET(
         const { id } = await context.params;
 
         const readClient =
-            profile?.role === "STUDENT"
+            profile?.role === Role.STUDENT
                 ? supabase
                 : createSupabaseServiceClient()
 

@@ -6,6 +6,7 @@ import { fetchStudentDashboardPageData } from "@/lib/student/server"
 import { PageLoader } from "@/components/shared/page-loader"
 import { PageContent } from "./_components/page-content"
 import { UniversityStudentListPageContent } from "./_components/university-student/page-content"
+import { Role } from "@/types/enums/role"
 
 type StudentPageProps = {
     searchParams: Promise<{
@@ -22,7 +23,7 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
         redirect("/login")
     }
 
-    if (role === "UNIVERSITY") {
+    if (role === Role.ADMIN || role === Role.SUPER_ADMIN) {
         const params = await searchParams
         const initialOverview = await fetchUniversityStudentsForPage({
             q: params.q,

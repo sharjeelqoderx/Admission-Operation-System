@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn, formatRoleLabel } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { Role } from '@/types/enums/role';
 
 interface NavbarProps {
     userName?: string;
@@ -64,7 +65,7 @@ const getTitleFromPathname = (pathname: string): string => {
 
 export function Navbar({
     userName = 'John Doe',
-    userRole = 'STUDENT',
+    userRole = Role.STUDENT,
     userImage,
     onMenuToggle,
     isSidebarOpen = false,

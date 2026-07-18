@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { loginSchema } from "@/types/schemas/auth"
 import { formatFullName } from "@/lib/utils/profile"
+import { Role } from "@/types/enums/role"
 
 export async function POST(req: NextRequest) {
     try {
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
             ),
             firstName: profile?.first_name ?? data.user.user_metadata?.first_name ?? "",
             lastName: profile?.last_name ?? data.user.user_metadata?.last_name ?? "",
-            role: profile?.role ?? "STUDENT",
+            role: profile?.role ?? Role.STUDENT,
             profile: {
                 dateOfBirth: profile?.date_of_birth ?? "",
                 gender: profile?.gender?.toLowerCase?.() ?? "",

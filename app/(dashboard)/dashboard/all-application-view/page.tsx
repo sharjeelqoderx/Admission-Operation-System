@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchAllApplicationViewPageData } from "@/lib/application/server"
 import { PageContent } from "./page-content"
+import { Role } from "@/types/enums/role"
 
 type AllApplicationViewPageProps = {
     searchParams: Promise<{
@@ -24,7 +25,7 @@ export default async function AllApplicationViewPage({
         redirect("/login")
     }
 
-    if (role === "STUDENT" || role === "UNIVERSITY") {
+    if (role === Role.STUDENT || role === Role.ADMIN || role === Role.SUPER_ADMIN) {
         redirect("/dashboard")
     }
 

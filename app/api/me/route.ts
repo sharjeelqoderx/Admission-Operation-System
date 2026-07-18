@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { normalizeDateValue } from "@/types/schemas/academic"
 import { formatFullName } from "@/lib/utils/profile"
+import { Role } from "@/types/enums/role"
 
 export async function GET() {
     try {
@@ -23,21 +24,21 @@ export async function GET() {
 
         let extraData: any = {}
 
-        if (role === "STUDENT") {
+        if (role === Role.STUDENT) {
             const { data: student } = await supabase
                 .from("student")
                 .select("*")
                 .eq("profile_id", user.id)
                 .maybeSingle()
             extraData = student ?? {}
-        } else if (role === "AGENT") {
+        } else if (role === Role.AGENT) {
             const { data: agent } = await supabase
                 .from("agent")
                 .select("*")
                 .eq("profile_id", user.id)
                 .maybeSingle()
             extraData = agent ?? {}
-        } else if (role === "UNIVERSITY") {
+        } else if (role === Role.ADMIN) {
             const { data: university } = await supabase
                 .from("university")
                 .select("*")
@@ -62,7 +63,7 @@ export async function GET() {
             idCardBackUrl: string | null
         } | null = null
 
-        if (role === "AGENT") {
+        if (role === Role.AGENT) {
             const { data: agentDocuments } = await supabase
                 .from("document")
                 .select("document_type_id, created_at, document_type:document_type_id(code, name), document_files(file_url, type)")

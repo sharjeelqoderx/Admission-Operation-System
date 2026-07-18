@@ -1,6 +1,7 @@
 import "server-only"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { Role } from "@/types/enums/role"
 
 export async function getDashboardRole(): Promise<string | null> {
     const supabase = await createSupabaseServerClient()
@@ -19,5 +20,5 @@ export async function getDashboardRole(): Promise<string | null> {
         .eq("id", user.id)
         .maybeSingle()
 
-    return profile?.role ?? "STUDENT"
+    return profile?.role ?? Role.STUDENT
 }

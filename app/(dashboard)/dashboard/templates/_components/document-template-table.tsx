@@ -29,6 +29,7 @@ type DocumentTemplateTableProps = {
     onDelete: (template: DocumentTemplateListItem) => void
     onRetry: () => void
     viewOnly?: boolean
+    canDelete?: boolean
 }
 
 const COLUMN_COUNT = 4
@@ -61,6 +62,7 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
     onDelete,
     onRetry,
     viewOnly = false,
+    canDelete = true,
 }: DocumentTemplateTableProps) {
     if (isLoading) {
         return (
@@ -217,17 +219,19 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                                     <Pencil className="size-4" />
                                                 </Button>
                                             ) : null}
-                                            {/* <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                className="size-9 shrink-0 rounded-lg shadow-sm"
-                                                aria-label={`Delete ${template.title}`}
-                                                disabled={deletingId === template.id}
-                                                onClick={() => onDelete(template)}
-                                            >
-                                                <Trash2 className="size-4" />
-                                            </Button> */}
+                                            {canDelete ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="size-9 shrink-0 rounded-lg shadow-sm"
+                                                    aria-label={`Delete ${template.title}`}
+                                                    disabled={deletingId === template.id}
+                                                    onClick={() => onDelete(template)}
+                                                >
+                                                    <Trash2 className="size-4" />
+                                                </Button>
+                                            ) : null}
                                         </div>
                                     </TableCell>
                                 </TableRow>

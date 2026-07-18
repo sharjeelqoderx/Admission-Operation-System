@@ -3,8 +3,6 @@
 import React, { useCallback, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { useAuth } from "@/hooks/useAuth"
-import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
 import type {
     DocumentTemplateListItem,
     DocumentTemplatesListResponse,
@@ -15,6 +13,8 @@ export type DocumentTemplatePageMode = "list" | "create" | "edit" | "view"
 
 export type DocumentTemplatePageLogicProps = {
     templates: DocumentTemplateListItem[]
+    canCreateTemplate: boolean
+    canDeleteTemplate: boolean
     isLoading: boolean
     isError: boolean
     errorMessage?: string
@@ -53,12 +53,14 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
 ) {
     return function DocumentTemplatePageContainer({
         initialTemplates,
+        canCreateTemplate,
+        canDeleteTemplate,
     }: {
         initialTemplates: DocumentTemplateListItem[]
+        canCreateTemplate: boolean
+        canDeleteTemplate: boolean
     }) {
         const queryClient = useQueryClient()
-        const { me } = useAuth()
-        const viewOnly = isUniversityViewOnly(me.data?.role)
         const [mode, setMode] = useState<DocumentTemplatePageMode>("list")
         const [activeTemplate, setActiveTemplate] = useState<DocumentTemplateListItem | null>(null)
         const [title, setTitle] = useState("")
@@ -143,10 +145,9 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         }, [])
 
         const openCreate = useCallback(() => {
-            if (viewOnly) return
             resetEditorState()
             setMode("create")
-        }, [resetEditorState, viewOnly])
+        }, [resetEditorState])
 
         const openView = useCallback((template: DocumentTemplateListItem) => {
             setActiveTemplate(template)
@@ -158,17 +159,13 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
 
         const openEdit = useCallback(
             (template: DocumentTemplateListItem) => {
-                if (viewOnly) {
-                    openView(template)
-                    return
-                }
                 setActiveTemplate(template)
                 setTitle(template.title)
                 setBodyHtml(template.body_html || EMPTY_TEMPLATE_HTML)
                 setFormError(null)
                 setMode("edit")
             },
-            [openView, viewOnly]
+            []
         )
 
         const backToList = useCallback(() => {
@@ -251,6 +248,8 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
 
         const logicProps: DocumentTemplatePageLogicProps = {
             templates,
+            canCreateTemplate,
+            canDeleteTemplate,
             isLoading: templatesQuery.isLoading,
             isError: templatesQuery.isError,
             errorMessage:

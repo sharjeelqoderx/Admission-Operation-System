@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import ImageUploadCard from "@/components/shared/image-upload-card"
 import { Plus, ImageIcon } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
+import { Role } from "@/types/enums/role"
 
 function F({ field, label, children }: { field: any; label: string; children: React.ReactNode }) {
     const isSubmitted = field.form.state.isSubmitted
@@ -42,7 +43,7 @@ export function UploadDocumentForm() {
 
     const { data: studentsData } = useQuery({
         queryKey: ["students"],
-        enabled: user?.role === "AGENT",
+        enabled: user?.role === Role.AGENT,
         queryFn: async () => {
             const res = await fetch("/api/student")
             const json = await res.json()
@@ -124,7 +125,7 @@ export function UploadDocumentForm() {
     })
 
     useEffect(() => {
-        if (user?.role === "STUDENT") {
+        if (user?.role === Role.STUDENT) {
             form.setFieldValue("student_id", user.id);
         } else if (studentIdParam) {
             form.setFieldValue("student_id", studentIdParam);
@@ -152,7 +153,7 @@ export function UploadDocumentForm() {
                 className="space-y-12 relative z-10"
             >
                 <FieldGroup className="p-1">
-                    {user?.role !== "STUDENT" && (
+                    {user?.role !== Role.STUDENT && (
                         <form.Field name="student_id">
                             {(field) => (
                                 <F field={field} label="Select Student">

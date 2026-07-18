@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Gender } from "..";
 import { fileWithinSizeLimit, MAX_FILE_SIZE_LABEL } from "@/lib/constants/file-upload";
+import { Role } from "@/types/enums/role";
 
 /* =========================
    HELPERS
@@ -60,7 +61,7 @@ export const signupSchema = z.object({
     email,
     phone,
     password,
-    role: z.enum(["AGENT", "STUDENT"]).default("STUDENT"),
+    role: z.enum([Role.AGENT, Role.STUDENT]).default(Role.STUDENT),
 });
 
 /* =========================

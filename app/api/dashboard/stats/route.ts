@@ -3,6 +3,7 @@ import {
     createSupabaseServerClient,
     createSupabaseServiceClient,
 } from "@/lib/supabase/server"
+import { Role } from "@/types/enums/role"
 
 export async function GET() {
     try {
@@ -22,7 +23,7 @@ export async function GET() {
             .eq("id", user.id)
             .maybeSingle()
 
-        if (profile?.role !== "AGENT") {
+        if (profile?.role !== Role.AGENT) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 

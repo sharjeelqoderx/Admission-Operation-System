@@ -3,17 +3,18 @@ import {
     createSupabaseServerClient,
     createSupabaseServiceClient,
 } from "@/lib/supabase/server"
+import { Role } from "@/types/enums/role"
 
 function canReadDocument(
     role: string | undefined,
     userId: string,
     document: { profile_id: string; uploaded_by_profile_id: string | null }
 ) {
-    if (role === "STUDENT") {
+    if (role === Role.STUDENT) {
         return document.profile_id === userId
     }
 
-    if (role === "AGENT" || role === "UNIVERSITY" || role === "ADMIN") {
+    if (role === Role.AGENT || role === Role.ADMIN || role === Role.SUPER_ADMIN) {
         return true
     }
 
