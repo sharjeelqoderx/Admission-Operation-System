@@ -5,6 +5,7 @@ export const COURSE_SELECT = `
     name,
     created_at,
     updated_at,
+    is_deleted,
     degree_id,
     deadline_date,
     program_id,
@@ -42,6 +43,7 @@ export type CourseRow = {
     name: string
     created_at: string
     updated_at: string
+    is_deleted: boolean
     degree_id: string | null
     deadline_date: string | null
     program_id: string | null

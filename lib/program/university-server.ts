@@ -110,6 +110,7 @@ export async function fetchUniversityProgramList(params: {
         `,
             { count: "exact" }
         )
+        .eq("is_deleted", false)
         .order("created_at", { ascending: false })
 
     if (error) {
@@ -194,6 +195,7 @@ export async function fetchUniversityProgramDetail(
         `
         )
         .eq("id", courseId)
+        .eq("is_deleted", false)
         .maybeSingle()
 
     if (error || !course) {
@@ -467,6 +469,30 @@ export async function updateUniversityProgram(params: {
     }
 
     return { courseId: params.courseId, programId }
+}
+
+export async function softDeleteUniversityProgram(courseId: string) {
+    const writeClient = await getProgramWriteClient()
+    const { data, error } = await writeClient
+        .from("course")
+        .update({
+            is_deleted: true,
+            updated_at: new Date().toISOString(),
+        })
+        .eq("id", courseId)
+        .eq("is_deleted", false)
+        .select("id")
+        .maybeSingle()
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    if (!data) {
+        throw new Error("Program not found")
+    }
+
+    return { courseId: data.id }
 }
 
 async function resolveOwnerProfileId(userId: string, role: string, payload: UniversityProgramUpsert) {

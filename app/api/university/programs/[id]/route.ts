@@ -4,6 +4,7 @@ import { ok, err } from "@/lib/api"
 import {
     fetchUniversityProgramDetail,
     saveUniversityProgramForPage,
+    softDeleteUniversityProgram,
 } from "@/lib/program/university-server"
 import { universityProgramUpsertSchema } from "@/types/schemas/university-program"
 
@@ -78,5 +79,23 @@ export async function PATCH(
     } catch (e: unknown) {
         const message = e instanceof Error ? e.message : "Internal server error"
         return err(message, 500)
+    }
+}
+
+export async function DELETE(
+    _req: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const auth = await assertUniversityOrAdmin()
+        if ("error" in auth && auth.error) return auth.error
+
+        const { id } = await params
+        const result = await softDeleteUniversityProgram(id)
+
+        return ok(result)
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : "Internal server error"
+        return err(message, message === "Program not found" ? 404 : 500)
     }
 }

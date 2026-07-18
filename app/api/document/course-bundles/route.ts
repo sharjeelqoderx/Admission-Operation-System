@@ -139,6 +139,7 @@ export async function GET(req: NextRequest) {
         const { data: courseRows, error: courseError } = await supabase
             .from("course")
             .select(COURSE_SELECT)
+            .eq("is_deleted", false)
             .order("name", { ascending: true })
 
         if (courseError) {

@@ -148,6 +148,7 @@ export async function POST(req: NextRequest) {
             .from("course")
             .select("id")
             .eq("id", validatedData.course_id)
+            .eq("is_deleted", false)
             .maybeSingle()
 
         if (!course) {

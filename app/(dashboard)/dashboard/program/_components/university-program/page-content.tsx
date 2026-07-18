@@ -6,7 +6,7 @@ import { Plus, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
-import { UniversityProgramList } from "./program-list"
+import { UniversityProgramList as ProgramList } from "./program-list"
 import { withUniversityProgramPageLogic } from "./withUniversityProgramPageLogic"
 import type { UniversityProgramListResponse } from "@/types/schemas/university-program"
 
@@ -14,16 +14,20 @@ type UniversityProgramPageViewProps = {
     overview: UniversityProgramListResponse
     searchValue: string
     isFetching: boolean
+    deletingId: string | null
     onSearchChange: (value: string) => void
     onPageChange: (page: number) => void
+    onDelete: (id: string) => void
 }
 
 const UniversityProgramPageView = memo(function UniversityProgramPageView({
     overview,
     searchValue,
     isFetching,
+    deletingId,
     onSearchChange,
     onPageChange,
+    onDelete,
 }: UniversityProgramPageViewProps) {
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
@@ -56,11 +60,13 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
                 />
             </div>
 
-            <UniversityProgramList
+            <ProgramList
                 programs={overview.data}
                 pagination={overview.pagination}
                 isLoading={isFetching}
+                deletingId={deletingId}
                 onPageChange={onPageChange}
+                onDelete={onDelete}
             />
         </div>
     )

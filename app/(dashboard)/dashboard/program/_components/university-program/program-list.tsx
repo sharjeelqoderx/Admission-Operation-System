@@ -1,11 +1,20 @@
 "use client"
 
-import { memo } from "react"
+import { memo, useState } from "react"
 import Link from "next/link"
-import { Clock, MapPin, ChevronLeft, ChevronRight } from "lucide-react"
+import { Clock, MapPin, ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { PageLoader } from "@/components/shared/page-loader"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import type {
     UniversityProgramListItem,
     UniversityProgramListResponse,
@@ -13,6 +22,8 @@ import type {
 
 type UniversityProgramListCardProps = {
     program: UniversityProgramListItem
+    isDeleting: boolean
+    onDelete: (id: string) => void
 }
 
 function formatTimestamp(value: string) {
@@ -27,7 +38,10 @@ function formatTimestamp(value: string) {
 
 export const UniversityProgramListCard = memo(function UniversityProgramListCard({
     program,
+    isDeleting,
+    onDelete,
 }: UniversityProgramListCardProps) {
+    const [deleteOpen, setDeleteOpen] = useState(false)
     const metaParts = [
         program.level_name,
         program.intake_label,
@@ -127,25 +141,74 @@ export const UniversityProgramListCard = memo(function UniversityProgramListCard
                                 Edit Program
                             </Typography>
                         </Link>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            aria-label={`Delete ${program.name}`}
+                            disabled={isDeleting}
+                            onClick={() => setDeleteOpen(true)}
+                        >
+                            <Trash2 />
+                        </Button>
                     </div>
                 </div>
             </div>
+
+            <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                <DialogContent showCloseButton={!isDeleting}>
+                    <DialogHeader>
+                        <DialogTitle asChild>
+                            <Typography as="h2" font="title">
+                                Delete program?
+                            </Typography>
+                        </DialogTitle>
+                        <DialogDescription asChild>
+                            <Typography as="p" font="sub-text">
+                                {`"${program.name}" will be removed from program listings. Existing historical records will remain intact.`}
+                            </Typography>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={isDeleting}
+                            onClick={() => setDeleteOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            disabled={isDeleting}
+                            onClick={() => onDelete(program.id)}
+                        >
+                            {isDeleting ? "Deleting..." : "Delete Program"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </Card>
     )
 })
 
-type UniversityProgramListProps = {
+export type UniversityProgramListProps = {
     programs: UniversityProgramListItem[]
     pagination: UniversityProgramListResponse["pagination"]
     isLoading?: boolean
+    deletingId: string | null
     onPageChange: (page: number) => void
+    onDelete: (id: string) => void
 }
 
-export const UniversityProgramList = memo(function UniversityProgramList({
+export const UniversityProgramList = memo<UniversityProgramListProps>(function UniversityProgramList({
     programs,
     pagination,
     isLoading = false,
+    deletingId,
     onPageChange,
+    onDelete,
 }: UniversityProgramListProps) {
     if (isLoading) {
         return <PageLoader className="py-12" />
@@ -162,7 +225,12 @@ export const UniversityProgramList = memo(function UniversityProgramList({
     return (
         <div className="space-y-5">
             {programs.map((program) => (
-                <UniversityProgramListCard key={program.id} program={program} />
+                <UniversityProgramListCard
+                    key={program.id}
+                    program={program}
+                    isDeleting={deletingId === program.id}
+                    onDelete={onDelete}
+                />
             ))}
 
             <div className="flex items-center justify-between pt-2">

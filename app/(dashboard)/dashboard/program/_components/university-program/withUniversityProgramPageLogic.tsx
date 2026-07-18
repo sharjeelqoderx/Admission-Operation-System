@@ -2,16 +2,19 @@
 
 import type { ComponentType } from "react"
 import { useCallback, useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { toast } from "sonner"
 import type { UniversityProgramListResponse } from "@/types/schemas/university-program"
 
 export type UniversityProgramPageLogicProps = {
     overview: UniversityProgramListResponse
     searchValue: string
     isFetching: boolean
+    deletingId: string | null
     onSearchChange: (value: string) => void
     onPageChange: (page: number) => void
+    onDelete: (id: string) => void
 }
 
 async function fetchUniversityPrograms(params: { q?: string; page?: string }) {
@@ -36,6 +39,7 @@ export function withUniversityProgramPageLogic(
     }: {
         initialOverview: UniversityProgramListResponse
     }) {
+        const queryClient = useQueryClient()
         const router = useRouter()
         const pathname = usePathname()
         const searchParams = useSearchParams()
@@ -47,6 +51,29 @@ export function withUniversityProgramPageLogic(
             queryKey: ["university-programs", q, page],
             queryFn: () => fetchUniversityPrograms({ q, page }),
             initialData: initialOverview,
+        })
+
+        const deleteMutation = useMutation({
+            mutationFn: async (id: string) => {
+                const res = await fetch(`/api/university/programs/${id}`, {
+                    method: "DELETE",
+                })
+                const json = await res.json()
+
+                if (!res.ok) {
+                    throw new Error(json?.error ?? "Failed to delete program")
+                }
+
+                return json
+            },
+            onSuccess: () => {
+                toast.success("Program deleted successfully")
+                queryClient.invalidateQueries({ queryKey: ["university-programs"] })
+                router.refresh()
+            },
+            onError: (error: Error) => {
+                toast.error(error.message)
+            },
         })
 
         const updateParams = useCallback(
@@ -75,8 +102,10 @@ export function withUniversityProgramPageLogic(
                 overview={overview}
                 searchValue={q}
                 isFetching={programsQuery.isFetching}
+                deletingId={deleteMutation.isPending ? deleteMutation.variables : null}
                 onSearchChange={(value) => updateParams({ q: value || null, page: "1" })}
                 onPageChange={(nextPage) => updateParams({ page: String(nextPage) })}
+                onDelete={(id) => deleteMutation.mutate(id)}
             />
         )
     }

@@ -411,25 +411,34 @@ export type Database = {
       }
       course: {
         Row: {
+          created_at: string
           deadline_date: string | null
           degree_id: string | null
           id: string
+          is_deleted: boolean
           name: string
           program_id: string | null
+          updated_at: string
         }
         Insert: {
+          created_at?: string
           deadline_date?: string | null
           degree_id?: string | null
           id?: string
+          is_deleted?: boolean
           name: string
           program_id?: string | null
+          updated_at?: string
         }
         Update: {
+          created_at?: string
           deadline_date?: string | null
           degree_id?: string | null
           id?: string
+          is_deleted?: boolean
           name?: string
           program_id?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
