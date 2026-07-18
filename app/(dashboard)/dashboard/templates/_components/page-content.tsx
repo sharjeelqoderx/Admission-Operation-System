@@ -2,7 +2,6 @@
 
 import { memo, useCallback, useState } from "react"
 import { ArrowLeft, Plus, Printer, Save } from "lucide-react"
-import { ArrowLeft, Plus, Printer, Save } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { ErrorView } from "@/components/shared/error-view"
@@ -192,7 +191,6 @@ function DocumentTemplatePageView({
         )
     }
 
-    const isViewMode = mode === "view"
     const isViewMode = mode === "view"
     const heading =
         mode === "create"
