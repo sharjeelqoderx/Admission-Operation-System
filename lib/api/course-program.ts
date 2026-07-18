@@ -7,6 +7,7 @@ export const COURSE_SELECT = `
     updated_at,
     degree_id,
     deadline_date,
+    program_id,
     degree:degree_id (
         id,
         name,
@@ -43,6 +44,7 @@ export type CourseRow = {
     updated_at: string
     degree_id: string | null
     deadline_date: string | null
+    program_id: string | null
     degree: {
         level_id: string | null
         [key: string]: unknown
