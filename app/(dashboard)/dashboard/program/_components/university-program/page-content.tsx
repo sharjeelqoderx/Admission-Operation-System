@@ -6,8 +6,6 @@ import { Plus, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
-import { useAuth } from "@/hooks/useAuth"
-import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
 import { UniversityProgramList } from "./program-list"
 import { withUniversityProgramPageLogic } from "./withUniversityProgramPageLogic"
 import type { UniversityProgramListResponse } from "@/types/schemas/university-program"
@@ -27,9 +25,6 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
     onSearchChange,
     onPageChange,
 }: UniversityProgramPageViewProps) {
-    const { me } = useAuth()
-    const viewOnly = isUniversityViewOnly(me.data?.role)
-
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -43,14 +38,12 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
                     </Typography>
                 </div>
 
-                {!viewOnly ? (
+                <Button asChild variant="default" size="default">
                     <Link href="/dashboard/program/new">
-                        <Button className="h-11 rounded-xl bg-white px-5 font-semibold text-brand-primary shadow-sm ring-1 ring-black/5 hover:bg-gray-50">
-                            <Plus className="mr-2 size-4" />
-                            Add New Program
-                        </Button>
+                        <Plus />
+                        Add New Program
                     </Link>
-                ) : null}
+                </Button>
             </div>
 
             <div className="relative max-w-xl">
@@ -68,7 +61,6 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
                 pagination={overview.pagination}
                 isLoading={isFetching}
                 onPageChange={onPageChange}
-                viewOnly={viewOnly}
             />
         </div>
     )

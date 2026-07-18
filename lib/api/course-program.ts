@@ -3,6 +3,8 @@ import type { createSupabaseServerClient } from "@/lib/supabase/server"
 export const COURSE_SELECT = `
     id,
     name,
+    created_at,
+    updated_at,
     degree_id,
     deadline_date,
     degree:degree_id (
@@ -37,6 +39,8 @@ export const COURSE_SELECT = `
 export type CourseRow = {
     id: string
     name: string
+    created_at: string
+    updated_at: string
     degree_id: string | null
     deadline_date: string | null
     degree: {

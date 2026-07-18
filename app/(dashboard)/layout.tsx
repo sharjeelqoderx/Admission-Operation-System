@@ -99,7 +99,7 @@ const sidebarRoutes = [
     label: 'Templates',
     href: '/dashboard/templates',
     icon: FileStack,
-    allowFor: [Role.AGENT, Role.ADMIN],
+    allowFor: [Role.AGENT, Role.ADMIN, Role.UNIVERSITY],
   },
 
   {

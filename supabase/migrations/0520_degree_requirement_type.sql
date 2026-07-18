@@ -1,5 +1,5 @@
 -- ============================================================
--- 052_degree_requirement_type.sql
+-- 0520_degree_requirement_type.sql
 -- Add REQUIRED / OPTIONAL to degree_requirement (course path via degree)
 -- ============================================================
 
@@ -69,17 +69,17 @@ degree_keys AS (
         ('msc_duren_90_18m',       'Master of Science (M. Sc.)',                         90,  '%Duren%',   '%Eglish%',  '%18%Minth%'),
         ('msc_duren_120_2y_typo',  'Master of Science (M. Sc.)',                         120, '%Duren%',   '%Eglish%',  '%2%yaer%'),
         ('msc_duren_120_2y',       'Master of Science (M. Sc.)',                         120, '%Duren%',   '%Eglish%',  '%2%year%'),
-        ('beng_koln',              'Bachelor of Engg',                                   180, '%Köln%',    '%English%', '%3%year%'),
-        ('ba_duren',               'Bachelor of Arts (B.A.)',                            180, '%Düren%',   '%English%', '%3%year%'),
-        ('ba_koln',                'Bachelor of Arts (B.A.)',                            180, '%Koln%',    '%English%', '%3%year%'),
-        ('studienkolleg_en',       'Studienkolleg',                                      NULL::INTEGER, '%Bielefeld%', '%English%', '%12%month%'),
-        ('studienkolleg_de',       'Studienkolleg',                                      NULL::INTEGER, '%Bielefeld%', '%German%',  '%12%month%'),
-        ('ba_berlin_en',           'Bachelor of Arts (B.A.)',                            180, '%berlin%',  '%English%', '%3%year%'),
-        ('ba_berlin_eglish',       'Bachelor of Arts (B.A.)',                            180, '%Berlin%',  '%Eglish%',  '%3%year%'),
-        ('ba_duren_eglish',        'Bachelor of Arts (B.A.)',                            180, '%Duren%',   '%Eglish%',  '%3%year%'),
-        ('bsc_waldshut_210_45',    'Bachelor of Science',                                210, '%Waldshut%','%German%',  '%4.5%'),
-        ('bsc_waldshut_210_3y',    'Bachelor of Science',                                210, '%Waldshut%','%German%',  '%3%year%'),
-        ('bsc_waldshut_240_3y',    'Bachelor of Science',                                240, '%Waldshut%','%German%',  '%3%year%')
+        ('beng_koln',               'Bachelor of Engg',                                   180, '%Köln%',    '%English%', '%3%year%'),
+        ('ba_duren',                'Bachelor of Arts (B.A.)',                            180, '%Düren%',   '%English%', '%3%year%'),
+        ('ba_koln',                 'Bachelor of Arts (B.A.)',                            180, '%Koln%',    '%English%', '%3%year%'),
+        ('studienkolleg_en',        'Studienkolleg',                                      NULL::INTEGER, '%Bielefeld%', '%English%', '%12%month%'),
+        ('studienkolleg_de',        'Studienkolleg',                                      NULL::INTEGER, '%Bielefeld%', '%German%',  '%12%month%'),
+        ('ba_berlin_en',            'Bachelor of Arts (B.A.)',                            180, '%berlin%',  '%English%', '%3%year%'),
+        ('ba_berlin_eglish',        'Bachelor of Arts (B.A.)',                            180, '%Berlin%',  '%Eglish%',  '%3%year%'),
+        ('ba_duren_eglish',         'Bachelor of Arts (B.A.)',                            180, '%Duren%',   '%Eglish%',  '%3%year%'),
+        ('bsc_waldshut_210_45',     'Bachelor of Science',                                210, '%Waldshut%','%German%',  '%4.5%'),
+        ('bsc_waldshut_210_3y',     'Bachelor of Science',                                210, '%Waldshut%','%German%',  '%3%year%'),
+        ('bsc_waldshut_240_3y',     'Bachelor of Science',                                240, '%Waldshut%','%German%',  '%3%year%')
     ) AS t(degree_key, deg_name, credits, location_like, language_like, duration_like)
     JOIN degree d
         ON d.name = t.deg_name

@@ -3,9 +3,9 @@
 import { memo, type ChangeEvent } from "react"
 import Link from "next/link"
 import { ChevronLeft } from "lucide-react"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Typography } from "@/components/shared/Typography"
 import { DatePicker } from "@/components/shared/date-picker"
 import {
@@ -80,7 +80,7 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
 
             {errorMessage ? <ErrorView message={errorMessage} /> : null}
 
-            <Card className="space-y-8 border-none bg-white/80 px-5 py-6 shadow-sm ring-1 ring-black/5 backdrop-blur-lg">
+            <div className="space-y-8">
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                     <div>
                         <FieldLabel>Program Name</FieldLabel>
@@ -116,17 +116,24 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                         <FieldLabel>University Partner Commission</FieldLabel>
                         <Input
                             type="number"
-                            min={0}
-                            max={100}
+                            step="0.01"
+                            min="0"
+                            max="100"
                             value={values.agent_commission ?? ""}
                             onChange={(event) =>
                                 onChange(
                                     "agent_commission",
-                                    event.target.value ? Number(event.target.value) : null
+                                    event.target.value
+                                        ? Math.min(100, Math.max(0, Number(event.target.value)))
+                                        : null
                                 )
                             }
+                            onKeyDown={(event) =>
+                                ["e", "E", "-", "+"].includes(event.key) &&
+                                event.preventDefault()
+                            }
                             placeholder="Enter University Partner Percent"
-                            className="h-11 bg-white"
+                            className="h-11 bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                     </div>
                     <div>
@@ -190,61 +197,61 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
 
                 <div>
                     <FieldLabel>Program Detail</FieldLabel>
-                    <textarea
+                    <Textarea
                         value={values.program_detail ?? ""}
                         onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
                             onChange("program_detail", event.target.value)
                         }
                         placeholder="Enter program detail"
-                        className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                        className="bg-white"
                     />
                 </div>
 
                 <div>
                     <FieldLabel>Admission Requirements</FieldLabel>
-                    <textarea
+                    <Textarea
                         value={values.admission_requirements ?? ""}
                         onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
                             onChange("admission_requirements", event.target.value)
                         }
                         placeholder="Enter admission requirements"
-                        className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                        className="bg-white"
                     />
                 </div>
 
                 <div>
                     <FieldLabel>Perspectives</FieldLabel>
-                    <textarea
+                    <Textarea
                         value={values.perspectives ?? ""}
                         onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
                             onChange("perspectives", event.target.value)
                         }
                         placeholder="Enter perspectives"
-                        className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                        className="bg-white"
                     />
                 </div>
 
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                     <div>
                         <FieldLabel>Your Prospect After Graduation</FieldLabel>
-                        <textarea
+                        <Textarea
                             value={values.prospects_after_graduation ?? ""}
                             onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
                                 onChange("prospects_after_graduation", event.target.value)
                             }
                             placeholder="Enter prospects after graduation"
-                            className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                            className="bg-white"
                         />
                     </div>
                     <div>
                         <FieldLabel>Our Competency Model</FieldLabel>
-                        <textarea
+                        <Textarea
                             value={values.competency_model ?? ""}
                             onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
                                 onChange("competency_model", event.target.value)
                             }
                             placeholder="Enter competency model"
-                            className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                            className="bg-white"
                         />
                     </div>
                 </div>
@@ -252,24 +259,24 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                     <div>
                         <FieldLabel>Professional Skills</FieldLabel>
-                        <textarea
+                        <Textarea
                             value={values.professional_skills ?? ""}
                             onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
                                 onChange("professional_skills", event.target.value)
                             }
                             placeholder="Enter professional skills"
-                            className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                            className="bg-white"
                         />
                     </div>
                     <div>
                         <FieldLabel>Management Skills</FieldLabel>
-                        <textarea
+                        <Textarea
                             value={values.management_skills ?? ""}
                             onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
                                 onChange("management_skills", event.target.value)
                             }
                             placeholder="Enter management skills"
-                            className="min-h-28 w-full rounded-md border border-input bg-white px-3 py-2 text-sm"
+                            className="bg-white"
                         />
                     </div>
                 </div>
@@ -287,8 +294,8 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                                     onClick={() => onToggleDocumentType(documentType.id)}
                                     className={
                                         isSelected
-                                            ? "rounded-xl border-2 border-brand-byzantine bg-brand-byzantine/5 px-4 py-3 text-left"
-                                            : "rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-left"
+                                            ? "cursor-pointer rounded-xl border-2 border-brand-byzantine bg-brand-byzantine/5 px-4 py-3 text-left"
+                                            : "cursor-pointer rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-left"
                                     }
                                 >
                                     <Typography as="span" font="sub-text" className="font-semibold text-brand-primary">
@@ -311,7 +318,7 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                         {isSubmitting ? "Saving..." : "Save Program Info"}
                     </Button>
                 </div>
-            </Card>
+            </div>
         </div>
     )
 })

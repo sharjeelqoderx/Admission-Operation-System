@@ -12,6 +12,8 @@ export const universityProgramListItemSchema = z.object({
     duration: z.string().nullable(),
     tuition_fees: z.string().nullable(),
     agent_commission: z.number().nullable(),
+    created_at: z.string(),
+    updated_at: z.string(),
 })
 
 export const universityProgramListResponseSchema = z.object({
@@ -28,7 +30,12 @@ export const universityProgramUpsertSchema = z.object({
     name: z.string().trim().min(1, "Program name is required"),
     category: z.string().trim().optional(),
     tuition_fees: z.string().trim().optional(),
-    agent_commission: z.coerce.number().min(0).max(100).optional().nullable(),
+    agent_commission: z.coerce
+        .number()
+        .min(0, "Commission cannot be less than 0%")
+        .max(100, "Commission cannot exceed 100%")
+        .optional()
+        .nullable(),
     location: z.string().trim().optional(),
     program_length: z.string().trim().optional(),
     study_type: z.enum(["full_time", "part_time"]).optional().nullable(),

@@ -10,10 +10,6 @@ export default async function DocumentTemplatesPage() {
         redirect("/login")
     }
 
-    if (role === "UNIVERSITY") {
-        redirect("/dashboard")
-    }
-
     const initialTemplates = await fetchDocumentTemplatesForPage()
 
     return <PageContent initialTemplates={initialTemplates} />

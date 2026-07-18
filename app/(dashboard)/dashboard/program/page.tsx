@@ -1,8 +1,6 @@
-import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityProgramsForPage } from "@/lib/program/university-server"
-import { PageLoader } from "@/components/shared/page-loader"
 import { AgentStudentProgramPage } from "./_components/agent-student-program-page"
 import { UniversityProgramListPageContent } from "./_components/university-program/page-content"
 
@@ -32,11 +30,7 @@ export default async function ProgramPage({ searchParams }: ProgramPageProps) {
             redirect("/login")
         }
 
-        return (
-            <Suspense fallback={<PageLoader />}>
-                <UniversityProgramListPageContent initialOverview={initialOverview} />
-            </Suspense>
-        )
+        return <UniversityProgramListPageContent initialOverview={initialOverview} />
     }
 
     return <AgentStudentProgramPage />

@@ -1,13 +1,11 @@
 "use client"
 
 import { memo, useCallback, useState } from "react"
-import { ArrowLeft, Printer, Save } from "lucide-react"
+import { ArrowLeft, Plus, Printer, Save } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/hooks/useAuth"
-import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
 import {
     Dialog,
     DialogContent,
@@ -101,9 +99,6 @@ function DocumentTemplatePageView({
     deleteTemplateById,
     refetchTemplates,
 }: DocumentTemplatePageLogicProps) {
-    const { me } = useAuth()
-    const viewOnly = isUniversityViewOnly(me.data?.role)
-
     const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplateListItem | null>(
         null
     )
@@ -152,10 +147,10 @@ function DocumentTemplatePageView({
                                 like the admission requirements checklist for conditional letters.
                             </Typography>
                         </div>
-                        {/* <Button type="button" className="gap-2" onClick={openCreate}>
+                        <Button type="button" onClick={openCreate}>
                             <Plus className="size-4" />
                             Create Template
-                        </Button> */}
+                        </Button>
                     </div>
                 </BluryCard>
 
@@ -170,26 +165,24 @@ function DocumentTemplatePageView({
                         onEdit={openEdit}
                         onDelete={handleOpenDeleteDialog}
                         onRetry={refetchTemplates}
-                        viewOnly={viewOnly}
+                        viewOnly={false}
                     />
                 </div>
 
-                {!viewOnly ? (
-                    <DeleteTemplateDialog
-                        template={templateToDelete}
-                        open={templateToDelete !== null}
-                        isDeleting={isDeleting}
-                        onOpenChange={(open) => {
-                            if (!open) handleCloseDeleteDialog()
-                        }}
-                        onConfirm={handleConfirmDelete}
-                    />
-                ) : null}
+                <DeleteTemplateDialog
+                    template={templateToDelete}
+                    open={templateToDelete !== null}
+                    isDeleting={isDeleting}
+                    onOpenChange={(open) => {
+                        if (!open) handleCloseDeleteDialog()
+                    }}
+                    onConfirm={handleConfirmDelete}
+                />
             </main>
         )
     }
 
-    const isViewMode = mode === "view" || viewOnly
+    const isViewMode = mode === "view"
     const heading =
         mode === "create"
             ? "Create Document Template"

@@ -66,6 +66,8 @@ function mapListItem(
         tuition_fees: typeof degree?.fees === "string" ? degree.fees : null,
         agent_commission:
             typeof degree?.agent_commission === "number" ? degree.agent_commission : null,
+        created_at: course.created_at,
+        updated_at: course.updated_at,
     }
 }
 
@@ -85,6 +87,8 @@ export async function fetchUniversityProgramList(params: {
             `
             id,
             name,
+            created_at,
+            updated_at,
             degree_id,
             deadline_date,
             program_id,
@@ -106,7 +110,7 @@ export async function fetchUniversityProgramList(params: {
         `,
             { count: "exact" }
         )
-        .order("name", { ascending: true })
+        .order("created_at", { ascending: false })
 
     if (error) {
         throw new Error(error.message)

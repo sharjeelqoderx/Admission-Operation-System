@@ -13,12 +13,20 @@ import type {
 
 type UniversityProgramListCardProps = {
     program: UniversityProgramListItem
-    viewOnly?: boolean
+}
+
+function formatTimestamp(value: string) {
+    return new Date(value).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    })
 }
 
 export const UniversityProgramListCard = memo(function UniversityProgramListCard({
     program,
-    viewOnly = false,
 }: UniversityProgramListCardProps) {
     const metaParts = [
         program.level_name,
@@ -69,6 +77,15 @@ export const UniversityProgramListCard = memo(function UniversityProgramListCard
                             </div>
                         ) : null}
                     </div>
+
+                    <div className="flex flex-wrap gap-x-5 gap-y-1">
+                        <Typography as="span" font="small" className="text-gray-500">
+                            Created: {formatTimestamp(program.created_at)}
+                        </Typography>
+                        <Typography as="span" font="small" className="text-gray-500">
+                            Updated: {formatTimestamp(program.updated_at)}
+                        </Typography>
+                    </div>
                 </div>
 
                 <div className="flex w-full flex-col items-stretch gap-4 lg:w-[280px] lg:items-end">
@@ -102,16 +119,14 @@ export const UniversityProgramListCard = memo(function UniversityProgramListCard
                                 View
                             </Typography>
                         </Link>
-                        {!viewOnly ? (
-                            <Link
-                                href={`/dashboard/program/${program.id}/edit`}
-                                className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-byzantine px-6 font-semibold text-white shadow-sm transition-colors hover:bg-brand-byzantine/90"
-                            >
-                                <Typography as="span" font="text" className="font-semibold text-white">
-                                    Edit Program
-                                </Typography>
-                            </Link>
-                        ) : null}
+                        <Link
+                            href={`/dashboard/program/${program.id}/edit`}
+                            className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-byzantine px-6 font-semibold text-white shadow-sm transition-colors hover:bg-brand-byzantine/90"
+                        >
+                            <Typography as="span" font="text" className="font-semibold text-white">
+                                Edit Program
+                            </Typography>
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -124,7 +139,6 @@ type UniversityProgramListProps = {
     pagination: UniversityProgramListResponse["pagination"]
     isLoading?: boolean
     onPageChange: (page: number) => void
-    viewOnly?: boolean
 }
 
 export const UniversityProgramList = memo(function UniversityProgramList({
@@ -132,7 +146,6 @@ export const UniversityProgramList = memo(function UniversityProgramList({
     pagination,
     isLoading = false,
     onPageChange,
-    viewOnly = false,
 }: UniversityProgramListProps) {
     if (isLoading) {
         return <PageLoader className="py-12" />
@@ -149,7 +162,7 @@ export const UniversityProgramList = memo(function UniversityProgramList({
     return (
         <div className="space-y-5">
             {programs.map((program) => (
-                <UniversityProgramListCard key={program.id} program={program} viewOnly={viewOnly} />
+                <UniversityProgramListCard key={program.id} program={program} />
             ))}
 
             <div className="flex items-center justify-between pt-2">

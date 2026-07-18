@@ -6,8 +6,6 @@ import { ChevronLeft } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
-import { useAuth } from "@/hooks/useAuth"
-import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
 import { formatProgramDate, formatStudyMode } from "@/lib/utils/program"
 import type { UniversityProgramDetail } from "@/types/schemas/university-program"
 
@@ -48,9 +46,6 @@ function DetailTextBlock({ label, value }: { label: string; value?: string | nul
 export const UniversityProgramDetailView = memo(function UniversityProgramDetailView({
     detail,
 }: UniversityProgramDetailViewProps) {
-    const { me } = useAuth()
-    const viewOnly = isUniversityViewOnly(me.data?.role)
-
     const tuitionLabel = detail.tuition_fees
         ? detail.tuition_fees.toLowerCase().includes("tuition")
             ? detail.tuition_fees
@@ -71,13 +66,11 @@ export const UniversityProgramDetailView = memo(function UniversityProgramDetail
                     </Typography>
                 </div>
 
-                {!viewOnly ? (
-                    <Link href={`/dashboard/program/${detail.id}/edit`}>
-                        <Button className="h-11 rounded-xl bg-brand-byzantine px-6 font-semibold hover:bg-brand-byzantine/90">
-                            Edit Program
-                        </Button>
-                    </Link>
-                ) : null}
+                <Link href={`/dashboard/program/${detail.id}/edit`}>
+                    <Button className="h-11 rounded-xl bg-brand-byzantine px-6 font-semibold hover:bg-brand-byzantine/90">
+                        Edit Program
+                    </Button>
+                </Link>
             </div>
 
             <div className="space-y-2">
