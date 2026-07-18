@@ -1,12 +1,23 @@
 "use client"
 
 import { memo, useState } from "react"
+import { memo, useState } from "react"
 import Link from "next/link"
+import { Clock, MapPin, ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 import { Clock, MapPin, ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { PageLoader } from "@/components/shared/page-loader"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import {
     Dialog,
     DialogContent,
@@ -43,6 +54,7 @@ export const UniversityProgramListCard = memo(function UniversityProgramListCard
     isDeleting,
     onDelete,
 }: UniversityProgramListCardProps) {
+    const [deleteOpen, setDeleteOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
     const metaParts = [
         program.level_name,
@@ -106,6 +118,15 @@ export const UniversityProgramListCard = memo(function UniversityProgramListCard
                                 </Typography>
                             </div>
                         ) : null}
+                    </div>
+
+                    <div className="flex flex-wrap gap-x-5 gap-y-1">
+                        <Typography as="span" font="small" className="text-gray-500">
+                            Created: {formatTimestamp(program.created_at)}
+                        </Typography>
+                        <Typography as="span" font="small" className="text-gray-500">
+                            Updated: {formatTimestamp(program.updated_at)}
+                        </Typography>
                     </div>
 
                     <div className="flex flex-wrap gap-x-5 gap-y-1">
@@ -208,6 +229,7 @@ export const UniversityProgramListCard = memo(function UniversityProgramListCard
 })
 
 export type UniversityProgramListProps = {
+export type UniversityProgramListProps = {
     programs: UniversityProgramListItem[]
     pagination: UniversityProgramListResponse["pagination"]
     isLoading?: boolean
@@ -215,8 +237,10 @@ export type UniversityProgramListProps = {
     canManagePrograms: boolean
     onPageChange: (page: number) => void
     onDelete: (id: string) => void
+    onDelete: (id: string) => void
 }
 
+export const UniversityProgramList = memo<UniversityProgramListProps>(function UniversityProgramList({
 export const UniversityProgramList = memo<UniversityProgramListProps>(function UniversityProgramList({
     programs,
     pagination,
@@ -224,6 +248,7 @@ export const UniversityProgramList = memo<UniversityProgramListProps>(function U
     deletingId,
     canManagePrograms,
     onPageChange,
+    onDelete,
     onDelete,
 }: UniversityProgramListProps) {
     if (isLoading) {

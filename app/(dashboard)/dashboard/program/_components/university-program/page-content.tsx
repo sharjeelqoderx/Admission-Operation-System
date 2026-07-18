@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { UniversityProgramList as ProgramList } from "./program-list"
+import { UniversityProgramList as ProgramList } from "./program-list"
 import { withUniversityProgramPageLogic } from "./withUniversityProgramPageLogic"
 import type { UniversityProgramListResponse } from "@/types/schemas/university-program"
 
@@ -16,8 +17,10 @@ type UniversityProgramPageViewProps = {
     searchValue: string
     isFetching: boolean
     deletingId: string | null
+    deletingId: string | null
     onSearchChange: (value: string) => void
     onPageChange: (page: number) => void
+    onDelete: (id: string) => void
     onDelete: (id: string) => void
 }
 
@@ -27,8 +30,10 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
     searchValue,
     isFetching,
     deletingId,
+    deletingId,
     onSearchChange,
     onPageChange,
+    onDelete,
     onDelete,
 }: UniversityProgramPageViewProps) {
     return (
@@ -65,12 +70,14 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
             </div>
 
             <ProgramList
+            <ProgramList
                 programs={overview.data}
                 pagination={overview.pagination}
                 isLoading={isFetching}
                 deletingId={deletingId}
                 canManagePrograms={canManagePrograms}
                 onPageChange={onPageChange}
+                onDelete={onDelete}
                 onDelete={onDelete}
             />
         </div>
