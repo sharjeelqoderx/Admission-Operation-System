@@ -33,6 +33,8 @@ import { DatePicker } from "@/components/shared/date-picker"
 import { CountrySelect } from "@/components/shared/country-select"
 import { StateSelect } from "@/components/shared/state-select"
 import { CitySelect } from "@/components/shared/city-select"
+import { useCountries } from "@/hooks/useLocations"
+import type { CountryOption } from "@/lib/data/locations"
 import ImageUploadCard from "@/components/shared/image-upload-card"
 import {
     Dialog,
@@ -229,6 +231,12 @@ function ProfilePageView({ initialData }: PageContentProps) {
     const { me } = useAuth()
     const user = (me.data as ProfilePageData | undefined) ?? initialData
     const isError = me.isError
+    const { data: countries } = useCountries()
+    
+    const getCountryIso2 = (countryName: string) => {
+        const country = countries?.find(c => c.name === countryName)
+        return country?.iso2.toLowerCase()
+    }
 
     const mutation = useMutation({
         mutationFn: async (fd: FormData) => {
@@ -537,19 +545,24 @@ function ProfilePageView({ initialData }: PageContentProps) {
  
                             <form.Field name="phone">
                                 {(field) => (
-                                    <F field={field} label="Phone Number">
-                                        {isEditingBasic ? (
-                                            <PhoneInputComponent
-                                                value={field.state.value}
-                                                onChange={(value) => field.handleChange(value)}
-                                                placeholder="Enter your phone number"
-                                            />
-                                        ) : (
-                                            <div className="p-3 bg-white/20 rounded-xl border border-white/20 min-h-12 flex items-center shadow-sm">
-                                                <Typography className="text-gray-800 font-semibold">{field.state.value || "N/A"}</Typography>
-                                            </div>
+                                    <form.Subscribe selector={(s) => s.values.country}>
+                                        {(country) => (
+                                            <F field={field} label="Phone Number">
+                                                {isEditingBasic ? (
+                                                    <PhoneInputComponent
+                                                        value={field.state.value}
+                                                        onChange={(value) => field.handleChange(value)}
+                                                        placeholder="Enter your phone number"
+                                                        country={getCountryIso2(country)}
+                                                    />
+                                                ) : (
+                                                    <div className="p-3 bg-white/20 rounded-xl border border-white/20 min-h-12 flex items-center shadow-sm">
+                                                        <Typography className="text-gray-800 font-semibold">{field.state.value || "N/A"}</Typography>
+                                                    </div>
+                                                )}
+                                            </F>
                                         )}
-                                    </F>
+                                    </form.Subscribe>
                                 )}
                             </form.Field>
  
@@ -809,19 +822,24 @@ function ProfilePageView({ initialData }: PageContentProps) {
                             </form.Field>
                             <form.Field name="guardian_phone">
                                 {(field) => (
-                                    <F field={field} label="Guardian Phone (Optional)">
-                                        {isEditingStudentDetails ? (
-                                            <PhoneInputComponent
-                                                value={field.state.value}
-                                                onChange={(value) => field.handleChange(value)}
-                                                placeholder="Enter guardian phone (optional)"
-                                            />
-                                        ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                            </div>
+                                    <form.Subscribe selector={(s) => s.values.country}>
+                                        {(country) => (
+                                            <F field={field} label="Guardian Phone (Optional)">
+                                                {isEditingStudentDetails ? (
+                                                    <PhoneInputComponent
+                                                        value={field.state.value}
+                                                        onChange={(value) => field.handleChange(value)}
+                                                        placeholder="Enter guardian phone (optional)"
+                                                        country={getCountryIso2(country)}
+                                                    />
+                                                ) : (
+                                                    <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                        <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                                    </div>
+                                                )}
+                                            </F>
                                         )}
-                                    </F>
+                                    </form.Subscribe>
                                 )}
                             </form.Field>
                         </div>

@@ -11,6 +11,7 @@ interface PhoneInputProps {
     className?: string
     placeholder?: string
     disabled?: boolean
+    country?: string
 }
 
 export function PhoneInputComponent({
@@ -19,9 +20,10 @@ export function PhoneInputComponent({
     className,
     placeholder,
     disabled,
+    country,
 }: PhoneInputProps) {
     const phoneInputProps = {
-        country: "us",
+        country: country || (value ? undefined : "us"),
         value,
         onChange,
         placeholder,
@@ -30,9 +32,9 @@ export function PhoneInputComponent({
         searchPlaceholder: "Search",
         enableAreaCodes: false,
         enableTerritories: false,
-        containerClass: "w-full",
+        containerClass: "w-full relative z-[9999]",
         inputClass: "w-full",
-        containerStyle: { width: "100%" },
+        containerStyle: { width: "100%", zIndex: 9999 },
         inputStyle: { 
             width: "100%", 
             minWidth: 0, 
@@ -53,11 +55,12 @@ export function PhoneInputComponent({
             borderRadius: "0.125rem 0 0 0.125rem",
             height: "50px",
             width: "55px"
-        }
+        },
+        dropdownStyle: { zIndex: 9999 }
     } as any
 
     return (
-        <div className={cn("w-full min-w-0", className)}>
+        <div className={cn("w-full min-w-0 relative z-[9999]", className)}>
             <PhoneInput {...phoneInputProps} />
         </div>
     )

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server"
 import { upsertStudentDocument } from "@/lib/supabase/upsert-student-document"
+import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { STUDENT_DOCUMENT_TYPE_IDS } from "@/lib/constants/document-types"
 import { formatFullName } from "@/lib/utils/profile"
 import { requiresApsRequirement } from "@/lib/utils/aps"
+import { Role } from "@/types/enums/role"
 
 export async function GET(
     req: NextRequest,
@@ -153,7 +155,10 @@ export async function PATCH(
 
         const { id } = await params
         const formData = await req.formData()
-        const getString = (key: string) => { const v = formData.get(key); return typeof v === "string" ? v : undefined }
+        const getString = (key: string) => { 
+            const v = formData.get(key); 
+            return typeof v === "string" && v.trim() !== "" ? v : undefined 
+        }
         const getFile = (key: string) => { const v = formData.get(key); return v instanceof File ? v : undefined }
 
         const academicRaw = getString("academic_background")
@@ -178,49 +183,71 @@ export async function PATCH(
             academic,
         }
 
+        // Check user's role
+        const { data: meProfile } = await supabase
+            .from("profile")
+            .select("id, role")
+            .eq("id", user.id)
+            .maybeSingle()
+
+        if (!meProfile) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
+
+        if (meProfile.role !== Role.AGENT && meProfile.role !== Role.ADMIN) {
+            // If user is a student, they can only update their own profile
+            if (meProfile.role === Role.STUDENT && user.id !== id) {
+                return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+            } else if (meProfile.role !== Role.STUDENT) {
+                return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+            }
+        }
+
+        // Use service role client for database updates to bypass RLS
+        const serviceSupabase = createSupabaseServiceClient()
 
         // 1. Update profile
         const avatarUpload = data.avatar_url
-            ? await (await import("@/lib/supabase/upload-public-image")).uploadPublicImage({ supabase, bucket: "student-admission", userId: id, file: data.avatar_url })
+            ? await uploadPublicImage({ supabase: serviceSupabase, bucket: "student-admission", userId: id, file: data.avatar_url })
             : null
 
         const passportUpload = data.passport_file_url
-            ? await (await import("@/lib/supabase/upload-public-image")).uploadPublicImage({ supabase, bucket: "student-admission", userId: `${id}/passport`, file: data.passport_file_url })
+            ? await uploadPublicImage({ supabase: serviceSupabase, bucket: "student-admission", userId: `${id}/passport`, file: data.passport_file_url })
             : null
 
-        const { error: profileError } = await supabase
+        const { error: profileError } = await serviceSupabase
             .from("profile")
             .update({
-                ...(data.title ? { title: data.title } : {}),
-                ...(data.first_name ? { first_name: data.first_name } : {}),
-                ...(data.last_name ? { last_name: data.last_name } : {}),
-                email: data.email,
-                phone: data.phone,
-                date_of_birth: data.dob,
+                ...(data.title !== undefined ? { title: data.title } : {}),
+                ...(data.first_name !== undefined ? { first_name: data.first_name } : {}),
+                ...(data.last_name !== undefined ? { last_name: data.last_name } : {}),
+                ...(data.email !== undefined ? { email: data.email } : {}),
+                ...(data.phone !== undefined ? { phone: data.phone } : {}),
+                ...(data.dob !== undefined ? { date_of_birth: data.dob } : {}),
                 ...(avatarUpload ? { avatar_url: avatarUpload.publicUrl } : {}),
-                gender: data.gender
-                    ? (data.gender.toUpperCase() as "MALE" | "FEMALE")
-                    : undefined,
+                ...(data.gender !== undefined
+                    ? { gender: data.gender.toUpperCase() as "MALE" | "FEMALE" }
+                    : {}),
             })
             .eq("id", id)
 
         if (profileError) {
-            console.error(profileError)
-            return NextResponse.json({ error: "Profile update failed" }, { status: 400 })
+            console.error("Profile update error:", JSON.stringify(profileError, null, 2))
+            return NextResponse.json({ error: "Profile update failed", details: profileError }, { status: 400 })
         }
 
         // 2. Upsert student details
-        const { error: studentError } = await supabase
+        const { error: studentError } = await serviceSupabase
             .from("student")
             .upsert(
                 {
                     profile_id: id,
-                    country: data.country,
-                    state: data.state,
-                    city: data.city,
-                    nationality: data.nationality,
-                    guardian_email: data.guardian_email,
-                    guardian_phone: data.guardian_phone,
+                    ...(data.country !== undefined ? { country: data.country } : {}),
+                    ...(data.state !== undefined ? { state: data.state } : {}),
+                    ...(data.city !== undefined ? { city: data.city } : {}),
+                    ...(data.nationality !== undefined ? { nationality: data.nationality } : {}),
+                    ...(data.guardian_email !== undefined ? { guardian_email: data.guardian_email } : {}),
+                    ...(data.guardian_phone !== undefined ? { guardian_phone: data.guardian_phone } : {}),
                     ...(passportUpload ? { passport_file_url: passportUpload.publicUrl } : {}),
                     ...(data.country !== undefined
                         ? { aps_requirement: requiresApsRequirement(data.country) }
@@ -230,8 +257,8 @@ export async function PATCH(
             )
 
         if (studentError) {
-            console.error(studentError)
-            return NextResponse.json({ error: "Student update failed" }, { status: 400 })
+            console.error("Student update error:", JSON.stringify(studentError, null, 2))
+            return NextResponse.json({ error: "Student update failed", details: studentError }, { status: 400 })
         }
 
         // 3. Update or insert education rows
@@ -264,21 +291,21 @@ export async function PATCH(
             }
 
             if (row.id) {
-                const { error: eduError } = await supabase
+                const { error: eduError } = await serviceSupabase
                     .from("education")
                     .update(payload)
                     .eq("id", row.id)
                 if (eduError) {
-                    console.error(eduError)
-                    return NextResponse.json({ error: "Education update failed" }, { status: 400 })
+                    console.error("Education update error:", JSON.stringify(eduError, null, 2))
+                    return NextResponse.json({ error: "Education update failed", details: eduError }, { status: 400 })
                 }
             } else {
-                const { error: eduError } = await supabase
+                const { error: eduError } = await serviceSupabase
                     .from("education")
                     .insert(payload)
                 if (eduError) {
-                    console.error(eduError)
-                    return NextResponse.json({ error: "Education update failed" }, { status: 400 })
+                    console.error("Education insert error:", JSON.stringify(eduError, null, 2))
+                    return NextResponse.json({ error: "Education update failed", details: eduError }, { status: 400 })
                 }
             }
         }
@@ -286,7 +313,7 @@ export async function PATCH(
         // 4. Upsert passport document if provided
         if (data.passport_file_url instanceof File) {
             await upsertStudentDocument({
-                supabase,
+                supabase: serviceSupabase,
                 profileId: id,
                 uploadedByProfileId: user.id,
                 documentTypeId: STUDENT_DOCUMENT_TYPE_IDS.PASSPORT,
