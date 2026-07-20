@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { useAuth } from "@/hooks/useAuth"
 import { Typography } from "@/components/shared/Typography"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -14,6 +15,7 @@ import { getLevelPriority, getLevelBadgeStyle } from "@/lib/utils/levels"
 import { Button } from "@/components/ui/button"
 import { PageLoader } from "@/components/shared/page-loader"
 import type { ProgramListResponse } from "@/types/schemas/program"
+import { Role } from "@/types/enums/role"
 
 export function AgentStudentProgramPage() {
     const searchParams = useSearchParams()
@@ -28,26 +30,19 @@ export function AgentStudentProgramPage() {
     const [localSearch, setLocalSearch] = useState(urlSearch)
     const debouncedSearch = useDebounce(localSearch, 600)
 
-    // Fetch user
-    const { data: user } = useQuery({
-        queryKey: ["me"],
-        queryFn: async () => {
-            const res = await fetch("/api/me")
-            if (!res.ok) throw new Error("Failed to fetch user")
-            return res.json()
-        },
-    })
+    const { me } = useAuth()
+    const user = me.data
 
     // Fetch student details if user is student
     const { data: studentDetails } = useQuery({
-        queryKey: ["student", user?.data?.id],
+        queryKey: ["student", user?.id],
         queryFn: async () => {
-            if (!user?.data?.id) return null
-            const res = await fetch(`/api/student/${user.data.id}`)
+            if (!user?.id) return null
+            const res = await fetch(`/api/student/${user.id}`)
             if (!res.ok) throw new Error("Failed to fetch student")
             return res.json()
         },
-        enabled: !!user?.data?.id && user?.data?.role === "STUDENT",
+        enabled: !!user?.id && user?.role === Role.STUDENT,
     })
 
     const { data: levels = [], isLoading: levelsLoading } = useLevels()
@@ -127,11 +122,11 @@ export function AgentStudentProgramPage() {
         router.push(`${pathname}?${params.toString()}`)
     }
 
-    const allPrograms = useMemo(() => {
+    const allProgramsResult = useMemo(() => {
         let programs = data?.pages.flatMap((page) => page.data) ?? [];
         let highestLevelName: string | null = null;
 
-        if (user?.data?.role === "STUDENT") {
+        if (user?.role === Role.STUDENT) {
             // Find highest level priority from student's education
             let highestLevelPriority = 0;
             if (studentDetails?.data?.education && Array.isArray(studentDetails.data.education)) {
@@ -156,8 +151,11 @@ export function AgentStudentProgramPage() {
             }
         }
 
-        return programs;
+        return { programs, highestLevelName };
     }, [data, user, studentDetails])
+
+    const allPrograms = allProgramsResult.programs;
+    const highestLevelName = allProgramsResult.highestLevelName;
 
     const isPageLoading = levelsLoading || isLoading || (isFetching && !isFetchingNextPage)
 
@@ -170,6 +168,15 @@ export function AgentStudentProgramPage() {
                 <Typography as="p" font="sub-text" className="text-gray-500 font-medium max-w-2xl leading-relaxed">
                     Browse through our extensive academic catalog. Find the right program that fits your career goals across multiple campuses and universities.
                 </Typography>
+                {user?.role === Role.STUDENT && highestLevelName && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <Typography as="span" font="small" className="text-gray-500">Your current qualification:</Typography>
+                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${getLevelBadgeStyle(highestLevelName)}`}>
+                            {highestLevelName}
+                        </span>
+                        <Typography as="span" font="small" className="text-gray-400">— showing eligible programs above this level</Typography>
+                    </div>
+                )}
             </div>
 
             <div className="flex flex-col md:flex-row gap-4 sticky top-4 z-10">
@@ -194,7 +201,9 @@ export function AgentStudentProgramPage() {
                                 <SelectItem value="ALL">All Levels</SelectItem>
                                 {levels.map((level) => (
                                     <SelectItem key={level.id} value={level.id}>
-                                        {level.name}
+                                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${getLevelBadgeStyle(level.name)}`}>
+                                            {level.name}
+                                        </span>
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -217,7 +226,7 @@ export function AgentStudentProgramPage() {
             </div>
 
             {isPageLoading ? (
-                <PageLoader label={isLoading ? "Loading programs..." : "Searching programs..."} />
+                <PageLoader />
             ) : isError ? (
                 <div className="flex flex-col items-center justify-center py-32 text-center space-y-4">
                     <div className="size-16 rounded-2xl bg-red-50 flex items-center justify-center">

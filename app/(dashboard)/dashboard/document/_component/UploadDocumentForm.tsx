@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
 import { useEffect } from "react"
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
+import { useAuth } from "@/hooks/useAuth"
 import { DocumentFormSchema, type DocumentInput } from "@/types/schemas/document"
 import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils"
 import ImageUploadCard from "@/components/shared/image-upload-card"
 import { Plus, ImageIcon } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
+import { Role } from "@/types/enums/role"
 
 function F({ field, label, children }: { field: any; label: string; children: React.ReactNode }) {
     const isSubmitted = field.form.state.isSubmitted
@@ -36,19 +38,12 @@ export function UploadDocumentForm() {
     const documentTypeIdParam = searchParams.get("document_type_id")
     const queryClient = useQueryClient()
 
-    const { data: user } = useQuery({
-        queryKey: ["me"],
-        queryFn: async () => {
-            const res = await fetch("/api/me");
-            const json = await res.json();
-            if (!res.ok) throw new Error(json?.error ?? "Failed");
-            return json.data;
-        },
-    });
+    const { me } = useAuth()
+    const user = me.data
 
     const { data: studentsData } = useQuery({
         queryKey: ["students"],
-        enabled: user?.role === "AGENT",
+        enabled: user?.role === Role.AGENT,
         queryFn: async () => {
             const res = await fetch("/api/student")
             const json = await res.json()
@@ -130,7 +125,7 @@ export function UploadDocumentForm() {
     })
 
     useEffect(() => {
-        if (user?.role === "STUDENT") {
+        if (user?.role === Role.STUDENT) {
             form.setFieldValue("student_id", user.id);
         } else if (studentIdParam) {
             form.setFieldValue("student_id", studentIdParam);
@@ -158,7 +153,7 @@ export function UploadDocumentForm() {
                 className="space-y-12 relative z-10"
             >
                 <FieldGroup className="p-1">
-                    {user?.role !== "STUDENT" && (
+                    {user?.role !== Role.STUDENT && (
                         <form.Field name="student_id">
                             {(field) => (
                                 <F field={field} label="Select Student">

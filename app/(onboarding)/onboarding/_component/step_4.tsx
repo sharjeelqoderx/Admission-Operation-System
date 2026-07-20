@@ -11,7 +11,7 @@ import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
 import { FilePreview } from "@/components/shared/FilePreview"
 import { useAuth } from "@/hooks/useAuth"
-import { PageLoader } from "@/components/shared/page-loader"
+import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { useDegrees } from "@/hooks/useDegrees"
 import { useLevels } from "@/hooks/useLevels"
 import { filterCoursesByQualificationLevel } from "@/lib/utils/levels"
@@ -19,7 +19,7 @@ import { resolveCourseDocumentTypes } from "@/lib/utils/course-documents"
 import { resolveApsDocumentType, withApsRequiredDocument } from "@/lib/utils/aps"
 import { formatProgramDate } from "@/lib/utils/program"
 import type { CourseProgram } from "@/types/schemas/program"
-import { FileText, Loader2, Plus } from "lucide-react"
+import { FileText, Plus } from "lucide-react"
 import { ImageUploadCard } from "@/components/shared/image-upload-card"
 import {
     Dialog,
@@ -218,7 +218,7 @@ function SupportingDocumentUploadModal({
                     >
                         {uploadMutation.isPending ? (
                             <>
-                                <Loader2 className="size-4 animate-spin" />
+                                <Spinner size="sm" />
                                 Uploading...
                             </>
                         ) : (
@@ -296,10 +296,10 @@ function SupportingDocumentsSection({
                                 className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border-2 border-purple-400 bg-purple-50/30 shadow-md cursor-not-allowed"
                             >
                                 <div className="absolute top-3 left-3 z-10">
-                                    <Loader2 className="size-4 text-purple-500 animate-spin" />
+                                    <Spinner size="sm" />
                                 </div>
                                 <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                    <Loader2 className="size-10 text-purple-500 animate-spin" />
+                                    <Spinner size="lg" className="size-10" />
                                 </div>
                                 <div>
                                     <RequiredDocumentTitle name={rt.name} />
@@ -486,12 +486,7 @@ function SupportingDocumentsSection({
                 </div>
 
                 {isDocumentsLoading ? (
-                    <div className="flex flex-col items-center justify-center gap-3 py-14 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                        <Loader2 className="size-8 text-brand-byzantine animate-spin" />
-                        <Typography as="p" className="text-sm font-medium text-gray-600">
-                            Loading documents...
-                        </Typography>
-                    </div>
+                    <PageLoader className="py-14 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200" />
                 ) : requiredDocTypes.length > 0 || optionalDocTypes.length > 0 ? (
                     <div className="space-y-6">
                         {requiredDocTypes.length > 0 && (
@@ -766,7 +761,7 @@ export function Step4Application({ onBack }: { onBack: () => void }) {
     }, [applicationRequiredDocTypes, documents, mutation, pendingFiles, router, selectedCourseId])
 
     if (isLoading || loadingDegrees || (isFetching && !qualificationId)) {
-        return <PageLoader label="Loading courses..." />
+        return <PageLoader />
     }
 
     return (
@@ -854,7 +849,7 @@ export function Step4Application({ onBack }: { onBack: () => void }) {
                 >
                     {mutation.isPending ? (
                         <>
-                            <Loader2 className="size-4 animate-spin mr-2" />
+                            <Spinner size="sm" className="mr-2" />
                             Processing...
                         </>
                     ) : selectedCourseId ? (

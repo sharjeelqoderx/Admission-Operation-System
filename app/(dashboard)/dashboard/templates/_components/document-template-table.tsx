@@ -1,7 +1,8 @@
 "use client"
 
 import { memo } from "react"
-import { AlertCircle, Eye, FileText, Loader2, Pencil, Trash2 } from "lucide-react"
+import { AlertCircle, Eye, FileText, Pencil, Trash2 } from "lucide-react"
+import { PageLoader } from "@/components/shared/page-loader"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
@@ -28,6 +29,7 @@ type DocumentTemplateTableProps = {
     onDelete: (template: DocumentTemplateListItem) => void
     onRetry: () => void
     viewOnly?: boolean
+    canDelete?: boolean
 }
 
 const COLUMN_COUNT = 4
@@ -60,6 +62,7 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
     onDelete,
     onRetry,
     viewOnly = false,
+    canDelete = true,
 }: DocumentTemplateTableProps) {
     if (isLoading) {
         return (
@@ -70,12 +73,7 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                 childClass="p-0!"
                 className="rounded-lg p-0"
             >
-                <div className="flex flex-col items-center justify-center py-24 gap-3">
-                    <Loader2 className="size-8 text-brand-secondary animate-spin" />
-                    <Typography as="p" className="text-sm font-medium text-gray-500">
-                        Loading document templates...
-                    </Typography>
-                </div>
+                <PageLoader className="py-24" />
             </BluryCard>
         )
     }
@@ -221,17 +219,19 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                                     <Pencil className="size-4" />
                                                 </Button>
                                             ) : null}
-                                            {/* <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                className="size-9 shrink-0 rounded-lg shadow-sm"
-                                                aria-label={`Delete ${template.title}`}
-                                                disabled={deletingId === template.id}
-                                                onClick={() => onDelete(template)}
-                                            >
-                                                <Trash2 className="size-4" />
-                                            </Button> */}
+                                            {canDelete ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="size-9 shrink-0 rounded-lg shadow-sm"
+                                                    aria-label={`Delete ${template.title}`}
+                                                    disabled={deletingId === template.id}
+                                                    onClick={() => onDelete(template)}
+                                                >
+                                                    <Trash2 className="size-4" />
+                                                </Button>
+                                            ) : null}
                                         </div>
                                     </TableCell>
                                 </TableRow>

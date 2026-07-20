@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Typography } from "@/components/shared/Typography"
+import { PageLoader } from "@/components/shared/page-loader"
 import { StudentPipelineBadge } from "@/components/shared/student-pipeline-badge"
 import {
     Table,
@@ -134,10 +135,8 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="px-6 py-12 text-center">
-                                        <Typography as="span" font="sub-text" className="text-gray-500">
-                                            Loading applications...
-                                        </Typography>
+                                    <TableCell colSpan={6} className="px-6 py-12">
+                                        <PageLoader className="min-h-0" />
                                     </TableCell>
                                 </TableRow>
                             ) : applications.length === 0 ? (

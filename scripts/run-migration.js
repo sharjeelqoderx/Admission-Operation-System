@@ -3,11 +3,11 @@ require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
 async function runMigration() {
-  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SECRET_KEY;
 
   if (!supabaseUrl || !serviceRoleKey) {
-    console.error('Missing Supabase credentials!');
+    console.error('Missing SUPABASE_URL or SUPABASE_SECRET_KEY!');
     process.exit(1);
   }
 

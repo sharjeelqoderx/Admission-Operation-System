@@ -20,6 +20,7 @@ import type {
     ApplicationProfileRole,
 } from "@/types/schemas/application"
 import type { Database, Tables } from "@/types/supabase"
+import { Role } from "@/types/enums/role"
 
 const APPLICATION_LIST_SELECT = `
     id,
@@ -318,7 +319,7 @@ async function resolveMatchingStudentProfileIds(
     const escaped = searchTerm.replace(/[%_,]/g, "\\$&")
     const pattern = `%${escaped}%`
 
-    if (options.role === "STUDENT") {
+    if (options.role === Role.STUDENT) {
         const { data: profile, error } = await supabase
             .from("profile")
             .select("id, first_name, last_name, email")
@@ -340,7 +341,7 @@ async function resolveMatchingStudentProfileIds(
 
     let allowedProfileIds: string[] | null = null
 
-    if (options.role === "AGENT" && options.scope !== "all") {
+    if (options.role === Role.AGENT && options.scope !== "all") {
         const { data: agentRow, error: agentError } = await supabase
             .from("agent")
             .select("id")
@@ -399,14 +400,14 @@ function applyApplicationFilters(query: any, ctx: ApplicationFilterContext) {
         nextQuery = nextQuery.eq("profile_id", ctx.studentId)
     } else if (ctx.scope === "all") {
         // All Application View — no role-based row restriction
-    } else if (ctx.role === "STUDENT") {
+    } else if (ctx.role === Role.STUDENT) {
         nextQuery = nextQuery.eq("profile_id", ctx.userId)
-    } else if (ctx.role === "AGENT") {
+    } else if (ctx.role === Role.AGENT) {
         const studentProfileIds = ctx.agentStudentProfileIds ?? []
         nextQuery = nextQuery.or(
             buildAgentApplicationOrFilter(ctx.userId, studentProfileIds)
         )
-    } else if (ctx.role === "UNIVERSITY") {
+    } else if (ctx.role === Role.ADMIN) {
         nextQuery = nextQuery.eq("university_id", ctx.userId)
     }
 
@@ -474,7 +475,8 @@ export async function fetchApplicationsList(
         userId,
         role,
         student_id: studentId,
-        limit,
+        page: pageOption,
+        limit: limitOption,
         status,
         degree_id: degreeId,
         date_from: dateFrom,
@@ -483,22 +485,42 @@ export async function fetchApplicationsList(
         scope: listScope,
     } = options
 
-    if (listScope === "all" && role === "STUDENT") {
+    if (listScope === "all" && role === Role.STUDENT) {
         return { error: "Forbidden" }
     }
+
+    const page = pageOption
+    const pageSize = limitOption
+    const usePagination = page != null && pageSize != null
+
+    const emptyResult = (): ApplicationListResponse => ({
+        data: [],
+        stats: EMPTY_APPLICATION_STATS,
+        role,
+        ...(usePagination
+            ? {
+                  pagination: {
+                      total: 0,
+                      page: 1,
+                      limit: pageSize,
+                      totalPages: 0,
+                  },
+              }
+            : {}),
+    })
 
     let filteredCourseIds: string[] | null = null
     let filteredProfileIds: string[] | null = null
     let agentStudentProfileIds: string[] | null = null
 
-    if (role === "AGENT" && !studentId && listScope !== "all") {
+    if (role === Role.AGENT && !studentId && listScope !== "all") {
         agentStudentProfileIds = await resolveAgentStudentProfileIds(supabase, userId)
     }
 
     if (degreeId) {
         filteredCourseIds = await resolveCourseIdsForDegree(supabase, degreeId)
         if (filteredCourseIds.length === 0) {
-            return { data: [], stats: EMPTY_APPLICATION_STATS, role }
+            return emptyResult()
         }
     }
 
@@ -511,7 +533,7 @@ export async function fetchApplicationsList(
         })
 
         if (filteredProfileIds.length === 0) {
-            return { data: [], stats: EMPTY_APPLICATION_STATS, role }
+            return emptyResult()
         }
     }
 
@@ -530,7 +552,9 @@ export async function fetchApplicationsList(
     const stats = await fetchApplicationStats(supabase, filterContext)
 
     let query = applyApplicationFilters(
-        supabase.from("application").select(APPLICATION_LIST_SELECT),
+        supabase
+            .from("application")
+            .select(APPLICATION_LIST_SELECT, usePagination ? { count: "exact" } : undefined),
         filterContext
     ).order("created_at", { ascending: false })
 
@@ -538,11 +562,16 @@ export async function fetchApplicationsList(
         query = query.eq("status", status)
     }
 
-    if (limit) {
-        query = query.limit(limit)
+    if (usePagination) {
+        const safePage = Math.max(1, page)
+        const from = (safePage - 1) * pageSize
+        const to = from + pageSize - 1
+        query = query.range(from, to)
+    } else if (pageSize) {
+        query = query.limit(pageSize)
     }
 
-    const { data: applications, error } = await query
+    const { data: applications, error, count } = await query
 
     if (error) {
         return { error: error.message }
@@ -553,5 +582,23 @@ export async function fetchApplicationsList(
         (applications ?? []) as unknown as ApplicationListRow[]
     )
 
-    return { data: result, stats, role }
+    if (!usePagination) {
+        return { data: result, stats, role }
+    }
+
+    const total = count ?? 0
+    const totalPages = total === 0 ? 0 : Math.max(1, Math.ceil(total / pageSize))
+    const safePage = totalPages > 0 ? Math.min(page, totalPages) : 1
+
+    return {
+        data: result,
+        stats,
+        role,
+        pagination: {
+            total,
+            page: safePage,
+            limit: pageSize,
+            totalPages,
+        },
+    }
 }

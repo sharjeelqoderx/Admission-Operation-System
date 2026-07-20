@@ -6,11 +6,11 @@ import { fetchApplicationDetail } from "@/lib/application/detail"
 import { ApplicationListQuerySchema } from "@/types/schemas/application"
 import type {
     ApplicationDashboardPageData,
-    ApplicationDetail,
     ApplicationDetailPageData,
     ApplicationListResponse,
     ApplicationProfileRole,
 } from "@/types/schemas/application"
+import { Role } from "@/types/enums/role"
 
 const DEFAULT_APPLICATION_LIST_QUERY = {
     q: "",
@@ -18,12 +18,40 @@ const DEFAULT_APPLICATION_LIST_QUERY = {
     degree_id: "all",
     date_from: "",
     date_to: "",
+    page: "1",
+    limit: "10",
 } as const
 
 const EMPTY_APPLICATIONS: ApplicationListResponse = {
     data: [],
     stats: { total: 0, pending: 0, accepted: 0 },
-    role: "AGENT",
+    role: Role.AGENT,
+    pagination: {
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0,
+    },
+}
+
+function buildQuery(searchParams: {
+    q?: string
+    status?: string
+    degree_id?: string
+    date_from?: string
+    date_to?: string
+    page?: string
+    limit?: string
+}) {
+    return {
+        q: searchParams.q ?? DEFAULT_APPLICATION_LIST_QUERY.q,
+        status: searchParams.status ?? DEFAULT_APPLICATION_LIST_QUERY.status,
+        degree_id: searchParams.degree_id ?? DEFAULT_APPLICATION_LIST_QUERY.degree_id,
+        date_from: searchParams.date_from ?? DEFAULT_APPLICATION_LIST_QUERY.date_from,
+        date_to: searchParams.date_to ?? DEFAULT_APPLICATION_LIST_QUERY.date_to,
+        page: searchParams.page ?? DEFAULT_APPLICATION_LIST_QUERY.page,
+        limit: searchParams.limit ?? DEFAULT_APPLICATION_LIST_QUERY.limit,
+    }
 }
 
 export async function fetchApplicationDashboardPageData(
@@ -33,7 +61,10 @@ export async function fetchApplicationDashboardPageData(
         degree_id?: string
         date_from?: string
         date_to?: string
-    } = {}
+        page?: string
+        limit?: string
+    } = {},
+    options: { scope?: "all"; paginate?: boolean } = {}
 ): Promise<ApplicationDashboardPageData> {
     const supabase = await createSupabaseServerClient()
     const {
@@ -41,13 +72,8 @@ export async function fetchApplicationDashboardPageData(
         error: authError,
     } = await supabase.auth.getUser()
 
-    const query = {
-        q: searchParams.q ?? DEFAULT_APPLICATION_LIST_QUERY.q,
-        status: searchParams.status ?? DEFAULT_APPLICATION_LIST_QUERY.status,
-        degree_id: searchParams.degree_id ?? DEFAULT_APPLICATION_LIST_QUERY.degree_id,
-        date_from: searchParams.date_from ?? DEFAULT_APPLICATION_LIST_QUERY.date_from,
-        date_to: searchParams.date_to ?? DEFAULT_APPLICATION_LIST_QUERY.date_to,
-    }
+    const query = buildQuery(searchParams)
+    const paginate = options.paginate === true || options.scope === "all"
 
     if (authError || !user) {
         return {
@@ -77,6 +103,9 @@ export async function fetchApplicationDashboardPageData(
         date_from: query.date_from || undefined,
         date_to: query.date_to || undefined,
         q: query.q || undefined,
+        page: paginate ? query.page : undefined,
+        limit: paginate ? query.limit : undefined,
+        scope: options.scope,
     })
 
     if (!queryParse.success) {
@@ -103,6 +132,23 @@ export async function fetchApplicationDashboardPageData(
         applications: result,
         query,
     }
+}
+
+export async function fetchAllApplicationViewPageData(
+    searchParams: {
+        q?: string
+        status?: string
+        degree_id?: string
+        date_from?: string
+        date_to?: string
+        page?: string
+        limit?: string
+    } = {}
+): Promise<ApplicationDashboardPageData> {
+    return fetchApplicationDashboardPageData(searchParams, {
+        scope: "all",
+        paginate: true,
+    })
 }
 
 export async function fetchApplicationDetailForPage(

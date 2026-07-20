@@ -6,6 +6,7 @@ import { z } from "zod"
 import { Enums, Tables, TablesUpdate } from "@/types/supabase"
 import { loginSchema, otpSchema, signupSchema } from "@/types/schemas/auth"
 import { ApiResponse } from "@/lib/api"
+import { Role } from "@/types/enums/role"
 
 type RoleEnum = Enums<"role_enum">
 type ProfileRow = Tables<"profile">
@@ -21,22 +22,22 @@ type SendOtpPayload = { email: string }
 type VerifyOtpPayload = { email: string; otp: z.infer<typeof otpSchema>["otp"] }
 
 type StudentRoleProfile = {
-    role: "STUDENT"
+    role: Role.STUDENT
     details: StudentRow | null
 }
 
 type AgentRoleProfile = {
-    role: "AGENT"
+    role: Role.AGENT
     details: AgentRow | null
 }
 
 type UniversityRoleProfile = {
-    role: "UNIVERSITY"
+    role: Role.ADMIN
     details: UniversityRow | null
 }
 
 type OtherRoleProfile = {
-    role: Exclude<RoleEnum, "STUDENT" | "AGENT" | "UNIVERSITY">
+    role: Exclude<RoleEnum, Role.STUDENT | Role.AGENT | Role.ADMIN>
     details: null
 }
 
@@ -215,7 +216,7 @@ export function useAuth() {
                 throw error
             }
         },
-        enabled: sessionActive,
+        enabled: clientReady && sessionActive,
         staleTime: 0,
         gcTime: 0,
         refetchOnMount: "always",

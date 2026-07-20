@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useForm } from "@tanstack/react-form"
-import { Loader2 } from "lucide-react"
+
 import { z } from "zod"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,7 @@ import { ImageUploadCard } from "@/components/shared/image-upload-card"
 import { fileWithinSizeLimit, MAX_FILE_SIZE_ERROR_MESSAGE, MAX_FILE_SIZE_LABEL } from "@/lib/constants/file-upload"
 import { F } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
-import { PageLoader } from "@/components/shared/page-loader"
+import { PageLoader, Spinner } from "@/components/shared/page-loader"
 
 const EXPERIENCE_OPTIONS = [
     { label: "1 – 3 years", value: "1-3" },
@@ -200,7 +200,7 @@ function AgentStep2Form({
                     Back
                 </Button>
                 <Button type="submit" className="flex-1 min-w-40 capitalize gap-2" disabled={agentProfile.isPending}>
-                    {agentProfile.isPending && <Loader2 className="size-4 animate-spin" />}
+                    {agentProfile.isPending && <Spinner size="sm" />}
                     {agentProfile.isPending ? "Saving..." : "Continue"}
                 </Button>
             </div>
@@ -219,7 +219,7 @@ export function AgentStep2({ onBack, onNext }: { onBack: () => void; onNext: () 
     const { data: meData, isLoading } = me
 
     if (isLoading) {
-        return <PageLoader label="Preparing your KYC details..." />
+        return <PageLoader />
     }
 
     const agentProfile = meData?.profile as { experience_years?: number | null } | undefined

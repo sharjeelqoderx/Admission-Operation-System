@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm, useStore } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useAuth } from "@/hooks/useAuth"
 import { StudentCreateFormSchema, StudentFormSchema, type StudentInput } from "@/types/schemas/student"
 import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
@@ -24,8 +25,10 @@ import { DatePicker } from "@/components/shared/date-picker"
 import { CountrySelect } from "@/components/shared/country-select"
 import { StateSelect } from "@/components/shared/state-select"
 import { CitySelect } from "@/components/shared/city-select"
-import { Building, ChevronDown, School, FileUp, FileText, Plus, Loader2, Upload, X, ClipboardList } from "lucide-react"
+import { Building, ChevronDown, School, FileUp, FileText, Plus, Upload, X, ClipboardList } from "lucide-react"
+import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { resolveGradeType, type GradeType } from "@/types/schemas/academic"
+import { Role } from "@/types/enums/role"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import { toast } from "sonner"
 import { FilePreview } from "@/components/shared/FilePreview"
@@ -333,7 +336,7 @@ function SupportingDocumentUploadModal({
                     >
                         {uploadMutation.isPending ? (
                             <>
-                                <Loader2 className="size-4 animate-spin" />
+                                <Spinner size="sm" />
                                 Uploading...
                             </>
                         ) : (
@@ -504,10 +507,10 @@ function SupportingDocumentsSection({
                                 className="bg-[#f8f9fc] rounded-xl p-3 space-y-3 relative border-2 border-purple-400 bg-purple-50/30 shadow-md cursor-not-allowed group"
                             >
                                 <div className="absolute top-3 left-3 z-10">
-                                    <Loader2 className="size-4 text-purple-500 animate-spin" />
+                                    <Spinner size="sm" />
                                 </div>
                                 <div className="aspect-square bg-white rounded-lg flex items-center justify-center overflow-hidden border border-gray-100 shadow-inner">
-                                    <Loader2 className="size-10 text-purple-500 animate-spin" />
+                                    <Spinner size="lg" className="size-10" />
                                 </div>
                                 <div>
                                     <RequiredDocumentTitle name={rt.name} />
@@ -726,12 +729,7 @@ function SupportingDocumentsSection({
                 </div>
 
                 {isRequiredDocsLoading || isDocumentsLoading ? (
-                    <div className="flex flex-col items-center justify-center gap-3 py-14 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                        <Loader2 className="size-8 text-brand-byzantine animate-spin" />
-                        <Typography as="p" className="text-sm font-medium text-gray-600">
-                            Loading required documents...
-                        </Typography>
-                    </div>
+                    <PageLoader className="py-14 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200" />
                 ) : requiredDocTypes.length > 0 || optionalDocTypes.length > 0 ? (
                     <div className="space-y-6">
                         {requiredDocTypes.length > 0 && (
@@ -833,16 +831,8 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
     const [pendingFiles, setPendingFiles] = useState<Record<string, { front: File | null; back: File | null }>>({});
     const [isUploading, setIsUploading] = useState<Record<string, boolean>>({});
 
-    const { data: user } = useQuery({
-        queryKey: ["me"],
-        queryFn: async () => {
-            const res = await fetch("/api/me");
-            if (!res.ok) throw new Error("Failed to fetch profile");
-            const json = await res.json();
-            return json.data;
-        },
-        initialData: initialUser ?? undefined,
-    });
+    const { me } = useAuth()
+    const user = me.data ?? initialUser ?? undefined
 
     const { data: programsResponse } = useQuery({
         queryKey: ["programs"],
@@ -863,7 +853,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
             const json = await res.json();
             return (json.data ?? []) as { id: string; name: string }[];
         },
-        enabled: mode === "create" && user?.role === "AGENT",
+        enabled: mode === "create" && user?.role === Role.AGENT,
     });
 
     const refetchDocuments = useCallback(async () => {
@@ -1089,7 +1079,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
         },
 
         onSubmit: async ({ value }) => {
-            if (mode === "create" && user?.role === "AGENT") {
+            if (mode === "create" && user?.role === Role.AGENT) {
                 if (selectedCourseIds.length > 0) {
                     const missingDocs = applicationRequiredDocTypes.filter(
                         (docType) =>
@@ -1644,7 +1634,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                         </div>
 
                         {/* ── Section: Create Application ── */}
-                        {mode === "create" && user?.role === "AGENT" && (
+                        {mode === "create" && user?.role === Role.AGENT && (
                             <div className="space-y-6">
                                 <div className="space-y-2">
                                     <div className="flex flex-wrap items-center gap-2 pb-2">
@@ -1737,7 +1727,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                     >
                                         {mutation.isPending
                                             ? "Processing..."
-                                            : mode === "create" && user?.role === "AGENT"
+                                            : mode === "create" && user?.role === Role.AGENT
                                                 ? selectedCourseIds.length > 0
                                                     ? "Create Student & Application"
                                                     : "Create Student"

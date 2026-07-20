@@ -13,12 +13,17 @@ import {
     TableCell,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, AlertCircle, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, AlertCircle } from "lucide-react"
+import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import Link from "next/link"
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
 import { cn } from "@/lib/utils"
+import { Role } from "@/types/enums/role"
 import { Progress } from "@/components/ui/progress"
-import type { ApplicationListItem } from "@/types/schemas/application"
+import type {
+    ApplicationListItem,
+    ApplicationListPagination,
+} from "@/types/schemas/application"
 import type { ApplicationProfileRole } from "@/types/schemas/application"
 import { formatFullName } from "@/lib/utils/profile"
 
@@ -28,8 +33,11 @@ type Props = {
     applications: ApplicationListItem[]
     role?: ApplicationProfileRole
     isLoading: boolean
+    isFetching?: boolean
     isError: boolean
     onRetry: () => void
+    pagination?: ApplicationListPagination
+    onPageChange?: (page: number) => void
     showPagination?: boolean
     viewBasePath?: string
 }
@@ -105,17 +113,20 @@ export function DocumentVaultCell({
 
 export const ApplicationsListTable = React.memo(function ApplicationsListTable({
     applications,
-    role = "AGENT",
+    role = Role.AGENT,
     isLoading,
+    isFetching = false,
     isError,
     onRetry,
+    pagination,
+    onPageChange,
     showPagination = true,
     viewBasePath = "/dashboard/application",
 }: Props) {
-    const isStudent = role === "STUDENT"
-    const isAgent = role === "AGENT"
+    const isStudent = role === Role.STUDENT
+    const isAgent = role === Role.AGENT
     const showStudentColumn = !isStudent
-    const showAgentColumn = role === "UNIVERSITY"
+    const showAgentColumn = role === Role.ADMIN || role === Role.SUPER_ADMIN
     const showApplicationNoColumn = isStudent || isAgent
     const showExtendedProgramColumns = isStudent || isAgent
 
@@ -128,6 +139,14 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
 
     const tableMinWidth = isAgent ? "min-w-[1320px]" : "min-w-[1020px]"
 
+    const total = pagination?.total ?? applications.length
+    const page = pagination?.page ?? 1
+    const limit = pagination?.limit ?? Math.max(applications.length, 1)
+    const totalPages = Math.max(1, pagination?.totalPages ?? 1)
+    const startIndex = total === 0 ? 0 : (page - 1) * limit + 1
+    const endIndex = total === 0 ? 0 : Math.min(page * limit, total)
+    const canPaginate = Boolean(showPagination && pagination && onPageChange)
+
     if (isLoading) {
         return (
             <BluryCard
@@ -137,12 +156,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                 childClass="p-0!"
                 className="rounded-lg p-0"
             >
-                <div className="flex flex-col items-center justify-center py-24 gap-3">
-                    <Loader2 className="size-8 text-brand-secondary animate-spin" />
-                    <Typography as="p" className="text-sm font-medium text-gray-500">
-                        Loading applications...
-                    </Typography>
-                </div>
+                <PageLoader className="py-24" />
             </BluryCard>
         )
     }
@@ -187,7 +201,14 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
             childClass="p-0!"
             className="rounded-lg p-0"
         >
-            <div className="overflow-x-auto rounded-xl">
+            <div className="relative overflow-x-auto rounded-xl">
+                {isFetching && !isLoading && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/55 backdrop-blur-[1px]">
+                        <div className="rounded-xl border border-brand-secondary/15 bg-white/90 px-5 py-4 shadow-sm">
+                            <Spinner size="md" />
+                        </div>
+                    </div>
+                )}
                 <Table className={cn("w-full text-left border-collapse", tableMinWidth)}>
                     <TableHeader className="sticky top-0 z-10">
                         <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
@@ -201,7 +222,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                     Student
                                 </TableHead>
                             )}
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                            <TableHead className="max-w-[220px] px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Program
                             </TableHead>
                             {showExtendedProgramColumns && (
@@ -324,18 +345,20 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                             </TableCell>
                                         )}
 
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <div className="flex flex-col">
+                                        <TableCell className="max-w-[220px] px-6 py-5">
+                                            <div className="min-w-0 max-w-[220px]">
                                                 <Typography
                                                     as="span"
-                                                    className="text-sm font-bold text-gray-700"
+                                                    className="block truncate text-sm font-bold text-gray-700"
+                                                    title={app.course?.name ?? undefined}
                                                 >
                                                     {app.course?.name ?? "—"}
                                                 </Typography>
                                                 {app.course?.degree?.name && (
                                                     <Typography
                                                         as="span"
-                                                        className="text-[11px] text-gray-500 font-light"
+                                                        className="block truncate text-[11px] text-gray-500 font-light"
+                                                        title={app.course.degree.name}
                                                     >
                                                         {app.course.degree.name}
                                                     </Typography>
@@ -427,8 +450,8 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                     <TableFooter className="border-t-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
                         <TableRow className="hover:bg-brand-secondary/10 border-0">
                             <TableCell colSpan={columnCount} className="px-8 py-5">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex flex-wrap items-center gap-x-1 text-[12px] font-light text-gray-500">
                                         <Typography
                                             as="span"
                                             className="text-[12px] font-light text-gray-500"
@@ -437,24 +460,71 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                         </Typography>
                                         <Typography
                                             as="span"
-                                            className="text-[12px] font-bold text-brand-blue-text mx-1"
+                                            className="text-[12px] font-bold text-brand-blue-text"
                                         >
-                                            {applications.length}
+                                            {canPaginate
+                                                ? `${startIndex}–${endIndex}`
+                                                : applications.length}
                                         </Typography>
                                         <Typography
                                             as="span"
                                             className="text-[12px] font-light text-gray-500"
                                         >
-                                            entries
+                                            of
+                                        </Typography>
+                                        <Typography
+                                            as="span"
+                                            className="text-[12px] font-bold text-brand-blue-text"
+                                        >
+                                            {canPaginate ? total : applications.length}
+                                        </Typography>
+                                        <Typography
+                                            as="span"
+                                            className="text-[12px] font-light text-gray-500"
+                                        >
+                                            total
                                         </Typography>
                                     </div>
 
                                     {showPagination && (
                                         <div className="flex items-center gap-2">
-                                            <Button variant="outline" size="icon">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={() =>
+                                                    onPageChange?.(Math.max(1, page - 1))
+                                                }
+                                                disabled={!canPaginate || page <= 1}
+                                            >
                                                 <ChevronLeft size={16} />
                                             </Button>
-                                            <Button variant="outline" size="icon">
+                                            <Typography
+                                                as="span"
+                                                className="min-w-[72px] text-center text-[12px] font-medium text-gray-600"
+                                            >
+                                                {canPaginate
+                                                    ? `${page} / ${Math.max(totalPages, 1)}`
+                                                    : "1 / 1"}
+                                            </Typography>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={() =>
+                                                    onPageChange?.(
+                                                        Math.min(
+                                                            Math.max(totalPages, 1),
+                                                            page + 1
+                                                        )
+                                                    )
+                                                }
+                                                disabled={
+                                                    !canPaginate ||
+                                                    page >= totalPages ||
+                                                    total === 0
+                                                }
+                                            >
                                                 <ChevronRight size={16} />
                                             </Button>
                                         </div>

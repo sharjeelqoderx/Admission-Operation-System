@@ -1,9 +1,15 @@
-let sessionActive =
-    typeof document !== "undefined" &&
-    document.cookie.split(";").some((part) => {
+const SESSION_FLAG = "aos_session"
+
+let sessionActive = false
+
+function hasSessionCookie() {
+    if (typeof document === "undefined") return false
+
+    return document.cookie.split(";").some((part) => {
         const name = part.trim().split("=")[0] ?? ""
-        return name.includes("-auth-token")
+        return name === SESSION_FLAG
     })
+}
 
 export function isSessionActive() {
     return sessionActive
@@ -11,18 +17,18 @@ export function isSessionActive() {
 
 export function setSessionActive(active: boolean) {
     sessionActive = active
+
+    if (typeof document === "undefined") return
+
+    if (active) {
+        document.cookie = `${SESSION_FLAG}=1; Path=/; SameSite=Lax`
+        return
+    }
+
+    document.cookie = `${SESSION_FLAG}=; Path=/; Max-Age=0`
 }
 
 export function syncSessionActiveFromCookie() {
-    if (typeof document === "undefined") {
-        sessionActive = false
-        return false
-    }
-
-    sessionActive = document.cookie.split(";").some((part) => {
-        const name = part.trim().split("=")[0] ?? ""
-        return name.includes("-auth-token")
-    })
-
+    sessionActive = hasSessionCookie()
     return sessionActive
 }

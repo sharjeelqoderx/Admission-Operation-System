@@ -1,0 +1,2461 @@
+{
+    "records": [
+        {
+            "id": "69bcbc3404fb9cc1245430cb",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4e8aa308c22fd0bf1\" data-kn=\"connection-value\">Foundation</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4e8aa308c22fd0bf1",
+                    "identifier": "Foundation"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723d2\" data-kn=\"connection-value\">H.S.C / UG Diploma Passing Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723d2",
+                    "identifier": "H.S.C / UG Diploma Passing Certificate"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc1245430cb",
+            "field_275_raw": "69bcbc3404fb9cc1245430cb",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Certificate proving you have passed 12th grade",
+            "field_330_raw": "Certificate proving you have passed 12th grade",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc1245430d0",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4e8aa308c22fd0bf1\" data-kn=\"connection-value\">Foundation</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4e8aa308c22fd0bf1",
+                    "identifier": "Foundation"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723cf\" data-kn=\"connection-value\">H.S.C / UG Diploma Marksheet/s</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723cf",
+                    "identifier": "H.S.C / UG Diploma Marksheet/s"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc1245430d0",
+            "field_275_raw": "69bcbc3404fb9cc1245430d0",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Official marksheet of your 12th (higher secondary) exams",
+            "field_330_raw": "Official marksheet of your 12th (higher secondary) exams",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc1245430d5",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4e8aa308c22fd0bf1\" data-kn=\"connection-value\">Foundation</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4e8aa308c22fd0bf1",
+                    "identifier": "Foundation"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723cc\" data-kn=\"connection-value\">S.S.C Passing Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723cc",
+                    "identifier": "S.S.C Passing Certificate"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc1245430d5",
+            "field_275_raw": "69bcbc3404fb9cc1245430d5",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Certificate proving you have passed 10th grade",
+            "field_330_raw": "Certificate proving you have passed 10th grade",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc1245430da",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4e8aa308c22fd0bf1\" data-kn=\"connection-value\">Foundation</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4e8aa308c22fd0bf1",
+                    "identifier": "Foundation"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723c9\" data-kn=\"connection-value\">S.S.C Marksheet</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723c9",
+                    "identifier": "S.S.C Marksheet"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc1245430da",
+            "field_275_raw": "69bcbc3404fb9cc1245430da",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Official marksheet of your 10th (secondary school) exams",
+            "field_330_raw": "Official marksheet of your 10th (secondary school) exams",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc1245430df",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4e8aa308c22fd0bf1\" data-kn=\"connection-value\">Foundation</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4e8aa308c22fd0bf1",
+                    "identifier": "Foundation"
+                }
+            ],
+            "field_313": "<span class=\"69baa628ff7989b082c723ed\" data-kn=\"connection-value\">English Proficiency Test</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa628ff7989b082c723ed",
+                    "identifier": "English Proficiency Test"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc1245430df",
+            "field_275_raw": "69bcbc3404fb9cc1245430df",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Language Proficiency",
+            "field_329_raw": "Language Proficiency",
+            "field_330": "Valid English language test result (IELTS, TOEFL, PTE, etc.)",
+            "field_330_raw": "Valid English language test result (IELTS, TOEFL, PTE, etc.)",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc1245430e4",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4e8aa308c22fd0bf1\" data-kn=\"connection-value\">Foundation</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4e8aa308c22fd0bf1",
+                    "identifier": "Foundation"
+                }
+            ],
+            "field_313": "<span class=\"69baa628ff7989b082c723f6\" data-kn=\"connection-value\">APS Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa628ff7989b082c723f6",
+                    "identifier": "APS Certificate"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc1245430e4",
+            "field_275_raw": "69bcbc3404fb9cc1245430e4",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "India, China, Vietnam, Mongolia",
+            "field_302_raw": "India, China, Vietnam, Mongolia",
+            "field_329": "Academic Recognition",
+            "field_329_raw": "Academic Recognition",
+            "field_330": "APS verification certificate required for certain countries (e.g. Germany)",
+            "field_330_raw": "APS verification certificate required for certain countries (e.g. Germany)",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc1245430e9",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4e8aa308c22fd0bf1\" data-kn=\"connection-value\">Foundation</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4e8aa308c22fd0bf1",
+                    "identifier": "Foundation"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723c6\" data-kn=\"connection-value\">Curriculum Vitae (CV)</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723c6",
+                    "identifier": "Curriculum Vitae (CV)"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc1245430e9",
+            "field_275_raw": "69bcbc3404fb9cc1245430e9",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Professional",
+            "field_329_raw": "Professional",
+            "field_330": "Your latest CV with education, work experience, and skills",
+            "field_330_raw": "Your latest CV with education, work experience, and skills",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc1245430ee",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4e8aa308c22fd0bf1\" data-kn=\"connection-value\">Foundation</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4e8aa308c22fd0bf1",
+                    "identifier": "Foundation"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723c3\" data-kn=\"connection-value\">A Valid Passport Copy</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723c3",
+                    "identifier": "A Valid Passport Copy"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc1245430ee",
+            "field_275_raw": "69bcbc3404fb9cc1245430ee",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Identity",
+            "field_329_raw": "Identity",
+            "field_330": "A valid passport showing your personal details and photo page",
+            "field_330_raw": "A valid passport showing your personal details and photo page",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc1245430f3",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4680ccc622c2b8264\" data-kn=\"connection-value\">MBA</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4680ccc622c2b8264",
+                    "identifier": "MBA"
+                }
+            ],
+            "field_313": "<span class=\"69baa628ff7989b082c723f0\" data-kn=\"connection-value\">Work Experience Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa628ff7989b082c723f0",
+                    "identifier": "Work Experience Certificate"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc1245430f3",
+            "field_275_raw": "69bcbc3404fb9cc1245430f3",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Professional",
+            "field_329_raw": "Professional",
+            "field_330": "Letter from employer confirming your work experience",
+            "field_330_raw": "Letter from employer confirming your work experience",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc1245430f8",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4680ccc622c2b8264\" data-kn=\"connection-value\">MBA</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4680ccc622c2b8264",
+                    "identifier": "MBA"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723e1\" data-kn=\"connection-value\">Bachelor’s Degree / Advanced Diploma Transcript</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723e1",
+                    "identifier": "Bachelor’s Degree / Advanced Diploma Transcript"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc1245430f8",
+            "field_275_raw": "69bcbc3404fb9cc1245430f8",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Official academic record issued by your institution (sealed or stamped)",
+            "field_330_raw": "Official academic record issued by your institution (sealed or stamped)",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc1245430fd",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4680ccc622c2b8264\" data-kn=\"connection-value\">MBA</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4680ccc622c2b8264",
+                    "identifier": "MBA"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723de\" data-kn=\"connection-value\">Bachelor’s Degree / Advanced Diploma Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723de",
+                    "identifier": "Bachelor’s Degree / Advanced Diploma Certificate"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc1245430fd",
+            "field_275_raw": "69bcbc3404fb9cc1245430fd",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Official certificate confirming your bachelor’s degree completion",
+            "field_330_raw": "Official certificate confirming your bachelor’s degree completion",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc124543102",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4680ccc622c2b8264\" data-kn=\"connection-value\">MBA</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4680ccc622c2b8264",
+                    "identifier": "MBA"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723db\" data-kn=\"connection-value\">Bachelor / Advanced Diploma All Semester Marksheets</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723db",
+                    "identifier": "Bachelor / Advanced Diploma All Semester Marksheets"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc124543102",
+            "field_275_raw": "69bcbc3404fb9cc124543102",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "All semester/year marksheets of your bachelor’s degree",
+            "field_330_raw": "All semester/year marksheets of your bachelor’s degree",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc124543107",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4680ccc622c2b8264\" data-kn=\"connection-value\">MBA</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4680ccc622c2b8264",
+                    "identifier": "MBA"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723d2\" data-kn=\"connection-value\">H.S.C / UG Diploma Passing Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723d2",
+                    "identifier": "H.S.C / UG Diploma Passing Certificate"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc124543107",
+            "field_275_raw": "69bcbc3404fb9cc124543107",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Certificate proving you have passed 12th grade",
+            "field_330_raw": "Certificate proving you have passed 12th grade",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc12454310c",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4680ccc622c2b8264\" data-kn=\"connection-value\">MBA</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4680ccc622c2b8264",
+                    "identifier": "MBA"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723cf\" data-kn=\"connection-value\">H.S.C / UG Diploma Marksheet/s</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723cf",
+                    "identifier": "H.S.C / UG Diploma Marksheet/s"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc12454310c",
+            "field_275_raw": "69bcbc3404fb9cc12454310c",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/23/2026 8:15am",
+            "field_277_raw": {
+                "date": "03/23/2026",
+                "date_formatted": "03/23/2026",
+                "hours": "08",
+                "minutes": "15",
+                "am_pm": "AM",
+                "unix_timestamp": 1774278900000,
+                "iso_timestamp": "2026-03-23T15:15:00.000Z",
+                "timestamp": "03/23/2026 08:15 am",
+                "time": 495,
+                "time_formatted": "08:15am",
+                "proper_unix_timestamp": 1774278900000,
+                "proper_iso_timestamp": "2026-03-23T15:15:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Official marksheet of your 12th (higher secondary) exams",
+            "field_330_raw": "Official marksheet of your 12th (higher secondary) exams",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc124543111",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4680ccc622c2b8264\" data-kn=\"connection-value\">MBA</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4680ccc622c2b8264",
+                    "identifier": "MBA"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723cc\" data-kn=\"connection-value\">S.S.C Passing Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723cc",
+                    "identifier": "S.S.C Passing Certificate"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc124543111",
+            "field_275_raw": "69bcbc3404fb9cc124543111",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Certificate proving you have passed 10th grade",
+            "field_330_raw": "Certificate proving you have passed 10th grade",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc124543116",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4680ccc622c2b8264\" data-kn=\"connection-value\">MBA</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4680ccc622c2b8264",
+                    "identifier": "MBA"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723c9\" data-kn=\"connection-value\">S.S.C Marksheet</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723c9",
+                    "identifier": "S.S.C Marksheet"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc124543116",
+            "field_275_raw": "69bcbc3404fb9cc124543116",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Official marksheet of your 10th (secondary school) exams",
+            "field_330_raw": "Official marksheet of your 10th (secondary school) exams",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc12454311b",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4680ccc622c2b8264\" data-kn=\"connection-value\">MBA</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4680ccc622c2b8264",
+                    "identifier": "MBA"
+                }
+            ],
+            "field_313": "<span class=\"69baa628ff7989b082c723ed\" data-kn=\"connection-value\">English Proficiency Test</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa628ff7989b082c723ed",
+                    "identifier": "English Proficiency Test"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc12454311b",
+            "field_275_raw": "69bcbc3404fb9cc12454311b",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Language Proficiency",
+            "field_329_raw": "Language Proficiency",
+            "field_330": "Valid English language test result (IELTS, TOEFL, PTE, etc.)",
+            "field_330_raw": "Valid English language test result (IELTS, TOEFL, PTE, etc.)",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc124543120",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4680ccc622c2b8264\" data-kn=\"connection-value\">MBA</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4680ccc622c2b8264",
+                    "identifier": "MBA"
+                }
+            ],
+            "field_313": "<span class=\"69baa628ff7989b082c723f6\" data-kn=\"connection-value\">APS Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa628ff7989b082c723f6",
+                    "identifier": "APS Certificate"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc124543120",
+            "field_275_raw": "69bcbc3404fb9cc124543120",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "India, China, Vietnam, Mongolia",
+            "field_302_raw": "India, China, Vietnam, Mongolia",
+            "field_329": "Academic Recognition",
+            "field_329_raw": "Academic Recognition",
+            "field_330": "APS verification certificate required for certain countries (e.g. Germany)",
+            "field_330_raw": "APS verification certificate required for certain countries (e.g. Germany)",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc124543125",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4680ccc622c2b8264\" data-kn=\"connection-value\">MBA</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4680ccc622c2b8264",
+                    "identifier": "MBA"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723c6\" data-kn=\"connection-value\">Curriculum Vitae (CV)</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723c6",
+                    "identifier": "Curriculum Vitae (CV)"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc124543125",
+            "field_275_raw": "69bcbc3404fb9cc124543125",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Professional",
+            "field_329_raw": "Professional",
+            "field_330": "Your latest CV with education, work experience, and skills",
+            "field_330_raw": "Your latest CV with education, work experience, and skills",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc12454312a",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4680ccc622c2b8264\" data-kn=\"connection-value\">MBA</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4680ccc622c2b8264",
+                    "identifier": "MBA"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723c3\" data-kn=\"connection-value\">A Valid Passport Copy</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723c3",
+                    "identifier": "A Valid Passport Copy"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc12454312a",
+            "field_275_raw": "69bcbc3404fb9cc12454312a",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Identity",
+            "field_329_raw": "Identity",
+            "field_330": "A valid passport showing your personal details and photo page",
+            "field_330_raw": "A valid passport showing your personal details and photo page",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc12454312f",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4f3ec448e4ddaa7c1\" data-kn=\"connection-value\">Master</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4f3ec448e4ddaa7c1",
+                    "identifier": "Master"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723e1\" data-kn=\"connection-value\">Bachelor’s Degree / Advanced Diploma Transcript</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723e1",
+                    "identifier": "Bachelor’s Degree / Advanced Diploma Transcript"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc12454312f",
+            "field_275_raw": "69bcbc3404fb9cc12454312f",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Official academic record issued by your institution (sealed or stamped)",
+            "field_330_raw": "Official academic record issued by your institution (sealed or stamped)",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc124543134",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4f3ec448e4ddaa7c1\" data-kn=\"connection-value\">Master</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4f3ec448e4ddaa7c1",
+                    "identifier": "Master"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723de\" data-kn=\"connection-value\">Bachelor’s Degree / Advanced Diploma Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723de",
+                    "identifier": "Bachelor’s Degree / Advanced Diploma Certificate"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc124543134",
+            "field_275_raw": "69bcbc3404fb9cc124543134",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Official certificate confirming your bachelor’s degree completion",
+            "field_330_raw": "Official certificate confirming your bachelor’s degree completion",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc124543139",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4f3ec448e4ddaa7c1\" data-kn=\"connection-value\">Master</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4f3ec448e4ddaa7c1",
+                    "identifier": "Master"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723db\" data-kn=\"connection-value\">Bachelor / Advanced Diploma All Semester Marksheets</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723db",
+                    "identifier": "Bachelor / Advanced Diploma All Semester Marksheets"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc124543139",
+            "field_275_raw": "69bcbc3404fb9cc124543139",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "All semester/year marksheets of your bachelor’s degree",
+            "field_330_raw": "All semester/year marksheets of your bachelor’s degree",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc12454313e",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4f3ec448e4ddaa7c1\" data-kn=\"connection-value\">Master</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4f3ec448e4ddaa7c1",
+                    "identifier": "Master"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723d2\" data-kn=\"connection-value\">H.S.C / UG Diploma Passing Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723d2",
+                    "identifier": "H.S.C / UG Diploma Passing Certificate"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc12454313e",
+            "field_275_raw": "69bcbc3404fb9cc12454313e",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Certificate proving you have passed 12th grade",
+            "field_330_raw": "Certificate proving you have passed 12th grade",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc124543143",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4f3ec448e4ddaa7c1\" data-kn=\"connection-value\">Master</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4f3ec448e4ddaa7c1",
+                    "identifier": "Master"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723cf\" data-kn=\"connection-value\">H.S.C / UG Diploma Marksheet/s</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723cf",
+                    "identifier": "H.S.C / UG Diploma Marksheet/s"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc124543143",
+            "field_275_raw": "69bcbc3404fb9cc124543143",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Official marksheet of your 12th (higher secondary) exams",
+            "field_330_raw": "Official marksheet of your 12th (higher secondary) exams",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc124543148",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4f3ec448e4ddaa7c1\" data-kn=\"connection-value\">Master</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4f3ec448e4ddaa7c1",
+                    "identifier": "Master"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723cc\" data-kn=\"connection-value\">S.S.C Passing Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723cc",
+                    "identifier": "S.S.C Passing Certificate"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc124543148",
+            "field_275_raw": "69bcbc3404fb9cc124543148",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Certificate proving you have passed 10th grade",
+            "field_330_raw": "Certificate proving you have passed 10th grade",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc12454314d",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4f3ec448e4ddaa7c1\" data-kn=\"connection-value\">Master</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4f3ec448e4ddaa7c1",
+                    "identifier": "Master"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723c9\" data-kn=\"connection-value\">S.S.C Marksheet</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723c9",
+                    "identifier": "S.S.C Marksheet"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc12454314d",
+            "field_275_raw": "69bcbc3404fb9cc12454314d",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Official marksheet of your 10th (secondary school) exams",
+            "field_330_raw": "Official marksheet of your 10th (secondary school) exams",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3404fb9cc124543152",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4f3ec448e4ddaa7c1\" data-kn=\"connection-value\">Master</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4f3ec448e4ddaa7c1",
+                    "identifier": "Master"
+                }
+            ],
+            "field_313": "<span class=\"69baa628ff7989b082c723ed\" data-kn=\"connection-value\">English Proficiency Test</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa628ff7989b082c723ed",
+                    "identifier": "English Proficiency Test"
+                }
+            ],
+            "field_275": "69bcbc3404fb9cc124543152",
+            "field_275_raw": "69bcbc3404fb9cc124543152",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Language Proficiency",
+            "field_329_raw": "Language Proficiency",
+            "field_330": "Valid English language test result (IELTS, TOEFL, PTE, etc.)",
+            "field_330_raw": "Valid English language test result (IELTS, TOEFL, PTE, etc.)",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3504fb9cc124543157",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4f3ec448e4ddaa7c1\" data-kn=\"connection-value\">Master</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4f3ec448e4ddaa7c1",
+                    "identifier": "Master"
+                }
+            ],
+            "field_313": "<span class=\"69baa628ff7989b082c723f6\" data-kn=\"connection-value\">APS Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa628ff7989b082c723f6",
+                    "identifier": "APS Certificate"
+                }
+            ],
+            "field_275": "69bcbc3504fb9cc124543157",
+            "field_275_raw": "69bcbc3504fb9cc124543157",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "India, China, Vietnam, Mongolia",
+            "field_302_raw": "India, China, Vietnam, Mongolia",
+            "field_329": "Academic Recognition",
+            "field_329_raw": "Academic Recognition",
+            "field_330": "APS verification certificate required for certain countries (e.g. Germany)",
+            "field_330_raw": "APS verification certificate required for certain countries (e.g. Germany)",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3504fb9cc12454315c",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4f3ec448e4ddaa7c1\" data-kn=\"connection-value\">Master</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4f3ec448e4ddaa7c1",
+                    "identifier": "Master"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723c6\" data-kn=\"connection-value\">Curriculum Vitae (CV)</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723c6",
+                    "identifier": "Curriculum Vitae (CV)"
+                }
+            ],
+            "field_275": "69bcbc3504fb9cc12454315c",
+            "field_275_raw": "69bcbc3504fb9cc12454315c",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Professional",
+            "field_329_raw": "Professional",
+            "field_330": "Your latest CV with education, work experience, and skills",
+            "field_330_raw": "Your latest CV with education, work experience, and skills",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3504fb9cc124543161",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9d4f3ec448e4ddaa7c1\" data-kn=\"connection-value\">Master</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9d4f3ec448e4ddaa7c1",
+                    "identifier": "Master"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723c3\" data-kn=\"connection-value\">A Valid Passport Copy</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723c3",
+                    "identifier": "A Valid Passport Copy"
+                }
+            ],
+            "field_275": "69bcbc3504fb9cc124543161",
+            "field_275_raw": "69bcbc3504fb9cc124543161",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Identity",
+            "field_329_raw": "Identity",
+            "field_330": "A valid passport showing your personal details and photo page",
+            "field_330_raw": "A valid passport showing your personal details and photo page",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3504fb9cc124543166",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9c164032db45aa2090e\" data-kn=\"connection-value\">Bachelor</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9c164032db45aa2090e",
+                    "identifier": "Bachelor"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723d2\" data-kn=\"connection-value\">H.S.C / UG Diploma Passing Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723d2",
+                    "identifier": "H.S.C / UG Diploma Passing Certificate"
+                }
+            ],
+            "field_275": "69bcbc3504fb9cc124543166",
+            "field_275_raw": "69bcbc3504fb9cc124543166",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Certificate proving you have passed 12th grade",
+            "field_330_raw": "Certificate proving you have passed 12th grade",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3504fb9cc12454316b",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9c164032db45aa2090e\" data-kn=\"connection-value\">Bachelor</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9c164032db45aa2090e",
+                    "identifier": "Bachelor"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723cf\" data-kn=\"connection-value\">H.S.C / UG Diploma Marksheet/s</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723cf",
+                    "identifier": "H.S.C / UG Diploma Marksheet/s"
+                }
+            ],
+            "field_275": "69bcbc3504fb9cc12454316b",
+            "field_275_raw": "69bcbc3504fb9cc12454316b",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Official marksheet of your 12th (higher secondary) exams",
+            "field_330_raw": "Official marksheet of your 12th (higher secondary) exams",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3504fb9cc124543170",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9c164032db45aa2090e\" data-kn=\"connection-value\">Bachelor</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9c164032db45aa2090e",
+                    "identifier": "Bachelor"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723cc\" data-kn=\"connection-value\">S.S.C Passing Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723cc",
+                    "identifier": "S.S.C Passing Certificate"
+                }
+            ],
+            "field_275": "69bcbc3504fb9cc124543170",
+            "field_275_raw": "69bcbc3504fb9cc124543170",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Certificate proving you have passed 10th grade",
+            "field_330_raw": "Certificate proving you have passed 10th grade",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3504fb9cc124543175",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9c164032db45aa2090e\" data-kn=\"connection-value\">Bachelor</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9c164032db45aa2090e",
+                    "identifier": "Bachelor"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723c9\" data-kn=\"connection-value\">S.S.C Marksheet</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723c9",
+                    "identifier": "S.S.C Marksheet"
+                }
+            ],
+            "field_275": "69bcbc3504fb9cc124543175",
+            "field_275_raw": "69bcbc3504fb9cc124543175",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Academic",
+            "field_329_raw": "Academic",
+            "field_330": "Official marksheet of your 10th (secondary school) exams",
+            "field_330_raw": "Official marksheet of your 10th (secondary school) exams",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3504fb9cc12454317a",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9c164032db45aa2090e\" data-kn=\"connection-value\">Bachelor</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9c164032db45aa2090e",
+                    "identifier": "Bachelor"
+                }
+            ],
+            "field_313": "<span class=\"69baa628ff7989b082c723ed\" data-kn=\"connection-value\">English Proficiency Test</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa628ff7989b082c723ed",
+                    "identifier": "English Proficiency Test"
+                }
+            ],
+            "field_275": "69bcbc3504fb9cc12454317a",
+            "field_275_raw": "69bcbc3504fb9cc12454317a",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Language Proficiency",
+            "field_329_raw": "Language Proficiency",
+            "field_330": "Valid English language test result (IELTS, TOEFL, PTE, etc.)",
+            "field_330_raw": "Valid English language test result (IELTS, TOEFL, PTE, etc.)",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3504fb9cc12454317f",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9c164032db45aa2090e\" data-kn=\"connection-value\">Bachelor</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9c164032db45aa2090e",
+                    "identifier": "Bachelor"
+                }
+            ],
+            "field_313": "<span class=\"69baa628ff7989b082c723f6\" data-kn=\"connection-value\">APS Certificate</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa628ff7989b082c723f6",
+                    "identifier": "APS Certificate"
+                }
+            ],
+            "field_275": "69bcbc3504fb9cc12454317f",
+            "field_275_raw": "69bcbc3504fb9cc12454317f",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "India, China, Vietnam, Mongolia",
+            "field_302_raw": "India, China, Vietnam, Mongolia",
+            "field_329": "Academic Recognition",
+            "field_329_raw": "Academic Recognition",
+            "field_330": "APS verification certificate required for certain countries (e.g. Germany)",
+            "field_330_raw": "APS verification certificate required for certain countries (e.g. Germany)",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3504fb9cc124543184",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9c164032db45aa2090e\" data-kn=\"connection-value\">Bachelor</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9c164032db45aa2090e",
+                    "identifier": "Bachelor"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723c6\" data-kn=\"connection-value\">Curriculum Vitae (CV)</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723c6",
+                    "identifier": "Curriculum Vitae (CV)"
+                }
+            ],
+            "field_275": "69bcbc3504fb9cc124543184",
+            "field_275_raw": "69bcbc3504fb9cc124543184",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Professional",
+            "field_329_raw": "Professional",
+            "field_330": "Your latest CV with education, work experience, and skills",
+            "field_330_raw": "Your latest CV with education, work experience, and skills",
+            "field_374": "",
+            "field_374_raw": []
+        },
+        {
+            "id": "69bcbc3504fb9cc124543189",
+            "field_373": "",
+            "field_373_raw": [],
+            "field_327": "<span class=\"69bbe9c164032db45aa2090e\" data-kn=\"connection-value\">Bachelor</span>",
+            "field_327_raw": [
+                {
+                    "id": "69bbe9c164032db45aa2090e",
+                    "identifier": "Bachelor"
+                }
+            ],
+            "field_313": "<span class=\"69baa627ff7989b082c723c3\" data-kn=\"connection-value\">A Valid Passport Copy</span>",
+            "field_313_raw": [
+                {
+                    "id": "69baa627ff7989b082c723c3",
+                    "identifier": "A Valid Passport Copy"
+                }
+            ],
+            "field_275": "69bcbc3504fb9cc124543189",
+            "field_275_raw": "69bcbc3504fb9cc124543189",
+            "field_276": "03/19/2026 8:17pm",
+            "field_276_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_277": "03/19/2026 8:17pm",
+            "field_277_raw": {
+                "date": "03/19/2026",
+                "date_formatted": "03/19/2026",
+                "hours": "08",
+                "minutes": "17",
+                "am_pm": "PM",
+                "unix_timestamp": 1773976620000,
+                "iso_timestamp": "2026-03-20T03:17:00.000Z",
+                "timestamp": "03/19/2026 08:17 pm",
+                "time": 1217,
+                "time_formatted": "08:17pm",
+                "proper_unix_timestamp": 1773976620000,
+                "proper_iso_timestamp": "2026-03-20T03:17:00.000Z"
+            },
+            "field_288": "Yes",
+            "field_288_raw": true,
+            "field_289_raw": "",
+            "field_289": "",
+            "field_302": "All",
+            "field_302_raw": "All",
+            "field_329": "Identity",
+            "field_329_raw": "Identity",
+            "field_330": "A valid passport showing your personal details and photo page",
+            "field_330_raw": "A valid passport showing your personal details and photo page",
+            "field_374": "",
+            "field_374_raw": []
+        }
+    ]
+}

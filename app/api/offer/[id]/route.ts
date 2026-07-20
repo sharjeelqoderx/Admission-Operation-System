@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+    createSupabaseServerClient,
+    createSupabaseServiceClient,
+} from "@/lib/supabase/server";
 import { withProfileDisplayName } from "@/lib/utils/profile";
 import {
     isMissingOfferTemplateColumnError,
@@ -7,6 +10,28 @@ import {
     OFFER_DETAIL_SELECT_WITH_TEMPLATE,
 } from "@/lib/offer/select-fields";
 import { renderOfferBodyHtml } from "@/lib/offer/render-offer-body-html";
+import { Role } from "@/types/enums/role";
+
+function canReadOffer(
+    role: string | undefined,
+    userId: string,
+    application: {
+        profile_id?: string | null
+        university_id?: string | null
+    } | null | undefined
+) {
+    if (!application) return false
+
+    if (role === Role.STUDENT) {
+        return application.profile_id === userId
+    }
+
+    if (role === Role.ADMIN) {
+        return application.university_id === userId
+    }
+
+    return role === Role.AGENT || role === Role.SUPER_ADMIN
+}
 
 export async function GET(
     req: NextRequest,
@@ -28,9 +53,20 @@ export async function GET(
             );
         }
 
+        const { data: profile } = await supabase
+            .from("profile")
+            .select("role")
+            .eq("id", user.id)
+            .maybeSingle()
+
         const { id } = await context.params;
 
-        const primaryResult = await supabase
+        const readClient =
+            profile?.role === Role.STUDENT
+                ? supabase
+                : createSupabaseServiceClient()
+
+        const primaryResult = await readClient
             .from("offer_letter")
             .select(OFFER_DETAIL_SELECT_WITH_TEMPLATE)
             .eq("id", id)
@@ -38,7 +74,7 @@ export async function GET(
 
         const offerResult =
             primaryResult.error && isMissingOfferTemplateColumnError(primaryResult.error.message)
-                ? await supabase
+                ? await readClient
                       .from("offer_letter")
                       .select(OFFER_DETAIL_SELECT_LEGACY)
                       .eq("id", id)
@@ -70,23 +106,29 @@ export async function GET(
             value: ProfileRelation | ProfileRelation[] | null | undefined
         ): ProfileRelation => (Array.isArray(value) ? value[0] ?? null : value ?? null)
 
-        const application = offer.application as unknown as (Record<string, unknown> & {
+        const applicationRecord = offer.application as unknown as (Record<string, unknown> & {
+            profile_id?: string | null
+            university_id?: string | null
             student?: ProfileRelation | ProfileRelation[] | null
             university?: ProfileRelation | ProfileRelation[] | null
             agent?: ProfileRelation | ProfileRelation[] | null
         }) | null
 
-        const mappedApplication = application
+        if (!canReadOffer(profile?.role, user.id, applicationRecord)) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
+
+        const mappedApplication = applicationRecord
             ? {
-                  ...application,
-                  student: withProfileDisplayName(pickProfile(application.student)),
-                  university: withProfileDisplayName(pickProfile(application.university)),
-                  agent: withProfileDisplayName(pickProfile(application.agent)),
+                  ...applicationRecord,
+                  student: withProfileDisplayName(pickProfile(applicationRecord.student)),
+                  university: withProfileDisplayName(pickProfile(applicationRecord.university)),
+                  agent: withProfileDisplayName(pickProfile(applicationRecord.agent)),
               }
-            : application
+            : applicationRecord
 
         const renderedBodyHtml =
-            application && typeof application.id === "string" && typeof application.profile_id === "string"
+            applicationRecord && typeof applicationRecord.id === "string" && typeof applicationRecord.profile_id === "string"
                 ? await renderOfferBodyHtml(supabase, {
                       bodyHtml: (offer as { body_html?: string | null }).body_html,
                       documentTemplateId: (offer as { document_template_id?: string | null })
@@ -95,17 +137,17 @@ export async function GET(
                       checklistItems: (offer as { checklist_items?: unknown }).checklist_items,
                       checklistProofs: (offer as { checklist_proofs?: unknown }).checklist_proofs,
                       application: {
-                          id: application.id,
+                          id: applicationRecord.id,
                           application_no:
-                              typeof application.application_no === "string"
-                                  ? application.application_no
+                              typeof applicationRecord.application_no === "string"
+                                  ? applicationRecord.application_no
                                   : null,
-                          profile_id: application.profile_id,
-                          student: application.student,
-                          course: application.course as Parameters<
+                          profile_id: applicationRecord.profile_id,
+                          student: applicationRecord.student,
+                          course: applicationRecord.course as Parameters<
                               typeof renderOfferBodyHtml
                           >[1]["application"]["course"],
-                          university: application.university,
+                          university: applicationRecord.university,
                       },
                   })
                 : null

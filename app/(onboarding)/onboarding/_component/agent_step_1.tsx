@@ -1,7 +1,7 @@
 "use client"
 
 import { useForm } from "@tanstack/react-form"
-import { Loader2 } from "lucide-react"
+
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { CountrySelect } from "@/components/shared/country-select"
 import { StateSelect } from "@/components/shared/state-select"
 import { CitySelect } from "@/components/shared/city-select"
-import { PageLoader } from "@/components/shared/page-loader"
+import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { Typography } from "@/components/shared/Typography"
 
 const namePart = z
@@ -359,7 +359,7 @@ function AgentStep1Form({
 
             <div className="flex gap-3 mt-8">
                 <Button type="submit" className="flex-1 capitalize gap-2" disabled={agentProfile.isPending}>
-                    {agentProfile.isPending && <Loader2 className="size-4 animate-spin" />}
+                    {agentProfile.isPending && <Spinner size="sm" />}
                     {agentProfile.isPending ? "Saving..." : "Continue"}
                 </Button>
             </div>
@@ -372,7 +372,7 @@ export function AgentStep1({ onNext }: { onNext: () => void; onSkip: () => void 
     const { data: meData, isLoading } = me
 
     if (isLoading) {
-        return <PageLoader label="Preparing your profile..." />
+        return <PageLoader />
     }
 
     const agentFirstName = meData?.firstName ?? ""

@@ -101,7 +101,7 @@ export function DegreeDocumentsPanel({
     )
 
     if (isLoading) {
-        return <PageLoader label="Loading documents..." />
+        return <PageLoader />
     }
 
     if (isError) {

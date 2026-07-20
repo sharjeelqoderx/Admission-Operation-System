@@ -356,7 +356,7 @@ export function Step1Basic({ onNext }: { onNext: () => void }) {
     const { data: meData, isLoading } = me
 
     if (isLoading) {
-        return <PageLoader label="Preparing your profile..." />
+        return <PageLoader />
     }
 
     const profileTitle = meData?.title ?? ""

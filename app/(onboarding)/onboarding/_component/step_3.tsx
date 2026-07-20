@@ -279,7 +279,7 @@ export function Step3Experience({ onBack, onNext }: { onBack: () => void; onNext
     const { me } = useAuth()
     const { data: meData, isLoading } = me
 
-    if (isLoading) return <PageLoader label="Loading work experience..." />
+    if (isLoading) return <PageLoader />
 
     const experiences: ExperienceFormItem[] = meData?.experience?.entries?.length
         ? meData.experience.entries.map(mapExperienceToFormItem)

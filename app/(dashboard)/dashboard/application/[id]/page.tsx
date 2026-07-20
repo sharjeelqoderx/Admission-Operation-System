@@ -4,6 +4,7 @@ import { fetchUniversityApplicationDetailForPage } from "@/lib/application/unive
 import { fetchApplicationDetailForPage } from "@/lib/application/server"
 import { PageContent } from "./_components/page-content"
 import { UniversityApplicationDetailPageContent } from "./_components/university-application/page-content"
+import { Role } from "@/types/enums/role"
 
 type ApplicationDetailPageProps = {
     params: Promise<{ id: string }>
@@ -17,7 +18,7 @@ export default async function ApplicationDetailPage({ params }: ApplicationDetai
         redirect("/login")
     }
 
-    if (role === "UNIVERSITY" || role === "ADMIN") {
+    if (role === Role.ADMIN || role === Role.SUPER_ADMIN) {
         const initialData = await fetchUniversityApplicationDetailForPage(id)
 
         return (

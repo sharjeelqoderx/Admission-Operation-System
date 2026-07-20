@@ -11,8 +11,8 @@ BEGIN
     FOR seed_user IN
         SELECT *
         FROM (VALUES
-            ('00000000-0000-0000-0000-000000000001'::uuid, 'sharjeel.genzsolution@gmail.com', 'Admin@123'),
-            ('00000000-0000-0000-0000-000000000002'::uuid, 'sharjeel.qoderx@gmail.com', 'University@123')
+            ('00000000-0000-0000-0000-000000000001'::uuid, 'sharjeel.qoderx@gmail.com', 'Admin@123'),
+            ('00000000-0000-0000-0000-000000000002'::uuid, 'fhm@gmail.com', 'University@123')
         ) AS t(id, email, plain_password)
     LOOP
         UPDATE auth.users

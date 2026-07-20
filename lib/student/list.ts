@@ -1,10 +1,12 @@
 import { formatFullName } from "@/lib/utils/profile"
+import { createSupabaseServiceClient } from "@/lib/supabase/server"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 import {
     resolveHighestQualificationName,
     resolveQualificationsById,
 } from "@/lib/student/qualifications"
+import { Role } from "@/types/enums/role"
 
 export type StudentListPagination = {
     total: number
@@ -57,28 +59,30 @@ export async function fetchStudentsListForAgent(
     userId: string,
     options: FetchStudentsListOptions = {}
 ): Promise<StudentsListResult | { error: string }> {
-    const { data: agentRow } = await supabase
-        .from("agent")
-        .select("id")
-        .eq("profile_id", userId)
+    const { data: profile } = await supabase
+        .from("profile")
+        .select("role")
+        .eq("id", userId)
         .maybeSingle()
 
-    if (!agentRow) {
-        return { error: "University Partner profile not found" }
+    if (profile?.role !== Role.AGENT) {
+        return { error: "Forbidden" }
     }
+
+    // Agents see all students (same staff-wide visibility as offers / applications).
+    const db = createSupabaseServiceClient()
 
     const q = options.q ?? ""
     const status = options.status ?? "all"
     const page = options.page ?? 1
     const limit = options.limit ?? 10
 
-    const { data: rawStudents, error } = await supabase
+    const { data: rawStudents, error } = await db
         .from("student")
         .select(`
             *,
             profile:profile_id (*)
         `)
-        .eq("created_by_agent_id", agentRow.id)
         .order("created_at", { ascending: false })
 
     if (error) {
@@ -135,13 +139,13 @@ export async function fetchStudentsListForAgent(
 
     const [{ count: totalDocumentTypes }, { data: documents }, { data: educationRows }] =
         await Promise.all([
-            supabase.from("document_type").select("id", { count: "exact", head: true }),
-            supabase
+            db.from("document_type").select("id", { count: "exact", head: true }),
+            db
                 .from("document")
                 .select("profile_id, document_type_id")
                 .in("profile_id", profileIds)
                 .not("document_type_id", "is", null),
-            supabase.from("education").select("profile_id, qualification").in("profile_id", profileIds),
+            db.from("education").select("profile_id, qualification").in("profile_id", profileIds),
         ])
 
     const uploadedByProfile = new Map<string, Set<string>>()
@@ -167,7 +171,7 @@ export async function fetchStudentsListForAgent(
         ),
     ]
 
-    const qualificationById = await resolveQualificationsById(supabase, qualificationIds)
+    const qualificationById = await resolveQualificationsById(db, qualificationIds)
     const total = totalDocumentTypes ?? 0
 
     const data: StudentListItem[] = students.map((student) => {
@@ -210,29 +214,24 @@ export async function fetchStudentDashboardStats(
     supabase: SupabaseClient<Database>,
     userId: string
 ): Promise<StudentDashboardStats | null> {
-    const { data: agentRow } = await supabase
-        .from("agent")
-        .select("id")
-        .eq("profile_id", userId)
+    const { data: profile } = await supabase
+        .from("profile")
+        .select("role")
+        .eq("id", userId)
         .maybeSingle()
 
-    if (!agentRow) {
+    if (profile?.role !== Role.AGENT) {
         return null
     }
 
+    const db = createSupabaseServiceClient()
+
     const [studentsResult, applicationsResult, pendingResult] = await Promise.all([
-        supabase
-            .from("student")
-            .select("id", { count: "exact", head: true })
-            .eq("created_by_agent_id", agentRow.id),
-        supabase
+        db.from("student").select("id", { count: "exact", head: true }),
+        db.from("application").select("id", { count: "exact", head: true }),
+        db
             .from("application")
             .select("id", { count: "exact", head: true })
-            .eq("submitted_by_profile_id", userId),
-        supabase
-            .from("application")
-            .select("id", { count: "exact", head: true })
-            .eq("submitted_by_profile_id", userId)
             .eq("status", "PENDING"),
     ])
 

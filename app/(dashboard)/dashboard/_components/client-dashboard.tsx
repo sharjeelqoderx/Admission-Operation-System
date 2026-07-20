@@ -2,13 +2,14 @@
 
 import { AgentDashboard } from "./agent-dashboard"
 import { StudentDashboard } from "./student-dashboard"
+import { Role } from "@/types/enums/role"
 
 type ClientDashboardProps = {
     role: string
 }
 
 export function ClientDashboard({ role }: ClientDashboardProps) {
-    if (role === "STUDENT") {
+    if (role === Role.STUDENT) {
         return <StudentDashboard />
     }
 

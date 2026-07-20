@@ -3,39 +3,20 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { fetchApplicationsList } from "@/lib/application/list"
 import { CreateApplicationSchema, ApplicationListQuerySchema } from "@/types/schemas/application"
 import type { ApplicationProfileRole } from "@/types/schemas/application"
+import { Role } from "@/types/enums/role"
 
 async function canAccessStudentApplications(
-    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    _supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
     userId: string,
     role: string | undefined,
     studentId: string
 ) {
-    if (role === "STUDENT") {
+    if (role === Role.STUDENT) {
         return userId === studentId
     }
 
-    if (role === "AGENT") {
-        const { data: agentRow } = await supabase
-            .from("agent")
-            .select("id")
-            .eq("profile_id", userId)
-            .maybeSingle()
-
-        if (!agentRow) {
-            return false
-        }
-
-        const { data: studentRow } = await supabase
-            .from("student")
-            .select("id")
-            .eq("profile_id", studentId)
-            .eq("created_by_agent_id", agentRow.id)
-            .maybeSingle()
-
-        return Boolean(studentRow)
-    }
-
-    return role === "UNIVERSITY" || role === "ADMIN"
+    // Agents have staff-wide visibility (same as all-apps / students / offers).
+    return role === Role.AGENT || role === Role.ADMIN || role === Role.SUPER_ADMIN
 }
 
 export async function GET(req: NextRequest) {
@@ -53,6 +34,7 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url)
         const queryParse = ApplicationListQuerySchema.safeParse({
             student_id: searchParams.get("student_id") ?? undefined,
+            page: searchParams.get("page") ?? undefined,
             limit: searchParams.get("limit") ?? undefined,
             status: searchParams.get("status") ?? undefined,
             degree_id: searchParams.get("degree_id") ?? undefined,
@@ -86,7 +68,7 @@ export async function GET(req: NextRequest) {
 
         const role = profile.role as ApplicationProfileRole
 
-        if (queryParse.data.scope === "all" && role === "STUDENT") {
+        if (queryParse.data.scope === "all" && role === Role.STUDENT) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
@@ -167,6 +149,7 @@ export async function POST(req: NextRequest) {
             .from("course")
             .select("id")
             .eq("id", validatedData.course_id)
+            .eq("is_deleted", false)
             .maybeSingle()
 
         if (!course) {

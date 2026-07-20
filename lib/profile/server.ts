@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { normalizeDateValue } from "@/types/schemas/academic"
 import { formatFullName } from "@/lib/utils/profile"
 import type { Database } from "@/types/supabase"
+import { Role } from "@/types/enums/role"
 
 type RoleEnum = Database["public"]["Enums"]["role_enum"]
 
@@ -89,25 +90,25 @@ export async function fetchProfilePageData(): Promise<ProfilePageData | null> {
         .eq("id", user.id)
         .maybeSingle()
 
-    const role = (profile?.role ?? "STUDENT") as RoleEnum
+    const role = (profile?.role ?? Role.STUDENT) as RoleEnum
 
     let extraData: Record<string, string | null | undefined> = {}
 
-    if (role === "STUDENT") {
+    if (role === Role.STUDENT) {
         const { data: student } = await supabase
             .from("student")
             .select("*")
             .eq("profile_id", user.id)
             .maybeSingle()
         extraData = student ?? {}
-    } else if (role === "AGENT") {
+    } else if (role === Role.AGENT) {
         const { data: agent } = await supabase
             .from("agent")
             .select("*")
             .eq("profile_id", user.id)
             .maybeSingle()
         extraData = agent ?? {}
-    } else if (role === "UNIVERSITY") {
+    } else if (role === Role.ADMIN) {
         const { data: university } = await supabase
             .from("university")
             .select("*")
@@ -128,7 +129,7 @@ export async function fetchProfilePageData(): Promise<ProfilePageData | null> {
 
     let agentKyc: ProfilePageData["agentKyc"] = null
 
-    if (role === "AGENT") {
+    if (role === Role.AGENT) {
         const { data: agentDocuments } = await supabase
             .from("document")
             .select(

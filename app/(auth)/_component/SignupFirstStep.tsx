@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { clearSessionQueryCache } from "@/lib/query/session-cache"
 import { ErrorView } from "@/components/shared/error-view"
 import { z } from "zod"
+import { Role } from "@/types/enums/role"
 
 // Create a schema where title is required string (without default)
 const signupFirstStepSchema = z.object({
@@ -35,7 +36,7 @@ export function SignupFirstStep({ onNext }: { onNext: () => void }) {
     const [showPassword, setShowPassword] = useState(false)
 
     const role = searchParams.get("role") ?? "student"
-    const normalizedRole = role.toUpperCase() as "STUDENT" | "AGENT"
+    const normalizedRole = role.toUpperCase() as Role.STUDENT | Role.AGENT
 
     const queryClient = useQueryClient()
     const { signup } = useAuth()

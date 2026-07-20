@@ -9,13 +9,19 @@ const UniversityProgramDetailContent = withUniversityProgramDetailLogic(Universi
 type PageContentProps = {
     courseId: string
     initialDetail: UniversityProgramDetail
+    canEditProgram: boolean
 }
 
 export function UniversityProgramDetailPageContent({
     courseId,
     initialDetail,
+    canEditProgram,
 }: PageContentProps) {
     return (
-        <UniversityProgramDetailContent courseId={courseId} initialDetail={initialDetail} />
+        <UniversityProgramDetailContent
+            courseId={courseId}
+            initialDetail={initialDetail}
+            canEditProgram={canEditProgram}
+        />
     )
 }

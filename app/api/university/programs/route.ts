@@ -6,6 +6,7 @@ import {
     saveUniversityProgramForPage,
 } from "@/lib/program/university-server"
 import { universityProgramUpsertSchema } from "@/types/schemas/university-program"
+import { Role } from "@/types/enums/role"
 
 async function assertUniversityOrAdmin() {
     const supabase = await createSupabaseServerClient()
@@ -24,7 +25,7 @@ async function assertUniversityOrAdmin() {
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== "UNIVERSITY" && profile?.role !== "ADMIN") {
+    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
         return { error: err("Forbidden", 403) }
     }
 

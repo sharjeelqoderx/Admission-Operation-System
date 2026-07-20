@@ -8,17 +8,19 @@ import { resolveTemplateChecklistItems } from "@/lib/document-template/resolve-c
 import { extractTemplateVariables } from "@/lib/document-template/variables"
 import type { DocumentTemplateListItem } from "@/types/schemas/document-template"
 import type { Database } from "@/types/supabase"
+import { Role } from "@/types/enums/role"
 
 type DocumentTemplateRow = Database["public"]["Tables"]["document_template"]["Row"]
-type StaffRole = Extract<
-    Database["public"]["Enums"]["role_enum"],
-    "ADMIN" | "UNIVERSITY" | "AGENT"
->
+type StaffRole = Role.SUPER_ADMIN | Role.ADMIN | Role.AGENT
 
-const DOCUMENT_TEMPLATE_STAFF_ROLES: StaffRole[] = ["ADMIN", "UNIVERSITY", "AGENT"]
+const DOCUMENT_TEMPLATE_STAFF_ROLES: StaffRole[] = [
+    Role.SUPER_ADMIN,
+    Role.ADMIN,
+    Role.AGENT,
+]
 
 export function isDocumentTemplateStaffRole(
-    role: Database["public"]["Enums"]["role_enum"] | null | undefined
+    role: string | null | undefined
 ): role is StaffRole {
     return role != null && DOCUMENT_TEMPLATE_STAFF_ROLES.includes(role as StaffRole)
 }

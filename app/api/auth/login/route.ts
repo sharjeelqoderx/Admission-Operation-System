@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { loginSchema } from "@/types/schemas/auth"
 import { formatFullName } from "@/lib/utils/profile"
+import { Role } from "@/types/enums/role"
 
 export async function POST(req: NextRequest) {
     try {
@@ -50,13 +51,13 @@ export async function POST(req: NextRequest) {
 
         const { data: academic } = await supabase
             .from("education")
-            .select("qualification, institution_name, cumulative_gpa")
+            .select("qualification, institution_name, gpa")
             .eq("profile_id", data.user.id)
             .maybeSingle()
 
         const { data: experience } = await supabase
             .from("work_experience")
-            .select("timeline_gap_years, title, organization_name, industry_sector, country, start_date, end_date, key_responsibilities")
+            .select("title, organization_name, industry_sector, country, start_date, end_date, key_responsibilities")
             .eq("profile_id", data.user.id)
             .maybeSingle()
 
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
             ),
             firstName: profile?.first_name ?? data.user.user_metadata?.first_name ?? "",
             lastName: profile?.last_name ?? data.user.user_metadata?.last_name ?? "",
-            role: profile?.role ?? (data.user.user_metadata?.role ?? "STUDENT"),
+            role: profile?.role ?? Role.STUDENT,
             profile: {
                 dateOfBirth: profile?.date_of_birth ?? "",
                 gender: profile?.gender?.toLowerCase?.() ?? "",
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest) {
                 ? {
                     highestDegree: academic.qualification ?? "",
                     instituteName: academic.institution_name ?? "",
-                    gpa: academic.cumulative_gpa ?? "",
+                    gpa: academic.gpa != null ? String(academic.gpa) : "",
                     desiredProgram: "",
                     campus: "",
                     englishTest: "",
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
                 : null,
             experience: experience
                 ? {
-                    academicGap: experience.timeline_gap_years ? String(experience.timeline_gap_years) : "",
+                    academicGap: "",
                     hasExperience: "yes" as const,
                     jobTitle: experience.title ?? "",
                     organization: experience.organization_name ?? "",

@@ -9,13 +9,6 @@ import { Input } from "@/components/ui/input"
 import { StudentTable } from "../../_components/StudentTable"
 import { BluryCard } from "@/components/shared/blury-card"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import {
     withStudentDashboardLogic,
     type StudentDashboardViewProps,
 } from "../withStudentDashboardLogic"
@@ -60,7 +53,7 @@ const StatsDashboard = memo(function StatsDashboard({
                 </Link>
             </div>
 
-            <div className="flex flex-col md:flex-row items-center gap-16">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-16">
                 <div className="flex items-center gap-6">
                     <div className="size-14 border-x border-white/40 rounded-l-lg rounded-r-lg bg-white/20 flex items-center justify-center">
                         <GraduationCap className="size-7 text-gray-800" />
@@ -146,6 +139,7 @@ function StudentDashboardView({
                             />
                         </div>
 
+                        {/* Status filter — hidden for now
                         <div className="relative w-full sm:w-64">
                             <Select value={status} onValueChange={handleStatusChange}>
                                 <SelectTrigger className="w-full">
@@ -159,6 +153,7 @@ function StudentDashboardView({
                                 </SelectContent>
                             </Select>
                         </div>
+                        */}
                     </div>
 
                     <StudentTable

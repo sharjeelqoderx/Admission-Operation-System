@@ -5,6 +5,7 @@ import {
 } from "@/lib/supabase/server"
 import { assertAgentCanAccessDocument } from "@/lib/document/agent-access"
 import { DocumentReviewActionSchema } from "@/types/schemas/document"
+import { Role } from "@/types/enums/role"
 
 function isReviewWriteBlocked(error: { code?: string; message?: string } | null) {
     if (!error) return false
@@ -32,7 +33,7 @@ export async function PATCH(
             .eq("id", user.id)
             .single()
 
-        if (profile?.role !== "AGENT") {
+        if (profile?.role !== Role.AGENT) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 

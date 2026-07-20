@@ -13,6 +13,7 @@ import { ApplicationStatusBadge } from "@/app/(dashboard)/dashboard/application/
 import { formatFullName } from "@/lib/utils/profile"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { formatIntakeDate } from "@/lib/utils/program"
+import { Role } from "@/types/enums/role"
 import {
     ChevronLeft,
     User,
@@ -37,7 +38,7 @@ export default function AllApplicationViewDetailsPage() {
 
     const canCreateOffer =
         me.isSuccess &&
-        (me.data?.role === "AGENT" || me.data?.role === "ADMIN")
+        (me.data?.role === Role.AGENT || me.data?.role === Role.SUPER_ADMIN)
 
     const { data: application, isLoading, isError } = useQuery({
         queryKey: ["application", id, "all"],
@@ -77,7 +78,7 @@ export default function AllApplicationViewDetailsPage() {
         setOfferModalOpen(true)
     }, [])
 
-    if (isLoading) return <PageLoader label="Loading application details..." />
+    if (isLoading) return <PageLoader />
 
     if (isError || !application) {
         return (

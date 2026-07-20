@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { fetchUniversityApplicationList } from "@/lib/application/university-server"
 import { universityApplicationTabSchema } from "@/types/schemas/university-application"
+import { Role } from "@/types/enums/role"
 
 export async function GET(req: NextRequest) {
     try {
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
             .eq("id", user.id)
             .maybeSingle()
 
-        if (profile?.role !== "UNIVERSITY" && profile?.role !== "ADMIN") {
+        if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
             return err("Forbidden", 403)
         }
 
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
         const limit = Number(searchParams.get("limit") ?? "10")
 
         const data = await fetchUniversityApplicationList({
-            universityId: profile.role === "UNIVERSITY" ? user.id : null,
+            universityId: profile.role === Role.ADMIN ? user.id : null,
             q,
             tab,
             page: Number.isFinite(page) ? page : 1,

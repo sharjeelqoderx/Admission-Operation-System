@@ -5,6 +5,7 @@ import { getCourseDocumentTypeIds } from "@/lib/utils/course-documents"
 import { includeApsDocumentTypeIdIfRequired } from "@/lib/utils/aps"
 import { upsertStudentDocument } from "@/lib/supabase/upsert-student-document"
 import { STUDENT_DOCUMENT_TYPE_IDS } from "@/lib/constants/document-types"
+import { Role } from "@/types/enums/role"
 
 export async function GET(
     req: NextRequest,
@@ -31,11 +32,11 @@ export async function GET(
             .eq("id", user.id)
             .single()
 
-        if (profile?.role === "STUDENT" && user.id !== studentId) {
+        if (profile?.role === Role.STUDENT && user.id !== studentId) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        if (profile?.role === "AGENT") {
+        if (profile?.role === Role.AGENT) {
             const { data: agentRow } = await supabase
                 .from("agent")
                 .select("id")

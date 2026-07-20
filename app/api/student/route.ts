@@ -6,6 +6,7 @@ import { upsertStudentDocument } from "@/lib/supabase/upsert-student-document"
 import { STUDENT_DOCUMENT_TYPE_IDS } from "@/lib/constants/document-types"
 import { requiresApsRequirement } from "@/lib/utils/aps"
 import { fetchStudentsListForAgent } from "@/lib/student/list"
+import { Role } from "@/types/enums/role"
 
 export async function GET(req: NextRequest) {
     try {
@@ -30,7 +31,8 @@ export async function GET(req: NextRequest) {
         })
 
         if ("error" in result) {
-            return NextResponse.json({ error: result.error }, { status: 400 })
+            const status = result.error === "Forbidden" ? 403 : 400
+            return NextResponse.json({ error: result.error }, { status })
         }
 
         return NextResponse.json({ data: result.data, pagination: result.pagination }, { status: 200 })
@@ -109,7 +111,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        if (meProfile.role !== "AGENT") {
+        if (meProfile.role !== Role.AGENT) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
@@ -134,7 +136,7 @@ export async function POST(req: NextRequest) {
             .maybeSingle()
 
         if (existingProfile) {
-            const msg = existingProfile.role === "STUDENT"
+            const msg = existingProfile.role === Role.STUDENT
                 ? "A student with this email already exists."
                 : `This email is already registered as a ${existingProfile.role.toLowerCase()} account.`
             return NextResponse.json({ error: msg }, { status: 409 })
@@ -151,7 +153,7 @@ export async function POST(req: NextRequest) {
                         full_name: fullName,
                         first_name: validatedData.first_name,
                         last_name: validatedData.last_name,
-                        role: "STUDENT",
+                        role: Role.STUDENT,
                     },
                 },
             })
@@ -204,7 +206,7 @@ export async function POST(req: NextRequest) {
                             | "FEMALE")
                         : null,
                 avatar_url: avatarUpload?.publicUrl ?? null,
-                role: "STUDENT",
+                role: Role.STUDENT,
             })
             .select()
             .single()

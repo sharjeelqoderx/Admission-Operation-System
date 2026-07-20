@@ -12,6 +12,7 @@ import {
     type StudentsListResult,
 } from "@/lib/student/list"
 import type { UserRole } from "@/types"
+import { Role } from "@/types/enums/role"
 
 export type StudentFormPageData = {
     title?: string | null
@@ -151,7 +152,7 @@ export async function fetchStudentFormCreatePageData(): Promise<StudentFormCreat
     return {
         user: {
             id: user.id,
-            role: (profile?.role ?? "STUDENT") as UserRole,
+            role: (profile?.role ?? Role.STUDENT) as UserRole,
         },
     }
 }

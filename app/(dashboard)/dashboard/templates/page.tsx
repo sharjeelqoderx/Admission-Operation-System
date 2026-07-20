@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchDocumentTemplatesForPage } from "@/lib/document-template/server"
+import { Role } from "@/types/enums/role"
 import { PageContent } from "./_components/page-content"
 
 export default async function DocumentTemplatesPage() {
@@ -10,11 +11,13 @@ export default async function DocumentTemplatesPage() {
         redirect("/login")
     }
 
-    if (role === "UNIVERSITY") {
-        redirect("/dashboard")
-    }
-
     const initialTemplates = await fetchDocumentTemplatesForPage()
 
-    return <PageContent initialTemplates={initialTemplates} />
+    return (
+        <PageContent
+            initialTemplates={initialTemplates}
+            canCreateTemplate={role !== Role.ADMIN}
+            canDeleteTemplate={role !== Role.ADMIN}
+        />
+    )
 }

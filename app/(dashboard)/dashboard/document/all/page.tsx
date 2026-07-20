@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { PageLoader } from "@/components/shared/page-loader"
 import { AllDocumentsPageContent } from "../_component/all-documents/page-content"
 import { withAllDocumentsLogic } from "../_component/all-documents/withAllDocumentsLogic"
+import { Role } from "@/types/enums/role"
 
 const AllDocumentsView = withAllDocumentsLogic(AllDocumentsPageContent)
 
@@ -14,12 +15,12 @@ export default function AllDocumentsPage() {
     const { data: user, isLoading } = me
 
     if (isLoading) {
-        return <PageLoader label="Loading documents..." />
+        return <PageLoader />
     }
 
-    if (user?.role !== "AGENT") {
+    if (user?.role !== Role.AGENT) {
         router.replace("/dashboard/document")
-        return <PageLoader label="Redirecting..." />
+        return <PageLoader />
     }
 
     return <AllDocumentsView />

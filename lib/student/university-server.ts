@@ -12,6 +12,7 @@ import type {
     UniversityStudentListItem,
     UniversityStudentListResponse,
 } from "@/types/schemas/university-student"
+import { Role } from "@/types/enums/role"
 
 type StudentRow = {
     profile_id: string
@@ -178,9 +179,10 @@ async function loadAgentOrganizations(
         return new Map<string, string>()
     }
 
+    // Live DB may not have agency_name — use contact person (or default) instead.
     const { data, error } = await supabase
         .from("agent")
-        .select("profile_id, agency_name")
+        .select("profile_id, contact_person_first_name, contact_person_last_name")
         .in("profile_id", agentProfileIds)
 
     if (error) {
@@ -188,7 +190,13 @@ async function loadAgentOrganizations(
     }
 
     return new Map(
-        (data ?? []).map((agent) => [agent.profile_id, agent.agency_name ?? "University Partner"])
+        (data ?? []).map((agent) => [
+            agent.profile_id,
+            formatFullName(
+                agent.contact_person_first_name,
+                agent.contact_person_last_name
+            ) || "University Partner",
+        ])
     )
 }
 
@@ -229,7 +237,7 @@ function mapListItem(params: {
 }
 
 export async function fetchUniversityStudentList(params: {
-    universityId: string
+    universityId?: string | null
     q?: string
     status?: string
     page?: number
@@ -279,7 +287,7 @@ export async function fetchUniversityStudentList(params: {
             ...row,
             profile,
         }
-    }).filter((student) => student.profile?.role === "STUDENT")
+    }).filter((student) => student.profile?.role === Role.STUDENT)
 
     const profileIds = studentRows.map((student) => student.profile_id)
 
@@ -332,7 +340,7 @@ export async function fetchUniversityStudentList(params: {
         const application = pickApplicationForStudent(
             applicationRows,
             student.profile_id,
-            params.universityId
+            params.universityId ?? undefined
         )
         const offer = application ? offerByApplicationId.get(application.id) : undefined
         const course = application ? courseById.get(application.course_id) : undefined
@@ -403,7 +411,7 @@ export async function fetchUniversityStudentList(params: {
 }
 
 export async function fetchUniversityStudentDetail(params: {
-    universityId: string
+    universityId?: string | null
     profileId: string
 }): Promise<UniversityStudentDetail | null> {
     const supabase = await createSupabaseServerClient()
@@ -414,7 +422,7 @@ export async function fetchUniversityStudentDetail(params: {
         .eq("id", params.profileId)
         .maybeSingle()
 
-    if (profileError || !profile || profile.role !== "STUDENT") {
+    if (profileError || !profile || profile.role !== Role.STUDENT) {
         return null
     }
 
@@ -467,7 +475,11 @@ export async function fetchUniversityStudentDetail(params: {
     const courseById = await loadCoursesById(supabase, courseIds)
 
     const primaryApplication =
-        pickApplicationForStudent(applicationRows, params.profileId, params.universityId) ??
+        pickApplicationForStudent(
+            applicationRows,
+            params.profileId,
+            params.universityId ?? undefined
+        ) ??
         applicationRows[0] ??
         null
 
@@ -639,8 +651,18 @@ export async function fetchUniversityStudentsForPage(params?: {
         return null
     }
 
+    const { data: profile } = await supabase
+        .from("profile")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle()
+
+    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+        return null
+    }
+
     return fetchUniversityStudentList({
-        universityId: user.id,
+        universityId: profile.role === Role.ADMIN ? user.id : null,
         q: params?.q,
         status: params?.status,
         page: params?.page,
@@ -659,8 +681,18 @@ export async function fetchUniversityStudentDetailForPage(profileId: string) {
         return null
     }
 
+    const { data: profile } = await supabase
+        .from("profile")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle()
+
+    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+        return null
+    }
+
     return fetchUniversityStudentDetail({
-        universityId: user.id,
+        universityId: profile.role === Role.ADMIN ? user.id : null,
         profileId,
     })
 }

@@ -4,6 +4,7 @@ import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { DocumentFormSchema } from "@/types/schemas/document"
 import { formatFullName } from "@/lib/utils/profile"
 import { assertCanUploadStudentDocument } from "@/lib/document/agent-access"
+import { Role } from "@/types/enums/role"
 
 export async function GET(req: NextRequest) {
     try {
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
             .eq("id", user.id)
             .single();
  
-        if (profile?.role === "STUDENT") {
+        if (profile?.role === Role.STUDENT) {
             const { data: studentProfile } = await supabase
                 .from("profile")
                 .select("id, first_name, last_name, avatar_url")
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest) {
                             last_doc_status: lastDoc?.document_review?.[0]?.status ?? null,
                         },
                     ],
-                    role: "STUDENT",
+                    role: Role.STUDENT,
                 },
                 { status: 200 }
             )
@@ -108,7 +109,7 @@ export async function GET(req: NextRequest) {
         }
  
         if (!Array.isArray(students) || !students.length) {
-            return NextResponse.json({ data: [], role: "AGENT" }, { status: 200 })
+            return NextResponse.json({ data: [], role: Role.AGENT }, { status: 200 })
         }
  
         const profileIds = students.map((s: any) => s.profile_id)
@@ -155,7 +156,7 @@ export async function GET(req: NextRequest) {
             })
             .filter(Boolean)
  
-        return NextResponse.json({ data: result, role: "AGENT" }, { status: 200 })
+        return NextResponse.json({ data: result, role: Role.AGENT }, { status: 200 })
     } catch {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }

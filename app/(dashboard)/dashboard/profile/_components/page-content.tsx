@@ -1,7 +1,8 @@
 "use client"
 
 import React, { memo, useEffect, useState } from "react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useAuth } from "@/hooks/useAuth"
 import { useForm } from "@tanstack/react-form"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
@@ -20,6 +21,7 @@ import {
     Trash2,
     GraduationCap
 } from "lucide-react"
+import { Role } from "@/types/enums/role"
 import {
     Select,
     SelectContent,
@@ -224,17 +226,9 @@ type PageContentProps = {
 function ProfilePageView({ initialData }: PageContentProps) {
     const queryClient = useQueryClient()
     const [showSuccess, setShowSuccess] = useState(false)
-    const { data: user = initialData, isError } = useQuery({
-        queryKey: ["me"],
-        queryFn: async () => {
-            const res = await fetch("/api/me")
-            if (!res.ok) throw new Error("Failed to fetch profile")
-            const json = await res.json()
-            return json.data as ProfilePageData
-        },
-        initialData,
-        refetchOnMount: false,
-    })
+    const { me } = useAuth()
+    const user = (me.data as ProfilePageData | undefined) ?? initialData
+    const isError = me.isError
 
     const mutation = useMutation({
         mutationFn: async (fd: FormData) => {
@@ -395,7 +389,7 @@ function ProfilePageView({ initialData }: PageContentProps) {
     if (isError) return <ErrorView message="Failed to load profile. Please try again." />
 
     const role = user?.role
-    const isStudent = role === "STUDENT"
+    const isStudent = role === Role.STUDENT
     const isUniversityViewOnlyRole = isUniversityViewOnly(role)
     const isEditingBasic = isStudent ? editingSection === "basic" : isEditing
     const isEditingStudentDetails = editingSection === "student-details"
@@ -627,7 +621,7 @@ function ProfilePageView({ initialData }: PageContentProps) {
 
                 {/* ── Role Specific Sections ── */}
 
-                {role === "STUDENT" && (
+                {role === Role.STUDENT && (
                     <BluryCard isCentered={false} childClass="space-y-8" className="rounded-2xl">
                         <div className="flex flex-wrap gap-2 border-b border-white/20 pb-4">
                             {STUDENT_TABS.map((tab) => {
@@ -1335,7 +1329,7 @@ function ProfilePageView({ initialData }: PageContentProps) {
                     </BluryCard>
                 )}
 
-                {role === "AGENT" && (
+                {role === Role.AGENT && (
                     <BluryCard isCentered={false} childClass="space-y-8" className="rounded-2xl">
                         <div className="flex items-center gap-3 border-b border-white/20 pb-4">
                             <Briefcase className="size-5 text-gray-700" />
@@ -1519,7 +1513,7 @@ function ProfilePageView({ initialData }: PageContentProps) {
                     </BluryCard>
                 )}
 
-                {role === "UNIVERSITY" && (
+                {role === Role.ADMIN && (
                     <BluryCard isCentered={false} childClass="space-y-8" className="rounded-2xl">
                         <div className="flex items-center gap-3 border-b border-white/20 pb-4">
                             <Building className="size-5 text-gray-700" />

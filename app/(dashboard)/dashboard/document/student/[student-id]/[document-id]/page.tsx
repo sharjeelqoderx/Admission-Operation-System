@@ -29,7 +29,7 @@ export default function DocumentDetailPage({ params }: PageProps) {
         }
     })
 
-    if (isLoading) return <PageLoader label="Loading document details..." />
+    if (isLoading) return <PageLoader />
     if (!document) return <div className="p-20 text-center text-gray-500 font-bold uppercase tracking-widest">Document not found.</div>
 
     return (

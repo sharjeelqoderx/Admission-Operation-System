@@ -12,6 +12,7 @@ import {
 } from "@/app/(dashboard)/dashboard/application/_components/applications-list-table"
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { Role } from '@/types/enums/role';
 
 type DashboardStats = {
     total_students: number
@@ -132,7 +133,7 @@ export function AgentDashboard() {
 
                 <ApplicationsListTable
                     applications={recentApplications}
-                    role="AGENT"
+                    role={Role.AGENT}
                     isLoading={appsLoading}
                     isError={appsError}
                     onRetry={() => refetchApps()}

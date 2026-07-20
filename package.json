@@ -84,7 +84,7 @@
     "react-hook-form": "^7.54.1",
     "react-phone-input-2": "^2.15.1",
     "react-resizable-panels": "^2.1.7",
-    "recharts": "2.15.0",
+    "recharts": "^3.8.0",
     "resend": "^6.12.2",
     "shadcn": "^4.2.0",
     "sonner": "^1.7.1",
@@ -106,5 +106,8 @@
     "eslint-config-next": "16.2.3",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "supabase@2.95.2": true
   }
 }

@@ -6,6 +6,7 @@ import type { UniversityProgramDetail } from "@/types/schemas/university-program
 
 export type UniversityProgramDetailLogicProps = {
     detail: UniversityProgramDetail
+    canEditProgram: boolean
 }
 
 async function fetchUniversityProgramDetail(courseId: string) {
@@ -23,9 +24,11 @@ export function withUniversityProgramDetailLogic(
     return function UniversityProgramDetailContainer({
         courseId,
         initialDetail,
+        canEditProgram,
     }: {
         courseId: string
         initialDetail: UniversityProgramDetail
+        canEditProgram: boolean
     }) {
         const detailQuery = useQuery({
             queryKey: ["university-program-detail", courseId],
@@ -33,6 +36,6 @@ export function withUniversityProgramDetailLogic(
             initialData: initialDetail,
         })
 
-        return <Component detail={detailQuery.data} />
+        return <Component detail={detailQuery.data} canEditProgram={canEditProgram} />
     }
 }

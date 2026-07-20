@@ -5,6 +5,7 @@ import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { getFileSizeLimitError, isFileWithinSizeLimit } from "@/lib/constants/file-upload"
 
 import { profileStep1Schema } from "@/types/schemas/auth"
+import { Role } from "@/types/enums/role"
 
 export async function POST(req: NextRequest) {
     try {
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
             .select("role")
             .eq("id", user.id)
             .maybeSingle()
-        const role = profile?.role ?? "STUDENT"
+        const role = profile?.role ?? Role.STUDENT
 
         const contentType = req.headers.get("content-type") ?? ""
         let data: any = {}
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
             })
 
             // Specific validation for STUDENT onboarding step 1
-            if (role === "STUDENT") {
+            if (role === Role.STUDENT) {
                 const validated = profileStep1Schema.safeParse(data)
                 if (!validated.success) {
                     return err(validated.error.issues[0].message, 400)
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
                 return ok({ message: "Profile updated" })
             }
 
-            // Fallback for other roles (AGENT, UNIVERSITY) using FormData
+            // Fallback for other roles (AGENT, ADMIN) using FormData
             const file = form.get("avatar")
             if (file instanceof File && file.size > 0) {
                 if (!isFileWithinSizeLimit(file)) {
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Update common profile (non-student or JSON)
-        if (role !== "STUDENT" || !contentType.includes("multipart/form-data")) {
+        if (role !== Role.STUDENT || !contentType.includes("multipart/form-data")) {
             const title = data.title
             const firstName = data.firstName
             const lastName = data.lastName
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Update role-specific table (non-student)
-        if (role === "AGENT") {
+        if (role === Role.AGENT) {
             const { error } = await supabase
                 .from("agent")
                 .upsert({
@@ -149,7 +150,7 @@ export async function POST(req: NextRequest) {
                     experience_years: data.experience_years ? Number(data.experience_years) : undefined,
                 }, { onConflict: "profile_id" })
             if (error) return err(error.message, 500)
-        } else if (role === "UNIVERSITY") {
+        } else if (role === Role.ADMIN) {
             const { error } = await supabase
                 .from("university")
                 .upsert({

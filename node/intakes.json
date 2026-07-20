@@ -1,0 +1,308 @@
+{
+    "records": [
+        {
+            "id": "69bd4943457d49a807c472c9",
+            "field_62": "Summer Semester 2027",
+            "field_62_raw": "Summer Semester 2027",
+            "field_409": "Sommersemester 2027",
+            "field_409_raw": "Sommersemester 2027",
+            "field_63": "31/12/2026",
+            "field_63_raw": {
+                "date": "12/31/2026",
+                "date_formatted": "31/12/2026",
+                "hours": "12",
+                "minutes": "00",
+                "am_pm": "AM",
+                "unix_timestamp": 1798675200000,
+                "iso_timestamp": "2026-12-31T00:00:00.000Z",
+                "timestamp": "12/31/2026 12:00 am",
+                "time": 0,
+                "time_formatted": "00:00",
+                "proper_unix_timestamp": 1798675200000,
+                "proper_iso_timestamp": "2026-12-31T00:00:00.000Z"
+            },
+            "field_270": "Open",
+            "field_270_raw": "Open",
+            "field_376": "01/02/2027",
+            "field_376_raw": {
+                "date": "02/01/2027",
+                "date_formatted": "01/02/2027",
+                "hours": "12",
+                "minutes": "00",
+                "am_pm": "AM",
+                "unix_timestamp": 1801440000000,
+                "iso_timestamp": "2027-02-01T00:00:00.000Z",
+                "timestamp": "02/01/2027 12:00 am",
+                "time": 0,
+                "time_formatted": "00:00",
+                "proper_unix_timestamp": 1801440000000,
+                "proper_iso_timestamp": "2027-02-01T00:00:00.000Z"
+            },
+            "field_65": "$500.00",
+            "field_65_raw": "500.00",
+            "field_66": "69bd4943457d49a807c472c9",
+            "field_66_raw": "69bd4943457d49a807c472c9",
+            "field_67": "03/20/2026 6:18am",
+            "field_67_raw": {
+                "date": "03/20/2026",
+                "date_formatted": "03/20/2026",
+                "hours": "06",
+                "minutes": "18",
+                "am_pm": "AM",
+                "unix_timestamp": 1774012680000,
+                "iso_timestamp": "2026-03-20T13:18:00.000Z",
+                "timestamp": "03/20/2026 06:18 am",
+                "time": 378,
+                "time_formatted": "06:18am",
+                "proper_unix_timestamp": 1774012680000,
+                "proper_iso_timestamp": "2026-03-20T13:18:00.000Z"
+            },
+            "field_68": "05/28/2026 12:19am",
+            "field_68_raw": {
+                "date": "05/28/2026",
+                "date_formatted": "05/28/2026",
+                "hours": "12",
+                "minutes": "19",
+                "am_pm": "AM",
+                "unix_timestamp": 1779952740000,
+                "iso_timestamp": "2026-05-28T07:19:00.000Z",
+                "timestamp": "05/28/2026 12:19 am",
+                "time": 19,
+                "time_formatted": "12:19am",
+                "proper_unix_timestamp": 1779952740000,
+                "proper_iso_timestamp": "2026-05-28T07:19:00.000Z"
+            },
+            "field_125": "<span class=\"69b8fc991d643fbc25f55837\" data-kn=\"connection-value\">Artificial Intelligence (Bachelor of Arts)</span><br /><span class=\"69b8fd88384a931bcf13cf10\" data-kn=\"connection-value\">Care & Management (Bachelor of Science)</span><br /><span class=\"69b8fd4bdf255a79055562cc\" data-kn=\"connection-value\">Digital Business Management (Bachelor of Arts)</span><br /><span class=\"69ba9c98e1f064ade2879a7d\" data-kn=\"connection-value\">Digital Transformation Management (Master of Science)</span><br /><span class=\"69ba9baf4425566552812e1c\" data-kn=\"connection-value\">Global SMEs (Master of Arts)</span><br /><span class=\"69b8fce6ef72657ae4489367\" data-kn=\"connection-value\">International Business Administration (Bachelor of Arts)</span><br /><span class=\"69ba9a8453350527b409c4c9\" data-kn=\"connection-value\">International Management (Master of Arts)</span><br /><span class=\"69ba99a9e1f064ade27b914a\" data-kn=\"connection-value\">International Technology Transfer Management (Master of Science)</span><br /><span class=\"69b8fb98df255a79054d6a11\" data-kn=\"connection-value\">                                     Management and Technology (Bachelor of Engineering)                               Major: Energy & Environment</span><br /><span class=\"69b8faeea04c9b2b0e448e1c\" data-kn=\"connection-value\">                                     Management and Technology (Bachelor of Engineering)                                     Major: Mechanical Engineering</span><br /><span class=\"69b8fb5def72657ae444bd4b\" data-kn=\"connection-value\">Marketing Management (Bachelor of Arts)</span><br /><span class=\"69ba9c426af058ddfe270d94\" data-kn=\"connection-value\">                 Master of Business Administration (MBA) – General Technology Management                 Major: Data Science</span><br /><span class=\"69ba9af373a280f8e870572c\" data-kn=\"connection-value\">                 Master of Business Administration (MBA) – General Technology Management                 Major: Environment and Energy Management</span><br /><span class=\"69b8f805e80da0feeeaf85be\" data-kn=\"connection-value\">Occupational Therapy (Bachelor of Science)</span><br /><span class=\"69ba97410e1e4c16fe1b6105\" data-kn=\"connection-value\">Physician Assistance (Bachelor of Science)</span><br /><span class=\"69b8f607ef72657ae4356943\" data-kn=\"connection-value\">Physiotherapy (Bachelor of Science)</span><br /><span class=\"69b8e9811c135522ba9a88e5\" data-kn=\"connection-value\">Sports Management (Bachelor of Arts)</span><br /><span class=\"69ba98f7e2ec0cb66fa8330d\" data-kn=\"connection-value\">Sustainability and Climate Management (Master of Arts)</span>",
+            "field_125_raw": [
+                {
+                    "id": "69b8fc991d643fbc25f55837",
+                    "identifier": "Artificial Intelligence (Bachelor of Arts)"
+                },
+                {
+                    "id": "69b8fd88384a931bcf13cf10",
+                    "identifier": "Care & Management (Bachelor of Science)"
+                },
+                {
+                    "id": "69b8fd4bdf255a79055562cc",
+                    "identifier": "Digital Business Management (Bachelor of Arts)"
+                },
+                {
+                    "id": "69ba9c98e1f064ade2879a7d",
+                    "identifier": "Digital Transformation Management (Master of Science)"
+                },
+                {
+                    "id": "69ba9baf4425566552812e1c",
+                    "identifier": "Global SMEs (Master of Arts)"
+                },
+                {
+                    "id": "69b8fce6ef72657ae4489367",
+                    "identifier": "International Business Administration (Bachelor of Arts)"
+                },
+                {
+                    "id": "69ba9a8453350527b409c4c9",
+                    "identifier": "International Management (Master of Arts)"
+                },
+                {
+                    "id": "69ba99a9e1f064ade27b914a",
+                    "identifier": "International Technology Transfer Management (Master of Science)"
+                },
+                {
+                    "id": "69b8fb98df255a79054d6a11",
+                    "identifier": "                                     Management and Technology (Bachelor of Engineering)                               Major: Energy & Environment"
+                },
+                {
+                    "id": "69b8faeea04c9b2b0e448e1c",
+                    "identifier": "                                     Management and Technology (Bachelor of Engineering)                                     Major: Mechanical Engineering"
+                },
+                {
+                    "id": "69b8fb5def72657ae444bd4b",
+                    "identifier": "Marketing Management (Bachelor of Arts)"
+                },
+                {
+                    "id": "69ba9c426af058ddfe270d94",
+                    "identifier": "                 Master of Business Administration (MBA) – General Technology Management                 Major: Data Science"
+                },
+                {
+                    "id": "69ba9af373a280f8e870572c",
+                    "identifier": "                 Master of Business Administration (MBA) – General Technology Management                 Major: Environment and Energy Management"
+                },
+                {
+                    "id": "69b8f805e80da0feeeaf85be",
+                    "identifier": "Occupational Therapy (Bachelor of Science)"
+                },
+                {
+                    "id": "69ba97410e1e4c16fe1b6105",
+                    "identifier": "Physician Assistance (Bachelor of Science)"
+                },
+                {
+                    "id": "69b8f607ef72657ae4356943",
+                    "identifier": "Physiotherapy (Bachelor of Science)"
+                },
+                {
+                    "id": "69b8e9811c135522ba9a88e5",
+                    "identifier": "Sports Management (Bachelor of Arts)"
+                },
+                {
+                    "id": "69ba98f7e2ec0cb66fa8330d",
+                    "identifier": "Sustainability and Climate Management (Master of Arts)"
+                }
+            ],
+            "field_149": 0,
+            "field_149_raw": 0,
+            "field_375": "",
+            "field_375_raw": []
+        },
+        {
+            "id": "69b6cccc535d7e8afa108732",
+            "field_62": "Winter Semester 2026/27",
+            "field_62_raw": "Winter Semester 2026/27",
+            "field_409": "Wintersemester 2026/27",
+            "field_409_raw": "Wintersemester 2026/27",
+            "field_63": "31/08/2025",
+            "field_63_raw": {
+                "date": "08/31/2025",
+                "date_formatted": "31/08/2025",
+                "hours": "12",
+                "minutes": "00",
+                "am_pm": "AM",
+                "unix_timestamp": 1756598400000,
+                "iso_timestamp": "2025-08-31T00:00:00.000Z",
+                "timestamp": "08/31/2025 12:00 am",
+                "time": 0,
+                "time_formatted": "00:00",
+                "proper_unix_timestamp": 1756598400000,
+                "proper_iso_timestamp": "2025-08-31T00:00:00.000Z"
+            },
+            "field_270": "Open",
+            "field_270_raw": "Open",
+            "field_376": "01/10/2026",
+            "field_376_raw": {
+                "date": "10/01/2026",
+                "date_formatted": "01/10/2026",
+                "hours": "12",
+                "minutes": "00",
+                "am_pm": "AM",
+                "unix_timestamp": 1790812800000,
+                "iso_timestamp": "2026-10-01T00:00:00.000Z",
+                "timestamp": "10/01/2026 12:00 am",
+                "time": 0,
+                "time_formatted": "00:00",
+                "proper_unix_timestamp": 1790812800000,
+                "proper_iso_timestamp": "2026-10-01T00:00:00.000Z"
+            },
+            "field_65": "$500.00",
+            "field_65_raw": "500.00",
+            "field_66": "69b6cccc535d7e8afa108732",
+            "field_66_raw": "69b6cccc535d7e8afa108732",
+            "field_67": "03/15/2026 8:14am",
+            "field_67_raw": {
+                "date": "03/15/2026",
+                "date_formatted": "03/15/2026",
+                "hours": "08",
+                "minutes": "14",
+                "am_pm": "AM",
+                "unix_timestamp": 1773587640000,
+                "iso_timestamp": "2026-03-15T15:14:00.000Z",
+                "timestamp": "03/15/2026 08:14 am",
+                "time": 494,
+                "time_formatted": "08:14am",
+                "proper_unix_timestamp": 1773587640000,
+                "proper_iso_timestamp": "2026-03-15T15:14:00.000Z"
+            },
+            "field_68": "07/15/2026 5:25am",
+            "field_68_raw": {
+                "date": "07/15/2026",
+                "date_formatted": "07/15/2026",
+                "hours": "05",
+                "minutes": "25",
+                "am_pm": "AM",
+                "unix_timestamp": 1784118300000,
+                "iso_timestamp": "2026-07-15T12:25:00.000Z",
+                "timestamp": "07/15/2026 05:25 am",
+                "time": 325,
+                "time_formatted": "05:25am",
+                "proper_unix_timestamp": 1784118300000,
+                "proper_iso_timestamp": "2026-07-15T12:25:00.000Z"
+            },
+            "field_125": "<span class=\"69b8fc991d643fbc25f55837\" data-kn=\"connection-value\">Artificial Intelligence (Bachelor of Arts)</span><br /><span class=\"69b8fd88384a931bcf13cf10\" data-kn=\"connection-value\">Care & Management (Bachelor of Science)</span><br /><span class=\"69b8fd4bdf255a79055562cc\" data-kn=\"connection-value\">Digital Business Management (Bachelor of Arts)</span><br /><span class=\"69ba9c98e1f064ade2879a7d\" data-kn=\"connection-value\">Digital Transformation Management (Master of Science)</span><br /><span class=\"69ba9baf4425566552812e1c\" data-kn=\"connection-value\">Global SMEs (Master of Arts)</span><br /><span class=\"69b8fce6ef72657ae4489367\" data-kn=\"connection-value\">International Business Administration (Bachelor of Arts)</span><br /><span class=\"69ba9a8453350527b409c4c9\" data-kn=\"connection-value\">International Management (Master of Arts)</span><br /><span class=\"69ba99a9e1f064ade27b914a\" data-kn=\"connection-value\">International Technology Transfer Management (Master of Science)</span><br /><span class=\"69b8fb98df255a79054d6a11\" data-kn=\"connection-value\">                                     Management and Technology (Bachelor of Engineering)                               Major: Energy & Environment</span><br /><span class=\"69b8faeea04c9b2b0e448e1c\" data-kn=\"connection-value\">                                     Management and Technology (Bachelor of Engineering)                                     Major: Mechanical Engineering</span><br /><span class=\"69b8fb5def72657ae444bd4b\" data-kn=\"connection-value\">Marketing Management (Bachelor of Arts)</span><br /><span class=\"69ba9c426af058ddfe270d94\" data-kn=\"connection-value\">                 Master of Business Administration (MBA) – General Technology Management                 Major: Data Science</span><br /><span class=\"69ba9af373a280f8e870572c\" data-kn=\"connection-value\">                 Master of Business Administration (MBA) – General Technology Management                 Major: Environment and Energy Management</span><br /><span class=\"69b8f805e80da0feeeaf85be\" data-kn=\"connection-value\">Occupational Therapy (Bachelor of Science)</span><br /><span class=\"69ba97410e1e4c16fe1b6105\" data-kn=\"connection-value\">Physician Assistance (Bachelor of Science)</span><br /><span class=\"69b8f607ef72657ae4356943\" data-kn=\"connection-value\">Physiotherapy (Bachelor of Science)</span><br /><span class=\"69b8e9811c135522ba9a88e5\" data-kn=\"connection-value\">Sports Management (Bachelor of Arts)</span><br /><span class=\"69ba98f7e2ec0cb66fa8330d\" data-kn=\"connection-value\">Sustainability and Climate Management (Master of Arts)</span>",
+            "field_125_raw": [
+                {
+                    "id": "69b8fc991d643fbc25f55837",
+                    "identifier": "Artificial Intelligence (Bachelor of Arts)"
+                },
+                {
+                    "id": "69b8fd88384a931bcf13cf10",
+                    "identifier": "Care & Management (Bachelor of Science)"
+                },
+                {
+                    "id": "69b8fd4bdf255a79055562cc",
+                    "identifier": "Digital Business Management (Bachelor of Arts)"
+                },
+                {
+                    "id": "69ba9c98e1f064ade2879a7d",
+                    "identifier": "Digital Transformation Management (Master of Science)"
+                },
+                {
+                    "id": "69ba9baf4425566552812e1c",
+                    "identifier": "Global SMEs (Master of Arts)"
+                },
+                {
+                    "id": "69b8fce6ef72657ae4489367",
+                    "identifier": "International Business Administration (Bachelor of Arts)"
+                },
+                {
+                    "id": "69ba9a8453350527b409c4c9",
+                    "identifier": "International Management (Master of Arts)"
+                },
+                {
+                    "id": "69ba99a9e1f064ade27b914a",
+                    "identifier": "International Technology Transfer Management (Master of Science)"
+                },
+                {
+                    "id": "69b8fb98df255a79054d6a11",
+                    "identifier": "                                     Management and Technology (Bachelor of Engineering)                               Major: Energy & Environment"
+                },
+                {
+                    "id": "69b8faeea04c9b2b0e448e1c",
+                    "identifier": "                                     Management and Technology (Bachelor of Engineering)                                     Major: Mechanical Engineering"
+                },
+                {
+                    "id": "69b8fb5def72657ae444bd4b",
+                    "identifier": "Marketing Management (Bachelor of Arts)"
+                },
+                {
+                    "id": "69ba9c426af058ddfe270d94",
+                    "identifier": "                 Master of Business Administration (MBA) – General Technology Management                 Major: Data Science"
+                },
+                {
+                    "id": "69ba9af373a280f8e870572c",
+                    "identifier": "                 Master of Business Administration (MBA) – General Technology Management                 Major: Environment and Energy Management"
+                },
+                {
+                    "id": "69b8f805e80da0feeeaf85be",
+                    "identifier": "Occupational Therapy (Bachelor of Science)"
+                },
+                {
+                    "id": "69ba97410e1e4c16fe1b6105",
+                    "identifier": "Physician Assistance (Bachelor of Science)"
+                },
+                {
+                    "id": "69b8f607ef72657ae4356943",
+                    "identifier": "Physiotherapy (Bachelor of Science)"
+                },
+                {
+                    "id": "69b8e9811c135522ba9a88e5",
+                    "identifier": "Sports Management (Bachelor of Arts)"
+                },
+                {
+                    "id": "69ba98f7e2ec0cb66fa8330d",
+                    "identifier": "Sustainability and Climate Management (Master of Arts)"
+                }
+            ],
+            "field_149": 263,
+            "field_149_raw": 263,
+            "field_375": "",
+            "field_375_raw": []
+        }
+    ]
+}

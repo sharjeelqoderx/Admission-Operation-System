@@ -129,7 +129,7 @@ function OnboardingControllerInner() {
     }
 
     if (step !== "welcome" && isLoading) {
-        return <PageLoader fullScreen label="Setting up your onboarding..." />
+        return <PageLoader fullScreen />
     }
 
     if (step === "welcome") {

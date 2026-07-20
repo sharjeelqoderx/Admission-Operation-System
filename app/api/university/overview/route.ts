@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { err, ok } from "@/lib/api"
 import { fetchUniversityOverviewForPage } from "@/lib/university-overview/server"
+import { Role } from "@/types/enums/role"
 
 export async function GET() {
     try {
@@ -21,7 +22,7 @@ export async function GET() {
             .eq("id", user.id)
             .maybeSingle()
 
-        if (profile?.role !== "UNIVERSITY") {
+        if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
             return err("Forbidden", 403)
         }
 

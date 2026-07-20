@@ -69,16 +69,41 @@ export const universityOverviewRecentSchema = z.object({
     offers: z.array(universityOverviewRecentOfferSchema),
 })
 
+export const overviewChartPointSchema = z.object({
+    name: z.string(),
+    value: z.number(),
+})
+
+export const overviewTrendPointSchema = z.object({
+    month: z.string(),
+    applications: z.number(),
+    offers: z.number(),
+})
+
+export const universityOverviewChartsSchema = z.object({
+    overview: z.array(overviewChartPointSchema),
+    applications_by_status: z.array(overviewChartPointSchema),
+    pipeline: z.array(overviewChartPointSchema),
+    offers_by_status: z.array(overviewChartPointSchema),
+    programs_by_status: z.array(overviewChartPointSchema),
+    documents_by_status: z.array(overviewChartPointSchema),
+    monthly_trend: z.array(overviewTrendPointSchema),
+})
+
 export const universityOverviewSchema = z.object({
     title: z.string(),
     subtitle: z.string(),
     stats: universityOverviewStatsSchema,
+    charts: universityOverviewChartsSchema,
     recent: universityOverviewRecentSchema,
 })
 
 export type UniversityOverview = z.infer<typeof universityOverviewSchema>
 export type UniversityOverviewStats = z.infer<typeof universityOverviewStatsSchema>
 export type UniversityOverviewRecent = z.infer<typeof universityOverviewRecentSchema>
+export type UniversityOverviewCharts = z.infer<typeof universityOverviewChartsSchema>
+export type OverviewChartPoint = z.infer<typeof overviewChartPointSchema>
+export type OverviewTrendPoint = z.infer<typeof overviewTrendPointSchema>
 
 const DEFAULT_OVERVIEW_STATS: UniversityOverviewStats = {
     total_students: 0,
@@ -91,6 +116,16 @@ const DEFAULT_OVERVIEW_STATS: UniversityOverviewStats = {
     total_offers: 0,
 }
 
+const DEFAULT_OVERVIEW_CHARTS: UniversityOverviewCharts = {
+    overview: [],
+    applications_by_status: [],
+    pipeline: [],
+    offers_by_status: [],
+    programs_by_status: [],
+    documents_by_status: [],
+    monthly_trend: [],
+}
+
 export function normalizeUniversityOverviewStats(
     stats?: Partial<UniversityOverviewStats> | null
 ): UniversityOverviewStats {
@@ -100,9 +135,28 @@ export function normalizeUniversityOverviewStats(
     }
 }
 
+export function normalizeUniversityOverviewCharts(
+    charts?: Partial<UniversityOverviewCharts> | null
+): UniversityOverviewCharts {
+    return {
+        ...DEFAULT_OVERVIEW_CHARTS,
+        ...charts,
+        overview: charts?.overview ?? DEFAULT_OVERVIEW_CHARTS.overview,
+        applications_by_status:
+            charts?.applications_by_status ?? DEFAULT_OVERVIEW_CHARTS.applications_by_status,
+        pipeline: charts?.pipeline ?? DEFAULT_OVERVIEW_CHARTS.pipeline,
+        offers_by_status: charts?.offers_by_status ?? DEFAULT_OVERVIEW_CHARTS.offers_by_status,
+        programs_by_status: charts?.programs_by_status ?? DEFAULT_OVERVIEW_CHARTS.programs_by_status,
+        documents_by_status:
+            charts?.documents_by_status ?? DEFAULT_OVERVIEW_CHARTS.documents_by_status,
+        monthly_trend: charts?.monthly_trend ?? DEFAULT_OVERVIEW_CHARTS.monthly_trend,
+    }
+}
+
 export function normalizeUniversityOverview(overview: UniversityOverview): UniversityOverview {
     return {
         ...overview,
         stats: normalizeUniversityOverviewStats(overview.stats),
+        charts: normalizeUniversityOverviewCharts(overview.charts),
     }
 }

@@ -12,6 +12,7 @@ import type {
     UploadedDocumentSummary,
 } from "@/types/schemas/document"
 import type { CourseDegree, CourseProgram } from "@/types/schemas/program"
+import { Role } from "@/types/enums/role"
 
 type DocumentRow = {
     id: string
@@ -108,7 +109,7 @@ export async function GET(req: NextRequest) {
                 .eq("id", user.id)
                 .maybeSingle()
 
-            if (profile?.role !== "AGENT") {
+            if (profile?.role !== Role.AGENT) {
                 return err("Forbidden", 403)
             }
 
@@ -139,6 +140,7 @@ export async function GET(req: NextRequest) {
         const { data: courseRows, error: courseError } = await supabase
             .from("course")
             .select(COURSE_SELECT)
+            .eq("is_deleted", false)
             .order("name", { ascending: true })
 
         if (courseError) {

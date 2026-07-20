@@ -1,41 +1,51 @@
 "use client"
 
-import { Typography } from "@/components/shared/Typography"
-import { cn } from "@/lib/utils"
 import { Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-type PageLoaderProps = {
-    label?: string
-    fullScreen?: boolean
+const SPINNER_SIZE = {
+    sm: "size-4",
+    md: "size-6",
+    lg: "size-8",
+} as const
+
+type SpinnerSize = keyof typeof SPINNER_SIZE
+
+type SpinnerProps = {
+    size?: SpinnerSize
     className?: string
 }
 
-export function PageLoader({
-    label = "Loading...",
-    fullScreen = false,
-    className
-}: PageLoaderProps) {
+/** Shared loading spinner — always brand-byzantine, no text. */
+export function Spinner({ size = "lg", className }: SpinnerProps) {
     return (
-        <div className={cn(
-            "flex flex-col items-center justify-center gap-4 transition-all duration-300 animate-in fade-in",
-            fullScreen ? "fixed inset-0 z-[9999] bg-white/80 backdrop-blur-md" : "min-h-[200px] w-full",
-            className
-        )}>
-            <div className="relative">
-                <Loader2 className="size-8 text-brand-byzantine animate-spin" />
-                <div className="absolute inset-0 size-8 bg-brand-byzantine/20 blur-xl rounded-full -z-10 animate-pulse" />
-            </div>
+        <Loader2
+            aria-hidden
+            className={cn(SPINNER_SIZE[size], "shrink-0 animate-spin text-brand-byzantine", className)}
+        />
+    )
+}
 
-            {label && (
-                <Typography
-                    as="span"
-                    font="small"
-                    className="text-gray-500 tracking-widest uppercase animate-pulse"
-                >
-                    {label}
-                </Typography>
+type PageLoaderProps = {
+    fullScreen?: boolean
+    className?: string
+    size?: SpinnerSize
+}
+
+export function PageLoader({ fullScreen = false, className, size = "lg" }: PageLoaderProps) {
+    return (
+        <div
+            role="status"
+            aria-label="Loading"
+            className={cn(
+                "flex w-full items-center justify-center animate-in fade-in",
+                fullScreen
+                    ? "fixed inset-0 z-[9999] bg-white/80 backdrop-blur-md"
+                    : "min-h-[200px]",
+                className
             )}
-
+        >
+            <Spinner size={size} />
         </div>
     )
 }

@@ -17,6 +17,7 @@ import { BluryCard } from "@/components/shared/blury-card"
 import { DatePicker } from "@/components/shared/date-picker"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import { ApplicationsListTable } from "./applications-list-table"
+import { Role } from "@/types/enums/role"
 import {
     withApplicationPageLogic,
     type ApplicationPageLogicProps,
@@ -53,14 +54,14 @@ const ApplicationDashboardView = memo(function ApplicationDashboardView({
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div className="space-y-1 max-w-2xl">
                     <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
-                        {role === "STUDENT" ? "My Applications" : "All Applications"}
+                        {role === Role.STUDENT ? "My Applications" : "All Applications"}
                     </Typography>
                     <Typography
                         as="p"
                         font="sub-text"
                         className="text-gray-500 font-medium max-w-2xl leading-relaxed"
                     >
-                        {role === "STUDENT"
+                        {role === Role.STUDENT
                             ? "Track your submitted applications and their current status."
                             : "Track and manage all student applications submitted through your agency."}
                     </Typography>

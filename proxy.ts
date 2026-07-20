@@ -10,6 +10,16 @@ export async function proxy(req: NextRequest) {
 
     const path = req.nextUrl.pathname
 
+    if (user) {
+        res.cookies.set("aos_session", "1", {
+            path: "/",
+            sameSite: "lax",
+            httpOnly: false,
+        })
+    } else {
+        res.cookies.delete("aos_session")
+    }
+
     // Logged-in → redirect away from login / root
     if (user && (path.startsWith("/login") || path === "/")) {
         return NextResponse.redirect(new URL("/dashboard", req.url))

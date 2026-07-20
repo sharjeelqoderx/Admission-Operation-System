@@ -17,7 +17,6 @@ export type Database = {
       agent: {
         Row: {
           address: string | null
-          agency_name: string | null
           city: string | null
           contact_person_first_name: string | null
           contact_person_last_name: string | null
@@ -34,7 +33,6 @@ export type Database = {
         }
         Insert: {
           address?: string | null
-          agency_name?: string | null
           city?: string | null
           contact_person_first_name?: string | null
           contact_person_last_name?: string | null
@@ -51,7 +49,6 @@ export type Database = {
         }
         Update: {
           address?: string | null
-          agency_name?: string | null
           city?: string | null
           contact_person_first_name?: string | null
           contact_person_last_name?: string | null
@@ -414,25 +411,34 @@ export type Database = {
       }
       course: {
         Row: {
+          created_at: string
           deadline_date: string | null
           degree_id: string | null
           id: string
+          is_deleted: boolean
           name: string
           program_id: string | null
+          updated_at: string
         }
         Insert: {
+          created_at?: string
           deadline_date?: string | null
           degree_id?: string | null
           id?: string
+          is_deleted?: boolean
           name: string
           program_id?: string | null
+          updated_at?: string
         }
         Update: {
+          created_at?: string
           deadline_date?: string | null
           degree_id?: string | null
           id?: string
+          is_deleted?: boolean
           name?: string
           program_id?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -879,6 +885,7 @@ export type Database = {
           created_at: string
           id: string
           level: Database["public"]["Enums"]["education_level_enum"]
+          level_id: string | null
           name: string
           university_id: string | null
           updated_at: string
@@ -887,6 +894,7 @@ export type Database = {
           created_at?: string
           id?: string
           level: Database["public"]["Enums"]["education_level_enum"]
+          level_id?: string | null
           name: string
           university_id?: string | null
           updated_at?: string
@@ -895,11 +903,19 @@ export type Database = {
           created_at?: string
           id?: string
           level?: Database["public"]["Enums"]["education_level_enum"]
+          level_id?: string | null
           name?: string
           university_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "education_type_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "education_type_university_id_fkey"
             columns: ["university_id"]
@@ -1137,7 +1153,6 @@ export type Database = {
           last_name: string | null
           phone: string | null
           role: Database["public"]["Enums"]["role_enum"]
-          signature: string | null
           title: string | null
           updated_at: string
         }
@@ -1152,7 +1167,6 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["role_enum"]
-          signature?: string | null
           title?: string | null
           updated_at?: string
         }
@@ -1167,7 +1181,6 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["role_enum"]
-          signature?: string | null
           title?: string | null
           updated_at?: string
         }
@@ -1451,6 +1464,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_profile_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["role_enum"]
+      }
       soft_delete_document_template: {
         Args: { template_id: string }
         Returns: undefined
@@ -1460,13 +1477,7 @@ export type Database = {
       app_status_enum: "APPROVED" | "REJECTED" | "NEEDS_REVISION" | "PENDING"
       campus_status_enum: "ACTIVE" | "INACTIVE"
       conv_status_enum: "OPEN" | "CLOSED"
-      doc_status_enum:
-        | "APPROVED"
-        | "REJECTED"
-        | "NEEDS_REVISION"
-        | "VERIFIED"
-        | "PENDING"
-        | "ACTION_REQUIRED"
+      doc_status_enum: "APPROVED" | "REJECTED" | "NEEDS_REVISION"
       document_requirement_type_enum: "REQUIRED" | "OPTIONAL"
       education_level_enum: "SCHOOL" | "COLLEGE" | "DIPLOMA" | "UNIVERSITY"
       gender_enum: "MALE" | "FEMALE"
@@ -1474,7 +1485,7 @@ export type Database = {
       offer_status_enum: "PENDING" | "ACCEPTED" | "REJECTED"
       payment_status_enum: "PENDING" | "CONFIRMED" | "FAILED"
       program_status_enum: "ACTIVE" | "INACTIVE"
-      role_enum: "STUDENT" | "AGENT" | "UNIVERSITY" | "ADMIN"
+      role_enum: "STUDENT" | "AGENT" | "ADMIN" | "SUPER_ADMIN"
       study_mode_enum: "full_time" | "part_time"
     }
     CompositeTypes: {
@@ -1606,14 +1617,7 @@ export const Constants = {
       app_status_enum: ["APPROVED", "REJECTED", "NEEDS_REVISION", "PENDING"],
       campus_status_enum: ["ACTIVE", "INACTIVE"],
       conv_status_enum: ["OPEN", "CLOSED"],
-      doc_status_enum: [
-        "APPROVED",
-        "REJECTED",
-        "NEEDS_REVISION",
-        "VERIFIED",
-        "PENDING",
-        "ACTION_REQUIRED",
-      ],
+      doc_status_enum: ["APPROVED", "REJECTED", "NEEDS_REVISION"],
       document_requirement_type_enum: ["REQUIRED", "OPTIONAL"],
       education_level_enum: ["SCHOOL", "COLLEGE", "DIPLOMA", "UNIVERSITY"],
       gender_enum: ["MALE", "FEMALE"],
@@ -1621,7 +1625,7 @@ export const Constants = {
       offer_status_enum: ["PENDING", "ACCEPTED", "REJECTED"],
       payment_status_enum: ["PENDING", "CONFIRMED", "FAILED"],
       program_status_enum: ["ACTIVE", "INACTIVE"],
-      role_enum: ["STUDENT", "AGENT", "UNIVERSITY", "ADMIN"],
+      role_enum: ["STUDENT", "AGENT", "ADMIN", "SUPER_ADMIN"],
       study_mode_enum: ["full_time", "part_time"],
     },
   },

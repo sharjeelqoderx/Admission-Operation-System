@@ -8,6 +8,7 @@ import type {
     UniversityProgramDetail,
     UniversityProgramUpsert,
 } from "@/types/schemas/university-program"
+import { universityProgramUpsertSchema } from "@/types/schemas/university-program"
 
 const emptyValues: UniversityProgramUpsert = {
     name: "",
@@ -150,12 +151,15 @@ export function withUniversityProgramFormLogic(Component: ComponentType<Universi
         )
 
         const onSubmit = useCallback(() => {
-            if (!values.name.trim()) {
-                setErrorMessage("Program name is required")
+            const parsed = universityProgramUpsertSchema.safeParse(values)
+
+            if (!parsed.success) {
+                setErrorMessage(parsed.error.issues[0]?.message ?? "Invalid program details")
                 return
             }
+
             saveMutation.mutate()
-        }, [saveMutation, values.name])
+        }, [saveMutation, values])
 
         return (
             <Component
