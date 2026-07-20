@@ -17,84 +17,114 @@ const requiredUploadFileSchema = z
 export const academicRecordSchema = z
     .object({
         id: z.string().uuid().optional(),
-        qualification: z.string().min(1, "Highest degree is required"),
-        institution_name: z.string().min(1, "Institution is required"),
-        grade_type: GradeTypeSchema,
-        gpa: z.string(),
-        obtained_marks: z.string(),
-        total_marks: z.string(),
+        qualification: z.string().optional(),
+        institution_name: z.string().optional(),
+        grade_type: GradeTypeSchema.optional(),
+        gpa: z.string().optional(),
+        obtained_marks: z.string().optional(),
+        total_marks: z.string().optional(),
     })
     .superRefine((val, ctx) => {
+        console.log("academicRecordSchema superRefine val:", val);
+        // If this is an existing record (has id), skip all validation!
+        if (val.id) {
+            return;
+        }
+
+        // For new records, apply strict validation
+        if (!val.qualification?.trim()) {
+            ctx.addIssue({
+                path: ["qualification"],
+                code: "custom",
+                message: "Highest degree is required",
+            });
+        }
+        if (!val.institution_name?.trim()) {
+            ctx.addIssue({
+                path: ["institution_name"],
+                code: "custom",
+                message: "Institution is required",
+            });
+        }
+        if (!val.grade_type) {
+            ctx.addIssue({
+                path: ["grade_type"],
+                code: "custom",
+                message: "Grade type is required",
+            });
+            return;
+        }
         if (val.grade_type === "gpa") {
-            if (!val.gpa.trim()) {
+            if (!val.gpa?.trim()) {
                 ctx.addIssue({
                     path: ["gpa"],
                     code: "custom",
                     message: "GPA is required",
-                })
-                return
+                });
+                return;
             }
             if (!/^\d+(\.\d{1,2})?$/.test(val.gpa.trim())) {
                 ctx.addIssue({
                     path: ["gpa"],
                     code: "custom",
                     message: "Must be a valid number",
-                })
-                return
+                });
+                return;
             }
-            const gpaValue = parseFloat(val.gpa)
+            const gpaValue = parseFloat(val.gpa);
             if (gpaValue < 0 || gpaValue > 4) {
                 ctx.addIssue({
                     path: ["gpa"],
                     code: "custom",
                     message: "GPA must be between 0 and 4",
-                })
+                });
             }
-            return
+            return;
         }
 
-        if (!val.obtained_marks.trim()) {
+        if (!val.obtained_marks?.trim()) {
             ctx.addIssue({
                 path: ["obtained_marks"],
                 code: "custom",
                 message: "Obtained marks is required",
-            })
+            });
         } else if (!/^\d+(\.\d{1,2})?$/.test(val.obtained_marks.trim())) {
             ctx.addIssue({
                 path: ["obtained_marks"],
                 code: "custom",
                 message: "Must be a valid number",
-            })
+            });
         }
 
-        if (!val.total_marks.trim()) {
+        if (!val.total_marks?.trim()) {
             ctx.addIssue({
                 path: ["total_marks"],
                 code: "custom",
                 message: "Total marks is required",
-            })
+            });
         } else if (!/^\d+(\.\d{1,2})?$/.test(val.total_marks.trim())) {
             ctx.addIssue({
                 path: ["total_marks"],
                 code: "custom",
                 message: "Must be a valid number",
-            })
+            });
         }
 
         if (
-            val.obtained_marks.trim() &&
-            val.total_marks.trim() &&
+            val.obtained_marks?.trim() &&
+            val.total_marks?.trim() &&
             parseFloat(val.obtained_marks) > parseFloat(val.total_marks)
         ) {
             ctx.addIssue({
                 path: ["obtained_marks"],
                 code: "custom",
                 message: "Obtained marks cannot exceed total marks",
-            })
+            });
         }
     })
 
-export const StudentFormSchema = z.object({
+// Base schema for both create and edit
+const BaseStudentFormSchema = z.object({
     title: z.string().optional(),
     first_name: z.string().min(2, "First name is required"),
     last_name: z.string().min(2, "Last name is required"),
@@ -117,15 +147,29 @@ export const StudentFormSchema = z.object({
             .trim()
             .regex(/^\+?[\d\s\-()]{8,30}$/, "Invalid guardian phone number"),
     ]),
-
-    academic_background: z.array(academicRecordSchema).min(1),
-
     avatar_url: optionalUploadFileSchema,
     passport_file_url: optionalUploadFileSchema,
 })
 
-export const StudentCreateFormSchema = StudentFormSchema.extend({
+// Edit schema: relaxed academic validation
+const relaxedAcademicRecordSchema = z.object({
+    id: z.string().uuid().optional(),
+    qualification: z.string().optional(),
+    institution_name: z.string().optional(),
+    grade_type: z.union([GradeTypeSchema, z.literal("")]).optional(),
+    gpa: z.string().optional(),
+    obtained_marks: z.string().optional(),
+    total_marks: z.string().optional(),
+})
+
+export const StudentFormSchema = BaseStudentFormSchema.extend({
+    academic_background: z.array(relaxedAcademicRecordSchema).or(z.any()),
+})
+
+// Create schema: strict academic validation
+export const StudentCreateFormSchema = BaseStudentFormSchema.extend({
     title: z.enum(["Mr", "Mrs", "Ms"], { message: "Title is required" }),
+    academic_background: z.array(academicRecordSchema).min(1),
 }).superRefine((data, ctx) => {
     const mappedGender =
         data.title === "Mr"
