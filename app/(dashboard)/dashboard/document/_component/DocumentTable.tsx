@@ -16,9 +16,9 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { ChevronLeft, ChevronRight, AlertCircle, FileText } from "lucide-react"
 import { PageLoader } from "@/components/shared/page-loader"
-import Link from "next/link"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { cn } from "@/lib/utils"
+import { DocumentRowActionsMenu } from "./document-row-actions-menu"
 
 export type DocumentStudentRow = {
     student_id: string
@@ -219,15 +219,10 @@ export const DocumentTable = React.memo(function DocumentTable({
                                         </TableCell>
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Button
-                                                variant="outline"
-                                                className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
-                                                asChild
-                                            >
-                                                <Link href={`/dashboard/document/student/${row.student_id}`}>
-                                                    View
-                                                </Link>
-                                            </Button>
+                                            <DocumentRowActionsMenu
+                                                mode="view-only"
+                                                viewHref={`/dashboard/document/student/${row.student_id}`}
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 )
