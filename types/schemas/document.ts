@@ -113,6 +113,7 @@ export type AgentAllDocumentRow = {
     feedback: string | null
     student_id: string
     student_name: string
+    avatar_url: string | null
     student_code: string | null
     student_country: string | null
     campus: string | null

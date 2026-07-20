@@ -416,7 +416,7 @@ export function DegreeDocumentsTable({
                                                     size="sm"
                                                     className={cn(
                                                         isRejected
-                                                            ? "bg-red-600 hover:bg-red-700"
+                                                            ? "bg-red-700 hover:bg-red-700/90"
                                                             : "bg-brand-byzantine hover:bg-brand-byzantine/90"
                                                     )}
                                                     disabled={

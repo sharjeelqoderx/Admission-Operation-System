@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useMemo, useState } from "react"
-import Link from "next/link"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Typography } from "@/components/shared/Typography"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -28,15 +27,14 @@ import {
 } from "@/components/ui/tooltip"
 import {
     AlertCircle,
-    Check,
     ChevronLeft,
     ChevronRight,
-    Eye,
-    X,
 } from "lucide-react"
-import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { PageLoader } from "@/components/shared/page-loader"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import type { AgentAllDocumentRow } from "@/types/schemas/document"
+import { DocumentRowActionsMenu } from "../document-row-actions-menu"
 
 type Props = {
     rows: AgentAllDocumentRow[]
@@ -57,6 +55,15 @@ function formatUploadDate(value: string) {
         day: "numeric",
         year: "numeric",
     })
+}
+
+function getStudentInitials(name: string) {
+    return name
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
 }
 
 function RejectionIndicator({ feedback }: { feedback: string }) {
@@ -176,14 +183,14 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase w-[72px]">
                                 Alert
                             </TableHead>
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase min-w-[200px]">
+                                Student
+                            </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Document
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Status
-                            </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                Student
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Uploaded
@@ -210,6 +217,10 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                                 const canReview =
                                     row.file_count > 0 &&
                                     !["APPROVED", "VERIFIED"].includes(row.status)
+                                const initials = getStudentInitials(row.student_name)
+                                const avatarSrc =
+                                    row.avatar_url ??
+                                    `https://ui-avatars.com/api/?name=${encodeURIComponent(row.student_name)}&background=random`
 
                                 return (
                                     <TableRow
@@ -230,139 +241,65 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                                             )}
                                         </TableCell>
 
-                                        <TableCell className="px-6 py-5">
-                                            <div className="space-y-1">
-                                                <Typography
-                                                    as="span"
-                                                    className="text-sm font-bold text-gray-900"
-                                                >
-                                                    {row.document_name}
-                                                </Typography>
-                                                {row.uploaded_by_name && (
-                                                    <Typography
-                                                        as="span"
-                                                        className="text-[11px] text-gray-500 font-light block"
-                                                    >
-                                                        Uploaded by {row.uploaded_by_name}
-                                                    </Typography>
-                                                )}
-                                            </div>
-                                        </TableCell>
-
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <StatusBadge status={row.status} />
-                                        </TableCell>
-
-                                        <TableCell className="px-6 py-5">
-                                            <div className="space-y-1">
-                                                <Typography
-                                                    as="span"
-                                                    className="text-sm font-bold text-gray-900"
-                                                >
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="size-10 rounded-xl border-2 border-white/50 shrink-0">
+                                                    <AvatarImage
+                                                        src={avatarSrc}
+                                                        alt={row.student_name}
+                                                        className="rounded-xl"
+                                                    />
+                                                    <AvatarFallback className="rounded-xl text-[12px] font-bold">
+                                                        {initials}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <Typography as="span" className="text-sm font-bold text-gray-900">
                                                     {row.student_name}
                                                 </Typography>
-                                                {row.student_code && (
-                                                    <Typography
-                                                        as="span"
-                                                        className="text-[11px] text-gray-500 font-light block"
-                                                    >
-                                                        ID: {row.student_code}
-                                                    </Typography>
-                                                )}
-                                                {row.campus && (
-                                                    <Typography
-                                                        as="span"
-                                                        className="text-[11px] text-gray-500 font-light block"
-                                                    >
-                                                        Campus: {row.campus}
-                                                    </Typography>
-                                                )}
-                                                {row.student_country && (
-                                                    <Typography
-                                                        as="span"
-                                                        className="text-[11px] text-gray-500 font-light block"
-                                                    >
-                                                        {row.student_country}
-                                                    </Typography>
-                                                )}
                                             </div>
                                         </TableCell>
 
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-medium text-gray-600">
-                                                {formatUploadDate(row.uploaded_at)}
-                                            </Typography>
-                                        </TableCell>
+                                        <TableCell className="px-6 py-5">
+                                                <div className="space-y-1">
+                                                    <Typography
+                                                        as="span"
+                                                        className="text-sm font-bold text-gray-900"
+                                                    >
+                                                        {row.document_name}
+                                                    </Typography>
+                                                    {row.uploaded_by_name && (
+                                                        <Typography
+                                                            as="span"
+                                                            className="text-[11px] text-gray-500 font-light block"
+                                                        >
+                                                            Uploaded by {row.uploaded_by_name}
+                                                        </Typography>
+                                                    )}
+                                                </div>
+                                            </TableCell>
 
-                                        <TableCell className="px-6 py-5 whitespace-nowrap overflow-visible">
-                                            <div className="flex flex-wrap items-center gap-2 p-0.5">
-                                                {canReview && (
-                                                    <>
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button
-                                                                        type="button"
-                                                                        size="icon"
-                                                                        className="size-9 bg-green-600 hover:bg-green-700 text-white rounded-lg"
-                                                                        disabled={isReviewing}
-                                                                        aria-label="Approve document"
-                                                                        onClick={() => onApprove(row.document_id)}
-                                                                    >
-                                                                        {isReviewing ? (
-                                                                            <Spinner size="sm" />
-                                                                        ) : (
-                                                                            <Check className="size-4" />
-                                                                        )}
-                                                                    </Button>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>Approve</TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="size-9 border border-red-300 bg-white text-red-600 hover:bg-red-50 hover:border-red-400 rounded-lg"
-                                                                        disabled={isReviewing}
-                                                                        aria-label="Reject document"
-                                                                        onClick={() => onReject(row.document_id)}
-                                                                    >
-                                                                        <X className="size-4" />
-                                                                    </Button>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>Reject</TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                    </>
-                                                )}
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="size-9 border border-gray-200 bg-white/80 text-gray-700 hover:bg-white hover:border-gray-300 rounded-lg"
-                                                                asChild
-                                                            >
-                                                                <Link
-                                                                    href={`/dashboard/document/student/${row.student_id}/${row.document_id}`}
-                                                                    aria-label="View document"
-                                                                >
-                                                                    <Eye className="size-4" />
-                                                                </Link>
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>View</TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                )
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <StatusBadge status={row.status} />
+                                            </TableCell>
+
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <Typography as="span" className="text-sm font-medium text-gray-600">
+                                                    {formatUploadDate(row.uploaded_at)}
+                                                </Typography>
+                                            </TableCell>
+
+                                            <TableCell className="px-6 py-5 whitespace-nowrap overflow-visible">
+                                                <DocumentRowActionsMenu
+                                                    mode="review"
+                                                    viewHref={`/dashboard/document/student/${row.student_id}/${row.document_id}`}
+                                                    canReview={canReview}
+                                                    isReviewing={isReviewing}
+                                                    onAccept={() => onApprove(row.document_id)}
+                                                    onDecline={() => onReject(row.document_id)}
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    )
                             })
                         )}
                     </TableBody>

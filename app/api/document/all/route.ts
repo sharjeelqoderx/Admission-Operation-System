@@ -179,6 +179,7 @@ export async function GET() {
                     studentProfile?.last_name,
                     "—"
                 ),
+                avatar_url: studentProfile?.avatar_url ?? null,
                 student_code: student?.student_code ?? null,
                 student_country: student?.country ?? null,
                 campus: campusByProfile.get(doc.profile_id) ?? null,
