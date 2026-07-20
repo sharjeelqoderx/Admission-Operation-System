@@ -1043,7 +1043,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                 ? eduList.map((e) => {
                     const gradeType = resolveGradeType(e)
                     return {
-                        id: (e as { id?: string }).id ?? undefined,
+                        id: (e as { id?: string }).id?.trim() || undefined,
                         qualification: e.qualification ?? "",
                         institution_name: e.institution_name ?? "",
                         grade_type: gradeType,
@@ -1079,7 +1079,6 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
         },
 
         onSubmit: async ({ value }) => {
-            console.log("form onSubmit called! value:", value);
             if (mode === "create" && user?.role === Role.AGENT) {
                 if (selectedCourseIds.length > 0) {
                     const missingDocs = applicationRequiredDocTypes.filter(
@@ -1112,11 +1111,8 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                 const url = mode === "edit" ? `/api/student/${studentId}` : "/api/student"
                 const method = mode === "edit" ? "PATCH" : "POST"
 
-                console.log("About to fetch:", url, method);
                 const res = await fetch(url, { method, body: buildStudentFormData(value) })
-                console.log("Fetch response:", res);
                 const json = await res.json()
-                console.log("Response JSON:", json);
                 if (!res.ok) throw new Error(json?.error ?? "Something went wrong")
 
                 queryClient.invalidateQueries({ queryKey: ["students"] })
@@ -1141,9 +1137,14 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
 
     const handleFormSubmit = useCallback(
         (e: React.FormEvent) => {
-            console.log("handleFormSubmit called!");
             e.preventDefault()
             e.stopPropagation()
+
+            const mappedGender = genderFromTitle(String(form.getFieldValue("title") ?? ""))
+            if (mappedGender) {
+                form.setFieldValue("gender", mappedGender)
+            }
+
             void form.handleSubmit()
         },
         [form]
@@ -1175,12 +1176,6 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
             <div className="bg-white/5 p-4 sm:p-6 lg:p-8 relative overflow-hidden">
 
                 <form id="student-form" onSubmit={handleFormSubmit} className="space-y-12 relative z-10">
-                    <form.Subscribe selector={(s) => [s.errors, s.isSubmitting, s.values]}>
-                        {([errors, isSubmitting, values]) => {
-                            console.log("Form state:", { errors, isSubmitting, values });
-                            return null;
-                        }}
-                    </form.Subscribe>
                     <FieldGroup className="space-y-10">
 
                         {/* ── Section: Enter Student Details ── */}

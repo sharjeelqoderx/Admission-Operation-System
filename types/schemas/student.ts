@@ -14,9 +14,12 @@ const requiredUploadFileSchema = z
     .instanceof(File, { message: "File is required" })
     .refine(fileWithinSizeLimit, MAX_FILE_SIZE_ERROR_MESSAGE)
 
+// Supabase UUIDs may not pass Zod's strict RFC 4122 validator.
+const optionalRecordIdSchema = z.string().optional()
+
 export const academicRecordSchema = z
     .object({
-        id: z.string().uuid().optional(),
+        id: optionalRecordIdSchema,
         qualification: z.string().optional(),
         institution_name: z.string().optional(),
         grade_type: GradeTypeSchema.optional(),
@@ -25,7 +28,6 @@ export const academicRecordSchema = z
         total_marks: z.string().optional(),
     })
     .superRefine((val, ctx) => {
-        console.log("academicRecordSchema superRefine val:", val);
         // If this is an existing record (has id), skip all validation!
         if (val.id) {
             return;
@@ -153,7 +155,7 @@ const BaseStudentFormSchema = z.object({
 
 // Edit schema: relaxed academic validation
 const relaxedAcademicRecordSchema = z.object({
-    id: z.string().uuid().optional(),
+    id: optionalRecordIdSchema,
     qualification: z.string().optional(),
     institution_name: z.string().optional(),
     grade_type: z.union([GradeTypeSchema, z.literal("")]).optional(),
