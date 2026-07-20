@@ -210,6 +210,7 @@
 .react-phone-input-2 {
   z-index: 9999999999 !important;
   width: 100% !important;
+  position: relative !important;
 }
 .react-phone-input-2 input.form-control {
   z-index: 9999999999 !important;
