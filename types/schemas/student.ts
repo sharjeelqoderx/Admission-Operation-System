@@ -163,7 +163,7 @@ const relaxedAcademicRecordSchema = z.object({
 })
 
 export const StudentFormSchema = BaseStudentFormSchema.extend({
-    academic_background: z.array(relaxedAcademicRecordSchema).or(z.any()),
+    academic_background: z.array(relaxedAcademicRecordSchema),
 })
 
 // Create schema: strict academic validation

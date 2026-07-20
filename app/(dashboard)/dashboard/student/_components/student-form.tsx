@@ -1450,7 +1450,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                             <form.Field name="academic_background" mode="array">
                                 {(field) => (
                                     <div className="space-y-6">
-                                        {field.state.value.map((_, index) => (
+                                        {field.state.value.map((_item: StudentInput["academic_background"][number], index: number) => (
                                             <form.Subscribe
                                                 key={index}
                                                 selector={(state) => state.values.academic_background[index]?.grade_type}
