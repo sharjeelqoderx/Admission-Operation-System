@@ -14,7 +14,11 @@ export default function DocumentPage() {
         return <PageLoader />
     }
 
-    if (user?.role === Role.AGENT) {
+    if (
+        user?.role === Role.AGENT ||
+        user?.role === Role.ADMIN ||
+        user?.role === Role.SUPER_ADMIN
+    ) {
         return <DocumentStudentsList />
     }
 

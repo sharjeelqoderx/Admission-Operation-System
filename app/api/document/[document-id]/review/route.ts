@@ -3,7 +3,10 @@ import {
     createSupabaseServerClient,
     tryCreateSupabaseServiceClient,
 } from "@/lib/supabase/server"
-import { assertAgentCanAccessDocument } from "@/lib/document/agent-access"
+import {
+    assertAgentCanAccessDocument,
+    isDocumentStaffRole,
+} from "@/lib/document/agent-access"
 import { DocumentReviewActionSchema } from "@/types/schemas/document"
 import { Role } from "@/types/enums/role"
 
@@ -33,7 +36,7 @@ export async function PATCH(
             .eq("id", user.id)
             .single()
 
-        if (profile?.role !== Role.AGENT) {
+        if (!isDocumentStaffRole(profile?.role)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 

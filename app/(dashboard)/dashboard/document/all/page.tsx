@@ -18,7 +18,11 @@ export default function AllDocumentsPage() {
         return <PageLoader />
     }
 
-    if (user?.role !== Role.AGENT) {
+    if (
+        user?.role !== Role.AGENT &&
+        user?.role !== Role.ADMIN &&
+        user?.role !== Role.SUPER_ADMIN
+    ) {
         router.replace("/dashboard/document")
         return <PageLoader />
     }

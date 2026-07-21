@@ -5,6 +5,10 @@ import { Role } from "@/types/enums/role"
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>
 
+export function isDocumentStaffRole(role: string | null | undefined) {
+    return role === Role.AGENT || role === Role.ADMIN || role === Role.SUPER_ADMIN
+}
+
 export async function assertAgentCanAccessStudentProfile(
     supabase: SupabaseServerClient,
     agentProfileId: string,
