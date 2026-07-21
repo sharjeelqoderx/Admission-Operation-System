@@ -1,6 +1,7 @@
 "use client"
 
-import { use } from "react"
+import { use, useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { PageLoader } from "@/components/shared/page-loader"
 import { CourseDocumentsView } from "../../_component/course-documents-view"
@@ -11,6 +12,15 @@ type PageProps = {
 
 export default function StudentDocumentsPage({ params }: PageProps) {
     const { "student-id": studentId } = use(params)
+    const searchParams = useSearchParams()
+
+    const backHref = useMemo(
+        () =>
+            searchParams.get("from") === "all"
+                ? "/dashboard/document/all"
+                : "/dashboard/document",
+        [searchParams]
+    )
 
     const { data: student, isLoading } = useQuery({
         queryKey: ["students", studentId],
@@ -32,6 +42,7 @@ export default function StudentDocumentsPage({ params }: PageProps) {
             profileId={studentId}
             studentName={student?.name ?? undefined}
             showBack
+            backHref={backHref}
         />
     )
 }

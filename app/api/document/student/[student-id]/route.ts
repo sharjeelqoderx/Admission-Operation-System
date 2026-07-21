@@ -5,6 +5,7 @@ import { getCourseDocumentTypeIds } from "@/lib/utils/course-documents"
 import { includeApsDocumentTypeIdIfRequired } from "@/lib/utils/aps"
 import { upsertStudentDocument } from "@/lib/supabase/upsert-student-document"
 import { STUDENT_DOCUMENT_TYPE_IDS } from "@/lib/constants/document-types"
+import { assertDocumentStaffCanAccessStudentProfile } from "@/lib/document/agent-access"
 import { Role } from "@/types/enums/role"
 
 export async function GET(
@@ -36,25 +37,15 @@ export async function GET(
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        if (profile?.role === Role.AGENT) {
-            const { data: agentRow } = await supabase
-                .from("agent")
-                .select("id")
-                .eq("profile_id", user.id)
-                .maybeSingle()
+        if (profile?.role !== Role.STUDENT) {
+            const canAccess = await assertDocumentStaffCanAccessStudentProfile(
+                supabase,
+                user.id,
+                profile?.role,
+                studentId
+            )
 
-            if (!agentRow) {
-                return NextResponse.json({ error: "University Partner profile not found" }, { status: 403 })
-            }
-
-            const { data: studentRow } = await supabase
-                .from("student")
-                .select("id")
-                .eq("profile_id", studentId)
-                .eq("created_by_agent_id", agentRow.id)
-                .maybeSingle()
-
-            if (!studentRow) {
+            if (!canAccess) {
                 return NextResponse.json({ error: "Forbidden" }, { status: 403 })
             }
         }

@@ -46,7 +46,7 @@ export function CourseBundlesTable({ bundles, studentId }: Props) {
                 <Table className="w-full text-left border-collapse min-w-[900px]">
                     <TableHeader className="sticky top-0 z-10">
                         <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase min-w-[220px]">
+                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase min-w-[220px] max-w-[280px]">
                                 Program
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase min-w-[160px]">
@@ -79,15 +79,16 @@ export function CourseBundlesTable({ bundles, studentId }: Props) {
                                         "hover:bg-brand-secondary/5"
                                     )}
                                 >
-                                    <TableCell className="px-6 py-5">
-                                        <div className="flex items-start gap-2">
+                                    <TableCell className="px-6 py-5 max-w-[280px]">
+                                        <div className="flex items-start gap-2 min-w-0">
                                             <GraduationCap
                                                 className="size-4 text-brand-byzantine shrink-0 mt-0.5"
                                             />
-                                            <div className="min-w-0">
+                                            <div className="min-w-0 flex-1">
                                                 <Typography
                                                     font="text"
-                                                    className="font-semibold text-gray-900"
+                                                    className="font-semibold text-gray-900 truncate max-w-[240px]"
+                                                    title={bundle.degree.name}
                                                 >
                                                     {bundle.degree.name}
                                                 </Typography>

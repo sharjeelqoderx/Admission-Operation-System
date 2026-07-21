@@ -34,6 +34,7 @@ type Props = {
     isLoading: boolean
     isError: boolean
     onRetry: () => void
+    getViewHref?: (studentId: string) => string
 }
 
 const COLUMN_COUNT = 5
@@ -53,6 +54,7 @@ export const DocumentTable = React.memo(function DocumentTable({
     isLoading,
     isError,
     onRetry,
+    getViewHref,
 }: Props) {
     const [currentPage, setCurrentPage] = useState(1)
 
@@ -221,7 +223,10 @@ export const DocumentTable = React.memo(function DocumentTable({
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <DocumentRowActionsMenu
                                                 mode="view-only"
-                                                viewHref={`/dashboard/document/student/${row.student_id}`}
+                                                viewHref={
+                                                    getViewHref?.(row.student_id) ??
+                                                    `/dashboard/document/student/${row.student_id}`
+                                                }
                                             />
                                         </TableCell>
                                     </TableRow>

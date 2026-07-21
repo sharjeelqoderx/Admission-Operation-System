@@ -3,11 +3,8 @@
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { PageLoader } from "@/components/shared/page-loader"
-import { AllDocumentsPageContent } from "../_component/all-documents/page-content"
-import { withAllDocumentsLogic } from "../_component/all-documents/withAllDocumentsLogic"
+import { DocumentStudentsList } from "../_component/document-students-list"
 import { Role } from "@/types/enums/role"
-
-const AllDocumentsView = withAllDocumentsLogic(AllDocumentsPageContent)
 
 export default function AllDocumentsPage() {
     const router = useRouter()
@@ -27,5 +24,13 @@ export default function AllDocumentsPage() {
         return <PageLoader />
     }
 
-    return <AllDocumentsView />
+    return (
+        <DocumentStudentsList
+            title="View All Documents"
+            description="Select a student to view all their uploaded documents."
+            getViewHref={(studentId) =>
+                `/dashboard/document/student/${studentId}?from=all`
+            }
+        />
+    )
 }
