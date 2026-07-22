@@ -1,12 +1,28 @@
+import dynamic from "next/dynamic"
 import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
-import { fetchUniversityApplicationsForPage } from "@/lib/application/university-server"
+import {
+    EMPTY_UNIVERSITY_APPLICATION_LIST,
+    fetchUniversityApplicationsForPage,
+} from "@/lib/application/university-server"
 import { fetchApplicationDashboardPageData } from "@/lib/application/server"
-import { PageContent } from "./_components/page-content"
-import { UniversityApplicationListPageContent } from "./_components/university-application/page-content"
 import type { UniversityApplicationTab } from "@/types/schemas/university-application"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
+import { PageLoader } from "@/components/shared/page-loader"
+
+const PageContent = dynamic(
+    () => import("./_components/page-content").then((mod) => mod.PageContent),
+    { loading: () => <PageLoader /> }
+)
+
+const UniversityApplicationListPageContent = dynamic(
+    () =>
+        import("./_components/university-application/page-content").then(
+            (mod) => mod.UniversityApplicationListPageContent
+        ),
+    { loading: () => <PageLoader /> }
+)
 
 type ApplicationPageProps = {
     searchParams: Promise<{
@@ -32,16 +48,13 @@ export default async function ApplicationPage({ searchParams }: ApplicationPageP
     if (isUniversityStaffRole(role)) {
         const tab = (params.tab ?? "all") as UniversityApplicationTab
 
-        const initialOverview = await fetchUniversityApplicationsForPage({
-            q: params.q,
-            tab,
-            page: params.page ? Number(params.page) : 1,
-            limit: 10,
-        })
-
-        if (!initialOverview) {
-            redirect("/login")
-        }
+        const initialOverview =
+            (await fetchUniversityApplicationsForPage({
+                q: params.q,
+                tab,
+                page: params.page ? Number(params.page) : 1,
+                limit: 10,
+            })) ?? EMPTY_UNIVERSITY_APPLICATION_LIST
 
         return (
             <UniversityApplicationListPageContent

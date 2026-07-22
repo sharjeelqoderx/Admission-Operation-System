@@ -115,11 +115,20 @@ export async function fetchApplicationDashboardPageData(
         }
     }
 
-    const result = await fetchApplicationsList(supabase, {
-        ...queryParse.data,
-        userId: user.id,
-        role,
-    })
+    let result: ApplicationListResponse | { error: string }
+    try {
+        result = await fetchApplicationsList(supabase, {
+            ...queryParse.data,
+            userId: user.id,
+            role,
+        })
+    } catch (fetchError) {
+        console.error("[fetchApplicationDashboardPageData]", fetchError)
+        return {
+            applications: { ...EMPTY_APPLICATIONS, role },
+            query,
+        }
+    }
 
     if ("error" in result) {
         return {
