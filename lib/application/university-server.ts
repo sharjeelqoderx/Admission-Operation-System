@@ -8,6 +8,8 @@ import { formatLocation } from "@/lib/utils/location"
 import { resolveStudentPipelineStatus } from "@/lib/student/pipeline-status"
 import { resolveQualificationLabel } from "@/lib/education/resolve-qualification"
 import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
+import { isUniversityStaffRole, isUniversityRole } from "@/lib/auth/university-role"
+import { Role } from "@/types/enums/role"
 import type {
     UniversityApplicationDetail,
     UniversityApplicationDetailPageData,
@@ -15,7 +17,38 @@ import type {
     UniversityApplicationListResponse,
     UniversityApplicationTab,
 } from "@/types/schemas/university-application"
-import { isUniversityStaffRole } from "@/lib/auth/university-role"
+
+export const EMPTY_UNIVERSITY_APPLICATION_LIST: UniversityApplicationListResponse = {
+    tab_counts: {
+        all: 0,
+        pending_review: 0,
+        awaiting_signature: 0,
+        recently_completed: 0,
+    },
+    data: [],
+    pagination: {
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0,
+    },
+}
+
+export async function resolveUniversityScope(userId: string, role: string) {
+    if (!isUniversityStaffRole(role)) {
+        return null
+    }
+
+    if (role === Role.SUPER_ADMIN) {
+        return { universityId: null as string | null }
+    }
+
+    if (isUniversityRole(role)) {
+        return { universityId: userId }
+    }
+
+    return { universityId: null as string | null }
+}
 
 type ApplicationRow = {
     id: string
@@ -190,7 +223,8 @@ async function loadCoursesById(
         .in("id", courseIds)
 
     if (error) {
-        throw new Error(error.message)
+        console.error("[loadCoursesById]", error.message)
+        return new Map<string, CourseRow>()
     }
 
     const courses = await attachLevelsToCourses(supabase, (data ?? []) as unknown as CourseRow[])
@@ -212,7 +246,8 @@ async function loadAgentOrganizations(
         .in("profile_id", agentProfileIds)
 
     if (error) {
-        throw new Error(error.message)
+        console.error("[loadAgentOrganizations]", error.message)
+        return new Map<string, string>()
     }
 
     return new Map(
@@ -280,7 +315,15 @@ export async function fetchUniversityApplicationList(params: {
     const { data: allApplications, error: applicationsError } = await applicationsQuery
 
     if (applicationsError) {
-        throw new Error(applicationsError.message)
+        console.error("[fetchUniversityApplicationList]", applicationsError.message)
+        return {
+            ...EMPTY_UNIVERSITY_APPLICATION_LIST,
+            pagination: {
+                ...EMPTY_UNIVERSITY_APPLICATION_LIST.pagination,
+                page,
+                limit,
+            },
+        }
     }
 
     const allApplicationRows = (allApplications ?? []) as ApplicationRow[]
@@ -319,15 +362,15 @@ export async function fetchUniversityApplicationList(params: {
         ])
 
     if (offersResult.error) {
-        throw new Error(offersResult.error.message)
+        console.error("[fetchUniversityApplicationList] offers", offersResult.error.message)
     }
 
     if (profilesResult.error) {
-        throw new Error(profilesResult.error.message)
+        console.error("[fetchUniversityApplicationList] profiles", profilesResult.error.message)
     }
 
     if (studentsResult.error) {
-        throw new Error(studentsResult.error.message)
+        console.error("[fetchUniversityApplicationList] students", studentsResult.error.message)
     }
 
     const offers = offersResult.data
@@ -709,14 +752,6 @@ export async function fetchUniversityApplicationDetail(params: {
     }
 }
 
-async function resolveUniversityScope(_userId: string, role: string) {
-    if (isUniversityStaffRole(role)) {
-        return { universityId: null as string | null }
-    }
-
-    return null
-}
-
 export async function fetchUniversityApplicationsForPage(params?: {
     q?: string
     tab?: UniversityApplicationTab
@@ -744,13 +779,25 @@ export async function fetchUniversityApplicationsForPage(params?: {
         return null
     }
 
-    return fetchUniversityApplicationList({
-        universityId: scope.universityId,
-        q: params?.q,
-        tab: params?.tab,
-        page: params?.page,
-        limit: params?.limit,
-    })
+    try {
+        return await fetchUniversityApplicationList({
+            universityId: scope.universityId,
+            q: params?.q,
+            tab: params?.tab,
+            page: params?.page,
+            limit: params?.limit,
+        })
+    } catch (error) {
+        console.error("[fetchUniversityApplicationsForPage]", error)
+        return {
+            ...EMPTY_UNIVERSITY_APPLICATION_LIST,
+            pagination: {
+                ...EMPTY_UNIVERSITY_APPLICATION_LIST.pagination,
+                page: params?.page ?? 1,
+                limit: params?.limit ?? 10,
+            },
+        }
+    }
 }
 
 export async function fetchUniversityApplicationDetailForPage(

@@ -579,23 +579,38 @@ export async function fetchApplicationsList(
     let agentStudentProfileIds: string[] | null = null
 
     if (role === Role.AGENT && !studentId && listScope !== "all") {
-        agentStudentProfileIds = await resolveAgentStudentProfileIds(supabase, userId)
+        try {
+            agentStudentProfileIds = await resolveAgentStudentProfileIds(supabase, userId)
+        } catch (agentError) {
+            console.error("[fetchApplicationsList] agent students", agentError)
+            return emptyResult()
+        }
     }
 
     if (degreeId) {
-        filteredCourseIds = await resolveCourseIdsForDegree(supabase, degreeId)
+        try {
+            filteredCourseIds = await resolveCourseIdsForDegree(supabase, degreeId)
+        } catch (degreeError) {
+            console.error("[fetchApplicationsList] degree courses", degreeError)
+            return emptyResult()
+        }
         if (filteredCourseIds.length === 0) {
             return emptyResult()
         }
     }
 
     if (searchTerm) {
-        filteredProfileIds = await resolveMatchingStudentProfileIds(supabase, searchTerm, {
-            role,
-            userId,
-            studentId,
-            scope: listScope,
-        })
+        try {
+            filteredProfileIds = await resolveMatchingStudentProfileIds(supabase, searchTerm, {
+                role,
+                userId,
+                studentId,
+                scope: listScope,
+            })
+        } catch (searchError) {
+            console.error("[fetchApplicationsList] search profiles", searchError)
+            return emptyResult()
+        }
 
         if (filteredProfileIds.length === 0) {
             return emptyResult()
@@ -614,7 +629,13 @@ export async function fetchApplicationsList(
         scope: listScope,
     }
 
-    const stats = await fetchApplicationStats(supabase, filterContext)
+    let stats: ApplicationListStats
+    try {
+        stats = await fetchApplicationStats(supabase, filterContext)
+    } catch (statsError) {
+        console.error("[fetchApplicationsList] stats", statsError)
+        stats = EMPTY_APPLICATION_STATS
+    }
 
     let query = applyApplicationFilters(
         supabase
@@ -642,10 +663,16 @@ export async function fetchApplicationsList(
         return { error: error.message }
     }
 
-    const result = await attachCoursesToApplications(
-        supabase,
-        (applications ?? []) as unknown as ApplicationListRow[]
-    )
+    let result: ApplicationListItem[]
+    try {
+        result = await attachCoursesToApplications(
+            supabase,
+            (applications ?? []) as unknown as ApplicationListRow[]
+        )
+    } catch (attachError) {
+        console.error("[fetchApplicationsList] attach courses", attachError)
+        return { error: "Failed to load application courses" }
+    }
 
     if (!usePagination) {
         return { data: result, stats, role }
