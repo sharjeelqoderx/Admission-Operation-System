@@ -1,10 +1,22 @@
+import dynamic from "next/dynamic"
 import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityOverviewForPage } from "@/lib/university-overview/server"
-import { ClientDashboard } from "./_components/client-dashboard"
-import { UniversityOverviewPageContent } from "./_components/university-overview/page-content"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
-import { Role } from "@/types/enums/role"
+import { PageLoader } from "@/components/shared/page-loader"
+
+const ClientDashboard = dynamic(
+    () => import("./_components/client-dashboard").then((mod) => mod.ClientDashboard),
+    { loading: () => <PageLoader /> }
+)
+
+const UniversityOverviewPageContent = dynamic(
+    () =>
+        import("./_components/university-overview/page-content").then(
+            (mod) => mod.UniversityOverviewPageContent
+        ),
+    { loading: () => <PageLoader /> }
+)
 
 export default async function DashboardPage() {
     const role = await getDashboardRole()

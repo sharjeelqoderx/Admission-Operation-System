@@ -1478,7 +1478,7 @@ export type Database = {
       app_status_enum: "APPROVED" | "REJECTED" | "NEEDS_REVISION" | "PENDING"
       campus_status_enum: "ACTIVE" | "INACTIVE"
       conv_status_enum: "OPEN" | "CLOSED"
-      doc_status_enum: "APPROVED" | "REJECTED" | "NEEDS_REVISION"
+      doc_status_enum: "APPROVED" | "REJECTED" | "NEEDS_REVISION" | "VERIFIED" | "PENDING" | "ACTION_REQUIRED"
       document_requirement_type_enum: "REQUIRED" | "OPTIONAL"
       education_level_enum: "SCHOOL" | "COLLEGE" | "DIPLOMA" | "UNIVERSITY"
       gender_enum: "MALE" | "FEMALE"
@@ -1618,7 +1618,7 @@ export const Constants = {
       app_status_enum: ["APPROVED", "REJECTED", "NEEDS_REVISION", "PENDING"],
       campus_status_enum: ["ACTIVE", "INACTIVE"],
       conv_status_enum: ["OPEN", "CLOSED"],
-      doc_status_enum: ["APPROVED", "REJECTED", "NEEDS_REVISION"],
+      doc_status_enum: ["APPROVED", "REJECTED", "NEEDS_REVISION", "VERIFIED", "PENDING", "ACTION_REQUIRED"],
       document_requirement_type_enum: ["REQUIRED", "OPTIONAL"],
       education_level_enum: ["SCHOOL", "COLLEGE", "DIPLOMA", "UNIVERSITY"],
       gender_enum: ["MALE", "FEMALE"],
