@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, AlertCircle, Copy, Check } from "lucide-react"
-import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { PageLoader } from "@/components/shared/page-loader"
 import Link from "next/link"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -77,7 +77,7 @@ export const OfferTable = React.memo(function OfferTable({
     const startIndex = total === 0 ? 0 : (page - 1) * limit + 1
     const endIndex = total === 0 ? 0 : Math.min(page * limit, total)
 
-    if (isLoading) {
+    if (isLoading || isFetching) {
         return (
             <BluryCard
                 isCentered={false}
@@ -132,13 +132,6 @@ export const OfferTable = React.memo(function OfferTable({
             className="rounded-lg p-0"
         >
             <div className="relative overflow-x-auto rounded-xl">
-                {isFetching && !isLoading && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/55 backdrop-blur-[1px]">
-                        <div className="rounded-xl border border-brand-secondary/15 bg-white/90 px-5 py-4 shadow-sm">
-                            <Spinner size="md" />
-                        </div>
-                    </div>
-                )}
                 <Table className="w-full text-left border-collapse min-w-[900px]">
                     <TableHeader className="sticky top-0 z-10">
                         <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">

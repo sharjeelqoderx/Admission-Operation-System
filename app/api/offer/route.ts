@@ -51,6 +51,8 @@ export async function GET(req: NextRequest) {
             q: searchParams.get("q") ?? undefined,
             page: searchParams.get("page") ?? undefined,
             limit: searchParams.get("limit") ?? undefined,
+            status: searchParams.get("status") ?? undefined,
+            course_id: searchParams.get("course_id") ?? undefined,
         })
 
         if (!queryParse.success) {

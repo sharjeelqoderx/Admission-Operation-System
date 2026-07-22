@@ -62,36 +62,61 @@ export const DocumentRejectionIndicator = memo(function DocumentRejectionIndicat
                             </button>
                         </PopoverTrigger>
                     </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[220px] px-2.5 py-1.5">
-                        <Typography as="p" className="text-xs whitespace-pre-wrap leading-snug">
+                    <TooltipContent side="top" className="max-w-[240px] px-3 py-2">
+                        <Typography as="p" className="text-xs whitespace-pre-wrap leading-relaxed">
                             {latest.feedback}
                         </Typography>
                     </TooltipContent>
                 </Tooltip>
-                <PopoverContent side="bottom" align={align} className="w-[280px] p-0 text-xs">
-                    <div className="border-b border-gray-100 px-2.5 py-1">
-                        <Typography
-                            as="p"
-                            className="text-xs font-semibold leading-none text-gray-900"
-                        >
-                            Rejection History
-                        </Typography>
+                <PopoverContent
+                    side="bottom"
+                    align={align}
+                    className="w-[300px] overflow-hidden p-0 gap-0 shadow-lg ring-1 ring-red-100/70"
+                >
+                    <div className="border-b border-red-100 bg-red-50/80 px-4 py-3">
+                        <div className="flex items-start gap-2.5">
+                            <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-red-100/80">
+                                <AlertCircle className="size-3.5 text-red-600" />
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-0.5">
+                                <Typography
+                                    as="p"
+                                    className="text-sm font-semibold leading-snug text-gray-900"
+                                >
+                                    Rejection History
+                                </Typography>
+                                <Typography
+                                    as="p"
+                                    className="text-[11px] font-medium leading-snug text-red-700/80"
+                                >
+                                    {history.length === 1
+                                        ? "1 review note"
+                                        : `${history.length} review notes`}
+                                </Typography>
+                            </div>
+                        </div>
                     </div>
-                    <div className="max-h-[200px] overflow-y-auto px-2.5 py-1.5 space-y-1.5">
+
+                    <div className="max-h-[260px] overflow-y-auto px-3 py-3 space-y-2.5">
                         {history.map((entry, index) => (
                             <div
                                 key={`${entry.created_at}-${index}`}
                                 className={cn(
-                                    "space-y-0",
-                                    index > 0 && "border-t border-gray-100 pt-1.5"
+                                    "rounded-lg border px-3.5 py-3",
+                                    index === 0
+                                        ? "border-red-100/90 bg-red-50/35"
+                                        : "border-gray-100 bg-gray-50/70"
                                 )}
                             >
-                                <Typography as="p" className="text-[10px] font-medium leading-none text-gray-500 mb-0.5">
+                                <Typography
+                                    as="p"
+                                    className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500"
+                                >
                                     {formatHistoryDate(entry.created_at)}
                                 </Typography>
                                 <Typography
                                     as="p"
-                                    className="text-xs text-gray-700 whitespace-pre-wrap leading-snug"
+                                    className="text-xs leading-relaxed text-gray-700 whitespace-pre-wrap"
                                 >
                                     {entry.feedback}
                                 </Typography>

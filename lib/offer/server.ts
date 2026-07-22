@@ -9,6 +9,8 @@ const DEFAULT_QUERY = {
     q: "",
     page: "1",
     limit: "10",
+    status: "all",
+    course_id: "all",
 } as const
 
 const EMPTY_OFFERS: OfferListResponse = {
@@ -26,12 +28,16 @@ export async function fetchOfferDashboardPageData(
         q?: string
         page?: string
         limit?: string
+        status?: string
+        course_id?: string
     } = {}
 ): Promise<OfferDashboardPageData> {
     const query = {
         q: searchParams.q ?? DEFAULT_QUERY.q,
         page: searchParams.page ?? DEFAULT_QUERY.page,
         limit: searchParams.limit ?? DEFAULT_QUERY.limit,
+        status: searchParams.status ?? DEFAULT_QUERY.status,
+        course_id: searchParams.course_id ?? DEFAULT_QUERY.course_id,
     }
 
     const supabase = await createSupabaseServerClient()
@@ -58,6 +64,8 @@ export async function fetchOfferDashboardPageData(
         q: query.q || undefined,
         page: query.page,
         limit: query.limit,
+        status: query.status === "all" ? "all" : query.status,
+        course_id: query.course_id !== "all" ? query.course_id : undefined,
     })
 
     if (!parsed.success) {

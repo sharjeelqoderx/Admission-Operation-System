@@ -8,6 +8,8 @@ type OfferPageProps = {
         q?: string
         page?: string
         limit?: string
+        status?: string
+        course_id?: string
     }>
 }
 

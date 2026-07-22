@@ -7,10 +7,22 @@ export const CreateOfferSchema = z.object({
 
 export type CreateOfferInput = z.infer<typeof CreateOfferSchema>
 
+export const OfferStatusFilterSchema = z.enum(["all", "PENDING", "ACCEPTED", "REJECTED"])
+
+/** Accepts any 8-4-4-4-12 hex id from Supabase/Postgres (Zod uuid() is RFC-4122 strict). */
+export const OfferCourseIdFilterSchema = z
+    .string()
+    .regex(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+        "Invalid course id"
+    )
+
 export const OfferListQuerySchema = z.object({
     q: z.string().optional().default(""),
     page: z.coerce.number().int().min(1).optional().default(1),
     limit: z.coerce.number().int().min(1).max(100).optional().default(10),
+    status: OfferStatusFilterSchema.optional().default("all"),
+    course_id: OfferCourseIdFilterSchema.optional(),
 })
 
 export type OfferListQuery = z.infer<typeof OfferListQuerySchema>
@@ -83,6 +95,8 @@ export const offerDashboardPageDataSchema = z.object({
         q: z.string(),
         page: z.string(),
         limit: z.string(),
+        status: z.string(),
+        course_id: z.string(),
     }),
 })
 

@@ -38,6 +38,16 @@ function matchesSearch(offer: OfferListItem, searchTerm: string) {
     return haystack.includes(searchTerm)
 }
 
+function matchesStatus(offer: OfferListItem, status?: string) {
+    if (!status || status === "all") return true
+    return offer.status.toUpperCase() === status.toUpperCase()
+}
+
+function matchesCourse(offer: OfferListItem, courseId?: string) {
+    if (!courseId || courseId === "all") return true
+    return offer.application?.course?.id === courseId
+}
+
 function applyRoleFilter(offers: OfferListItem[], role: OfferRole, userId: string) {
     if (role === Role.STUDENT) {
         return offers.filter((offer) => offer.application?.profile_id === userId)
@@ -158,7 +168,10 @@ export async function fetchOffersList(
 
     const mapped = mapOfferRows(await fetchRawOffers(readClient as DbClient))
     const roleFiltered = applyRoleFilter(mapped, options.role, options.userId)
-    const filtered = roleFiltered.filter((offer) => matchesSearch(offer, searchTerm))
+    const filtered = roleFiltered
+        .filter((offer) => matchesSearch(offer, searchTerm))
+        .filter((offer) => matchesStatus(offer, options.status))
+        .filter((offer) => matchesCourse(offer, options.course_id))
 
     const total = filtered.length
     const totalPages = Math.max(1, Math.ceil(total / limit))
