@@ -12,7 +12,7 @@ import type {
     UploadedDocumentSummary,
 } from "@/types/schemas/document"
 import type { CourseDegree, CourseProgram } from "@/types/schemas/program"
-import { Role } from "@/types/enums/role"
+import { assertDocumentStaffCanAccessStudentProfile } from "@/lib/document/agent-access"
 
 type DocumentRow = {
     id: string
@@ -109,29 +109,15 @@ export async function GET(req: NextRequest) {
                 .eq("id", user.id)
                 .maybeSingle()
 
-            if (profile?.role !== Role.AGENT) {
+            const canAccess = await assertDocumentStaffCanAccessStudentProfile(
+                supabase,
+                user.id,
+                profile?.role,
+                profileIdParam
+            )
+
+            if (!canAccess) {
                 return err("Forbidden", 403)
-            }
-
-            const { data: agentRow } = await supabase
-                .from("agent")
-                .select("id")
-                .eq("profile_id", user.id)
-                .maybeSingle()
-
-            if (!agentRow) {
-                return err("University Partner profile not found", 400)
-            }
-
-            const { data: studentRow } = await supabase
-                .from("student")
-                .select("profile_id")
-                .eq("profile_id", profileIdParam)
-                .eq("created_by_agent_id", agentRow.id)
-                .maybeSingle()
-
-            if (!studentRow) {
-                return err("Student not found", 404)
             }
 
             profileId = profileIdParam

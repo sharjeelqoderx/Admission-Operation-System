@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server"
 import { formatFullName } from "@/lib/utils/profile"
 import type { AgentAllDocumentRow } from "@/types/schemas/document"
-import { Role } from "@/types/enums/role"
+import { isDocumentStaffRole } from "@/lib/document/agent-access"
 
 type DocumentReviewRow = {
     id: string
@@ -36,7 +36,7 @@ export async function GET() {
             .eq("id", user.id)
             .maybeSingle()
 
-        if (profile?.role !== Role.AGENT) {
+        if (!isDocumentStaffRole(profile?.role)) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 

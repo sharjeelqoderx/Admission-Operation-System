@@ -15,12 +15,14 @@ type Props = {
     profileId?: string
     studentName?: string
     showBack?: boolean
+    backHref?: string
 }
 
 export function CourseDocumentsView({
     profileId,
     studentName,
     showBack = false,
+    backHref = "/dashboard/document",
 }: Props = {}) {
     const { me } = useAuth()
     const { data: user, isLoading: userLoading } = me
@@ -62,7 +64,7 @@ export function CourseDocumentsView({
             >
                 {showBack && (
                     <Link
-                        href="/dashboard/document"
+                        href={backHref}
                         className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-brand-byzantine transition-colors mb-2"
                     >
                         <ChevronLeft className="size-4" />

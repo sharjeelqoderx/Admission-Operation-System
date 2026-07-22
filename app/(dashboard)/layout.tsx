@@ -106,7 +106,7 @@ const sidebarRoutes = [
   {
     label: 'All Documents',
     icon: Folder,
-    allowFor: [Role.AGENT, Role.STUDENT],
+    allowFor: [Role.AGENT, Role.STUDENT, Role.ADMIN, Role.SUPER_ADMIN],
     children: [
       // {
       //   label: 'Upload Document',
@@ -118,13 +118,13 @@ const sidebarRoutes = [
         label: 'View Documents',
         href: '/dashboard/document',
         icon: Eye,
-        allowFor: [Role.AGENT, Role.STUDENT],
+        allowFor: [Role.AGENT, Role.STUDENT, Role.ADMIN, Role.SUPER_ADMIN],
       },
       {
         label: 'View All Documents',
         href: '/dashboard/document/all',
         icon: Files,
-        allowFor: [Role.AGENT],
+        allowFor: [Role.AGENT, Role.ADMIN, Role.SUPER_ADMIN],
       },
     ],
   },

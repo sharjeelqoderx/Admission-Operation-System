@@ -79,65 +79,143 @@ export async function GET(req: NextRequest) {
             )
         }
  
-        // Agent logic (Existing)
-        const { data: agentRow } = await supabase
-            .from("agent")
-            .select("id")
-            .eq("profile_id", user.id)
-            .maybeSingle()
- 
-        if (!agentRow) {
-            return NextResponse.json({ error: "University Partner profile not found" }, { status: 400 })
-        }
- 
-        // Fetch students by this agent
-        let studentsQuery = supabase
-            .from("student")
-            .select(`
+        const studentSelect = `
                 id,
                 profile_id,
                 created_at,
                 profile:profile_id (id, first_name, last_name, avatar_url)
-            `)
-            .eq("created_by_agent_id", agentRow.id)
- 
-        const { data: students, error: studentsError } = await studentsQuery.order("created_at", { ascending: false })
- 
-        if (studentsError) {
-            console.error("students error:", studentsError)
-            return NextResponse.json({ error: "Failed to fetch students", details: studentsError }, { status: 500 })
+            `
+
+        let students: Array<{
+            id: string
+            profile_id: string
+            created_at: string
+            profile: {
+                id: string
+                first_name: string | null
+                last_name: string | null
+                avatar_url: string | null
+            } | null
+        }> = []
+        const staffRole = profile?.role
+
+        if (profile?.role === Role.AGENT) {
+            const { data: agentRow } = await supabase
+                .from("agent")
+                .select("id")
+                .eq("profile_id", user.id)
+                .maybeSingle()
+
+            if (!agentRow) {
+                return NextResponse.json(
+                    { error: "University Partner profile not found" },
+                    { status: 400 }
+                )
+            }
+
+            const { data: agentStudents, error: studentsError } = await supabase
+                .from("student")
+                .select(studentSelect)
+                .eq("created_by_agent_id", agentRow.id)
+                .order("created_at", { ascending: false })
+
+            if (studentsError) {
+                console.error("students error:", studentsError)
+                return NextResponse.json(
+                    { error: "Failed to fetch students", details: studentsError },
+                    { status: 500 }
+                )
+            }
+
+            students = (agentStudents ?? []) as unknown as typeof students
+        } else if (profile?.role === Role.ADMIN || profile?.role === Role.SUPER_ADMIN) {
+            let studentsQuery = supabase
+                .from("student")
+                .select(studentSelect)
+                .order("created_at", { ascending: false })
+
+            if (profile.role === Role.ADMIN) {
+                const { data: applications, error: applicationsError } = await supabase
+                    .from("application")
+                    .select("profile_id")
+                    .eq("university_id", user.id)
+
+                if (applicationsError) {
+                    console.error("applications error:", applicationsError)
+                    return NextResponse.json(
+                        { error: "Failed to fetch students", details: applicationsError },
+                        { status: 500 }
+                    )
+                }
+
+                const profileIds = [
+                    ...new Set(
+                        (applications ?? [])
+                            .map((application) => application.profile_id)
+                            .filter(Boolean)
+                    ),
+                ]
+
+                if (profileIds.length === 0) {
+                    return NextResponse.json({ data: [], role: staffRole }, { status: 200 })
+                }
+
+                studentsQuery = studentsQuery.in("profile_id", profileIds)
+            }
+
+            const { data: staffStudents, error: studentsError } = await studentsQuery
+
+            if (studentsError) {
+                console.error("students error:", studentsError)
+                return NextResponse.json(
+                    { error: "Failed to fetch students", details: studentsError },
+                    { status: 500 }
+                )
+            }
+
+            students = (staffStudents ?? []) as unknown as typeof students
+        } else {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
- 
-        if (!Array.isArray(students) || !students.length) {
-            return NextResponse.json({ data: [], role: Role.AGENT }, { status: 200 })
+
+        if (!students.length) {
+            return NextResponse.json({ data: [], role: staffRole }, { status: 200 })
         }
- 
-        const profileIds = students.map((s: any) => s.profile_id)
- 
-        // Fetch documents uploaded by this agent
-        let docsQuery = supabase
+
+        const profileIds = students.map((student) => student.profile_id)
+
+        const { data: documents, error: docsError } = await supabase
             .from("document")
-            .select("id, profile_id, document_type_id, document_type:document_type_id(name), created_at, document_review(status, created_at), document_files(file_url, type)")
-            .in("profile_id", profileIds);
- 
-        const { data: documents, error: docsError } = await docsQuery
- 
+            .select(
+                "id, profile_id, document_type_id, document_type:document_type_id(name), created_at, document_review(status, created_at), document_files(file_url, type)"
+            )
+            .in("profile_id", profileIds)
+
         if (docsError) {
             console.error("documents error:", docsError)
-            return NextResponse.json({ error: "Failed to fetch documents", details: docsError }, { status: 500 })
+            return NextResponse.json(
+                { error: "Failed to fetch documents", details: docsError },
+                { status: 500 }
+            )
         }
- 
-        let result = students
-            .map((s: any) => {
-                const docs = (documents ?? []).filter((d: any) => d.profile_id === s.profile_id)
 
-                const profileName = formatFullName(s.profile?.first_name, s.profile?.last_name).toLowerCase()
+        const result = students
+            .map((student) => {
+                const docs = (documents ?? []).filter(
+                    (document) => document.profile_id === student.profile_id
+                )
+
+                const profileName = formatFullName(
+                    student.profile?.first_name,
+                    student.profile?.last_name
+                ).toLowerCase()
                 if (search && !profileName.includes(search)) return null
 
                 const lastDoc = docs.length
                     ? [...docs].sort(
-                          (a: any, b: any) =>
-                              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                          (a, b) =>
+                              new Date(b.created_at).getTime() -
+                              new Date(a.created_at).getTime()
                       )[0]
                     : null
 
@@ -146,17 +224,21 @@ export async function GET(req: NextRequest) {
                 if (status && status !== "ALL" && lastStatus !== status) return null
 
                 return {
-                    student_id: s.profile_id,
-                    student_name: formatFullName(s.profile?.first_name, s.profile?.last_name, "—"),
-                    avatar_url: s.profile?.avatar_url ?? null,
+                    student_id: student.profile_id,
+                    student_name: formatFullName(
+                        student.profile?.first_name,
+                        student.profile?.last_name,
+                        "—"
+                    ),
+                    avatar_url: student.profile?.avatar_url ?? null,
                     document_count: docs.length,
                     last_uploaded_at: lastDoc?.created_at ?? null,
                     last_doc_status: lastStatus,
                 }
             })
             .filter(Boolean)
- 
-        return NextResponse.json({ data: result, role: Role.AGENT }, { status: 200 })
+
+        return NextResponse.json({ data: result, role: staffRole }, { status: 200 })
     } catch {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }

@@ -5,7 +5,17 @@ import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { DocumentTable, type DocumentStudentRow } from "./DocumentTable"
 
-export function DocumentStudentsList() {
+type Props = {
+    title?: string
+    description?: string
+    getViewHref?: (studentId: string) => string
+}
+
+export function DocumentStudentsList({
+    title = "All Documents",
+    description = "Select a student to view programs and upload required documents to their profile.",
+    getViewHref,
+}: Props = {}) {
     const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ["documents", "students"],
         queryFn: async () => {
@@ -22,10 +32,10 @@ export function DocumentStudentsList() {
         <div className="space-y-6">
             <BluryCard isCentered={false} childClass="space-y-2" className="rounded-2xl">
                 <Typography as="h2" font="sub-heading" className="font-bold tracking-tight">
-                    All Documents
+                    {title}
                 </Typography>
                 <Typography as="p" font="sub-text" className="text-gray-600">
-                    Select a student to view programs and upload required documents to their profile.
+                    {description}
                 </Typography>
             </BluryCard>
 
@@ -34,6 +44,7 @@ export function DocumentStudentsList() {
                 isLoading={isLoading}
                 isError={isError}
                 onRetry={() => refetch()}
+                getViewHref={getViewHref}
             />
         </div>
     )
