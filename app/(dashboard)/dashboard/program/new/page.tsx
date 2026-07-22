@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { UniversityProgramFormPageContent } from "../_components/university-program/form-page-content"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 export default async function NewProgramPage() {
@@ -10,7 +11,7 @@ export default async function NewProgramPage() {
         redirect("/login")
     }
 
-    if (role !== Role.ADMIN && role !== Role.SUPER_ADMIN) {
+    if (!isUniversityStaffRole(role)) {
         redirect("/dashboard/program")
     }
 

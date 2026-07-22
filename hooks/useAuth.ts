@@ -32,12 +32,12 @@ type AgentRoleProfile = {
 }
 
 type UniversityRoleProfile = {
-    role: Role.ADMIN
+    role: Role.ADMIN | Role.MANAGEMENT
     details: UniversityRow | null
 }
 
 type OtherRoleProfile = {
-    role: Exclude<RoleEnum, Role.STUDENT | Role.AGENT | Role.ADMIN>
+    role: Exclude<RoleEnum, Role.STUDENT | Role.AGENT | Role.ADMIN | Role.MANAGEMENT>
     details: null
 }
 

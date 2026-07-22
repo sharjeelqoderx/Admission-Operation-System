@@ -20,6 +20,7 @@ import type {
     ApplicationProfileRole,
 } from "@/types/schemas/application"
 import type { Database, Tables } from "@/types/supabase"
+import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 const APPLICATION_LIST_SELECT = `
@@ -316,7 +317,12 @@ async function resolveMatchingStudentProfileIds(
         return [options.studentId]
     }
 
-    const escaped = searchTerm.replace(/[%_,]/g, "\\$&")
+    const normalizedSearch = searchTerm.trim().toLowerCase()
+    if (!normalizedSearch) {
+        return []
+    }
+
+    const escaped = normalizedSearch.replace(/[%_,]/g, "\\$&")
     const pattern = `%${escaped}%`
 
     if (options.role === Role.STUDENT) {
@@ -334,9 +340,22 @@ async function resolveMatchingStudentProfileIds(
             return []
         }
 
-        const displayName = formatFullName(profile.first_name, profile.last_name)
-        const haystack = `${displayName} ${profile.email ?? ""}`.toLowerCase()
-        return haystack.includes(searchTerm.toLowerCase()) ? [profile.id] : []
+        const { data: studentRow } = await supabase
+            .from("student")
+            .select("student_code")
+            .eq("profile_id", options.userId)
+            .maybeSingle()
+
+        const haystack = [
+            formatFullName(profile.first_name, profile.last_name),
+            profile.email ?? "",
+            studentRow?.student_code ?? "",
+            profile.id,
+        ]
+            .join(" ")
+            .toLowerCase()
+
+        return haystack.includes(normalizedSearch) ? [profile.id] : []
     }
 
     let allowedProfileIds: string[] | null = null
@@ -374,10 +393,14 @@ async function resolveMatchingStudentProfileIds(
         }
     }
 
+    const profileIds = new Set<string>()
+
     let profileQuery = supabase
         .from("profile")
-        .select("id")
-        .or(`first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern}`)
+        .select("id, first_name, last_name, email")
+        .or(
+            `first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern},id.ilike.${pattern}`
+        )
 
     if (allowedProfileIds) {
         profileQuery = profileQuery.in("id", allowedProfileIds)
@@ -389,7 +412,49 @@ async function resolveMatchingStudentProfileIds(
         throw error
     }
 
-    return (profiles ?? []).map((profile) => profile.id)
+    for (const profile of profiles ?? []) {
+        const haystack = [
+            formatFullName(profile.first_name, profile.last_name),
+            profile.email ?? "",
+            profile.id,
+        ]
+            .join(" ")
+            .toLowerCase()
+
+        if (haystack.includes(normalizedSearch)) {
+            profileIds.add(profile.id)
+        }
+    }
+
+    let studentQuery = supabase
+        .from("student")
+        .select("profile_id, student_code")
+        .ilike("student_code", pattern)
+
+    if (allowedProfileIds) {
+        studentQuery = studentQuery.in("profile_id", allowedProfileIds)
+    }
+
+    const { data: studentsByCode, error: studentsByCodeError } = await studentQuery
+
+    if (studentsByCodeError) {
+        throw studentsByCodeError
+    }
+
+    for (const student of studentsByCode ?? []) {
+        if (!student.profile_id) continue
+
+        const codeHaystack = [student.student_code, student.profile_id]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+
+        if (codeHaystack.includes(normalizedSearch)) {
+            profileIds.add(student.profile_id)
+        }
+    }
+
+    return Array.from(profileIds)
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -407,7 +472,7 @@ function applyApplicationFilters(query: any, ctx: ApplicationFilterContext) {
         nextQuery = nextQuery.or(
             buildAgentApplicationOrFilter(ctx.userId, studentProfileIds)
         )
-    } else if (ctx.role === Role.ADMIN) {
+    } else if (isUniversityRole(ctx.role)) {
         nextQuery = nextQuery.eq("university_id", ctx.userId)
     }
 

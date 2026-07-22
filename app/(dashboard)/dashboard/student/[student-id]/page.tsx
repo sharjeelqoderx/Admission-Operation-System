@@ -3,6 +3,7 @@ import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityStudentDetailForPage } from "@/lib/student/university-server"
 import { AgentStudentDetailPage } from "../_components/agent-student-detail-page"
 import { UniversityStudentDetailPageContent } from "./_components/university-student/page-content"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 type StudentDetailPageProps = {
@@ -17,7 +18,7 @@ export default async function StudentDetailPage({ params }: StudentDetailPagePro
         redirect("/login")
     }
 
-    if (role === Role.ADMIN || role === Role.SUPER_ADMIN) {
+    if (isUniversityStaffRole(role)) {
         const initialDetail = await fetchUniversityStudentDetailForPage(studentId)
 
         if (!initialDetail) {

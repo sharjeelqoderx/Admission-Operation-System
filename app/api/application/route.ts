@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { fetchApplicationsList } from "@/lib/application/list"
 import { CreateApplicationSchema, ApplicationListQuerySchema } from "@/types/schemas/application"
 import type { ApplicationProfileRole } from "@/types/schemas/application"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 async function canAccessStudentApplications(
@@ -16,7 +17,7 @@ async function canAccessStudentApplications(
     }
 
     // Agents have staff-wide visibility (same as all-apps / students / offers).
-    return role === Role.AGENT || role === Role.ADMIN || role === Role.SUPER_ADMIN
+    return role === Role.AGENT || isUniversityStaffRole(role)
 }
 
 export async function GET(req: NextRequest) {

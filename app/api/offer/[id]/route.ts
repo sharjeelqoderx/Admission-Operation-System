@@ -10,6 +10,7 @@ import {
     OFFER_DETAIL_SELECT_WITH_TEMPLATE,
 } from "@/lib/offer/select-fields";
 import { renderOfferBodyHtml } from "@/lib/offer/render-offer-body-html";
+import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role";
 
 function canReadOffer(
@@ -26,7 +27,7 @@ function canReadOffer(
         return application.profile_id === userId
     }
 
-    if (role === Role.ADMIN) {
+    if (isUniversityRole(role)) {
         return application.university_id === userId
     }
 

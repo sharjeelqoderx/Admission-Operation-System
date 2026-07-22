@@ -5,6 +5,7 @@ import { fetchApplicationDashboardPageData } from "@/lib/application/server"
 import { PageContent } from "./_components/page-content"
 import { UniversityApplicationListPageContent } from "./_components/university-application/page-content"
 import type { UniversityApplicationTab } from "@/types/schemas/university-application"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 type ApplicationPageProps = {
@@ -28,7 +29,7 @@ export default async function ApplicationPage({ searchParams }: ApplicationPageP
 
     const params = await searchParams
 
-    if (role === Role.ADMIN || role === Role.SUPER_ADMIN) {
+    if (isUniversityStaffRole(role)) {
         const tab = (params.tab ?? "all") as UniversityApplicationTab
 
         const initialOverview = await fetchUniversityApplicationsForPage({
@@ -42,10 +43,23 @@ export default async function ApplicationPage({ searchParams }: ApplicationPageP
             redirect("/login")
         }
 
-        return <UniversityApplicationListPageContent initialOverview={initialOverview} />
+        return (
+            <UniversityApplicationListPageContent
+                initialOverview={initialOverview}
+                initialQuery={{
+                    q: params.q ?? "",
+                    tab,
+                    page: params.page ?? "1",
+                }}
+            />
+        )
     }
 
-    const initialData = await fetchApplicationDashboardPageData(params)
+    if (role === Role.AGENT || role === Role.STUDENT) {
+        const initialData = await fetchApplicationDashboardPageData(params)
 
-    return <PageContent initialData={initialData} />
+        return <PageContent initialData={initialData} />
+    }
+
+    redirect("/dashboard")
 }

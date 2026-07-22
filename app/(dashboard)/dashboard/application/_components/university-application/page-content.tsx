@@ -8,6 +8,7 @@ import type {
     UniversityApplicationListResponse,
     UniversityApplicationTab,
 } from "@/types/schemas/university-application"
+import type { UniversityApplicationInitialQuery } from "./withUniversityApplicationPageLogic"
 
 type UniversityApplicationPageViewProps = {
     overview: UniversityApplicationListResponse
@@ -16,6 +17,7 @@ type UniversityApplicationPageViewProps = {
     isFetching: boolean
     onSearchChange: (value: string) => void
     onTabChange: (value: UniversityApplicationTab) => void
+    onTabHover: (value: UniversityApplicationTab) => void
     onPageChange: (page: number) => void
 }
 
@@ -26,6 +28,7 @@ const UniversityApplicationPageView = memo(function UniversityApplicationPageVie
     isFetching,
     onSearchChange,
     onTabChange,
+    onTabHover,
     onPageChange,
 }: UniversityApplicationPageViewProps) {
     return (
@@ -44,11 +47,12 @@ const UniversityApplicationPageView = memo(function UniversityApplicationPageVie
                 applications={overview.data}
                 tabCounts={overview.tab_counts}
                 pagination={overview.pagination}
-                isLoading={isFetching}
+                isFetching={isFetching}
                 searchValue={searchValue}
                 activeTab={activeTab}
                 onSearchChange={onSearchChange}
                 onTabChange={onTabChange}
+                onTabHover={onTabHover}
                 onPageChange={onPageChange}
             />
         </div>
@@ -59,8 +63,17 @@ const UniversityApplicationPageContent = withUniversityApplicationPageLogic(Univ
 
 type PageContentProps = {
     initialOverview: UniversityApplicationListResponse
+    initialQuery: UniversityApplicationInitialQuery
 }
 
-export function UniversityApplicationListPageContent({ initialOverview }: PageContentProps) {
-    return <UniversityApplicationPageContent initialOverview={initialOverview} />
+export function UniversityApplicationListPageContent({
+    initialOverview,
+    initialQuery,
+}: PageContentProps) {
+    return (
+        <UniversityApplicationPageContent
+            initialOverview={initialOverview}
+            initialQuery={initialQuery}
+        />
+    )
 }

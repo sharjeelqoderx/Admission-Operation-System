@@ -5,6 +5,7 @@ import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { getFileSizeLimitError, isFileWithinSizeLimit } from "@/lib/constants/file-upload"
 
 import { profileStep1Schema } from "@/types/schemas/auth"
+import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 export async function POST(req: NextRequest) {
@@ -150,7 +151,7 @@ export async function POST(req: NextRequest) {
                     experience_years: data.experience_years ? Number(data.experience_years) : undefined,
                 }, { onConflict: "profile_id" })
             if (error) return err(error.message, 500)
-        } else if (role === Role.ADMIN) {
+        } else if (isUniversityRole(role)) {
             const { error } = await supabase
                 .from("university")
                 .upsert({

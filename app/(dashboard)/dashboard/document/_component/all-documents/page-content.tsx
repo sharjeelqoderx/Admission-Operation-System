@@ -5,6 +5,7 @@ import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { AllDocumentsTable } from "./all-documents-table"
 import { RejectDocumentDialog } from "./reject-document-dialog"
+import { withAllDocumentsLogic } from "./withAllDocumentsLogic"
 import type { AllDocumentsPageLogicProps } from "./withAllDocumentsLogic"
 
 export const AllDocumentsPageContent = memo(function AllDocumentsPageContent({
@@ -54,3 +55,5 @@ export const AllDocumentsPageContent = memo(function AllDocumentsPageContent({
         </div>
     )
 })
+
+export const AllDocumentsDashboardPage = withAllDocumentsLogic(AllDocumentsPageContent)

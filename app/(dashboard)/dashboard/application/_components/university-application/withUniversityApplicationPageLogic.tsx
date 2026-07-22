@@ -1,13 +1,22 @@
 "use client"
 
 import type { ComponentType } from "react"
-import { useCallback, useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+    applyUrlSearchParamUpdates,
+    readUrlSearchParam,
+} from "@/lib/navigation/replace-url-search-params"
 import type {
     UniversityApplicationListResponse,
     UniversityApplicationTab,
 } from "@/types/schemas/university-application"
+
+export type UniversityApplicationInitialQuery = {
+    q: string
+    tab: UniversityApplicationTab
+    page: string
+}
 
 export type UniversityApplicationPageLogicProps = {
     overview: UniversityApplicationListResponse
@@ -16,10 +25,18 @@ export type UniversityApplicationPageLogicProps = {
     isFetching: boolean
     onSearchChange: (value: string) => void
     onTabChange: (value: UniversityApplicationTab) => void
+    onTabHover: (value: UniversityApplicationTab) => void
     onPageChange: (page: number) => void
 }
 
-async function fetchUniversityApplications(params: {
+const UNIVERSITY_APPLICATION_TABS: UniversityApplicationTab[] = [
+    "all",
+    "pending-review",
+    "awaiting-signature",
+    "recently-completed",
+]
+
+export async function fetchUniversityApplications(params: {
     q?: string
     tab?: string
     page?: string
@@ -32,7 +49,7 @@ async function fetchUniversityApplications(params: {
     if (params.page) url.searchParams.set("page", params.page)
     url.searchParams.set("limit", "10")
 
-    const res = await fetch(url.toString())
+    const res = await fetch(url.toString(), { cache: "no-store" })
     const json = await res.json()
     if (!res.ok) {
         throw new Error(json?.error ?? "Failed to fetch applications")
@@ -40,46 +57,90 @@ async function fetchUniversityApplications(params: {
     return json.data as UniversityApplicationListResponse
 }
 
+function readUniversityFiltersFromUrl() {
+    return {
+        q: readUrlSearchParam("q"),
+        tab: (readUrlSearchParam("tab") || "all") as UniversityApplicationTab,
+        page: readUrlSearchParam("page") || "1",
+    }
+}
+
 export function withUniversityApplicationPageLogic(
     Component: ComponentType<UniversityApplicationPageLogicProps>
 ) {
     return function UniversityApplicationPageContainer({
         initialOverview,
+        initialQuery,
     }: {
         initialOverview: UniversityApplicationListResponse
+        initialQuery: UniversityApplicationInitialQuery
     }) {
-        const router = useRouter()
-        const pathname = usePathname()
-        const searchParams = useSearchParams()
+        const queryClient = useQueryClient()
+        const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-        const q = searchParams.get("q") ?? ""
-        const tab = (searchParams.get("tab") ?? "all") as UniversityApplicationTab
-        const page = searchParams.get("page") ?? "1"
+        const [filters, setFilters] = useState(initialQuery)
+        const [searchInput, setSearchInput] = useState(initialQuery.q)
+
+        const updateFilters = useCallback((updates: Partial<typeof initialQuery>) => {
+            setFilters((current) => {
+                const next = { ...current, ...updates }
+                applyUrlSearchParamUpdates({
+                    q: next.q || null,
+                    tab: next.tab === "all" ? null : next.tab,
+                    page: next.page === "1" ? null : next.page,
+                })
+                return next
+            })
+        }, [])
+
+        useEffect(() => {
+            const syncFiltersFromUrl = () => {
+                const next = readUniversityFiltersFromUrl()
+                setFilters(next)
+                setSearchInput(next.q)
+            }
+
+            window.addEventListener("popstate", syncFiltersFromUrl)
+            return () => window.removeEventListener("popstate", syncFiltersFromUrl)
+        }, [])
+
+        const prefetchTab = useCallback(
+            (tab: UniversityApplicationTab, tabPage = "1") => {
+                void queryClient.prefetchQuery({
+                    queryKey: ["university-applications", filters.q, tab, tabPage],
+                    queryFn: () =>
+                        fetchUniversityApplications({ q: filters.q, tab, page: tabPage }),
+                    staleTime: 60_000,
+                })
+            },
+            [filters.q, queryClient]
+        )
+
+        useEffect(() => {
+            UNIVERSITY_APPLICATION_TABS.forEach((tab) => {
+                prefetchTab(tab)
+            })
+        }, [prefetchTab])
+
+        const matchesInitialQuery =
+            filters.q === initialQuery.q &&
+            filters.page === initialQuery.page &&
+            filters.tab === initialQuery.tab
 
         const applicationsQuery = useQuery({
-            queryKey: ["university-applications", q, tab, page],
-            queryFn: () => fetchUniversityApplications({ q, tab, page }),
-            initialData: initialOverview,
-            staleTime: 60000, // 1 minute
-            gcTime: 300000, // 5 minutes
+            queryKey: ["university-applications", filters.q, filters.tab, filters.page],
+            queryFn: () =>
+                fetchUniversityApplications({
+                    q: filters.q,
+                    tab: filters.tab,
+                    page: filters.page,
+                }),
+            initialData: matchesInitialQuery ? initialOverview : undefined,
+            placeholderData: keepPreviousData,
+            staleTime: 60_000,
+            gcTime: 300_000,
             refetchOnWindowFocus: false,
-            refetchOnReconnect: true,
         })
-
-        const updateParams = useCallback(
-            (updates: Record<string, string | null>) => {
-                const params = new URLSearchParams(searchParams.toString())
-                Object.entries(updates).forEach(([key, value]) => {
-                    if (value && value !== "all") {
-                        params.set(key, value)
-                    } else {
-                        params.delete(key)
-                    }
-                })
-                router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-            },
-            [pathname, router, searchParams]
-        )
 
         const overview = useMemo(
             () =>
@@ -91,15 +152,54 @@ export function withUniversityApplicationPageLogic(
             [applicationsQuery.data, initialOverview.pagination, initialOverview.tab_counts]
         )
 
+        const handleTabChange = useCallback(
+            (value: UniversityApplicationTab) => {
+                updateFilters({ tab: value, page: "1" })
+                prefetchTab(value)
+            },
+            [prefetchTab, updateFilters]
+        )
+
+        const handleTabHover = useCallback(
+            (value: UniversityApplicationTab) => {
+                prefetchTab(value)
+            },
+            [prefetchTab]
+        )
+
+        const handleSearchChange = useCallback(
+            (value: string) => {
+                setSearchInput(value)
+
+                if (searchTimeoutRef.current) {
+                    clearTimeout(searchTimeoutRef.current)
+                }
+
+                searchTimeoutRef.current = setTimeout(() => {
+                    updateFilters({ q: value.trim(), page: "1" })
+                }, 400)
+            },
+            [updateFilters]
+        )
+
+        useEffect(() => {
+            return () => {
+                if (searchTimeoutRef.current) {
+                    clearTimeout(searchTimeoutRef.current)
+                }
+            }
+        }, [])
+
         return (
             <Component
                 overview={overview}
-                searchValue={q}
-                activeTab={tab}
+                searchValue={searchInput}
+                activeTab={filters.tab}
                 isFetching={applicationsQuery.isFetching}
-                onSearchChange={(value) => updateParams({ q: value || null, page: "1" })}
-                onTabChange={(value) => updateParams({ tab: value, page: "1" })}
-                onPageChange={(nextPage) => updateParams({ page: String(nextPage) })}
+                onSearchChange={handleSearchChange}
+                onTabChange={handleTabChange}
+                onTabHover={handleTabHover}
+                onPageChange={(nextPage) => updateFilters({ page: String(nextPage) })}
             />
         )
     }

@@ -15,10 +15,11 @@ import type {
     OfferListResponse,
 } from "@/types/schemas/offer"
 import type { Database } from "@/types/supabase"
+import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 type DbClient = SupabaseClient<Database>
-type OfferRole = Role.STUDENT | Role.AGENT | Role.ADMIN | Role.SUPER_ADMIN
+type OfferRole = Role.STUDENT | Role.AGENT | Role.ADMIN | Role.MANAGEMENT | Role.SUPER_ADMIN
 
 function matchesSearch(offer: OfferListItem, searchTerm: string) {
     if (!searchTerm) return true
@@ -38,16 +39,15 @@ function matchesSearch(offer: OfferListItem, searchTerm: string) {
 }
 
 function applyRoleFilter(offers: OfferListItem[], role: OfferRole, userId: string) {
-    switch (role) {
-        case Role.STUDENT:
-            return offers.filter((offer) => offer.application?.profile_id === userId)
-        case Role.ADMIN:
-            return offers.filter((offer) => offer.application?.university_id === userId)
-        case Role.AGENT:
-        case Role.SUPER_ADMIN:
-        default:
-            return offers
+    if (role === Role.STUDENT) {
+        return offers.filter((offer) => offer.application?.profile_id === userId)
     }
+
+    if (isUniversityRole(role)) {
+        return offers.filter((offer) => offer.application?.university_id === userId)
+    }
+
+    return offers
 }
 
 type RawOfferProfile = {

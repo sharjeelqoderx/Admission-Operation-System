@@ -12,6 +12,7 @@ import type {
     UniversityAgentListItem,
     UniversityAgentListResponse,
 } from "@/types/schemas/university-agent"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 const KYC_DOCUMENT_CODES = ["AGENT_REGISTRATION", "AGENT_ID_FRONT", "AGENT_ID_BACK"] as const
@@ -512,7 +513,7 @@ export async function fetchUniversityAgentsForPage(params?: {
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+    if (!isUniversityStaffRole(profile?.role)) {
         return null
     }
 
@@ -539,7 +540,7 @@ export async function fetchUniversityAgentDetailForPage(profileId: string) {
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+    if (!isUniversityStaffRole(profile?.role)) {
         return null
     }
 

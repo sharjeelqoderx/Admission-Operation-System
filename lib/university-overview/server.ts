@@ -10,6 +10,7 @@ import type {
     UniversityOverview,
 } from "@/types/schemas/university-overview"
 import type { StudentPipelineStatus } from "@/types/schemas/university-student"
+import { isUniversityStaffRole, resolveUniversityScopeId } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 type ApplicationRow = {
@@ -510,9 +511,9 @@ export async function fetchUniversityOverviewForPage(): Promise<UniversityOvervi
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+    if (!isUniversityStaffRole(profile?.role)) {
         return null
     }
 
-    return fetchUniversityOverview(profile.role === Role.ADMIN ? user.id : null)
+    return fetchUniversityOverview(resolveUniversityScopeId(profile?.role, user.id))
 }

@@ -3,6 +3,7 @@ import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityOverviewForPage } from "@/lib/university-overview/server"
 import { ClientDashboard } from "./_components/client-dashboard"
 import { UniversityOverviewPageContent } from "./_components/university-overview/page-content"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 export default async function DashboardPage() {
@@ -12,7 +13,7 @@ export default async function DashboardPage() {
         redirect("/login")
     }
 
-    if (role === Role.ADMIN || role === Role.SUPER_ADMIN) {
+    if (isUniversityStaffRole(role)) {
         const initialOverview = await fetchUniversityOverviewForPage()
         if (!initialOverview) {
             redirect("/login")

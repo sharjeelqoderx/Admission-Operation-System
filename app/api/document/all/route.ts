@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server"
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server"
+import { resolveAgentStudentProfileIds } from "@/lib/api/agent-applications"
 import { formatFullName } from "@/lib/utils/profile"
 import type { AgentAllDocumentRow } from "@/types/schemas/document"
 import { isDocumentStaffRole } from "@/lib/document/agent-access"
+import { isUniversityRole } from "@/lib/auth/university-role"
+import { Role } from "@/types/enums/role"
 
 type DocumentReviewRow = {
     id: string
@@ -40,9 +43,44 @@ export async function GET() {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
+        let scopedProfileIds: string[] | null = null
+
+        if (isUniversityRole(profile?.role)) {
+            const { data: applications, error: applicationsError } = await supabase
+                .from("application")
+                .select("profile_id")
+                .eq("university_id", user.id)
+
+            if (applicationsError) {
+                console.error("GET /api/document/all applications error:", applicationsError)
+                return NextResponse.json(
+                    { error: "Failed to fetch documents", details: applicationsError },
+                    { status: 500 }
+                )
+            }
+
+            scopedProfileIds = [
+                ...new Set(
+                    (applications ?? [])
+                        .map((application) => application.profile_id)
+                        .filter(Boolean)
+                ),
+            ]
+
+            if (scopedProfileIds.length === 0) {
+                return NextResponse.json({ data: [] }, { status: 200 })
+            }
+        } else if (profile?.role === Role.AGENT) {
+            scopedProfileIds = await resolveAgentStudentProfileIds(supabase, user.id)
+
+            if (scopedProfileIds.length === 0) {
+                return NextResponse.json({ data: [] }, { status: 200 })
+            }
+        }
+
         const serviceSupabase = createSupabaseServiceClient()
 
-        const { data: documents, error: docsError } = await serviceSupabase
+        let documentsQuery = serviceSupabase
             .from("document")
             .select(`
                 id,
@@ -55,6 +93,12 @@ export async function GET() {
                 profile:profile_id(first_name, last_name, avatar_url, email)
             `)
             .order("created_at", { ascending: false })
+
+        if (scopedProfileIds) {
+            documentsQuery = documentsQuery.in("profile_id", scopedProfileIds)
+        }
+
+        const { data: documents, error: docsError } = await documentsQuery
 
         if (docsError) {
             console.error("GET /api/document/all error:", docsError)

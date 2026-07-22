@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { PageLoader } from "@/components/shared/page-loader"
-import { DocumentStudentsList } from "../_component/document-students-list"
-import { Role } from "@/types/enums/role"
+import { AllDocumentsDashboardPage } from "../_component/all-documents/page-content"
+import { isDocumentStaffRole } from "@/lib/auth/university-role"
 
 export default function AllDocumentsPage() {
     const router = useRouter()
@@ -15,22 +15,10 @@ export default function AllDocumentsPage() {
         return <PageLoader />
     }
 
-    if (
-        user?.role !== Role.AGENT &&
-        user?.role !== Role.ADMIN &&
-        user?.role !== Role.SUPER_ADMIN
-    ) {
+    if (!isDocumentStaffRole(user?.role)) {
         router.replace("/dashboard/document")
         return <PageLoader />
     }
 
-    return (
-        <DocumentStudentsList
-            title="View All Documents"
-            description="Select a student to view all their uploaded documents."
-            getViewHref={(studentId) =>
-                `/dashboard/document/student/${studentId}?from=all`
-            }
-        />
-    )
+    return <AllDocumentsDashboardPage />
 }

@@ -3,6 +3,7 @@ import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityProgramDetailForPage } from "@/lib/program/university-server"
 import { AgentStudentProgramDetailPage } from "../_components/agent-student-program-detail-page"
 import { UniversityProgramDetailPageContent } from "../_components/university-program/detail-page-content"
+import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 type ProgramDetailPageProps = {
@@ -17,7 +18,7 @@ export default async function ProgramDetailPage({ params }: ProgramDetailPagePro
         redirect("/login")
     }
 
-    if (role === Role.ADMIN || role === Role.SUPER_ADMIN) {
+    if (isUniversityStaffRole(role)) {
         const initialDetail = await fetchUniversityProgramDetailForPage(programId)
 
         if (!initialDetail) {
@@ -28,7 +29,7 @@ export default async function ProgramDetailPage({ params }: ProgramDetailPagePro
             <UniversityProgramDetailPageContent
                 courseId={programId}
                 initialDetail={initialDetail}
-                canEditProgram={role !== Role.ADMIN}
+                canEditProgram={!isUniversityRole(role)}
             />
         )
     }

@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { PageLoader } from "@/components/shared/page-loader"
 import { StudentPipelineBadge } from "@/components/shared/student-pipeline-badge"
@@ -36,11 +37,12 @@ type UniversityApplicationListTableProps = {
         limit: number
         totalPages: number
     }
-    isLoading?: boolean
+    isFetching?: boolean
     searchValue: string
     activeTab: UniversityApplicationTab
     onSearchChange: (value: string) => void
     onTabChange: (value: UniversityApplicationTab) => void
+    onTabHover: (value: UniversityApplicationTab) => void
     onPageChange: (page: number) => void
 }
 
@@ -55,11 +57,12 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
     applications,
     tabCounts,
     pagination,
-    isLoading = false,
+    isFetching = false,
     searchValue,
     activeTab,
     onSearchChange,
     onTabChange,
+    onTabHover,
     onPageChange,
 }: UniversityApplicationListTableProps) {
     const showingCount = applications.length
@@ -72,12 +75,12 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                 <Input
                     value={searchValue}
                     onChange={(event) => onSearchChange(event.target.value)}
-                    placeholder="Search student, program, or university partner"
+                    placeholder="Search by student name or ID"
                     className="h-12 border-none bg-white pl-11 shadow-sm ring-1 ring-black/5"
                 />
             </div>
 
-            <div className="flex flex-wrap items-center gap-6 border-b border-gray-200">
+            <div className="flex flex-wrap items-center gap-2 border-b border-brand-secondary/20 pb-0">
                 {tabs.map((tab) => {
                     const isActive = activeTab === tab.key
                     const count = tabCounts[tab.countKey]
@@ -87,10 +90,12 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                             key={tab.key}
                             type="button"
                             onClick={() => onTabChange(tab.key)}
+                            onMouseEnter={() => onTabHover(tab.key)}
+                            onFocus={() => onTabHover(tab.key)}
                             className={
                                 isActive
-                                    ? "border-b-2 border-brand-blue pb-3 text-sm font-semibold text-brand-blue"
-                                    : "pb-3 text-sm font-medium text-gray-500"
+                                    ? "relative -mb-px cursor-pointer rounded-t-lg border border-brand-secondary/25 border-b-white bg-brand-secondary/10 px-4 pb-3 pt-2 text-sm font-semibold text-brand-blue-text transition-colors"
+                                    : "relative -mb-px cursor-pointer border-b-2 border-transparent px-4 pb-3 pt-2 text-sm font-medium text-gray-500 transition-colors hover:text-brand-blue-text/80"
                             }
                         >
                             <span>{tab.label}</span>
@@ -98,7 +103,11 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                 <Typography
                                     as="span"
                                     font="small"
-                                    className="ml-2 inline-flex size-6 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-600"
+                                    className={
+                                        isActive
+                                            ? "ml-2 inline-flex size-6 items-center justify-center rounded-full bg-brand-secondary/25 text-[10px] font-bold text-brand-blue-text"
+                                            : "ml-2 inline-flex size-6 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-600"
+                                    }
                                 >
                                     {count.toLocaleString()}
                                 </Typography>
@@ -108,7 +117,11 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                 })}
             </div>
 
-            <Card className="overflow-hidden border-none bg-white shadow-sm ring-1 ring-black/5">
+            <Card className="relative overflow-hidden border-none bg-white shadow-sm ring-1 ring-black/5">
+                {isFetching ? (
+                    <PageLoader className="py-24" />
+                ) : (
+                    <>
                 <div className="overflow-x-auto">
                     <Table className="min-w-[1100px]">
                         <TableHeader>
@@ -120,7 +133,14 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                     "Submission Date",
                                     "Action",
                                 ].map((heading) => (
-                                    <TableHead key={heading} className="px-6 py-5">
+                                    <TableHead
+                                        key={heading}
+                                        className={
+                                            heading === "Program"
+                                                ? "px-6 py-5 max-w-[240px]"
+                                                : "px-6 py-5"
+                                        }
+                                    >
                                         <Typography
                                             as="span"
                                             font="small"
@@ -133,13 +153,7 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="px-6 py-12">
-                                        <PageLoader className="min-h-0" />
-                                    </TableCell>
-                                </TableRow>
-                            ) : applications.length === 0 ? (
+                            {applications.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="px-6 py-12 text-center">
                                         <Typography as="span" font="sub-text" className="text-gray-500">
@@ -162,14 +176,14 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                                         alt={application.student_name}
                                                         width={40}
                                                         height={40}
-                                                        className="size-10 rounded-full object-cover"
+                                                        className="size-10 rounded-xl border-2 border-white/50 object-cover"
                                                         unoptimized
                                                     />
                                                     <div>
                                                         <Typography
                                                             as="p"
                                                             font="text"
-                                                            className="font-semibold text-brand-blue"
+                                                            className="font-semibold text-gray-900"
                                                         >
                                                             {application.student_name}
                                                         </Typography>
@@ -179,13 +193,25 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                                     </div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="px-6 py-5">
-                                                <Typography as="p" font="text" className="font-semibold text-brand-primary">
-                                                    {application.program_name ?? "—"}
-                                                </Typography>
-                                                <Typography as="p" font="sub-text" className="text-gray-500">
-                                                    {application.intake_label ?? "—"}
-                                                </Typography>
+                                            <TableCell className="max-w-[240px] px-6 py-5">
+                                                <div className="min-w-0 max-w-[240px]">
+                                                    <Typography
+                                                        as="p"
+                                                        font="text"
+                                                        className="truncate font-semibold text-brand-primary"
+                                                        title={application.program_name ?? undefined}
+                                                    >
+                                                        {application.program_name ?? "—"}
+                                                    </Typography>
+                                                    <Typography
+                                                        as="p"
+                                                        font="sub-text"
+                                                        className="truncate text-gray-500"
+                                                        title={application.intake_label ?? undefined}
+                                                    >
+                                                        {application.intake_label ?? "—"}
+                                                    </Typography>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="px-6 py-5">
                                                 <StudentPipelineBadge status={application.pipeline_status} />
@@ -195,13 +221,16 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                                     {application.submission_date ?? "—"}
                                                 </Typography>
                                             </TableCell>
-                                            <TableCell className="px-6 py-5">
-                                                <Link
-                                                    href={`/dashboard/application/${application.id}`}
-                                                    className="font-bold uppercase tracking-wide text-brand-blue"
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
+                                                    asChild
                                                 >
-                                                    View
-                                                </Link>
+                                                    <Link href={`/dashboard/application/${application.id}`}>
+                                                        View
+                                                    </Link>
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     )
@@ -234,6 +263,8 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                         </button>
                     </div>
                 </div>
+                    </>
+                )}
             </Card>
         </div>
     )

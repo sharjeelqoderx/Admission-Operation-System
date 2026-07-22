@@ -51,7 +51,12 @@ export async function PATCH(
             )
         }
 
-        const access = await assertAgentCanAccessDocument(supabase, user.id, documentId)
+        const access = await assertAgentCanAccessDocument(
+            supabase,
+            user.id,
+            documentId,
+            profile?.role
+        )
         if (!access.allowed || !access.document) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }

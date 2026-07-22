@@ -35,9 +35,11 @@ const ApplicationDashboardView = memo(function ApplicationDashboardView({
     applications,
     stats,
     isLoading,
+    isFetching,
     isError,
     hasActiveFilters,
     q,
+    searchInput,
     status,
     degreeId,
     dateFrom,
@@ -97,7 +99,7 @@ const ApplicationDashboardView = memo(function ApplicationDashboardView({
                             as="p"
                             className="text-[28px] font-extrabold text-gray-900 leading-none"
                         >
-                            {isLoading ? "—" : stats.total}
+                            {isLoading || isFetching ? "—" : stats.total}
                         </Typography>
                     </div>
                 </div>
@@ -122,7 +124,7 @@ const ApplicationDashboardView = memo(function ApplicationDashboardView({
                             as="p"
                             className="text-[28px] font-extrabold text-gray-900 leading-none"
                         >
-                            {isLoading ? "—" : stats.pending}
+                            {isLoading || isFetching ? "—" : stats.pending}
                         </Typography>
                     </div>
                 </div>
@@ -147,7 +149,7 @@ const ApplicationDashboardView = memo(function ApplicationDashboardView({
                             as="p"
                             className="text-[28px] font-extrabold text-gray-900 leading-none"
                         >
-                            {isLoading ? "—" : stats.accepted}
+                            {isLoading || isFetching ? "—" : stats.accepted}
                         </Typography>
                     </div>
                 </div>
@@ -158,11 +160,10 @@ const ApplicationDashboardView = memo(function ApplicationDashboardView({
                     <div className="relative min-w-[220px] flex-1">
                         <Search className="absolute left-3 top-1/2 z-10 -translate-y-1/2 size-4 text-gray-400" />
                         <Input
-                            key={q}
                             type="text"
-                            placeholder="Search student name or email"
+                            placeholder="Search by student name or ID"
                             className="w-full backdrop-blur-md ps-9"
-                            defaultValue={q}
+                            value={searchInput}
                             onChange={(e) => handleSearch(e.target.value)}
                         />
                     </div>
@@ -230,6 +231,7 @@ const ApplicationDashboardView = memo(function ApplicationDashboardView({
                 applications={applications}
                 role={role}
                 isLoading={isLoading}
+                isFetching={isFetching}
                 isError={isError}
                 onRetry={handleRetry}
             />

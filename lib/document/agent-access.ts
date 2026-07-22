@@ -1,13 +1,14 @@
+import "server-only"
+
 import type { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createSupabaseServiceClient } from "@/lib/supabase/server"
 import { resolveAgentStudentProfileIds } from "@/lib/api/agent-applications"
+import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
-type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>
+export { isDocumentStaffRole } from "@/lib/auth/university-role"
 
-export function isDocumentStaffRole(role: string | null | undefined) {
-    return role === Role.AGENT || role === Role.ADMIN || role === Role.SUPER_ADMIN
-}
+type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>
 
 export async function assertAgentCanAccessStudentProfile(
     supabase: SupabaseServerClient,
@@ -42,7 +43,7 @@ export async function assertDocumentStaffCanAccessStudentProfile(
         return Boolean(studentRow)
     }
 
-    if (role === Role.ADMIN) {
+    if (isUniversityRole(role)) {
         const { data: application } = await supabase
             .from("application")
             .select("profile_id")
@@ -70,13 +71,14 @@ export async function assertCanUploadStudentDocument(
         return assertAgentCanAccessStudentProfile(supabase, userId, studentProfileId)
     }
 
-    return role === Role.ADMIN || role === Role.SUPER_ADMIN
+    return isUniversityStaffRole(role)
 }
 
 export async function assertAgentCanAccessDocument(
-    _supabase: SupabaseServerClient,
-    _agentProfileId: string,
-    documentId: string
+    supabase: SupabaseServerClient,
+    userId: string,
+    documentId: string,
+    role?: string | null
 ) {
     const serviceSupabase = createSupabaseServiceClient()
 
@@ -90,5 +92,15 @@ export async function assertAgentCanAccessDocument(
         return { allowed: false as const, document: null }
     }
 
-    return { allowed: true as const, document }
+    const allowed = await assertDocumentStaffCanAccessStudentProfile(
+        supabase,
+        userId,
+        role,
+        document.profile_id
+    )
+
+    return {
+        allowed,
+        document: allowed ? document : null,
+    }
 }

@@ -14,10 +14,11 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, AlertCircle } from "lucide-react"
-import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { PageLoader } from "@/components/shared/page-loader"
 import Link from "next/link"
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
 import { cn } from "@/lib/utils"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 import { Progress } from "@/components/ui/progress"
 import type {
@@ -126,7 +127,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
     const isStudent = role === Role.STUDENT
     const isAgent = role === Role.AGENT
     const showStudentColumn = !isStudent
-    const showAgentColumn = role === Role.ADMIN || role === Role.SUPER_ADMIN
+    const showAgentColumn = isUniversityStaffRole(role)
     const showApplicationNoColumn = isStudent || isAgent
     const showExtendedProgramColumns = isStudent || isAgent
 
@@ -147,7 +148,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
     const endIndex = total === 0 ? 0 : Math.min(page * limit, total)
     const canPaginate = Boolean(showPagination && pagination && onPageChange)
 
-    if (isLoading) {
+    if (isLoading || isFetching) {
         return (
             <BluryCard
                 isCentered={false}
@@ -202,13 +203,6 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
             className="rounded-lg p-0"
         >
             <div className="relative overflow-x-auto rounded-xl">
-                {isFetching && !isLoading && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/55 backdrop-blur-[1px]">
-                        <div className="rounded-xl border border-brand-secondary/15 bg-white/90 px-5 py-4 shadow-sm">
-                            <Spinner size="md" />
-                        </div>
-                    </div>
-                )}
                 <Table className={cn("w-full text-left border-collapse", tableMinWidth)}>
                     <TableHeader className="sticky top-0 z-10">
                         <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">

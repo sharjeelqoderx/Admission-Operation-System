@@ -7,6 +7,7 @@ import {
     softDeleteUniversityProgram,
 } from "@/lib/program/university-server"
 import { universityProgramUpsertSchema } from "@/types/schemas/university-program"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 async function assertUniversityOrAdmin() {
@@ -26,7 +27,7 @@ async function assertUniversityOrAdmin() {
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+    if (!isUniversityStaffRole(profile?.role)) {
         return { error: err("Forbidden", 403) }
     }
 

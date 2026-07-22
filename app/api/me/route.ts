@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { normalizeDateValue } from "@/types/schemas/academic"
 import { formatFullName } from "@/lib/utils/profile"
+import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 export async function GET() {
@@ -38,7 +39,7 @@ export async function GET() {
                 .eq("profile_id", user.id)
                 .maybeSingle()
             extraData = agent ?? {}
-        } else if (role === Role.ADMIN) {
+        } else if (isUniversityRole(role)) {
             const { data: university } = await supabase
                 .from("university")
                 .select("*")
