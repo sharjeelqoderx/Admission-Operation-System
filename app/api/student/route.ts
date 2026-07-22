@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import {
+    createSupabaseServerClient,
+    createSupabaseServiceClient,
+    tryCreateSupabaseAuthAdminClient,
+} from "@/lib/supabase/server"
+import { provisionAuthUser } from "@/lib/supabase/provision-auth-user"
 import { StudentCreateFormSchema } from "@/types/schemas/student"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { upsertStudentDocument } from "@/lib/supabase/upsert-student-document"
@@ -44,12 +49,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        const supabase = await createSupabaseServerClient()
+        const supabaseAuth = await createSupabaseServerClient()
+        const supabaseService = createSupabaseServiceClient()
 
         const {
             data: { user },
             error: authError,
-        } = await supabase.auth.getUser()
+        } = await supabaseAuth.auth.getUser()
 
         if (authError || !user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -101,7 +107,7 @@ export async function POST(req: NextRequest) {
             academic_background,
         })
 
-        const { data: meProfile } = await supabase
+        const { data: meProfile } = await supabaseService
             .from("profile")
             .select("id, role")
             .eq("id", user.id)
@@ -115,7 +121,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        const { data: agentRow } = await supabase
+        const { data: agentRow } = await supabaseService
             .from("agent")
             .select("id")
             .eq("profile_id", user.id)
@@ -129,10 +135,12 @@ export async function POST(req: NextRequest) {
         }
 
 
-        const { data: existingProfile } = await supabase
+        const normalizedEmail = validatedData.email.toLowerCase()
+
+        const { data: existingProfile } = await supabaseService
             .from("profile")
             .select("id, role")
-            .eq("email", validatedData.email)
+            .eq("email", normalizedEmail)
             .maybeSingle()
 
         if (existingProfile) {
@@ -143,35 +151,37 @@ export async function POST(req: NextRequest) {
         }
 
         const fullName = `${validatedData.first_name} ${validatedData.last_name}`
-        const { data: authData, error: createUserError } =
-            await supabase.auth.signUp({
-                email: validatedData.email,
-                password: "student@123",
-                options: {
-                    data: {
-                        title: validatedData.title || "",
-                        full_name: fullName,
-                        first_name: validatedData.first_name,
-                        last_name: validatedData.last_name,
-                        role: Role.STUDENT,
-                    },
-                },
-            })
 
-        if (createUserError || !authData?.user) {
-            const msg = createUserError?.message?.toLowerCase().includes("already")
-                ? "An account with this email already exists."
-                : createUserError?.message ?? "Failed to create user account"
-            return NextResponse.json({ error: msg }, { status: 400 })
+        const provisioned = await provisionAuthUser(
+            supabaseAuth,
+            tryCreateSupabaseAuthAdminClient(),
+            {
+                email: normalizedEmail,
+                password: "student@123",
+                userMetadata: {
+                    title: validatedData.title || "",
+                    full_name: fullName,
+                    first_name: validatedData.first_name,
+                    last_name: validatedData.last_name,
+                    phone: validatedData.phone || "",
+                },
+                appMetadata: {
+                    role: Role.STUDENT,
+                },
+            }
+        )
+
+        if ("error" in provisioned) {
+            return NextResponse.json({ error: provisioned.error }, { status: 400 })
         }
 
-        const newUserId = authData.user.id
+        const newUserId = provisioned.userId
 
         const bucket = "student-admission"
 
         const avatarUpload = validatedData.avatar_url
             ? await uploadPublicImage({
-                supabase,
+                supabase: supabaseService,
                 bucket,
                 userId: newUserId,
                 file: validatedData.avatar_url,
@@ -180,7 +190,7 @@ export async function POST(req: NextRequest) {
 
         const passportUpload = validatedData.passport_file_url
             ? await uploadPublicImage({
-                supabase,
+                supabase: supabaseService,
                 bucket,
                 userId: `${newUserId}/passport`,
                 file: validatedData.passport_file_url,
@@ -188,14 +198,14 @@ export async function POST(req: NextRequest) {
             : null
 
         /* ---------------- PROFILE CREATE ---------------- */
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await supabaseService
             .from("profile")
             .upsert({
                 id: newUserId,
                 title: validatedData.title || null,
                 first_name: validatedData.first_name,
                 last_name: validatedData.last_name,
-                email: validatedData.email,
+                email: normalizedEmail,
                 phone: validatedData.phone || null,
                 date_of_birth: validatedData.dob || null,
                 gender:
@@ -212,12 +222,15 @@ export async function POST(req: NextRequest) {
             .single()
 
         if (profileError) {
+            const isServiceRoleMisconfigured = profileError.code === "42501"
             return NextResponse.json(
                 {
-                    error: "Failed to create student profile",
+                    error: isServiceRoleMisconfigured
+                        ? "Server configuration error: service role key is missing or invalid. Set SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY) on the server."
+                        : "Failed to create student profile",
                     details: profileError,
                 },
-                { status: 400 }
+                { status: isServiceRoleMisconfigured ? 500 : 400 }
             )
         }
 
@@ -232,7 +245,7 @@ export async function POST(req: NextRequest) {
         let isUnique = false
         let attempts = 0
         while (!isUnique && attempts < 5) {
-            const { data: existing } = await supabase
+            const { data: existing } = await supabaseService
                 .from("student")
                 .select("id")
                 .eq("student_code", studentCode)
@@ -246,7 +259,7 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        const { error: studentError } = await supabase.from("student").upsert(
+        const { error: studentError } = await supabaseService.from("student").upsert(
             {
                 profile_id: newUserId,
                 created_by_agent_id: agentRow.id,
@@ -291,7 +304,7 @@ export async function POST(req: NextRequest) {
                         : null,
             }))
 
-            const { error: deleteError } = await supabase
+            const { error: deleteError } = await supabaseService
                 .from("education")
                 .delete()
                 .eq("profile_id", newUserId)
@@ -306,7 +319,7 @@ export async function POST(req: NextRequest) {
                 )
             }
 
-            const { error: eduError } = await supabase
+            const { error: eduError } = await supabaseService
                 .from("education")
                 .insert(educationRows)
 
@@ -324,7 +337,7 @@ export async function POST(req: NextRequest) {
         /* ---------------- PASSPORT DOCUMENT ---------------- */
         if (validatedData.passport_file_url instanceof File) {
             await upsertStudentDocument({
-                supabase,
+                supabase: supabaseService,
                 profileId: newUserId,
                 uploadedByProfileId: user.id,
                 documentTypeId: STUDENT_DOCUMENT_TYPE_IDS.PASSPORT,
