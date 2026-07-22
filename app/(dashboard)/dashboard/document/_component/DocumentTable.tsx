@@ -23,6 +23,7 @@ import { DocumentRowActionsMenu } from "./document-row-actions-menu"
 export type DocumentStudentRow = {
     student_id: string
     student_name: string
+    student_code: string | null
     avatar_url: string | null
     document_count: number
     last_uploaded_at: string | null
@@ -192,9 +193,17 @@ export const DocumentTable = React.memo(function DocumentTable({
                                                         {initials}
                                                     </AvatarFallback>
                                                 </Avatar>
-                                                <Typography as="span" className="text-sm font-bold text-gray-900">
-                                                    {row.student_name}
-                                                </Typography>
+                                                <div className="flex flex-col">
+                                                    <Typography as="span" className="text-sm font-bold text-gray-900">
+                                                        {row.student_name}
+                                                    </Typography>
+                                                    <Typography
+                                                        as="span"
+                                                        className="text-[11px] text-gray-500 font-light"
+                                                    >
+                                                        ID: {row.student_code ?? "N/A"}
+                                                    </Typography>
+                                                </div>
                                             </div>
                                         </TableCell>
 

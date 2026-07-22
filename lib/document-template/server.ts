@@ -11,11 +11,12 @@ import type { Database } from "@/types/supabase"
 import { Role } from "@/types/enums/role"
 
 type DocumentTemplateRow = Database["public"]["Tables"]["document_template"]["Row"]
-type StaffRole = Role.SUPER_ADMIN | Role.ADMIN | Role.AGENT
+type StaffRole = Role.SUPER_ADMIN | Role.ADMIN | Role.MANAGEMENT | Role.AGENT
 
 const DOCUMENT_TEMPLATE_STAFF_ROLES: StaffRole[] = [
     Role.SUPER_ADMIN,
     Role.ADMIN,
+    Role.MANAGEMENT,
     Role.AGENT,
 ]
 

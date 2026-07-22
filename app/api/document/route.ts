@@ -4,6 +4,7 @@ import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { DocumentFormSchema } from "@/types/schemas/document"
 import { formatFullName } from "@/lib/utils/profile"
 import { assertCanUploadStudentDocument } from "@/lib/document/agent-access"
+import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 export async function GET(req: NextRequest) {
@@ -31,6 +32,12 @@ export async function GET(req: NextRequest) {
                 .select("id, first_name, last_name, avatar_url")
                 .eq("id", user.id)
                 .single()
+
+            const { data: studentRow } = await supabase
+                .from("student")
+                .select("student_code")
+                .eq("profile_id", user.id)
+                .maybeSingle()
 
             let query = supabase
                 .from("document")
@@ -67,6 +74,7 @@ export async function GET(req: NextRequest) {
                         {
                             student_id: user.id,
                             student_name: formatFullName(studentProfile?.first_name, studentProfile?.last_name, "—"),
+                            student_code: studentRow?.student_code ?? null,
                             avatar_url: studentProfile?.avatar_url ?? null,
                             document_count: docs.length,
                             last_uploaded_at: lastDoc?.created_at ?? null,
@@ -82,6 +90,7 @@ export async function GET(req: NextRequest) {
         const studentSelect = `
                 id,
                 profile_id,
+                student_code,
                 created_at,
                 profile:profile_id (id, first_name, last_name, avatar_url)
             `
@@ -89,6 +98,7 @@ export async function GET(req: NextRequest) {
         let students: Array<{
             id: string
             profile_id: string
+            student_code: string | null
             created_at: string
             profile: {
                 id: string
@@ -128,13 +138,13 @@ export async function GET(req: NextRequest) {
             }
 
             students = (agentStudents ?? []) as unknown as typeof students
-        } else if (profile?.role === Role.ADMIN || profile?.role === Role.SUPER_ADMIN) {
+        } else if (isUniversityStaffRole(profile?.role)) {
             let studentsQuery = supabase
                 .from("student")
                 .select(studentSelect)
                 .order("created_at", { ascending: false })
 
-            if (profile.role === Role.ADMIN) {
+            if (isUniversityRole(profile?.role)) {
                 const { data: applications, error: applicationsError } = await supabase
                     .from("application")
                     .select("profile_id")
@@ -230,6 +240,7 @@ export async function GET(req: NextRequest) {
                         student.profile?.last_name,
                         "—"
                     ),
+                    student_code: student.student_code ?? null,
                     avatar_url: student.profile?.avatar_url ?? null,
                     document_count: docs.length,
                     last_uploaded_at: lastDoc?.created_at ?? null,

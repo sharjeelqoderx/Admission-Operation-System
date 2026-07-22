@@ -9,6 +9,7 @@ import type {
     UniversityProgramListResponse,
     UniversityProgramUpsert,
 } from "@/types/schemas/university-program"
+import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 function formatDeadlineLabel(value?: string | null) {
@@ -497,7 +498,7 @@ export async function softDeleteUniversityProgram(courseId: string) {
 }
 
 async function resolveOwnerProfileId(userId: string, role: string, payload: UniversityProgramUpsert) {
-    if (role === Role.ADMIN) {
+    if (isUniversityRole(role)) {
         return userId
     }
 
@@ -509,7 +510,7 @@ async function resolveOwnerProfileId(userId: string, role: string, payload: Univ
     const { data: universityProfile } = await supabase
         .from("profile")
         .select("id")
-        .eq("role", Role.ADMIN)
+        .in("role", [Role.ADMIN, Role.MANAGEMENT])
         .limit(1)
         .maybeSingle()
 
@@ -535,7 +536,7 @@ export async function fetchUniversityProgramsForPage(params?: { q?: string; page
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+    if (!isUniversityStaffRole(profile?.role)) {
         return null
     }
 
@@ -557,7 +558,7 @@ export async function fetchUniversityProgramDetailForPage(courseId: string) {
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+    if (!isUniversityStaffRole(profile?.role)) {
         return null
     }
 
@@ -584,11 +585,11 @@ export async function saveUniversityProgramForPage(params: {
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+    if (!isUniversityStaffRole(profile?.role)) {
         throw new Error("Forbidden")
     }
 
-    const ownerProfileId = await resolveOwnerProfileId(user.id, profile.role, params.payload)
+    const ownerProfileId = await resolveOwnerProfileId(user.id, profile?.role ?? "", params.payload)
 
     if (params.courseId) {
         return updateUniversityProgram({

@@ -1,9 +1,9 @@
 "use client"
 
 import type { ComponentType } from "react"
-import { useCallback, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { applyUrlSearchParamUpdates, readUrlSearchParam } from "@/lib/navigation/replace-url-search-params"
 import type { ApplicationDashboardPageData, ApplicationListResponse } from "@/types/schemas/application"
 import type { ApplicationListStats } from "@/types/schemas/application"
 import type { ApplicationProfileRole } from "@/types/schemas/application"
@@ -16,9 +16,11 @@ export type ApplicationPageLogicProps = {
     applications: ApplicationListResponse["data"]
     stats: ApplicationListStats
     isLoading: boolean
+    isFetching: boolean
     isError: boolean
     hasActiveFilters: boolean
     q: string
+    searchInput: string
     status: string
     degreeId: string
     dateFrom: string
@@ -29,23 +31,35 @@ export type ApplicationPageLogicProps = {
     handleRetry: () => void
 }
 
-async function fetchApplicationsFromApi(params: {
+type ApplicationFilters = {
     q: string
     status: string
-    degreeId: string
-    dateFrom: string
-    dateTo: string
-}) {
+    degree_id: string
+    date_from: string
+    date_to: string
+}
+
+async function fetchApplicationsFromApi(params: ApplicationFilters) {
     const url = new URL("/api/application", window.location.origin)
     if (params.q) url.searchParams.set("q", params.q)
     if (params.status !== "all") url.searchParams.set("status", params.status)
-    if (params.degreeId !== "all") url.searchParams.set("degree_id", params.degreeId)
-    if (params.dateFrom) url.searchParams.set("date_from", params.dateFrom)
-    if (params.dateTo) url.searchParams.set("date_to", params.dateTo)
+    if (params.degree_id !== "all") url.searchParams.set("degree_id", params.degree_id)
+    if (params.date_from) url.searchParams.set("date_from", params.date_from)
+    if (params.date_to) url.searchParams.set("date_to", params.date_to)
 
     const res = await fetch(url.toString())
     if (!res.ok) throw new Error("Failed to fetch applications")
     return res.json() as Promise<ApplicationListResponse>
+}
+
+function readApplicationFiltersFromUrl(): ApplicationFilters {
+    return {
+        q: readUrlSearchParam("q"),
+        status: readUrlSearchParam("status") || "all",
+        degree_id: readUrlSearchParam("degree_id") || "all",
+        date_from: readUrlSearchParam("date_from"),
+        date_to: readUrlSearchParam("date_to"),
+    }
 }
 
 export function withApplicationPageLogic(Component: ComponentType<ApplicationPageLogicProps>) {
@@ -54,52 +68,82 @@ export function withApplicationPageLogic(Component: ComponentType<ApplicationPag
     }: {
         initialData: ApplicationDashboardPageData
     }) {
-        const searchParams = useSearchParams()
-        const router = useRouter()
-        const pathname = usePathname()
         const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-        const q = searchParams.get("q") || ""
-        const status = searchParams.get("status") || "all"
-        const degreeId = searchParams.get("degree_id") || "all"
-        const dateFrom = searchParams.get("date_from") || ""
-        const dateTo = searchParams.get("date_to") || ""
+        const [filters, setFilters] = useState<ApplicationFilters>({
+            q: initialData.query.q,
+            status: initialData.query.status,
+            degree_id: initialData.query.degree_id,
+            date_from: initialData.query.date_from,
+            date_to: initialData.query.date_to,
+        })
+        const [searchInput, setSearchInput] = useState(initialData.query.q)
+
+        const updateParams = useCallback((updates: Record<string, string>) => {
+            setFilters((current) => {
+                const next = { ...current, ...updates } as ApplicationFilters
+                applyUrlSearchParamUpdates({
+                    q: next.q || null,
+                    status: next.status === "all" ? null : next.status,
+                    degree_id: next.degree_id === "all" ? null : next.degree_id,
+                    date_from: next.date_from || null,
+                    date_to: next.date_to || null,
+                })
+                return next
+            })
+        }, [])
+
+        useEffect(() => {
+            const syncFiltersFromUrl = () => {
+                const next = readApplicationFiltersFromUrl()
+                setFilters(next)
+                setSearchInput(next.q)
+            }
+
+            window.addEventListener("popstate", syncFiltersFromUrl)
+            return () => window.removeEventListener("popstate", syncFiltersFromUrl)
+        }, [])
 
         const matchesInitialQuery =
-            q === initialData.query.q &&
-            status === initialData.query.status &&
-            degreeId === initialData.query.degree_id &&
-            dateFrom === initialData.query.date_from &&
-            dateTo === initialData.query.date_to
-
-        const updateParams = useCallback(
-            (updates: Record<string, string>) => {
-                const params = new URLSearchParams(searchParams.toString())
-                Object.entries(updates).forEach(([key, value]) => {
-                    if (value && value !== "all") {
-                        params.set(key, value)
-                    } else {
-                        params.delete(key)
-                    }
-                })
-                router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-            },
-            [pathname, router, searchParams]
-        )
+            filters.q === initialData.query.q &&
+            filters.status === initialData.query.status &&
+            filters.degree_id === initialData.query.degree_id &&
+            filters.date_from === initialData.query.date_from &&
+            filters.date_to === initialData.query.date_to
 
         const handleSearch = useCallback(
             (term: string) => {
-                if (timeoutRef.current) clearTimeout(timeoutRef.current)
+                setSearchInput(term)
+
+                if (timeoutRef.current) {
+                    clearTimeout(timeoutRef.current)
+                }
+
                 timeoutRef.current = setTimeout(() => {
-                    updateParams({ q: term })
+                    updateParams({ q: term.trim() })
                 }, 400)
             },
             [updateParams]
         )
 
-        const { data: response, isLoading, isError, refetch } = useQuery({
-            queryKey: ["applications", q, status, degreeId, dateFrom, dateTo],
-            queryFn: () => fetchApplicationsFromApi({ q, status, degreeId, dateFrom, dateTo }),
+        useEffect(() => {
+            return () => {
+                if (timeoutRef.current) {
+                    clearTimeout(timeoutRef.current)
+                }
+            }
+        }, [])
+
+        const { data: response, isLoading, isFetching, isError, refetch } = useQuery({
+            queryKey: [
+                "applications",
+                filters.q,
+                filters.status,
+                filters.degree_id,
+                filters.date_from,
+                filters.date_to,
+            ],
+            queryFn: () => fetchApplicationsFromApi(filters),
             initialData: matchesInitialQuery ? initialData.applications : undefined,
             retry: false,
         })
@@ -125,18 +169,32 @@ export function withApplicationPageLogic(Component: ComponentType<ApplicationPag
 
         const hasActiveFilters = useMemo(
             () =>
-                Boolean(q) ||
-                status !== "all" ||
-                degreeId !== "all" ||
-                Boolean(dateFrom) ||
-                Boolean(dateTo),
-            [q, status, degreeId, dateFrom, dateTo]
+                Boolean(filters.q) ||
+                filters.status !== "all" ||
+                filters.degree_id !== "all" ||
+                Boolean(filters.date_from) ||
+                Boolean(filters.date_to),
+            [filters]
         )
 
         const handleResetFilters = useCallback(() => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current)
-            router.replace(pathname, { scroll: false })
-        }, [pathname, router])
+            setSearchInput("")
+            setFilters({
+                q: "",
+                status: "all",
+                degree_id: "all",
+                date_from: "",
+                date_to: "",
+            })
+            applyUrlSearchParamUpdates({
+                q: null,
+                status: null,
+                degree_id: null,
+                date_from: null,
+                date_to: null,
+            })
+        }, [])
 
         const handleRetry = useCallback(() => {
             refetch()
@@ -150,13 +208,15 @@ export function withApplicationPageLogic(Component: ComponentType<ApplicationPag
                 applications={applications}
                 stats={stats}
                 isLoading={isLoading && !response}
+                isFetching={isFetching}
                 isError={isError}
                 hasActiveFilters={hasActiveFilters}
-                q={q}
-                status={status}
-                degreeId={degreeId}
-                dateFrom={dateFrom}
-                dateTo={dateTo}
+                q={filters.q}
+                searchInput={searchInput}
+                status={filters.status}
+                degreeId={filters.degree_id}
+                dateFrom={filters.date_from}
+                dateTo={filters.date_to}
                 handleSearch={handleSearch}
                 updateParams={updateParams}
                 handleResetFilters={handleResetFilters}

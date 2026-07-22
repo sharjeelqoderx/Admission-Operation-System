@@ -15,7 +15,7 @@ import type {
     UniversityApplicationListResponse,
     UniversityApplicationTab,
 } from "@/types/schemas/university-application"
-import { Role } from "@/types/enums/role"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
 
 type ApplicationRow = {
     id: string
@@ -295,54 +295,58 @@ export async function fetchUniversityApplicationList(params: {
     ]
     const allCourseIds = [...new Set(allApplicationRows.map((application) => application.course_id))]
 
-    // Fetch all related data once for counts and list
-    const { data: offers, error: offersError } = await supabase
-        .from("offer_letter")
-        .select("application_id, status, created_at, accepted_at")
-        .in(
-            "application_id",
-            allApplicationIds.length > 0 ? allApplicationIds : ["00000000-0000-0000-0000-000000000000"]
-        )
+    const emptyId = "00000000-0000-0000-0000-000000000000"
+    const applicationIdsForQuery =
+        allApplicationIds.length > 0 ? allApplicationIds : [emptyId]
+    const profileIdsForQuery = allProfileIds.length > 0 ? allProfileIds : [emptyId]
 
-    if (offersError) {
-        throw new Error(offersError.message)
+    const [offersResult, profilesResult, studentsResult, courseById, agentOrgByProfileId] =
+        await Promise.all([
+            supabase
+                .from("offer_letter")
+                .select("application_id, status, created_at, accepted_at")
+                .in("application_id", applicationIdsForQuery),
+            supabase
+                .from("profile")
+                .select("id, first_name, last_name, email, avatar_url")
+                .in("id", profileIdsForQuery),
+            supabase
+                .from("student")
+                .select("profile_id, student_code")
+                .in("profile_id", profileIdsForQuery),
+            loadCoursesById(supabase, allCourseIds),
+            loadAgentOrganizations(supabase, allAgentProfileIds),
+        ])
+
+    if (offersResult.error) {
+        throw new Error(offersResult.error.message)
     }
+
+    if (profilesResult.error) {
+        throw new Error(profilesResult.error.message)
+    }
+
+    if (studentsResult.error) {
+        throw new Error(studentsResult.error.message)
+    }
+
+    const offers = offersResult.data
+    const profiles = profilesResult.data
+    const students = studentsResult.data
 
     const offerByApplicationId = new Map(
         ((offers ?? []) as OfferRow[]).map((offer) => [offer.application_id, offer])
     )
 
-    const { data: profiles, error: profilesError } = await supabase
-        .from("profile")
-        .select("id, first_name, last_name, email, avatar_url")
-        .in("id", allProfileIds.length > 0 ? allProfileIds : ["00000000-0000-0000-0000-000000000000"])
-
-    if (profilesError) {
-        throw new Error(profilesError.message)
-    }
-
     const profileById = new Map(
         ((profiles ?? []) as ProfileRow[]).map((profile) => [profile.id, profile])
     )
 
-    const { data: students, error: studentsError } = await supabase
-        .from("student")
-        .select("profile_id, student_code")
-        .in("profile_id", allProfileIds.length > 0 ? allProfileIds : ["00000000-0000-0000-0000-000000000000"])
-
-    if (studentsError) {
-        throw new Error(studentsError.message)
-    }
-
     const studentCodeByProfileId = new Map(
-        ((students ?? []) as { profile_id: string; student_code: string | null }[]).map((student) => [
-            student.profile_id,
-            student.student_code,
-        ])
+        ((students ?? []) as { profile_id: string; student_code: string | null }[]).map(
+            (student) => [student.profile_id, student.student_code]
+        )
     )
-
-    const courseById = await loadCoursesById(supabase, allCourseIds)
-    const agentOrgByProfileId = await loadAgentOrganizations(supabase, allAgentProfileIds)
 
     // Create all list items for filtering/counting
     const allListItems = allApplicationRows.map((application) => {
@@ -406,14 +410,13 @@ export async function fetchUniversityApplicationList(params: {
     let filteredItems = allListItems
 
     if (searchTerm) {
+        const profileIdByApplicationId = new Map(
+            allApplicationRows.map((application) => [application.id, application.profile_id])
+        )
+
         filteredItems = filteredItems.filter((item) => {
-            const haystack = [
-                item.student_name,
-                item.student_code,
-                item.program_name,
-                item.intake_label,
-                item.agent_name,
-            ]
+            const profileId = profileIdByApplicationId.get(item.id)?.toLowerCase() ?? ""
+            const haystack = [item.student_name, item.student_code, profileId]
                 .filter(Boolean)
                 .join(" ")
                 .toLowerCase()
@@ -706,13 +709,9 @@ export async function fetchUniversityApplicationDetail(params: {
     }
 }
 
-async function resolveUniversityScope(userId: string, role: string) {
-    if (role === Role.SUPER_ADMIN) {
+async function resolveUniversityScope(_userId: string, role: string) {
+    if (isUniversityStaffRole(role)) {
         return { universityId: null as string | null }
-    }
-
-    if (role === Role.ADMIN) {
-        return { universityId: userId }
     }
 
     return null

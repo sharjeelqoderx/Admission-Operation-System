@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchDocumentTemplatesForPage } from "@/lib/document-template/server"
+import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 import { PageContent } from "./_components/page-content"
 
@@ -16,8 +17,8 @@ export default async function DocumentTemplatesPage() {
     return (
         <PageContent
             initialTemplates={initialTemplates}
-            canCreateTemplate={role !== Role.ADMIN}
-            canDeleteTemplate={role !== Role.ADMIN}
+            canCreateTemplate={!isUniversityRole(role)}
+            canDeleteTemplate={!isUniversityRole(role)}
         />
     )
 }

@@ -10,6 +10,7 @@ const ROLE_DISPLAY_LABELS: Record<string, string> = {
   [Role.AGENT]: "University Partner",
   [Role.STUDENT]: "Student",
   [Role.ADMIN]: "University",
+  [Role.MANAGEMENT]: "Management",
   [Role.SUPER_ADMIN]: "Admin",
 }
 

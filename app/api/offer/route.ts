@@ -13,6 +13,7 @@ import { resolveTemplateChecklistItems } from "@/lib/document-template/resolve-c
 import { fetchOffersList } from "@/lib/offer/list";
 import { isMissingOfferTemplateColumnError } from "@/lib/offer/select-fields";
 import { withProfileDisplayName } from "@/lib/utils/profile";
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role";
 
 export async function GET(req: NextRequest) {
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Profile not found" }, { status: 404 });
         }
 
-        if (profile.role !== Role.ADMIN && profile.role !== Role.AGENT && profile.role !== Role.SUPER_ADMIN) {
+        if (profile.role !== Role.AGENT && !isUniversityStaffRole(profile.role)) {
             return NextResponse.json(
                 { error: "Only university or university partner profiles can create offers" },
                 { status: 403 }

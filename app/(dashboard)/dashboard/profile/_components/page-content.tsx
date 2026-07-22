@@ -21,6 +21,7 @@ import {
     Trash2,
     GraduationCap
 } from "lucide-react"
+import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 import {
     Select,
@@ -1531,7 +1532,7 @@ function ProfilePageView({ initialData }: PageContentProps) {
                     </BluryCard>
                 )}
 
-                {role === Role.ADMIN && (
+                {isUniversityRole(role) && (
                     <BluryCard isCentered={false} childClass="space-y-8" className="rounded-2xl">
                         <div className="flex items-center gap-3 border-b border-white/20 pb-4">
                             <Building className="size-5 text-gray-700" />

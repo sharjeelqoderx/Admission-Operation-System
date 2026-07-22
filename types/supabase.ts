@@ -1468,6 +1468,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["role_enum"]
       }
+      is_university_role: { Args: never; Returns: boolean }
       soft_delete_document_template: {
         Args: { template_id: string }
         Returns: undefined
@@ -1485,7 +1486,7 @@ export type Database = {
       offer_status_enum: "PENDING" | "ACCEPTED" | "REJECTED"
       payment_status_enum: "PENDING" | "CONFIRMED" | "FAILED"
       program_status_enum: "ACTIVE" | "INACTIVE"
-      role_enum: "STUDENT" | "AGENT" | "ADMIN" | "SUPER_ADMIN"
+      role_enum: "STUDENT" | "AGENT" | "ADMIN" | "SUPER_ADMIN" | "MANAGEMENT"
       study_mode_enum: "full_time" | "part_time"
     }
     CompositeTypes: {
@@ -1625,7 +1626,7 @@ export const Constants = {
       offer_status_enum: ["PENDING", "ACCEPTED", "REJECTED"],
       payment_status_enum: ["PENDING", "CONFIRMED", "FAILED"],
       program_status_enum: ["ACTIVE", "INACTIVE"],
-      role_enum: ["STUDENT", "AGENT", "ADMIN", "SUPER_ADMIN"],
+      role_enum: ["STUDENT", "AGENT", "ADMIN", "SUPER_ADMIN", "MANAGEMENT"],
       study_mode_enum: ["full_time", "part_time"],
     },
   },

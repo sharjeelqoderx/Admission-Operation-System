@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { fetchUniversityStudentList } from "@/lib/student/university-server"
+import { isUniversityStaffRole, resolveUniversityScopeId } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 export async function GET(req: NextRequest) {
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
             .eq("id", user.id)
             .maybeSingle()
 
-        if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+        if (!isUniversityStaffRole(profile?.role)) {
             return err("Forbidden", 403)
         }
 
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
         const limit = Number(searchParams.get("limit") ?? "10")
 
         const data = await fetchUniversityStudentList({
-            universityId: profile.role === Role.ADMIN ? user.id : null,
+            universityId: resolveUniversityScopeId(profile?.role, user.id),
             q,
             status,
             page: Number.isFinite(page) ? page : 1,

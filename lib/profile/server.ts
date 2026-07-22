@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { normalizeDateValue } from "@/types/schemas/academic"
 import { formatFullName } from "@/lib/utils/profile"
 import type { Database } from "@/types/supabase"
+import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 type RoleEnum = Database["public"]["Enums"]["role_enum"]
@@ -108,7 +109,7 @@ export async function fetchProfilePageData(): Promise<ProfilePageData | null> {
             .eq("profile_id", user.id)
             .maybeSingle()
         extraData = agent ?? {}
-    } else if (role === Role.ADMIN) {
+    } else if (isUniversityRole(role)) {
         const { data: university } = await supabase
             .from("university")
             .select("*")

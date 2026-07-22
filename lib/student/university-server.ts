@@ -12,6 +12,7 @@ import type {
     UniversityStudentListItem,
     UniversityStudentListResponse,
 } from "@/types/schemas/university-student"
+import { isUniversityStaffRole, resolveUniversityScopeId } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 type StudentRow = {
@@ -657,12 +658,12 @@ export async function fetchUniversityStudentsForPage(params?: {
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+    if (!isUniversityStaffRole(profile?.role)) {
         return null
     }
 
     return fetchUniversityStudentList({
-        universityId: profile.role === Role.ADMIN ? user.id : null,
+        universityId: resolveUniversityScopeId(profile?.role, user.id),
         q: params?.q,
         status: params?.status,
         page: params?.page,
@@ -687,12 +688,12 @@ export async function fetchUniversityStudentDetailForPage(profileId: string) {
         .eq("id", user.id)
         .maybeSingle()
 
-    if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+    if (!isUniversityStaffRole(profile?.role)) {
         return null
     }
 
     return fetchUniversityStudentDetail({
-        universityId: profile.role === Role.ADMIN ? user.id : null,
+        universityId: resolveUniversityScopeId(profile?.role, user.id),
         profileId,
     })
 }

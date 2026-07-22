@@ -8,6 +8,7 @@ import { SidebarGroup } from '@/components/shared/sidebar-group';
 import { Navbar } from '@/components/shared/navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/shared/page-loader';
+import { isUniversityRole } from '@/lib/auth/university-role';
 import { Role } from '@/types/enums/role';
 import {
   LayoutGrid,
@@ -38,13 +39,13 @@ const sidebarRoutes = [
     label: 'Dashboard',
     href: '/dashboard',
     icon: LayoutGrid,
-    allowFor: [Role.ADMIN, Role.SUPER_ADMIN, Role.STUDENT, Role.AGENT],
+    allowFor: [Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN, Role.STUDENT, Role.AGENT],
   },
 
   {
     label: 'All Students',
     icon: Users2,
-    allowFor: [Role.ADMIN, Role.SUPER_ADMIN, Role.AGENT],
+    allowFor: [Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN, Role.AGENT],
     children: [
       {
         label: 'Add Student',
@@ -56,7 +57,7 @@ const sidebarRoutes = [
         label: 'View Student',
         href: '/dashboard/student',
         icon: Eye,
-        allowFor: [Role.AGENT, Role.ADMIN, Role.SUPER_ADMIN],
+        allowFor: [Role.AGENT, Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN],
       },
     ],
   },
@@ -79,7 +80,7 @@ const sidebarRoutes = [
     label: 'All Applications',
     href: '/dashboard/application',
     icon: FileText,
-    allowFor: [Role.ADMIN, Role.AGENT, Role.STUDENT, Role.SUPER_ADMIN],
+    allowFor: [Role.ADMIN, Role.MANAGEMENT, Role.AGENT, Role.STUDENT, Role.SUPER_ADMIN],
   },
 
   {
@@ -100,13 +101,13 @@ const sidebarRoutes = [
     label: 'Programs',
     href: '/dashboard/program',
     icon: BarChart3,
-    allowFor: [Role.ADMIN, Role.AGENT, Role.STUDENT, Role.SUPER_ADMIN],
+    allowFor: [Role.ADMIN, Role.MANAGEMENT, Role.AGENT, Role.STUDENT, Role.SUPER_ADMIN],
   },
 
   {
     label: 'All Documents',
     icon: Folder,
-    allowFor: [Role.AGENT, Role.STUDENT, Role.ADMIN, Role.SUPER_ADMIN],
+    allowFor: [Role.AGENT, Role.STUDENT, Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN],
     children: [
       // {
       //   label: 'Upload Document',
@@ -118,13 +119,13 @@ const sidebarRoutes = [
         label: 'View Documents',
         href: '/dashboard/document',
         icon: Eye,
-        allowFor: [Role.AGENT, Role.STUDENT, Role.ADMIN, Role.SUPER_ADMIN],
+        allowFor: [Role.AGENT, Role.STUDENT, Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN],
       },
       {
         label: 'View All Documents',
         href: '/dashboard/document/all',
         icon: Files,
-        allowFor: [Role.AGENT, Role.ADMIN, Role.SUPER_ADMIN],
+        allowFor: [Role.AGENT, Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN],
       },
     ],
   },
@@ -133,7 +134,7 @@ const sidebarRoutes = [
     label: 'Offers',
     href: '/dashboard/offer',
     icon: Award,
-    allowFor: [Role.ADMIN, Role.AGENT, Role.STUDENT, Role.SUPER_ADMIN],
+    allowFor: [Role.ADMIN, Role.MANAGEMENT, Role.AGENT, Role.STUDENT, Role.SUPER_ADMIN],
   },
 
   // {
@@ -161,7 +162,7 @@ const sidebarRoutes = [
     label: 'University Partner Profile',
     href: '/dashboard/profile',
     icon: UserCircle,
-    allowFor: [Role.AGENT, Role.STUDENT, Role.ADMIN, Role.SUPER_ADMIN],
+    allowFor: [Role.AGENT, Role.STUDENT, Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN],
   },
 ];
 
@@ -277,7 +278,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 route.label === 'University Partner Profile'
                   ? role === Role.STUDENT
                     ? 'Student Profile'
-                    : role === Role.ADMIN
+                    : isUniversityRole(role)
                       ? 'University Profile'
                       : role === Role.SUPER_ADMIN
                         ? 'Admin Profile'

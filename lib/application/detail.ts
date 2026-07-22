@@ -6,6 +6,7 @@ import type {
     ApplicationProfileRole,
 } from "@/types/schemas/application"
 import type { Database } from "@/types/supabase"
+import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 const APPLICATION_DETAIL_SELECT = `
@@ -112,7 +113,7 @@ export async function fetchApplicationDetail(
         }
     }
 
-    if (role === Role.ADMIN && scope !== "all" && row.university_id !== userId) {
+    if (isUniversityRole(role) && scope !== "all" && row.university_id !== userId) {
         return { error: "Application not found" }
     }
 

@@ -5,6 +5,7 @@ import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { STUDENT_DOCUMENT_TYPE_IDS } from "@/lib/constants/document-types"
 import { formatFullName } from "@/lib/utils/profile"
 import { requiresApsRequirement } from "@/lib/utils/aps"
+import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 export async function GET(
@@ -194,7 +195,7 @@ export async function PATCH(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        if (meProfile.role !== Role.AGENT && meProfile.role !== Role.ADMIN) {
+        if (meProfile.role !== Role.AGENT && !isUniversityRole(meProfile.role)) {
             // If user is a student, they can only update their own profile
             if (meProfile.role === Role.STUDENT && user.id !== id) {
                 return NextResponse.json({ error: "Forbidden" }, { status: 403 })

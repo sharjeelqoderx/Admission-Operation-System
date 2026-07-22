@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { fetchUniversityApplicationDetail } from "@/lib/application/university-server"
+import { isUniversityStaffRole, resolveUniversityScopeId } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 export async function GET(
@@ -25,15 +26,15 @@ export async function GET(
             .eq("id", user.id)
             .maybeSingle()
 
-        if (profile?.role !== Role.ADMIN && profile?.role !== Role.SUPER_ADMIN) {
+        if (!isUniversityStaffRole(profile?.role)) {
             return err("Forbidden", 403)
         }
 
         const { id } = await params
         const data = await fetchUniversityApplicationDetail({
             applicationId: id,
-            universityId: profile.role === Role.ADMIN ? user.id : null,
-            viewerRole: profile.role,
+            universityId: resolveUniversityScopeId(profile?.role, user.id),
+            viewerRole: profile?.role,
         })
 
         if (!data) {
