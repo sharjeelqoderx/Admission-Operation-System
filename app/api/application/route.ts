@@ -4,7 +4,7 @@ import { fetchApplicationsList } from "@/lib/application/list"
 import { CreateApplicationSchema, ApplicationListQuerySchema } from "@/types/schemas/application"
 import type { ApplicationProfileRole } from "@/types/schemas/application"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
-import { recordApplicationResubmit } from "@/lib/application/review-meta"
+import { resubmitApplicationById } from "@/lib/application/resubmit"
 import { Role } from "@/types/enums/role"
 
 async function canAccessStudentApplications(
@@ -167,40 +167,24 @@ export async function POST(req: NextRequest) {
             .maybeSingle()
 
         if (rejectedApp) {
-            await recordApplicationResubmit(supabase, {
+            const resubmitResult = await resubmitApplicationById(supabase, {
                 applicationId: rejectedApp.id,
-                reviewedByProfileId: user.id,
+                userId: user.id,
+                role: profile.role as ApplicationProfileRole,
+                documentIds: validatedData.document_ids ?? [],
             })
 
-            if (validatedData.document_ids && validatedData.document_ids.length > 0) {
-                await supabase
-                    .from("application_document")
-                    .delete()
-                    .eq("application_id", rejectedApp.id)
-
-                const documentLinks = validatedData.document_ids.map((docId) => ({
-                    application_id: rejectedApp.id,
-                    document_id: docId,
-                }))
-
-                const { error: docLinkError } = await supabase
-                    .from("application_document")
-                    .insert(documentLinks)
-
-                if (docLinkError) {
-                    console.error("Document Linking Error:", docLinkError)
+            if ("error" in resubmitResult) {
+                if (resubmitResult.error === "forbidden") {
+                    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
                 }
-            }
 
-            const { data: updatedApplication } = await supabase
-                .from("application")
-                .select()
-                .eq("id", rejectedApp.id)
-                .single()
+                return NextResponse.json({ error: "Application not found" }, { status: 404 })
+            }
 
             return NextResponse.json(
                 {
-                    data: updatedApplication ?? rejectedApp,
+                    data: resubmitResult.application,
                     message: "Application resubmitted successfully",
                 },
                 { status: 200 }

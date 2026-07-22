@@ -1,7 +1,10 @@
+"use client"
+
 import React, { useMemo } from "react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { ApplicationStatusBadge } from "./application-status-badge"
+import { DocumentRejectionIndicator } from "@/app/(dashboard)/dashboard/document/_component/document-rejection-indicator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
     Table,
@@ -26,7 +29,19 @@ import type {
     ApplicationListPagination,
 } from "@/types/schemas/application"
 import type { ApplicationProfileRole } from "@/types/schemas/application"
+import type { DocumentRejectionHistoryEntry } from "@/types/schemas/document"
 import { formatFullName } from "@/lib/utils/profile"
+
+function toRejectionIndicatorHistory(
+    history: ApplicationListItem["rejection_history"]
+): DocumentRejectionHistoryEntry[] {
+    return history
+        .filter((entry) => Boolean(entry.feedback?.trim()))
+        .map((entry) => ({
+            feedback: entry.feedback!.trim(),
+            created_at: entry.created_at,
+        }))
+}
 
 export type ApplicationRow = ApplicationListItem
 
@@ -51,8 +66,8 @@ function formatSubmittedDate(value: string) {
     })
 }
 
-function getApplicationNumber(app: ApplicationListItem) {
-    return app.application_no ?? `APP-${app.id.slice(0, 8).toUpperCase()}`
+function getRejectionIndicatorHistory(app: ApplicationListItem) {
+    return toRejectionIndicatorHistory(app.rejection_history ?? [])
 }
 
 function getDocumentVaultHref(
@@ -128,7 +143,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
     const isAgent = role === Role.AGENT
     const showStudentColumn = !isStudent
     const showAgentColumn = isUniversityStaffRole(role)
-    const showApplicationNoColumn = isStudent || isAgent
+    const showRejectionAlertColumn = isStudent || isAgent
     const showExtendedProgramColumns = isStudent || isAgent
 
     const columnCount = useMemo(() => {
@@ -206,10 +221,8 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                 <Table className={cn("w-full text-left border-collapse", tableMinWidth)}>
                     <TableHeader className="sticky top-0 z-10">
                         <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
-                            {showApplicationNoColumn && (
-                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                    Application No
-                                </TableHead>
+                            {showRejectionAlertColumn && (
+                                <TableHead className="w-12 px-3" aria-hidden />
                             )}
                             {showStudentColumn && (
                                 <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
@@ -275,6 +288,8 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                     .slice(0, 2)
                                     .toUpperCase()
 
+                                const rejectionHistory = getRejectionIndicatorHistory(app)
+
                                 return (
                                     <TableRow
                                         key={app.id}
@@ -284,14 +299,14 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                             "hover:bg-brand-secondary/5"
                                         )}
                                     >
-                                        {showApplicationNoColumn && (
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
-                                                <Typography
-                                                    as="span"
-                                                    className="text-sm font-bold text-gray-900"
-                                                >
-                                                    {getApplicationNumber(app)}
-                                                </Typography>
+                                        {showRejectionAlertColumn && (
+                                            <TableCell className="px-3 py-5 whitespace-nowrap">
+                                                {rejectionHistory.length > 0 ? (
+                                                    <DocumentRejectionIndicator
+                                                        history={rejectionHistory}
+                                                        placement="bottom-right"
+                                                    />
+                                                ) : null}
                                             </TableCell>
                                         )}
 

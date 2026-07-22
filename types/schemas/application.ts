@@ -64,6 +64,12 @@ export const CreateApplicationSchema = z.object({
 
 export type CreateApplicationInput = z.infer<typeof CreateApplicationSchema>;
 
+export const ResubmitApplicationSchema = z.object({
+  document_ids: z.array(z.string()).min(1, "Please attach at least one document"),
+});
+
+export type ResubmitApplicationInput = z.infer<typeof ResubmitApplicationSchema>;
+
 export type ApplicationDocumentTypeSummary = Pick<Tables<"document_type">, "id" | "name">;
 
 export type ApplicationStudentDocument = Pick<
@@ -196,6 +202,7 @@ export type ApplicationListItem = Pick<
     | null;
   agent: ApplicationListAgent | null;
   course: ApplicationListCourse | null;
+  rejection_history: ApplicationReviewHistoryEntry[];
 };
 
 export type ApplicationListResponse = {

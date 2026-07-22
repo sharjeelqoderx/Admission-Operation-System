@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { FilePreview } from "@/components/shared/FilePreview";
 import ImageUploadCard from "@/components/shared/image-upload-card";
 import { Spinner } from "@/components/shared/page-loader";
+import { PageLoader } from "@/components/shared/page-loader";
 import { Role } from "@/types/enums/role";
 
 import {
@@ -35,7 +36,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { DatePicker } from "@/components/shared/date-picker";
 import { useForm, useStore } from "@tanstack/react-form";
-import { CreateApplicationSchema, type CreateApplicationInput, type ApplicationStudentDocument, type ApplicationStudentDetail, type ApplicationMe, type ApplicationProfileRole, type ApplicationDuplicateRow, type ApplicationDocumentTypeSummary, type CreateApplicationFormApi, type ApplicationFormFieldRenderProps, getApplicationFieldError } from "@/types/schemas/application";
+import { CreateApplicationSchema, type CreateApplicationInput, type ApplicationStudentDocument, type ApplicationStudentDetail, type ApplicationMe, type ApplicationProfileRole, type ApplicationDuplicateRow, type ApplicationDocumentTypeSummary, type CreateApplicationFormApi, type ApplicationFormFieldRenderProps, getApplicationFieldError, type ApplicationDetail } from "@/types/schemas/application";
 import type { CourseProgram } from "@/types/schemas/program";
 import type { LevelOption } from "@/hooks/useLevels";
 import type { StudentListItem } from "@/lib/student/list";
@@ -142,7 +143,18 @@ function applyCourseToForm(
     }
 }
 
-function buildFlowSteps(role: ApplicationProfileRole | undefined, courseIdFromParams: string | null): FlowStep[] {
+function buildFlowSteps(
+    role: ApplicationProfileRole | undefined,
+    courseIdFromParams: string | null,
+    isEditMode = false
+): FlowStep[] {
+    if (isEditMode) {
+        return [
+            { internalStep: 2, label: "Update Documents" },
+            { internalStep: 3, label: "Review & Resubmit" },
+        ]
+    }
+
     const isStudent = role === Role.STUDENT;
     const steps: FlowStep[] = [];
 
@@ -175,8 +187,9 @@ function F<TValue>({ field, label, isStepAttempted, children }: { field: Applica
     );
 }
 
-export function CreateApplicationForm() {
-    const [step, setStep] = useState(1);
+export function CreateApplicationForm({ applicationId }: { applicationId?: string } = {}) {
+    const isEditMode = Boolean(applicationId);
+    const [step, setStep] = useState(isEditMode ? 2 : 1);
     const [isStep1Attempted, setIsStep1Attempted] = useState(false);
     const [isStep2Attempted, setIsStep2Attempted] = useState(false);
     const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
@@ -229,6 +242,55 @@ export function CreateApplicationForm() {
         }
     });
 
+    const resubmitApplication = useMutation({
+        mutationFn: async (value: Pick<CreateApplicationInput, "document_ids">) => {
+            if (!applicationId) {
+                throw new Error("Application not found");
+            }
+
+            const res = await fetch(`/api/application/${applicationId}/resubmit`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(value),
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || "Failed to resubmit application");
+            }
+
+            return res.json();
+        },
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: ["application", applicationId] });
+            void queryClient.invalidateQueries({ queryKey: ["applications"] });
+            toast.success("Application resubmitted successfully");
+            router.push(`/dashboard/application/${applicationId}`);
+        },
+        onError: (err: Error) => {
+            toast.error(err.message);
+        },
+    });
+
+    const {
+        data: editApplication,
+        isLoading: isEditApplicationLoading,
+        isError: isEditApplicationError,
+        error: editApplicationError,
+    } = useQuery({
+        queryKey: ["application", applicationId, "edit"],
+        queryFn: async () => {
+            const res = await fetch(`/api/application/${applicationId}`);
+            const json = await res.json();
+            if (!res.ok) {
+                throw new Error(json.error ?? "Failed to fetch application");
+            }
+            return json.data as ApplicationDetail;
+        },
+        enabled: isEditMode,
+        retry: false,
+    });
+
     const form = useForm({
         defaultValues: {
             profile_id: studentIdParam || "",
@@ -243,17 +305,46 @@ export function CreateApplicationForm() {
             onChange: CreateApplicationSchema,
         },
         onSubmit: async ({ value }) => {
+            if (isEditMode) {
+                await resubmitApplication.mutateAsync({
+                    document_ids: value.document_ids,
+                });
+                return;
+            }
+
             await createApplication.mutateAsync(value);
         }
     }) as CreateApplicationFormApi;
 
     useEffect(() => {
-        if (user?.role === Role.STUDENT) {
+        if (!isEditMode || !editApplication) return;
+
+        if (!editApplication.can_resubmit) {
+            return;
+        }
+
+        const attachedDocumentIds = (editApplication.documents ?? [])
+            .map((item) => item.document?.id)
+            .filter((documentId): documentId is string => Boolean(documentId));
+
+        form.setFieldValue("profile_id", editApplication.profile_id);
+        form.setFieldValue("course_id", editApplication.course_id);
+        form.setFieldValue("university_id", editApplication.university_id);
+        form.setFieldValue(
+            "intake_date",
+            editApplication.course?.degree?.intake_date || "N/A"
+        );
+        form.setFieldValue("document_ids", attachedDocumentIds);
+        form.setFieldValue("declarations", [false, false, false]);
+    }, [editApplication, form, isEditMode]);
+
+    useEffect(() => {
+        if (user?.role === Role.STUDENT && !isEditMode) {
             form.setFieldValue("profile_id", user.id);
-        } else if (studentIdParam) {
+        } else if (studentIdParam && !isEditMode) {
             form.setFieldValue("profile_id", studentIdParam);
         }
-    }, [user, studentIdParam, form]);
+    }, [user, studentIdParam, form, isEditMode]);
 
     const selectedStudentId = useStore(form.store, (state) => state.values.profile_id);
     const selectedCourseId = useStore(form.store, (state) => state.values.course_id) || courseIdParam || "";
@@ -434,8 +525,8 @@ export function CreateApplicationForm() {
     }, [selectedCourseId, requiredDocTypes, optionalDocTypes, documents, form]);
 
     const flowSteps = useMemo(
-        () => buildFlowSteps(user?.role, courseIdParam),
-        [user?.role, courseIdParam]
+        () => buildFlowSteps(user?.role, courseIdParam, isEditMode),
+        [user?.role, courseIdParam, isEditMode]
     );
 
     const currentFlowIndex = flowSteps.findIndex((s) => s.internalStep === step);
@@ -448,6 +539,10 @@ export function CreateApplicationForm() {
 
     const checkDuplicateApplication = useCallback(
         async (studentId: string, courseId: string) => {
+            if (isEditMode) {
+                return true;
+            }
+
             setIsCheckingDuplicate(true);
             setDuplicateError(null);
 
@@ -476,7 +571,7 @@ export function CreateApplicationForm() {
                 setIsCheckingDuplicate(false);
             }
         },
-        []
+        [isEditMode]
     );
 
 
@@ -545,22 +640,69 @@ export function CreateApplicationForm() {
     };
 
     useEffect(() => {
-        if (user?.role !== Role.STUDENT || !courseIdParam || !isCourseFromParamValid) return;
+        if (user?.role !== Role.STUDENT || !courseIdParam || !isCourseFromParamValid || isEditMode) return;
         setStep(3);
-    }, [user?.role, courseIdParam, isCourseFromParamValid]);
+    }, [user?.role, courseIdParam, isCourseFromParamValid, isEditMode]);
+
+    if (isEditMode && isEditApplicationLoading) {
+        return <PageLoader />;
+    }
+
+    if (isEditMode && (isEditApplicationError || !editApplication?.can_resubmit)) {
+        return (
+            <div className="flex flex-col items-center justify-center py-40 gap-4">
+                <ErrorView
+                    message={
+                        editApplicationError instanceof Error
+                            ? editApplicationError.message
+                            : "This application cannot be edited or resubmitted."
+                    }
+                />
+                <Button variant="outline" onClick={() => router.push(`/dashboard/application/${applicationId}`)}>
+                    Back to Application
+                </Button>
+            </div>
+        );
+    }
+
+    const latestRejectionFeedback = editApplication?.rejection_history?.[0]?.feedback;
+    const isSubmitting = isEditMode
+        ? resubmitApplication.isPending
+        : createApplication.isPending;
+    const submitError = isEditMode
+        ? resubmitApplication.error?.message ?? duplicateError ?? undefined
+        : createApplication.error?.message ?? duplicateError ?? undefined;
+
     return (
         <div className="space-y-8 pb-20">
             {/* Header */}
             <div className="space-y-2">
                 <Typography as="h2" font="sub-heading" className="text-2xl sm:text-3xl font-bold tracking-tight">
-                    {step === 1 ? "Create Application" : "Choose Your Path"}
+                    {isEditMode
+                        ? "Edit & Resubmit Application"
+                        : step === 1
+                          ? "Create Application"
+                          : "Choose Your Path"}
                 </Typography>
                 <Typography as="p" font="sub-text" className="text-gray-500 font-medium leading-relaxed">
-                    {step === 1
-                        ? "Initiate a new student application and link them to global academic programs.\nEnsure all mandatory fields are verified before submission."
-                        : "Select the academic program that aligns with your professional aspirations. Browse\nour curated selection of undergraduate and graduate degrees."}
+                    {isEditMode
+                        ? "Update supporting documents and resubmit this application for university review."
+                        : step === 1
+                          ? "Initiate a new student application and link them to global academic programs.\nEnsure all mandatory fields are verified before submission."
+                          : "Select the academic program that aligns with your professional aspirations. Browse\nour curated selection of undergraduate and graduate degrees."}
                 </Typography>
             </div>
+
+            {isEditMode && latestRejectionFeedback ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50/80 px-5 py-4">
+                    <Typography as="p" className="text-xs font-bold uppercase tracking-widest text-red-700">
+                        Rejection Reason
+                    </Typography>
+                    <Typography as="p" className="mt-2 text-sm text-red-800 whitespace-pre-wrap">
+                        {latestRejectionFeedback}
+                    </Typography>
+                </div>
+            ) : null}
 
             <div className="flex items-center justify-between relative pt-4 pb-8">
                 <div className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 -z-10" />
@@ -640,14 +782,16 @@ export function CreateApplicationForm() {
                         requiredDocTypes={requiredDocTypes}
                         optionalDocTypes={optionalDocTypes}
                         selectedCourseId={selectedCourseId}
+                        selectedCourseDetail={selectedCourseDetail}
                         levels={levels}
                         refetchDocuments={refetchDocuments}
                         isDocumentsLoading={isDocumentsLoading}
                         onNext={handleNextStep}
-                        onBack={() => setStep(1)}
+                        onBack={() => (isEditMode ? router.push(`/dashboard/application/${applicationId}`) : setStep(1))}
                         isChecking={isCheckingDuplicate}
                         isStepAttempted={isStep2Attempted}
                         error={duplicateError}
+                        isEditMode={isEditMode}
                     />
                 )}
                 {step === 3 && (
@@ -663,11 +807,12 @@ export function CreateApplicationForm() {
                         refetchDocuments={refetchDocuments}
                         isDocumentsLoading={isDocumentsLoading}
                         onBack={() => {
-                            if (courseIdParam) return setStep(1)
+                            if (isEditMode || courseIdParam) return setStep(2)
                             setStep(2)
                         }}
-                        isSubmitting={createApplication.isPending}
-                        error={createApplication.error?.message ?? duplicateError ?? undefined}
+                        isSubmitting={isSubmitting}
+                        error={submitError}
+                        isEditMode={isEditMode}
                     />
                 )}
 
@@ -1218,6 +1363,7 @@ function Step2({
     requiredDocTypes,
     optionalDocTypes,
     selectedCourseId,
+    selectedCourseDetail,
     levels,
     refetchDocuments,
     isDocumentsLoading,
@@ -1226,6 +1372,7 @@ function Step2({
     isStepAttempted,
     onNext,
     onBack,
+    isEditMode = false,
 }: {
     form: CreateApplicationFormApi;
     courses: CourseProgram[];
@@ -1237,6 +1384,7 @@ function Step2({
     requiredDocTypes: ApplicationDocumentTypeSummary[];
     optionalDocTypes: ApplicationDocumentTypeSummary[];
     selectedCourseId: string;
+    selectedCourseDetail?: CourseProgram;
     levels: LevelOption[];
     refetchDocuments: () => Promise<unknown>;
     isDocumentsLoading?: boolean;
@@ -1245,6 +1393,7 @@ function Step2({
     isStepAttempted?: boolean;
     onNext: () => void;
     onBack: () => void;
+    isEditMode?: boolean;
 }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
@@ -1298,6 +1447,7 @@ function Step2({
                 </div>
             )}
             <div className="flex flex-col lg:flex-row gap-6">
+                {!isEditMode ? (
                 <div className="flex-1 bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-6 space-y-4 shadow-sm">
                     <div className="flex flex-col gap-4">
                         <div className="relative bg-white rounded-xl shadow-sm border border-gray-200 w-full">
@@ -1351,6 +1501,22 @@ function Step2({
                         </div>
                     </div>
                 </div>
+                ) : (
+                <div className="flex-1 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-3">
+                    <Typography as="h3" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                        Selected Course
+                    </Typography>
+                    <Typography as="p" className="text-lg font-bold text-brand-secondary">
+                        {selectedCourseDetail?.name ?? "—"}
+                    </Typography>
+                    <Typography as="p" className="text-sm text-gray-600">
+                        {selectedCourseDetail?.degree?.name ?? "N/A"}
+                    </Typography>
+                    <Typography as="p" className="text-xs text-gray-500">
+                        Course cannot be changed while resubmitting a rejected application.
+                    </Typography>
+                </div>
+                )}
 
                 <div className="w-full lg:w-80 bg-black/5 backdrop-blur-md rounded-2xl p-6 border border-white/20">
                     <Typography as="h3" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Selected Student</Typography>
@@ -1378,6 +1544,19 @@ function Step2({
                 </div>
             </div>
 
+            {isEditMode ? (
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-2">
+                    <Typography as="h3" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                        Locked Program Selection
+                    </Typography>
+                    <Typography as="p" className="text-sm font-bold text-gray-900">
+                        {selectedCourseDetail?.name ?? "—"}
+                    </Typography>
+                    <Typography as="p" className="text-xs text-gray-500">
+                        {formatIntakeDate(selectedCourseDetail?.degree?.intake_date)} • {selectedCourseDetail?.degree?.fees ?? "Contact University"}
+                    </Typography>
+                </div>
+            ) : (
             <BluryCard
                 isCentered={false}
                 blurAmount="backdrop-blur-xl"
@@ -1479,6 +1658,7 @@ function Step2({
                     <p className="text-[10px] text-red-500 font-bold mt-2 px-8 pb-4 text-right uppercase tracking-widest">Please select a course to continue</p>
                 )}
             </BluryCard>
+            )}
 
             <SupportingDocumentsSection
                 form={form}
@@ -1493,7 +1673,9 @@ function Step2({
             />
 
             <div className="flex justify-between items-center pt-8 border-t border-gray-200/50">
-                <Button type="button" variant="outline" onClick={onBack} className="h-12 px-8 border-gray-300 border text-brand-secondary font-bold rounded-xl">Back to Profile</Button>
+                <Button type="button" variant="outline" onClick={onBack} className="h-12 px-8 border-gray-300 border text-brand-secondary font-bold rounded-xl">
+                    {isEditMode ? "Cancel" : "Back to Profile"}
+                </Button>
                 <Button
                     type="button"
                     onClick={onNext}
@@ -1505,6 +1687,8 @@ function Step2({
                             <Spinner size="sm" />
                             Checking...
                         </>
+                    ) : isEditMode ? (
+                        "Next Step: Review & Resubmit"
                     ) : (
                         "Next Step: Review & Submit"
                     )}
@@ -1528,6 +1712,7 @@ function Step3({
     onBack,
     isSubmitting,
     error,
+    isEditMode = false,
 }: {
     form: CreateApplicationFormApi;
     studentDetails?: ApplicationStudentDetail;
@@ -1542,6 +1727,7 @@ function Step3({
     onBack: () => void;
     isSubmitting: boolean;
     error?: string;
+    isEditMode?: boolean;
 }) {
     const declarations = useStore(form.store, (state) => state.values.declarations);
 
@@ -1700,7 +1886,7 @@ function Step3({
                     className="h-12 px-8 border-gray-300 border text-brand-secondary font-bold rounded-xl w-full sm:w-auto"
                     disabled={isSubmitting}
                 >
-                    Back to Selection
+                    {isEditMode ? "Back to Documents" : "Back to Selection"}
                 </Button>
                 <Button
                     type="submit"
@@ -1710,7 +1896,13 @@ function Step3({
                     )}
                     disabled={isSubmitting || !isAllChecked || !allRequiredAttached}
                 >
-                    {isSubmitting ? "Submitting Application..." : "Send Your Application"}
+                    {isSubmitting
+                        ? isEditMode
+                            ? "Resubmitting Application..."
+                            : "Submitting Application..."
+                        : isEditMode
+                          ? "Resubmit Application"
+                          : "Send Your Application"}
                 </Button>
             </div>
         </div>

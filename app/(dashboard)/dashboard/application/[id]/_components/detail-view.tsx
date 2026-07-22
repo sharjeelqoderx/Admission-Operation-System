@@ -104,6 +104,16 @@ const ApplicationDetailView = memo(function ApplicationDetailView({
                 </div>
 
                 <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+                    {application.can_resubmit ? (
+                        <Link
+                            href={`/dashboard/application/${application.id}/edit`}
+                            className="w-full sm:w-auto"
+                        >
+                            <Button className="h-10 px-4 sm:px-6 rounded-xl font-bold text-xs w-full bg-brand-secondary hover:bg-brand-secondary/90">
+                                Edit & Resubmit
+                            </Button>
+                        </Link>
+                    ) : null}
                     <Link
                         href={`/dashboard/application/new?student_id=${student?.id}`}
                         className="w-full sm:w-auto"

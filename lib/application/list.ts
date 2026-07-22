@@ -22,6 +22,7 @@ import type {
 import type { Database, Tables } from "@/types/supabase"
 import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
+import { loadRejectionHistoryByApplicationIds } from "@/lib/application/review-meta"
 
 const APPLICATION_LIST_SELECT = `
     id,
@@ -174,6 +175,25 @@ async function buildOffersByApplicationId(
     return offerByApplicationId
 }
 
+async function attachRejectionHistoryToApplications(
+    supabase: SupabaseClient<Database>,
+    applications: ApplicationListItem[]
+): Promise<ApplicationListItem[]> {
+    if (applications.length === 0) {
+        return applications
+    }
+
+    const rejectionHistoryByApplicationId = await loadRejectionHistoryByApplicationIds(
+        supabase,
+        applications.map((application) => application.id)
+    )
+
+    return applications.map((application) => ({
+        ...application,
+        rejection_history: rejectionHistoryByApplicationId.get(application.id) ?? [],
+    }))
+}
+
 async function attachCoursesToApplications(
     supabase: SupabaseClient<Database>,
     applications: ApplicationListRow[]
@@ -219,6 +239,7 @@ async function attachCoursesToApplications(
                     : null,
                 agent: application.agent,
                 course: null,
+                rejection_history: [],
             }
         })
     }
@@ -283,6 +304,7 @@ async function attachCoursesToApplications(
                           : null,
                   }
                 : null,
+            rejection_history: [],
         }
     })
 }
@@ -669,6 +691,7 @@ export async function fetchApplicationsList(
             supabase,
             (applications ?? []) as unknown as ApplicationListRow[]
         )
+        result = await attachRejectionHistoryToApplications(supabase, result)
     } catch (attachError) {
         console.error("[fetchApplicationsList] attach courses", attachError)
         return { error: "Failed to load application courses" }

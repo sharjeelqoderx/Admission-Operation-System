@@ -67,6 +67,8 @@ export default function AllApplicationViewDetailsPage() {
         return offersResponse.find((offer: { application?: { id?: string } }) => offer.application?.id === id) ?? null
     }, [offersResponse, id])
 
+    const isOfferCreationDisabled = application?.status === "REJECTED"
+
     const handleOfferCreated = useCallback(
         () => {
             router.push("/dashboard/all-application-view")
@@ -261,6 +263,7 @@ export default function AllApplicationViewDetailsPage() {
                                     <Button
                                         className="w-full h-10 rounded-xl gap-2 font-bold text-xs bg-brand-secondary hover:bg-brand-secondary/90"
                                         onClick={handleOpenOfferModal}
+                                        disabled={isOfferCreationDisabled}
                                     >
                                         <Award className="size-4" />
                                         Create Another Offer
@@ -270,6 +273,7 @@ export default function AllApplicationViewDetailsPage() {
                                 <Button
                                     className="w-full h-10 rounded-xl gap-2 font-bold text-xs bg-brand-secondary hover:bg-brand-secondary/90"
                                     onClick={handleOpenOfferModal}
+                                    disabled={isOfferCreationDisabled}
                                 >
                                     <Award className="size-4" />
                                     Create Offer for this Application
