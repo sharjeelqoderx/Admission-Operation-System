@@ -34,41 +34,7 @@ import {
     type PendingEntry,
     type PendingFilesMap,
 } from "./degree-documents-shared"
-
-function RejectionFeedback({ feedback }: { feedback: string }) {
-    return (
-        <TooltipProvider>
-            <Popover>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <PopoverTrigger asChild>
-                            <button
-                                type="button"
-                                className="size-8 rounded-lg border border-red-200 bg-red-50 flex items-center justify-center shrink-0"
-                                aria-label="View rejection reason"
-                            >
-                                <AlertCircle className="size-4 text-red-600" />
-                            </button>
-                        </PopoverTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[260px]">
-                        <Typography as="p" className="text-sm whitespace-pre-wrap">
-                            {feedback}
-                        </Typography>
-                    </TooltipContent>
-                </Tooltip>
-                <PopoverContent align="start" className="w-[300px]">
-                    <Typography as="p" font="text" className="font-semibold mb-2">
-                        Rejection Reason
-                    </Typography>
-                    <Typography as="p" className="text-sm text-gray-600 whitespace-pre-wrap">
-                        {feedback}
-                    </Typography>
-                </PopoverContent>
-            </Popover>
-        </TooltipProvider>
-    )
-}
+import { DocumentRejectionIndicator } from "./document-rejection-indicator"
 
 function NotePopover({
     note,
@@ -216,18 +182,19 @@ export function DegreeDocumentsTable({
             <Table>
                 <TableHeader className="bg-gray-50">
                     <TableRow>
+                        <TableHead className="w-12 px-3" aria-hidden />
                         <TableHead className="font-semibold text-gray-700">Last Updated</TableHead>
                         <TableHead className="font-semibold text-gray-700 min-w-[200px]">Document</TableHead>
                         <TableHead className="font-semibold text-gray-700 min-w-[280px]">
                             {readOnly ? "File" : "Upload"}
                         </TableHead>
-                        <TableHead className="font-semibold text-gray-700">Status</TableHead>
                         {!readOnly ? (
                             <>
                                 <TableHead className="font-semibold text-gray-700">Note</TableHead>
                                 <TableHead className="font-semibold text-gray-700">Actions</TableHead>
                             </>
                         ) : null}
+                        <TableHead className="font-semibold text-gray-700 text-right">Status</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -245,7 +212,7 @@ export function DegreeDocumentsTable({
                             uploaded?.status === "VERIFIED"
                         const isRejected = uploaded?.status === "REJECTED"
                         const canUpload = !readOnly && !isLocked
-                        const rejectionFeedback = uploaded?.feedback?.trim() ?? ""
+                        const rejectionHistory = uploaded?.rejection_history ?? []
 
                         return (
                             <TableRow
@@ -255,10 +222,18 @@ export function DegreeDocumentsTable({
                                     isRejected && "bg-red-50/40"
                                 )}
                             >
+                                <TableCell className="px-3 py-5 whitespace-nowrap">
+                                    {isRejected && rejectionHistory.length > 0 ? (
+                                        <DocumentRejectionIndicator
+                                            history={rejectionHistory}
+                                            placement="bottom-right"
+                                        />
+                                    ) : null}
+                                </TableCell>
                                 <TableCell className="text-sm text-gray-500 whitespace-nowrap">
                                     {uploaded?.updated_at
                                         ? new Date(uploaded.updated_at).toLocaleDateString()
-                                        : "—"}
+                                        : null}
                                 </TableCell>
                                 <TableCell>
                                     <div className="space-y-1">
@@ -273,8 +248,8 @@ export function DegreeDocumentsTable({
                                         </div>
                                         {requirement.description && (
                                             <Typography
-                                                font="small"
-                                                className="text-gray-500"
+                                                font="sub-text"
+                                                className="text-[12px] text-gray-500"
                                             >
                                                 {requirement.description}
                                             </Typography>
@@ -292,11 +267,7 @@ export function DegreeDocumentsTable({
                                             >
                                                 View file
                                             </a>
-                                        ) : (
-                                            <Typography as="span" className="text-sm text-gray-500">
-                                                —
-                                            </Typography>
-                                        )
+                                        ) : null
                                     ) : (
                                         <div className="flex items-center gap-3">
                                             <label
@@ -367,33 +338,6 @@ export function DegreeDocumentsTable({
                                         </div>
                                     )}
                                 </TableCell>
-                                <TableCell>
-                                    <div className="space-y-2">
-                                        {uploaded ? (
-                                            <Badge
-                                                variant="outline"
-                                                className={cn(
-                                                    "text-[10px] uppercase tracking-wide",
-                                                    getDocumentStatusBadgeClass(uploaded.status)
-                                                )}
-                                            >
-                                                {formatDocumentStatus(uploaded.status)}
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="secondary" className="text-xs">
-                                                {hasFile ? "Ready" : "Pending"}
-                                            </Badge>
-                                        )}
-                                        {isRejected && rejectionFeedback && (
-                                            <div className="flex items-start gap-2 max-w-[220px]">
-                                                <RejectionFeedback feedback={rejectionFeedback} />
-                                                <Typography as="p" className="text-[11px] text-red-600 leading-snug">
-                                                    {rejectionFeedback}
-                                                </Typography>
-                                            </div>
-                                        )}
-                                    </div>
-                                </TableCell>
                                 {!readOnly ? (
                                     <>
                                         <TableCell>
@@ -443,6 +387,23 @@ export function DegreeDocumentsTable({
                                         </TableCell>
                                     </>
                                 ) : null}
+                                <TableCell className="text-right whitespace-nowrap">
+                                    {uploaded ? (
+                                        <Badge
+                                            variant="outline"
+                                            className={cn(
+                                                "text-[10px] uppercase tracking-wide",
+                                                getDocumentStatusBadgeClass(uploaded.status)
+                                            )}
+                                        >
+                                            {formatDocumentStatus(uploaded.status)}
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="secondary" className="text-xs">
+                                            {hasFile ? "Ready" : "Pending"}
+                                        </Badge>
+                                    )}
+                                </TableCell>
                             </TableRow>
                         )
                     })}
