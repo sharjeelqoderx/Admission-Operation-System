@@ -5,6 +5,7 @@ export const studentPipelineStatusSchema = z.enum([
     "Contract Sent",
     "Signed",
     "Completed",
+    "Rejected",
 ])
 
 export const universityStudentListItemSchema = z.object({

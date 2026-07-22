@@ -3,13 +3,14 @@
 import { memo } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { PageLoader } from "@/components/shared/page-loader"
 import { StudentPipelineBadge } from "@/components/shared/student-pipeline-badge"
+import { DocumentStudentSearch } from "@/app/(dashboard)/dashboard/document/_component/document-student-search"
+import { DocumentRejectionIndicator } from "@/app/(dashboard)/dashboard/document/_component/document-rejection-indicator"
 import {
     Table,
     TableBody,
@@ -22,6 +23,20 @@ import type {
     UniversityApplicationListItem,
     UniversityApplicationTab,
 } from "@/types/schemas/university-application"
+import type { DocumentRejectionHistoryEntry } from "@/types/schemas/document"
+
+const COLUMN_COUNT = 6
+
+function toRejectionIndicatorHistory(
+    history: UniversityApplicationListItem["rejection_history"]
+): DocumentRejectionHistoryEntry[] {
+    return history
+        .filter((entry) => Boolean(entry.feedback?.trim()))
+        .map((entry) => ({
+            feedback: entry.feedback!.trim(),
+            created_at: entry.created_at,
+        }))
+}
 
 type UniversityApplicationListTableProps = {
     applications: UniversityApplicationListItem[]
@@ -30,6 +45,7 @@ type UniversityApplicationListTableProps = {
         pending_review: number
         awaiting_signature: number
         recently_completed: number
+        rejected: number
     }
     pagination?: {
         total: number
@@ -51,6 +67,7 @@ const tabs: { key: UniversityApplicationTab; label: string; countKey: keyof Univ
     { key: "pending-review", label: "Pending Review", countKey: "pending_review" },
     { key: "awaiting-signature", label: "Awaiting Signature", countKey: "awaiting_signature" },
     { key: "recently-completed", label: "Recently Completed", countKey: "recently_completed" },
+    { key: "rejected", label: "Rejected", countKey: "rejected" },
 ]
 
 export const UniversityApplicationListTable = memo(function UniversityApplicationListTable({
@@ -70,14 +87,8 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
 
     return (
         <div className="space-y-5">
-            <div className="relative max-w-xl">
-                <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
-                <Input
-                    value={searchValue}
-                    onChange={(event) => onSearchChange(event.target.value)}
-                    placeholder="Search by student name or ID"
-                    className="h-12 border-none bg-white pl-11 shadow-sm ring-1 ring-black/5"
-                />
+            <div className="max-w-xl">
+                <DocumentStudentSearch value={searchValue} onChange={onSearchChange} />
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-b border-brand-secondary/20 pb-0">
@@ -126,6 +137,7 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                     <Table className="min-w-[1100px]">
                         <TableHeader>
                             <TableRow className="border-b border-gray-100 hover:bg-transparent">
+                                <TableHead className="w-12 px-3" aria-hidden />
                                 {[
                                     "Student Name",
                                     "Program",
@@ -155,7 +167,7 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                         <TableBody>
                             {applications.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="px-6 py-12 text-center">
+                                    <TableCell colSpan={COLUMN_COUNT} className="px-6 py-12 text-center">
                                         <Typography as="span" font="sub-text" className="text-gray-500">
                                             No applications found.
                                         </Typography>
@@ -166,9 +178,21 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                     const avatarSrc =
                                         application.avatar_url ??
                                         `https://ui-avatars.com/api/?name=${encodeURIComponent(application.student_name)}&background=random`
+                                    const rejectionHistory = toRejectionIndicatorHistory(
+                                        application.rejection_history
+                                    )
+                                    const showRejectionIndicator = rejectionHistory.length > 0
 
                                     return (
                                         <TableRow key={application.id} className="border-b border-gray-50">
+                                            <TableCell className="px-3 py-5 whitespace-nowrap">
+                                                {showRejectionIndicator ? (
+                                                    <DocumentRejectionIndicator
+                                                        history={rejectionHistory}
+                                                        placement="bottom-right"
+                                                    />
+                                                ) : null}
+                                            </TableCell>
                                             <TableCell className="px-6 py-5">
                                                 <div className="flex items-center gap-3">
                                                     <Image
@@ -187,7 +211,10 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                                         >
                                                             {application.student_name}
                                                         </Typography>
-                                                        <Typography as="p" font="sub-text" className="text-gray-500">
+                                                        <Typography
+                                                            as="p"
+                                                            className="text-xs font-normal text-muted-foreground"
+                                                        >
                                                             ID: {application.student_code ?? "N/A"}
                                                         </Typography>
                                                     </div>
@@ -205,8 +232,7 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                                     </Typography>
                                                     <Typography
                                                         as="p"
-                                                        font="sub-text"
-                                                        className="truncate text-gray-500"
+                                                        className="truncate text-xs font-normal text-muted-foreground"
                                                         title={application.intake_label ?? undefined}
                                                     >
                                                         {application.intake_label ?? "—"}

@@ -8,6 +8,7 @@ const pipelineStyles: Record<StudentPipelineStatus, string> = {
     "Contract Sent": "bg-brand-danger text-white",
     Signed: "bg-brand-success text-white",
     Completed: "bg-brand-primary text-white",
+    Rejected: "bg-red-500 text-white",
 }
 
 type StudentPipelineBadgeProps = {

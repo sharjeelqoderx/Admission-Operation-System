@@ -34,6 +34,7 @@ const UNIVERSITY_APPLICATION_TABS: UniversityApplicationTab[] = [
     "pending-review",
     "awaiting-signature",
     "recently-completed",
+    "rejected",
 ]
 
 export async function fetchUniversityApplications(params: {

@@ -40,6 +40,7 @@ const PIPELINE_STATUS_ORDER: StudentPipelineStatus[] = [
     "Contract Sent",
     "Signed",
     "Completed",
+    "Rejected",
 ]
 const PROGRAM_STATUS_ORDER = ["ACTIVE", "INACTIVE"] as const
 const DOCUMENT_STATUS_ORDER = [

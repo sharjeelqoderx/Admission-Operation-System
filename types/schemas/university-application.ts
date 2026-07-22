@@ -6,7 +6,16 @@ export const universityApplicationTabSchema = z.enum([
     "pending-review",
     "awaiting-signature",
     "recently-completed",
+    "rejected",
 ])
+
+export const applicationReviewHistoryEntrySchema = z.object({
+    status: z.string(),
+    feedback: z.string().nullable(),
+    created_at: z.string(),
+    reviewed_by_profile_id: z.string().uuid().nullable(),
+    reviewed_by_name: z.string().nullable(),
+})
 
 export const universityApplicationListItemSchema = z.object({
     id: z.string().uuid(),
@@ -18,6 +27,7 @@ export const universityApplicationListItemSchema = z.object({
     agent_name: z.string(),
     pipeline_status: studentPipelineStatusSchema,
     submission_date: z.string().nullable(),
+    rejection_history: z.array(applicationReviewHistoryEntrySchema),
 })
 
 export const universityApplicationTabCountsSchema = z.object({
@@ -25,6 +35,7 @@ export const universityApplicationTabCountsSchema = z.object({
     pending_review: z.number(),
     awaiting_signature: z.number(),
     recently_completed: z.number(),
+    rejected: z.number(),
 })
 
 export const universityApplicationListResponseSchema = z.object({
@@ -85,7 +96,11 @@ export const universityApplicationDetailSchema = z.object({
         })
         .nullable(),
     can_approve_for_signature: z.boolean(),
+    can_reject: z.boolean(),
+    can_resubmit: z.boolean(),
     has_offer: z.boolean(),
+    review_history: z.array(applicationReviewHistoryEntrySchema),
+    rejection_history: z.array(applicationReviewHistoryEntrySchema),
 })
 
 export type UniversityApplicationTab = z.infer<typeof universityApplicationTabSchema>

@@ -5,6 +5,10 @@ export function resolveStudentPipelineStatus(params: {
     offerStatus?: string | null
     hasOffer?: boolean
 }): StudentPipelineStatus {
+    if (params.applicationStatus === "REJECTED") {
+        return "Rejected"
+    }
+
     if (params.applicationStatus === "APPROVED") {
         return "Completed"
     }

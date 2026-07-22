@@ -4,17 +4,20 @@ import { memo } from "react"
 import { CheckCircle2, Circle } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Typography } from "@/components/shared/Typography"
+import { cn } from "@/lib/utils"
 import type { UniversityStudentDetail } from "@/types/schemas/university-student"
 
 type StudentProgressCardProps = {
     progress: UniversityStudentDetail["progress"]
+    className?: string
 }
 
 export const StudentProgressCard = memo(function StudentProgressCard({
     progress,
+    className,
 }: StudentProgressCardProps) {
     return (
-        <Card className="border-none bg-white px-5 py-6 shadow-sm ring-1 ring-black/5">
+        <Card className={cn("border-none bg-white px-5 py-6 shadow-sm ring-1 ring-black/5", className)}>
             <Typography as="h3" font="title" className="font-bold text-brand-primary">
                 Progress
             </Typography>

@@ -8,6 +8,7 @@ import type {
 import type { Database } from "@/types/supabase"
 import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
+import { loadApplicationReviewMeta } from "@/lib/application/review-meta"
 
 const APPLICATION_DETAIL_SELECT = `
     *,
@@ -61,12 +62,14 @@ async function fetchOfferForApplication(
 
 function mapApplicationDetail(
     application: ApplicationDetailQueryRow,
-    offerLetter: ApplicationDetailOfferLetter | null
+    offerLetter: ApplicationDetailOfferLetter | null,
+    reviewMeta: Awaited<ReturnType<typeof loadApplicationReviewMeta>>
 ): ApplicationDetail {
     return {
         ...application,
         offer_letter: offerLetter,
         documents: application.documents ?? [],
+        ...reviewMeta,
     }
 }
 
@@ -119,5 +122,15 @@ export async function fetchApplicationDetail(
 
     const offerLetter = await fetchOfferForApplication(supabase, applicationId)
 
-    return mapApplicationDetail(row, offerLetter)
+    const reviewMeta = await loadApplicationReviewMeta(supabase, {
+        applicationId,
+        applicationStatus: row.status,
+        hasOffer: Boolean(offerLetter),
+        profileId: row.profile_id,
+        submittedByProfileId: row.submitted_by_profile_id,
+        viewerId: userId,
+        viewerRole: role,
+    })
+
+    return mapApplicationDetail(row, offerLetter, reviewMeta)
 }

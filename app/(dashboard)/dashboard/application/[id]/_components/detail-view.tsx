@@ -10,6 +10,8 @@ import { ErrorView } from "@/components/shared/error-view"
 import { PageLoader } from "@/components/shared/page-loader"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ApplicationStatusBadge } from "../../_components/application-status-badge"
+import { ApplicationReviewHistoryCard } from "../../_components/application-review-history-card"
+import { applicationDetailCardClassName } from "../../_components/application-detail-card-styles"
 import {
     ChevronLeft,
     User,
@@ -82,18 +84,11 @@ const ApplicationDetailView = memo(function ApplicationDetailView({
                         <ChevronLeft className="size-5" />
                     </Button>
                     <div className="space-y-0.5">
-                        <Typography
-                            as="h1"
-                            font="title"
-                            className="text-xl sm:text-2xl font-bold tracking-tight"
-                        >
+                        <Typography as="h1" className="text-lg font-semibold text-foreground">
                             Application Details
                         </Typography>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <Typography
-                                as="span"
-                                className="text-[10px] font-medium text-gray-500 uppercase tracking-widest whitespace-nowrap"
-                            >
+                            <Typography as="span" className="text-xs text-muted-foreground whitespace-nowrap">
                                 {application.application_no ||
                                     `APP-${application.id.slice(0, 8).toUpperCase()}`}
                             </Typography>
@@ -127,18 +122,18 @@ const ApplicationDetailView = memo(function ApplicationDetailView({
                 <div className="lg:col-span-2 space-y-6 sm:space-y-8">
                     <BluryCard
                         isCentered={false}
-                        className="rounded-2xl"
+                        className={`rounded-2xl ${applicationDetailCardClassName}`}
                         childClass="p-5 sm:p-8 space-y-6"
                     >
                         <div className="flex items-center gap-2 text-brand-byzantine">
                             <User className="size-5" />
-                            <Typography font="title" className="text-lg font-bold">
+                            <Typography font="title" className="text-base font-semibold">
                                 Student Information
                             </Typography>
                         </div>
 
                         <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-8">
-                            <div className="size-20 sm:size-24 rounded-2xl overflow-hidden border-2 border-white shadow-sm shrink-0 bg-gray-50">
+                            <div className="size-20 sm:size-24 rounded-2xl overflow-hidden shrink-0 bg-gray-50">
                                 <Avatar className="w-full h-full rounded-none">
                                     <AvatarImage src={student?.avatar_url ?? undefined} />
                                     <AvatarFallback className="text-xl sm:text-2xl font-bold">
@@ -149,10 +144,10 @@ const ApplicationDetailView = memo(function ApplicationDetailView({
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6 flex-1 w-full">
                                 <div className="space-y-1">
-                                    <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                    <Typography className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
                                         Full Name
                                     </Typography>
-                                    <Typography className="font-bold text-gray-900">
+                                    <Typography className="text-sm font-medium text-foreground">
                                         {studentName}
                                     </Typography>
                                 </div>
@@ -194,12 +189,12 @@ const ApplicationDetailView = memo(function ApplicationDetailView({
 
                     <BluryCard
                         isCentered={false}
-                        className="rounded-2xl"
+                        className={`rounded-2xl ${applicationDetailCardClassName}`}
                         childClass="p-5 sm:p-8 space-y-6"
                     >
                         <div className="flex items-center gap-2 text-brand-secondary">
                             <GraduationCap className="size-5" />
-                            <Typography font="title" className="text-lg font-bold">
+                            <Typography font="title" className="text-base font-semibold">
                                 Course Selection
                             </Typography>
                         </div>
@@ -266,12 +261,14 @@ const ApplicationDetailView = memo(function ApplicationDetailView({
                             </div>
                         </div>
                     </BluryCard>
+
+                    <ApplicationReviewHistoryCard history={application.review_history} />
                 </div>
 
                 <div className="space-y-6 sm:space-y-8">
                     <BluryCard
                         isCentered={false}
-                        className="rounded-2xl border-l-4 border-l-brand-byzantine"
+                        className={`rounded-2xl ${applicationDetailCardClassName}`}
                         childClass="p-5 sm:p-6 space-y-4"
                     >
                         <div className="flex items-center justify-between">
@@ -322,7 +319,7 @@ const ApplicationDetailView = memo(function ApplicationDetailView({
                                 return (
                                     <div
                                         key={doc.id ?? index}
-                                        className="bg-white/60 backdrop-blur-md border border-white/60 rounded-xl p-4 flex flex-col gap-3 shadow-sm"
+                                        className="rounded-xl bg-white/60 p-4 backdrop-blur-md flex flex-col gap-3"
                                     >
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-1">
@@ -357,7 +354,7 @@ const ApplicationDetailView = memo(function ApplicationDetailView({
                             })}
 
                             {documents.length === 0 && (
-                                <div className="text-center py-10 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                                <div className="rounded-2xl bg-gray-50/50 py-10 text-center">
                                     <Typography className="text-xs text-gray-400 font-medium">
                                         No documents attached
                                     </Typography>

@@ -157,7 +157,7 @@ export type ApplicationDetail = Tables<"application"> & {
   course: ApplicationDetailCourse | null;
   university: ApplicationDetailUniversity | null;
   documents: ApplicationDetailDocument[];
-};
+} & ApplicationDetailReviewMeta;
 
 export type ApplicationListProfile = Pick<
   Tables<"profile">,
@@ -223,6 +223,41 @@ export type ApplicationDashboardPageData = {
 export type ApplicationDetailPageData = {
   detail: ApplicationDetail | null;
   error: string | null;
+};
+
+export const ApplicationReviewActionSchema = z
+  .object({
+    status: z.enum(["APPROVED", "REJECTED", "NEEDS_REVISION"]),
+    feedback: z.string().trim().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      (data.status === "REJECTED" || data.status === "NEEDS_REVISION") &&
+      !data.feedback?.trim()
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Rejection reason is required",
+        path: ["feedback"],
+      });
+    }
+  });
+
+export type ApplicationReviewActionInput = z.infer<typeof ApplicationReviewActionSchema>;
+
+export type ApplicationReviewHistoryEntry = {
+  status: string;
+  feedback: string | null;
+  created_at: string;
+  reviewed_by_profile_id: string | null;
+  reviewed_by_name: string | null;
+};
+
+export type ApplicationDetailReviewMeta = {
+  review_history: ApplicationReviewHistoryEntry[];
+  rejection_history: ApplicationReviewHistoryEntry[];
+  can_reject: boolean;
+  can_resubmit: boolean;
 };
 
 export type CreateApplicationFormApi = Pick<

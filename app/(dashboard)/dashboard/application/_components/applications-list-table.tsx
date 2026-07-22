@@ -321,15 +321,15 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                                         {app.student?.student_code && (
                                                             <Typography
                                                                 as="span"
-                                                                className="text-[11px] text-gray-500 font-light"
+                                                                className="text-xs font-normal text-muted-foreground"
                                                             >
-                                                                {app.student.student_code}
+                                                                ID: {app.student.student_code}
                                                             </Typography>
                                                         )}
                                                         {app.student?.email && (
                                                             <Typography
                                                                 as="span"
-                                                                className="text-[11px] text-gray-500 font-light"
+                                                                className="text-xs font-normal text-muted-foreground"
                                                             >
                                                                 {app.student.email}
                                                             </Typography>
@@ -351,7 +351,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                                 {app.course?.degree?.name && (
                                                     <Typography
                                                         as="span"
-                                                        className="block truncate text-[11px] text-gray-500 font-light"
+                                                        className="block truncate text-xs font-normal text-muted-foreground"
                                                         title={app.course.degree.name}
                                                     >
                                                         {app.course.degree.name}
@@ -373,7 +373,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                                 <TableCell className="px-6 py-5 whitespace-nowrap">
                                                     <Typography
                                                         as="span"
-                                                        className="text-sm font-medium text-gray-600"
+                                                        className="text-xs font-normal text-muted-foreground"
                                                     >
                                                         {formatIntakeDate(app.course?.degree?.intake_date)}
                                                     </Typography>
@@ -381,7 +381,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                                 <TableCell className="px-6 py-5 whitespace-nowrap">
                                                     <Typography
                                                         as="span"
-                                                        className="text-sm font-medium text-gray-600"
+                                                        className="text-xs font-normal text-muted-foreground"
                                                     >
                                                         {formatProgramDate(app.course?.deadline_date)}
                                                     </Typography>

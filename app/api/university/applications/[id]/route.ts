@@ -35,6 +35,7 @@ export async function GET(
             applicationId: id,
             universityId: resolveUniversityScopeId(profile?.role, user.id),
             viewerRole: profile?.role,
+            viewerId: user.id,
         })
 
         if (!data) {

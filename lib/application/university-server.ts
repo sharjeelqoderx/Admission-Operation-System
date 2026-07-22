@@ -7,8 +7,9 @@ import { formatIntakeDate } from "@/lib/utils/program"
 import { formatLocation } from "@/lib/utils/location"
 import { resolveStudentPipelineStatus } from "@/lib/student/pipeline-status"
 import { resolveQualificationLabel } from "@/lib/education/resolve-qualification"
-import { isUniversityViewOnly } from "@/lib/auth/is-university-view-only"
 import { isUniversityStaffRole, isUniversityRole } from "@/lib/auth/university-role"
+import { canApproveApplicationForSignature } from "@/lib/application/review-access"
+import { loadApplicationReviewMeta, loadRejectionHistoryByApplicationIds } from "@/lib/application/review-meta"
 import { Role } from "@/types/enums/role"
 import type {
     UniversityApplicationDetail,
@@ -17,6 +18,7 @@ import type {
     UniversityApplicationListResponse,
     UniversityApplicationTab,
 } from "@/types/schemas/university-application"
+import type { ApplicationReviewHistoryEntry } from "@/types/schemas/application"
 
 export const EMPTY_UNIVERSITY_APPLICATION_LIST: UniversityApplicationListResponse = {
     tab_counts: {
@@ -24,6 +26,7 @@ export const EMPTY_UNIVERSITY_APPLICATION_LIST: UniversityApplicationListRespons
         pending_review: 0,
         awaiting_signature: 0,
         recently_completed: 0,
+        rejected: 0,
     },
     data: [],
     pagination: {
@@ -180,6 +183,8 @@ function matchesTab(
             return pipelineStatus === "Contract Sent"
         case "recently-completed":
             return isRecentlyCompleted(pipelineStatus, updatedAt, offer)
+        case "rejected":
+            return applicationStatus === "REJECTED"
         default:
             return true
     }
@@ -269,6 +274,7 @@ function mapListItem(params: {
     course: CourseRow | undefined
     agentLabel: string
     offer: OfferRow | undefined
+    rejectionHistory: ApplicationReviewHistoryEntry[]
 }): UniversityApplicationListItem {
     return {
         id: params.application.id,
@@ -284,6 +290,7 @@ function mapListItem(params: {
             hasOffer: Boolean(params.offer),
         }),
         submission_date: formatSubmissionDate(params.application.created_at),
+        rejection_history: params.rejectionHistory,
     }
 }
 
@@ -343,7 +350,7 @@ export async function fetchUniversityApplicationList(params: {
         allApplicationIds.length > 0 ? allApplicationIds : [emptyId]
     const profileIdsForQuery = allProfileIds.length > 0 ? allProfileIds : [emptyId]
 
-    const [offersResult, profilesResult, studentsResult, courseById, agentOrgByProfileId] =
+    const [offersResult, profilesResult, studentsResult, courseById, agentOrgByProfileId, rejectionHistoryByApplicationId] =
         await Promise.all([
             supabase
                 .from("offer_letter")
@@ -359,6 +366,7 @@ export async function fetchUniversityApplicationList(params: {
                 .in("profile_id", profileIdsForQuery),
             loadCoursesById(supabase, allCourseIds),
             loadAgentOrganizations(supabase, allAgentProfileIds),
+            loadRejectionHistoryByApplicationIds(supabase, allApplicationIds),
         ])
 
     if (offersResult.error) {
@@ -414,6 +422,7 @@ export async function fetchUniversityApplicationList(params: {
             course,
             agentLabel,
             offer,
+            rejectionHistory: rejectionHistoryByApplicationId.get(application.id) ?? [],
         })
     })
 
@@ -447,6 +456,7 @@ export async function fetchUniversityApplicationList(params: {
             })
             return matchesTab("recently-completed", pipelineStatus, application.status, application.updated_at, offer)
         }).length,
+        rejected: allApplicationRows.filter((application) => application.status === "REJECTED").length,
     }
 
     // Apply filters
@@ -506,6 +516,7 @@ export async function fetchUniversityApplicationDetail(params: {
     applicationId: string
     universityId?: string | null
     viewerRole?: string | null
+    viewerId?: string | null
 }): Promise<UniversityApplicationDetail | null> {
     const supabase = await createSupabaseServerClient()
 
@@ -707,6 +718,16 @@ export async function fetchUniversityApplicationDetail(params: {
         !applicationRow.submitted_by_profile_id ||
         applicationRow.submitted_by_profile_id === applicationRow.profile_id
 
+    const reviewMeta = await loadApplicationReviewMeta(supabase, {
+        applicationId: applicationRow.id,
+        applicationStatus: applicationRow.status,
+        hasOffer: Boolean(offerRow),
+        profileId: applicationRow.profile_id,
+        submittedByProfileId: applicationRow.submitted_by_profile_id,
+        viewerId: params.viewerId ?? "",
+        viewerRole: params.viewerRole,
+    })
+
     return {
         id: applicationRow.id,
         display_id: applicationRow.application_no ?? studentRow?.student_code ?? null,
@@ -744,11 +765,16 @@ export async function fetchUniversityApplicationDetail(params: {
                       agentOrgByProfileId.get(agentProfileId!) ?? "Education Partner",
                   agent_name: agentName,
               },
-        can_approve_for_signature:
-            !isUniversityViewOnly(params.viewerRole) &&
-            applicationRow.status === "PENDING" &&
-            !offerRow,
+        can_approve_for_signature: canApproveApplicationForSignature({
+            role: params.viewerRole,
+            applicationStatus: applicationRow.status,
+            hasOffer: Boolean(offerRow),
+        }),
+        can_reject: reviewMeta.can_reject,
+        can_resubmit: reviewMeta.can_resubmit,
         has_offer: Boolean(offerRow),
+        review_history: reviewMeta.review_history,
+        rejection_history: reviewMeta.rejection_history,
     }
 }
 
@@ -834,6 +860,7 @@ export async function fetchUniversityApplicationDetailForPage(
         applicationId,
         universityId: scope.universityId,
         viewerRole: profile?.role ?? null,
+        viewerId: user.id,
     })
 
     if (!detail) {
