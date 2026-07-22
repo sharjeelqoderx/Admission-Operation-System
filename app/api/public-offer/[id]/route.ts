@@ -159,16 +159,6 @@ export async function POST(
             data: { publicUrl },
         } = supabase.storage.from(bucketName).getPublicUrl(objectPath)
 
-        const { error: profileError } = await supabase
-            .from("profile")
-            .update({ signature: publicUrl })
-            .eq("id", studentProfileId)
-
-        if (profileError) {
-            console.error("Profile update error:", profileError)
-            return NextResponse.json({ error: "Failed to update profile" }, { status: 500 })
-        }
-
         const { error: offerError } = await supabase
             .from("offer_letter")
             .update({
