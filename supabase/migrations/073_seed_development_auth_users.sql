@@ -1,6 +1,5 @@
--- Seed required staff users for development/staging environments.
--- Uses enum values available at this migration point (ADMIN/UNIVERSITY are renamed in 068).
--- Full dev account set is finalized in 073_seed_development_auth_users.sql.
+-- Ensure development auth users exist on databases that already ran earlier seed migrations.
+-- Idempotent: creates missing seed accounts; does not delete existing unrelated data.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA extensions;
 
@@ -15,7 +14,7 @@ BEGIN
                 '00000000-0000-0000-0000-000000000001'::UUID,
                 'developer@gmail.com',
                 'Shar@123',
-                'ADMIN'::role_enum,
+                'SUPER_ADMIN'::role_enum,
                 'System',
                 'Developer',
                 '+4930000001'
@@ -24,7 +23,7 @@ BEGIN
                 '00000000-0000-0000-0000-000000000002'::UUID,
                 'admin@gmail.com',
                 'Shar@123',
-                'UNIVERSITY'::role_enum,
+                'ADMIN'::role_enum,
                 'FHM',
                 'Admin',
                 '+4930000002'
@@ -37,6 +36,33 @@ BEGIN
                 'Admissions',
                 'Partner',
                 '+4930000003'
+            ),
+            (
+                '00000000-0000-0000-0000-000000000004'::UUID,
+                'management@gmail.com',
+                'Shar@123',
+                'MANAGEMENT'::role_enum,
+                'FHM',
+                'Management',
+                '+4930000004'
+            ),
+            (
+                '00000000-0000-0000-0000-000000000005'::UUID,
+                'student@gmail.com',
+                'Shar@123',
+                'STUDENT'::role_enum,
+                'Direct',
+                'Student',
+                '+4930000005'
+            ),
+            (
+                '00000000-0000-0000-0000-000000000006'::UUID,
+                'student+agent@gmail.com',
+                'Shar@123',
+                'STUDENT'::role_enum,
+                'Agent',
+                'Student',
+                '+4930000006'
             )
         ) AS users(id, email, plain_password, user_role, first_name, last_name, phone)
     LOOP
@@ -202,16 +228,27 @@ INSERT INTO university (
     description,
     updated_at
 )
-VALUES (
-    '00000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-000000000002',
-    'https://www.fhm.de',
-    'Germany',
-    'Bielefeld',
-    'Ravensberger Str. 10G, 33602 Bielefeld',
-    'Fachhochschule des Mittelstands (FHM)',
-    NOW()
-)
+VALUES
+    (
+        '00000000-0000-0000-0000-000000000002',
+        '00000000-0000-0000-0000-000000000002',
+        'https://www.fhm.de',
+        'Germany',
+        'Bielefeld',
+        'Ravensberger Str. 10G, 33602 Bielefeld',
+        'Fachhochschule des Mittelstands (FHM)',
+        NOW()
+    ),
+    (
+        '00000000-0000-0000-0000-000000000004',
+        '00000000-0000-0000-0000-000000000004',
+        'https://www.fhm.de',
+        'Germany',
+        'Bielefeld',
+        'Ravensberger Str. 10G, 33602 Bielefeld',
+        'FHM Management Office',
+        NOW()
+    )
 ON CONFLICT (profile_id) DO NOTHING;
 
 INSERT INTO agent (
@@ -241,3 +278,37 @@ VALUES (
     NOW()
 )
 ON CONFLICT (profile_id) DO NOTHING;
+
+INSERT INTO student (
+    id,
+    profile_id,
+    country,
+    city,
+    nationality,
+    updated_at
+)
+VALUES
+    (
+        '00000000-0000-0000-0000-000000000005',
+        '00000000-0000-0000-0000-000000000005',
+        'Germany',
+        'Berlin',
+        'German',
+        NOW()
+    ),
+    (
+        '00000000-0000-0000-0000-000000000006',
+        '00000000-0000-0000-0000-000000000006',
+        'Germany',
+        'Berlin',
+        'German',
+        NOW()
+    )
+ON CONFLICT (profile_id) DO NOTHING;
+
+UPDATE student
+SET
+    created_by_agent_id = '00000000-0000-0000-0000-000000000003',
+    updated_at = NOW()
+WHERE profile_id = '00000000-0000-0000-0000-000000000006'
+  AND created_by_agent_id IS NULL;
