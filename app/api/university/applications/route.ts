@@ -1,10 +1,9 @@
 import { NextRequest } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
-import { fetchUniversityApplicationList } from "@/lib/application/university-server"
+import { fetchUniversityApplicationList, resolveUniversityScope } from "@/lib/application/university-server"
 import { universityApplicationTabSchema } from "@/types/schemas/university-application"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
-import { Role } from "@/types/enums/role"
 
 export async function GET(req: NextRequest) {
     try {
@@ -28,6 +27,11 @@ export async function GET(req: NextRequest) {
             return err("Forbidden", 403)
         }
 
+        const scope = await resolveUniversityScope(user.id, profile?.role ?? "")
+        if (!scope) {
+            return err("Forbidden", 403)
+        }
+
         const { searchParams } = new URL(req.url)
         const tabParam = searchParams.get("tab") ?? "all"
         const tabParse = universityApplicationTabSchema.safeParse(tabParam)
@@ -37,7 +41,7 @@ export async function GET(req: NextRequest) {
         const limit = Number(searchParams.get("limit") ?? "10")
 
         const data = await fetchUniversityApplicationList({
-            universityId: null,
+            universityId: scope.universityId,
             q,
             tab,
             page: Number.isFinite(page) ? page : 1,

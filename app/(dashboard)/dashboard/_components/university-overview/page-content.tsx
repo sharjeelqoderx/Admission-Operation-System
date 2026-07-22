@@ -1,11 +1,28 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { memo } from "react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
-import { OverviewCharts } from "./overview-charts"
 import { withUniversityOverviewLogic } from "./withUniversityOverviewLogic"
 import type { UniversityOverview } from "@/types/schemas/university-overview"
+
+const OverviewCharts = dynamic(
+    () => import("./overview-charts").then((mod) => mod.OverviewCharts),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                    <div
+                        key={index}
+                        className="h-[220px] animate-pulse rounded-xl bg-muted/40"
+                    />
+                ))}
+            </div>
+        ),
+    }
+)
 
 type UniversityOverviewViewProps = {
     overview: UniversityOverview

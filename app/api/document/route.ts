@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
+import { z } from "zod"
+import {
+    createSupabaseServerClient,
+    createSupabaseServiceClient,
+} from "@/lib/supabase/server"
 import { DocumentFormSchema } from "@/types/schemas/document"
 import { formatFullName } from "@/lib/utils/profile"
 import { assertCanUploadStudentDocument } from "@/lib/document/agent-access"
 import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
+import { saveDocumentUpload } from "@/lib/supabase/save-document-upload"
 import { Role } from "@/types/enums/role"
 
 export async function GET(req: NextRequest) {
@@ -274,9 +278,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        const supabase = await createSupabaseServerClient()
+        const supabaseAuth = await createSupabaseServerClient()
+        const supabaseService = createSupabaseServiceClient()
 
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
         if (authError || !user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
@@ -284,23 +289,27 @@ export async function POST(req: NextRequest) {
         const formData = await req.formData()
 
         const rawFiles = formData.getAll("files")
-        const files = rawFiles.filter(f => f instanceof File) as File[]
+        const files = rawFiles.filter((file): file is File => file instanceof File)
 
         const validated = DocumentFormSchema.parse({
             student_id: formData.get("student_id") ?? "",
             document_type_id: formData.get("document_type_id") ?? "",
-            files: files,
+            files,
             comment: formData.get("comment") ?? undefined,
         })
 
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabaseAuth
             .from("profile")
             .select("role")
             .eq("id", user.id)
-            .single()
+            .maybeSingle()
+
+        if (profileError) {
+            return NextResponse.json({ error: profileError.message }, { status: 500 })
+        }
 
         const canUpload = await assertCanUploadStudentDocument(
-            supabase,
+            supabaseAuth,
             user.id,
             profile?.role,
             validated.student_id
@@ -310,74 +319,29 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        await supabase
-            .from("document")
-            .delete()
-            .eq("profile_id", validated.student_id)
-            .eq("document_type_id", validated.document_type_id)
+        const document = await saveDocumentUpload({
+            supabase: supabaseService,
+            studentProfileId: validated.student_id,
+            uploadedByProfileId: user.id,
+            documentTypeId: validated.document_type_id,
+            files: validated.files,
+        })
 
-        // Create document record — profile_id = student, uploaded_by = agent
-        const { data: document, error: docError } = await supabase
-            .from("document")
-            .insert({
-                profile_id: validated.student_id,
-                uploaded_by_profile_id: user.id,
-                document_type_id: validated.document_type_id,
-            })
-            .select()
-            .single()
-
-        if (docError || !document) {
-            return NextResponse.json({ error: "Failed to create document", details: docError }, { status: 400 })
+        return NextResponse.json(
+            { data: document, message: "Document uploaded successfully" },
+            { status: 201 }
+        )
+    } catch (e: unknown) {
+        if (e instanceof z.ZodError) {
+            return NextResponse.json(
+                { error: "Validation failed", details: e.issues },
+                { status: 400 }
+            )
         }
 
-        // Upload files and create document_files records
-        const filesToInsert = []
-        for (let i = 0; i < validated.files.length; i++) {
-            const file = validated.files[i]
-            const type = i === 0 ? "FRONT" : "BACK"
+        console.error("POST /api/document error:", e)
 
-            const { publicUrl } = await uploadPublicImage({
-                supabase,
-                bucket: "student-admission",
-                userId: user.id,
-                file: file,
-            })
-
-            filesToInsert.push({
-                document_id: document.id,
-                file_url: publicUrl,
-                type: type,
-            })
-        }
-
-        const { error: filesError } = await supabase
-            .from("document_files")
-            .insert(filesToInsert)
-
-        if (filesError) {
-            return NextResponse.json({ error: "Failed to save document files", details: filesError }, { status: 400 })
-        }
-
-        // Create document_review record with initial null feedback and PENDING status
-        const { error: reviewError } = await supabase
-            .from("document_review")
-            .insert({
-                document_id: document.id,
-                reviewed_by_profile_id: null,
-                status: "PENDING",
-                feedback: null,
-            })
-
-        if (reviewError) {
-            return NextResponse.json({ error: "Failed to create document review", details: reviewError }, { status: 400 })
-        }
-
-        return NextResponse.json({ data: document, message: "Document uploaded successfully" }, { status: 201 })
-    } catch (e: any) {
-        if (e?.name === "ZodError") {
-            return NextResponse.json({ error: "Validation failed", details: e.errors }, { status: 400 })
-        }
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+        const message = e instanceof Error ? e.message : "Internal Server Error"
+        return NextResponse.json({ error: message }, { status: 500 })
     }
 }

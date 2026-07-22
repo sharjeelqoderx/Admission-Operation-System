@@ -28,17 +28,48 @@ export async function createSupabaseServerClient() {
     })
 }
 
+function resolveServiceRoleKey() {
+    return process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY
+}
+
+function isLegacyJwtKey(key: string) {
+    return key.startsWith("eyJ")
+}
+
 export function createSupabaseServiceClient() {
     const supabaseUrl = process.env.SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SECRET_KEY
+    const serviceRoleKey = resolveServiceRoleKey()
 
     if (!supabaseUrl || !serviceRoleKey) {
-        throw new Error("Missing SUPABASE_URL or SUPABASE_SECRET_KEY")
+        throw new Error(
+            "Missing SUPABASE_URL or service role key (SUPABASE_SECRET_KEY / SUPABASE_SERVICE_ROLE_KEY)"
+        )
     }
 
     return createClient(supabaseUrl, serviceRoleKey, {
         auth: { autoRefreshToken: false, persistSession: false },
     })
+}
+
+export function tryCreateSupabaseAuthAdminClient() {
+    try {
+        const supabaseUrl = process.env.SUPABASE_URL
+        const serviceRoleKey =
+            process.env.SUPABASE_SERVICE_ROLE_KEY ??
+            (process.env.SUPABASE_SECRET_KEY && isLegacyJwtKey(process.env.SUPABASE_SECRET_KEY)
+                ? process.env.SUPABASE_SECRET_KEY
+                : undefined)
+
+        if (!supabaseUrl || !serviceRoleKey) {
+            return null
+        }
+
+        return createClient(supabaseUrl, serviceRoleKey, {
+            auth: { autoRefreshToken: false, persistSession: false },
+        })
+    } catch {
+        return null
+    }
 }
 
 export function tryCreateSupabaseServiceClient() {

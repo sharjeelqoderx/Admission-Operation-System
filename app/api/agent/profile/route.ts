@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import type { SupabaseClient } from "@supabase/supabase-js"
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { agentProfileSchema } from "@/types/schemas/auth"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
@@ -22,7 +23,7 @@ const AGENT_FILE_SIDE: Record<keyof typeof AGENT_DOC_TYPE_BY_FILE, "FRONT" | "BA
 }
 
 async function resolveDocumentTypeId(
-    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    supabase: SupabaseClient,
     typeCode: string
 ) {
     const { data: byCode } = await supabase
@@ -47,7 +48,7 @@ async function uploadAndSaveDocument({
     file,
     fileKey,
 }: {
-    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+    supabase: SupabaseClient
     userId: string
     file: File
     fileKey: keyof typeof AGENT_DOC_TYPE_BY_FILE
@@ -98,9 +99,11 @@ async function uploadAndSaveDocument({
 
 export async function POST(req: NextRequest) {
     try {
-        const supabase = await createSupabaseServerClient()
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        const supabaseAuth = await createSupabaseServerClient()
+        const { data: { user }, error: userError } = await supabaseAuth.auth.getUser()
         if (userError || !user) return err("Unauthorized", 401)
+
+        const supabase = createSupabaseServiceClient()
 
         const form = await req.formData()
         const maybe = (k: string) => {
@@ -131,31 +134,48 @@ export async function POST(req: NextRequest) {
 
         const data = parsed.data
 
-        const { error: profileError } = await supabase
+        const { data: existingProfile, error: profileReadError } = await supabase
             .from("profile")
-            .update({
-                ...(data.first_name && { first_name: data.first_name }),
-                ...(data.last_name && { last_name: data.last_name }),
-                ...(data.title && { title: data.title }),
-                gender: data.gender,
-                role: Role.AGENT,
-            })
+            .select("role")
             .eq("id", user.id)
-        if (profileError) return err(profileError.message, 500)
+            .maybeSingle()
+        if (profileReadError) return err(profileReadError.message, 500)
+        if (!existingProfile) return err("Profile not found", 404)
+        if (existingProfile.role !== Role.AGENT) return err("Forbidden", 403)
+
+        const profileUpdate: Record<string, string> = {}
+        if (data.first_name) profileUpdate.first_name = data.first_name
+        if (data.last_name) profileUpdate.last_name = data.last_name
+        if (data.title) profileUpdate.title = data.title
+        if (data.gender) profileUpdate.gender = data.gender
+
+        if (Object.keys(profileUpdate).length > 0) {
+            const { error: profileError } = await supabase
+                .from("profile")
+                .update(profileUpdate)
+                .eq("id", user.id)
+            if (profileError) return err(profileError.message, 500)
+        }
+
+        const agentPayload: Record<string, string | number | null | undefined> = {
+            profile_id: user.id,
+        }
+        if (data.contact_person_first_name !== undefined) {
+            agentPayload.contact_person_first_name = data.contact_person_first_name
+        }
+        if (data.contact_person_last_name !== undefined) {
+            agentPayload.contact_person_last_name = data.contact_person_last_name
+        }
+        if (data.country !== undefined) agentPayload.country = data.country
+        if (data.state !== undefined) agentPayload.state = data.state
+        if (data.city !== undefined) agentPayload.city = data.city
+        if (data.website !== undefined) agentPayload.website = data.website
+        if (data.experience_years !== undefined) agentPayload.experience_years = data.experience_years
+        if (data.address !== undefined) agentPayload.address = data.address
 
         const { error: agentError } = await supabase
             .from("agent")
-            .upsert({
-                profile_id: user.id,
-                contact_person_first_name: data.contact_person_first_name,
-                contact_person_last_name: data.contact_person_last_name,
-                country: data.country,
-                state: data.state,
-                city: data.city,
-                website: data.website,
-                experience_years: data.experience_years,
-                address: data.address,
-            }, { onConflict: "profile_id" })
+            .upsert(agentPayload, { onConflict: "profile_id" })
         if (agentError) return err(agentError.message, 500)
 
         const registration = form.get("registration_certificate")
@@ -202,4 +222,3 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
     return POST(req)
 }
-

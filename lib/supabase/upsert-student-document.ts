@@ -1,8 +1,6 @@
 import "server-only"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
-
-const STUDENT_ADMISSION_BUCKET = "student-admission"
+import { saveDocumentUpload } from "@/lib/supabase/save-document-upload"
 
 type UpsertStudentDocumentArgs = {
     supabase: SupabaseClient
@@ -10,7 +8,7 @@ type UpsertStudentDocumentArgs = {
     uploadedByProfileId: string
     documentTypeId: string
     file: File
-    storageSubpath: string
+    storageSubpath?: string
 }
 
 export async function upsertStudentDocument({
@@ -19,44 +17,22 @@ export async function upsertStudentDocument({
     uploadedByProfileId,
     documentTypeId,
     file,
-    storageSubpath,
 }: UpsertStudentDocumentArgs) {
-    const { publicUrl } = await uploadPublicImage({
+    const document = await saveDocumentUpload({
         supabase,
-        bucket: STUDENT_ADMISSION_BUCKET,
-        userId: `${profileId}/${storageSubpath}`,
-        file,
+        studentProfileId: profileId,
+        uploadedByProfileId,
+        documentTypeId,
+        files: [file],
     })
 
-    await supabase
-        .from("document")
-        .delete()
-        .eq("profile_id", profileId)
-        .eq("document_type_id", documentTypeId)
+    const fileUrl =
+        (await supabase
+            .from("document_files")
+            .select("file_url")
+            .eq("document_id", document.id)
+            .eq("type", "FRONT")
+            .maybeSingle()).data?.file_url ?? null
 
-    const { data: docRecord } = await supabase
-        .from("document")
-        .insert({
-            profile_id: profileId,
-            uploaded_by_profile_id: uploadedByProfileId,
-            document_type_id: documentTypeId,
-        })
-        .select()
-        .single()
-
-    if (docRecord) {
-        await supabase.from("document_files").insert({
-            document_id: docRecord.id,
-            file_url: publicUrl,
-            type: "FRONT",
-        })
-        await supabase.from("document_review").insert({
-            document_id: docRecord.id,
-            reviewed_by_profile_id: null,
-            status: "PENDING",
-            feedback: null,
-        })
-    }
-
-    return { documentId: docRecord?.id, publicUrl }
+    return { documentId: document.id, publicUrl: fileUrl }
 }

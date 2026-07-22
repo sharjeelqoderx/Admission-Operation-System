@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createSupabaseServerClient, tryCreateSupabaseServiceClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
 import { signupSchema } from "@/types/schemas/auth"
+import { Role } from "@/types/enums/role"
 
 function getAuthErrorMessage(error: { message?: string } | null | undefined) {
     const message = error?.message?.trim()
@@ -59,6 +60,40 @@ export async function POST(req: NextRequest) {
             return err(getAuthErrorMessage(authError), 500)
         }
         if (!authData.user) return err("User creation failed", 500)
+
+        if (role === Role.AGENT) {
+            const serviceClient = tryCreateSupabaseServiceClient()
+            if (!serviceClient) {
+                console.error("[SIGNUP_ERROR] Missing SUPABASE_SECRET_KEY for agent role assignment")
+                return err("Agent signup is temporarily unavailable", 500)
+            }
+
+            const { error: metadataError } = await serviceClient.auth.admin.updateUserById(
+                authData.user.id,
+                { app_metadata: { role: Role.AGENT } }
+            )
+            if (metadataError) {
+                console.error("[SIGNUP_AGENT_METADATA_ERROR]", metadataError)
+                return err("Failed to finalize agent account", 500)
+            }
+
+            const { error: profileRoleError } = await serviceClient
+                .from("profile")
+                .update({ role: Role.AGENT })
+                .eq("id", authData.user.id)
+            if (profileRoleError) {
+                console.error("[SIGNUP_AGENT_PROFILE_ERROR]", profileRoleError)
+                return err("Failed to finalize agent account", 500)
+            }
+
+            const { error: agentRowError } = await serviceClient
+                .from("agent")
+                .upsert({ profile_id: authData.user.id }, { onConflict: "profile_id" })
+            if (agentRowError) {
+                console.error("[SIGNUP_AGENT_ROW_ERROR]", agentRowError)
+                return err("Failed to finalize agent account", 500)
+            }
+        }
 
         return ok({
             id: authData.user.id,
