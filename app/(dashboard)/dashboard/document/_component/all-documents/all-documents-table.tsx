@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Typography } from "@/components/shared/Typography"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -15,17 +15,6 @@ import {
     TableCell,
 } from "@/components/ui/table"
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip"
-import {
     AlertCircle,
     ChevronLeft,
     ChevronRight,
@@ -35,11 +24,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import type { AgentAllDocumentRow } from "@/types/schemas/document"
 import { DocumentRowActionsMenu } from "../document-row-actions-menu"
+import { DocumentRejectionIndicator } from "../document-rejection-indicator"
 
 type Props = {
     rows: AgentAllDocumentRow[]
     isLoading: boolean
+    isFetching?: boolean
     isError: boolean
+    statusFilter?: string
+    searchFilter?: string
     reviewingDocumentId: string | null
     onRetry: () => void
     onApprove: (documentId: string) => void
@@ -48,6 +41,12 @@ type Props = {
 
 const COLUMN_COUNT = 6
 const PAGE_SIZE = 10
+
+function sortDocumentsByLatestUpload(rows: AgentAllDocumentRow[]) {
+    return [...rows].sort(
+        (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+    )
+}
 
 function formatUploadDate(value: string) {
     return new Date(value).toLocaleDateString("en-US", {
@@ -66,45 +65,13 @@ function getStudentInitials(name: string) {
         .toUpperCase()
 }
 
-function RejectionIndicator({ feedback }: { feedback: string }) {
-    return (
-        <TooltipProvider>
-            <Popover>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <PopoverTrigger asChild>
-                            <button
-                                type="button"
-                                className="size-9 rounded-lg border border-amber-200 bg-amber-50 flex items-center justify-center shrink-0"
-                                aria-label="View rejection reason"
-                            >
-                                <AlertCircle className="size-4 text-amber-600" />
-                            </button>
-                        </PopoverTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[260px]">
-                        <Typography as="p" className="text-sm whitespace-pre-wrap">
-                            {feedback}
-                        </Typography>
-                    </TooltipContent>
-                </Tooltip>
-                <PopoverContent align="start" className="w-[300px]">
-                    <Typography as="p" font="text" className="font-semibold mb-2">
-                        Rejection Reason
-                    </Typography>
-                    <Typography as="p" className="text-sm text-gray-600 whitespace-pre-wrap">
-                        {feedback}
-                    </Typography>
-                </PopoverContent>
-            </Popover>
-        </TooltipProvider>
-    )
-}
-
 export const AllDocumentsTable = React.memo(function AllDocumentsTable({
     rows,
     isLoading,
+    isFetching = false,
     isError,
+    statusFilter = "all",
+    searchFilter = "",
     reviewingDocumentId,
     onRetry,
     onApprove,
@@ -112,17 +79,23 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
 }: Props) {
     const [currentPage, setCurrentPage] = useState(1)
 
-    const totalEntries = rows.length
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [statusFilter, searchFilter])
+
+    const sortedRows = useMemo(() => sortDocumentsByLatestUpload(rows), [rows])
+
+    const totalEntries = sortedRows.length
     const totalPages = Math.max(1, Math.ceil(totalEntries / PAGE_SIZE))
     const startIndex = (currentPage - 1) * PAGE_SIZE
     const endIndex = Math.min(startIndex + PAGE_SIZE, totalEntries)
 
     const currentRows = useMemo(
-        () => rows.slice(startIndex, endIndex),
-        [rows, startIndex, endIndex]
+        () => sortedRows.slice(startIndex, endIndex),
+        [sortedRows, startIndex, endIndex]
     )
 
-    if (isLoading) {
+    if (isLoading || isFetching) {
         return (
             <BluryCard
                 isCentered={false}
@@ -202,7 +175,7 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                     </TableHeader>
 
                     <TableBody className="bg-white/45">
-                        {rows.length === 0 ? (
+                        {sortedRows.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={COLUMN_COUNT} className="px-8 py-16 text-center">
                                     <Typography as="p" className="text-sm font-medium text-gray-500">
@@ -213,7 +186,9 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                         ) : (
                             currentRows.map((row, index) => {
                                 const isReviewing = reviewingDocumentId === row.document_id
-                                const isRejected = row.status === "REJECTED" && Boolean(row.feedback)
+                                const isRejected =
+                                    row.status === "REJECTED" &&
+                                    row.rejection_history.length > 0
                                 const canReview =
                                     row.file_count > 0 &&
                                     !["APPROVED", "VERIFIED"].includes(row.status)
@@ -232,13 +207,12 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                                         )}
                                     >
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            {isRejected && row.feedback ? (
-                                                <RejectionIndicator feedback={row.feedback} />
-                                            ) : (
-                                                <Typography as="span" className="text-sm text-gray-300">
-                                                    —
-                                                </Typography>
-                                            )}
+                                            {isRejected ? (
+                                                <DocumentRejectionIndicator
+                                                    history={row.rejection_history}
+                                                    placement="bottom-right"
+                                                />
+                                            ) : null}
                                         </TableCell>
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
@@ -253,9 +227,17 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                                                         {initials}
                                                     </AvatarFallback>
                                                 </Avatar>
-                                                <Typography as="span" className="text-sm font-bold text-gray-900">
-                                                    {row.student_name}
-                                                </Typography>
+                                                <div className="flex flex-col">
+                                                    <Typography as="span" className="text-sm font-bold text-gray-900">
+                                                        {row.student_name}
+                                                    </Typography>
+                                                    <Typography
+                                                        as="span"
+                                                        className="text-[11px] text-gray-500 font-light"
+                                                    >
+                                                        ID: {row.student_code ?? "N/A"}
+                                                    </Typography>
+                                                </div>
                                             </div>
                                         </TableCell>
 

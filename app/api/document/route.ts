@@ -200,6 +200,7 @@ export async function GET(req: NextRequest) {
                 "id, profile_id, document_type_id, document_type:document_type_id(name), created_at, document_review(status, created_at), document_files(file_url, type)"
             )
             .in("profile_id", profileIds)
+            .order("created_at", { ascending: false })
 
         if (docsError) {
             console.error("documents error:", docsError)
@@ -219,7 +220,14 @@ export async function GET(req: NextRequest) {
                     student.profile?.first_name,
                     student.profile?.last_name
                 ).toLowerCase()
-                if (search && !profileName.includes(search)) return null
+                const studentCode = (student.student_code ?? "").toLowerCase()
+                if (
+                    search &&
+                    !profileName.includes(search) &&
+                    !studentCode.includes(search)
+                ) {
+                    return null
+                }
 
                 const lastDoc = docs.length
                     ? [...docs].sort(
@@ -231,7 +239,7 @@ export async function GET(req: NextRequest) {
 
                 const lastStatus = lastDoc?.document_review?.[0]?.status ?? null
 
-                if (status && status !== "ALL" && lastStatus !== status) return null
+                if (status && status.toLowerCase() !== "all" && lastStatus !== status) return null
 
                 return {
                     student_id: student.profile_id,
@@ -248,6 +256,15 @@ export async function GET(req: NextRequest) {
                 }
             })
             .filter(Boolean)
+            .sort((a, b) => {
+                const aTime = a?.last_uploaded_at
+                    ? new Date(a.last_uploaded_at).getTime()
+                    : 0
+                const bTime = b?.last_uploaded_at
+                    ? new Date(b.last_uploaded_at).getTime()
+                    : 0
+                return bTime - aTime
+            })
 
         return NextResponse.json({ data: result, role: staffRole }, { status: 200 })
     } catch {

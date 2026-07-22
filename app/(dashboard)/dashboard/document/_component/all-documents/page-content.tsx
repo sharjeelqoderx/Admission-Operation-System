@@ -1,23 +1,35 @@
 "use client"
 
 import { memo } from "react"
+import { RotateCcw } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
+import { Button } from "@/components/ui/button"
 import { AllDocumentsTable } from "./all-documents-table"
 import { RejectDocumentDialog } from "./reject-document-dialog"
+import { DocumentStatusFilter } from "../document-status-filter"
+import { DocumentStudentSearch } from "../document-student-search"
 import { withAllDocumentsLogic } from "./withAllDocumentsLogic"
 import type { AllDocumentsPageLogicProps } from "./withAllDocumentsLogic"
 
 export const AllDocumentsPageContent = memo(function AllDocumentsPageContent({
     rows,
     isLoading,
+    isFetching,
     isError,
+    q,
+    searchInput,
+    status,
+    hasActiveFilters,
     reviewingDocumentId,
     rejectDialogOpen,
     rejectTarget,
     rejectErrorMessage,
     isRejectSubmitting,
     onRetry,
+    handleSearch,
+    updateParams,
+    handleResetFilters,
     onApprove,
     onRejectRequest,
     onRejectDialogOpenChange,
@@ -34,10 +46,34 @@ export const AllDocumentsPageContent = memo(function AllDocumentsPageContent({
                 </Typography>
             </BluryCard>
 
+            <div className="flex flex-nowrap items-center gap-3 overflow-x-auto p-1">
+                <DocumentStudentSearch value={searchInput} onChange={handleSearch} />
+
+                <DocumentStatusFilter
+                    value={status}
+                    onValueChange={(value) => updateParams({ status: value })}
+                />
+
+                {hasActiveFilters && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleResetFilters}
+                        className="shrink-0 h-10 gap-2 border-white/40 bg-white/20 hover:bg-white/40"
+                    >
+                        <RotateCcw className="size-4" />
+                        Reset
+                    </Button>
+                )}
+            </div>
+
             <AllDocumentsTable
                 rows={rows}
                 isLoading={isLoading}
+                isFetching={isFetching}
                 isError={isError}
+                statusFilter={status}
+                searchFilter={q}
                 reviewingDocumentId={reviewingDocumentId}
                 onRetry={onRetry}
                 onApprove={onApprove}

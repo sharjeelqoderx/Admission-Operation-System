@@ -15,10 +15,16 @@ export const DocumentFormSchema = z.object({
 
 export type DocumentInput = z.infer<typeof DocumentFormSchema>
 
+export type DocumentRejectionHistoryEntry = {
+    feedback: string
+    created_at: string
+}
+
 export type UploadedDocumentSummary = {
     document_id: string
     status: string
     feedback: string | null
+    rejection_history: DocumentRejectionHistoryEntry[]
     note: string | null
     files: Array<{ file_url: string; type: string | null }>
     created_at: string
@@ -111,6 +117,7 @@ export type AgentAllDocumentRow = {
     document_name: string
     status: string
     feedback: string | null
+    rejection_history: DocumentRejectionHistoryEntry[]
     student_id: string
     student_name: string
     avatar_url: string | null

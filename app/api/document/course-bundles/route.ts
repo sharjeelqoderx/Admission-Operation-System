@@ -13,13 +13,22 @@ import type {
 } from "@/types/schemas/document"
 import type { CourseDegree, CourseProgram } from "@/types/schemas/program"
 import { assertDocumentStaffCanAccessStudentProfile } from "@/lib/document/agent-access"
+import {
+    buildRejectionHistory,
+    getLatestRejectionFeedback,
+} from "@/lib/document/rejection-history"
 
 type DocumentRow = {
     id: string
     document_type_id: string | null
     created_at: string
     updated_at: string | null
-    document_review: Array<{ status: string; created_at: string; feedback: string | null }> | null
+    document_review: Array<{
+        status: string
+        created_at: string
+        updated_at?: string | null
+        feedback: string | null
+    }> | null
     document_files: Array<{ file_url: string; type: string | null }> | null
 }
 
@@ -32,10 +41,12 @@ function getLatestReview(reviews: DocumentRow["document_review"]) {
 
 function mapUploadedDocument(doc: DocumentRow): UploadedDocumentSummary {
     const review = getLatestReview(doc.document_review)
+    const rejectionHistory = buildRejectionHistory(doc.document_review)
     return {
         document_id: doc.id,
         status: review?.status ?? "PENDING",
-        feedback: review?.feedback ?? null,
+        feedback: getLatestRejectionFeedback(rejectionHistory) ?? review?.feedback ?? null,
+        rejection_history: rejectionHistory,
         note: null,
         files: (doc.document_files ?? []).map((file) => ({
             file_url: file.file_url,
@@ -85,6 +96,32 @@ function resolveDegreeLevels(
     }
 
     return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name))
+}
+
+function getUploadedDocumentSortTime(
+    uploaded: UploadedDocumentSummary | null | undefined
+): number {
+    if (!uploaded) return 0
+    const value = uploaded.updated_at ?? uploaded.created_at
+    return value ? new Date(value).getTime() : 0
+}
+
+function sortRequiredDocumentsByLatest(
+    documents: CourseRequiredDocument[]
+): CourseRequiredDocument[] {
+    return [...documents].sort(
+        (a, b) =>
+            getUploadedDocumentSortTime(b.uploaded) - getUploadedDocumentSortTime(a.uploaded)
+    )
+}
+
+function getBundleLatestUploadTime(bundle: DegreeDocumentBundle): number {
+    return Math.max(
+        0,
+        ...bundle.required_documents.map((document) =>
+            getUploadedDocumentSortTime(document.uploaded)
+        )
+    )
 }
 
 export async function GET(req: NextRequest) {
@@ -146,7 +183,7 @@ export async function GET(req: NextRequest) {
                 document_type_id,
                 created_at,
                 updated_at,
-                document_review(status, created_at, feedback),
+                document_review(status, created_at, updated_at, feedback),
                 document_files(file_url, type)
             `)
             .eq("profile_id", profileId)
@@ -282,13 +319,13 @@ export async function GET(req: NextRequest) {
                         levels,
                     },
                     courses: degreeCourses,
-                    required_documents,
+                    required_documents: sortRequiredDocumentsByLatest(required_documents),
                     total_required,
                     uploaded_count,
                     completion_percentage,
                 }
             })
-            .sort((a, b) => a.degree.name.localeCompare(b.degree.name))
+            .sort((a, b) => getBundleLatestUploadTime(b) - getBundleLatestUploadTime(a))
 
         return ok({
             profile_id: profileId,

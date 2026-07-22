@@ -1,10 +1,14 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server"
 import { resolveAgentStudentProfileIds } from "@/lib/api/agent-applications"
 import { formatFullName } from "@/lib/utils/profile"
 import type { AgentAllDocumentRow } from "@/types/schemas/document"
 import { isDocumentStaffRole } from "@/lib/document/agent-access"
 import { isUniversityRole } from "@/lib/auth/university-role"
+import {
+    buildRejectionHistory,
+    getLatestRejectionFeedback,
+} from "@/lib/document/rejection-history"
 import { Role } from "@/types/enums/role"
 
 type DocumentReviewRow = {
@@ -12,6 +16,7 @@ type DocumentReviewRow = {
     status: string
     feedback: string | null
     created_at: string
+    updated_at?: string | null
 }
 
 function getLatestReview(reviews: DocumentReviewRow[] | null | undefined) {
@@ -21,9 +26,12 @@ function getLatestReview(reviews: DocumentReviewRow[] | null | undefined) {
     )[0]
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
         const supabase = await createSupabaseServerClient()
+        const { searchParams } = new URL(req.url)
+        const statusFilter = searchParams.get("status")
+        const search = searchParams.get("search")?.toLowerCase()
         const {
             data: { user },
             error: authError,
@@ -87,7 +95,7 @@ export async function GET() {
                 profile_id,
                 created_at,
                 document_type:document_type_id(id, name),
-                document_review(id, status, feedback, created_at),
+                document_review(id, status, feedback, created_at, updated_at),
                 document_files(id),
                 uploaded_by:uploaded_by_profile_id(first_name, last_name),
                 profile:profile_id(first_name, last_name, avatar_url, email)
@@ -209,6 +217,7 @@ export async function GET() {
                 : doc.uploaded_by
             const studentProfile = Array.isArray(doc.profile) ? doc.profile[0] : doc.profile
             const review = getLatestReview(doc.document_review)
+            const rejectionHistory = buildRejectionHistory(doc.document_review)
             const student = studentMeta.get(doc.profile_id)
 
             return {
@@ -216,7 +225,8 @@ export async function GET() {
                 review_id: review?.id ?? null,
                 document_name: documentType?.name ?? "Document",
                 status: review?.status ?? "PENDING",
-                feedback: review?.feedback ?? null,
+                feedback: getLatestRejectionFeedback(rejectionHistory) ?? review?.feedback ?? null,
+                rejection_history: rejectionHistory,
                 student_id: doc.profile_id,
                 student_name: formatFullName(
                     studentProfile?.first_name,
@@ -235,7 +245,25 @@ export async function GET() {
             }
         })
 
-        return NextResponse.json({ data: rows }, { status: 200 })
+        rows.sort(
+            (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+        )
+
+        let filteredRows = rows
+
+        if (statusFilter && statusFilter.toLowerCase() !== "all") {
+            filteredRows = filteredRows.filter((row) => row.status === statusFilter)
+        }
+
+        if (search) {
+            filteredRows = filteredRows.filter((row) => {
+                const studentName = row.student_name.toLowerCase()
+                const studentCode = (row.student_code ?? "").toLowerCase()
+                return studentName.includes(search) || studentCode.includes(search)
+            })
+        }
+
+        return NextResponse.json({ data: filteredRows }, { status: 200 })
     } catch (error) {
         console.error("GET /api/document/all error:", error)
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })

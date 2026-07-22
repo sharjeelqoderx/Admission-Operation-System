@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
@@ -33,13 +33,24 @@ export type DocumentStudentRow = {
 type Props = {
     rows: DocumentStudentRow[]
     isLoading: boolean
+    isFetching?: boolean
     isError: boolean
+    statusFilter?: string
+    searchFilter?: string
     onRetry: () => void
     getViewHref?: (studentId: string) => string
 }
 
 const COLUMN_COUNT = 5
 const PAGE_SIZE = 10
+
+function sortStudentsByLatestUpload(rows: DocumentStudentRow[]) {
+    return [...rows].sort((a, b) => {
+        const aTime = a.last_uploaded_at ? new Date(a.last_uploaded_at).getTime() : 0
+        const bTime = b.last_uploaded_at ? new Date(b.last_uploaded_at).getTime() : 0
+        return bTime - aTime
+    })
+}
 
 function formatUploadDate(value: string | null) {
     if (!value) return "—"
@@ -53,23 +64,32 @@ function formatUploadDate(value: string | null) {
 export const DocumentTable = React.memo(function DocumentTable({
     rows,
     isLoading,
+    isFetching = false,
     isError,
+    statusFilter = "all",
+    searchFilter = "",
     onRetry,
     getViewHref,
 }: Props) {
     const [currentPage, setCurrentPage] = useState(1)
 
-    const totalEntries = rows.length
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [statusFilter, searchFilter])
+
+    const sortedRows = useMemo(() => sortStudentsByLatestUpload(rows), [rows])
+
+    const totalEntries = sortedRows.length
     const totalPages = Math.max(1, Math.ceil(totalEntries / PAGE_SIZE))
     const startIndex = (currentPage - 1) * PAGE_SIZE
     const endIndex = Math.min(startIndex + PAGE_SIZE, totalEntries)
 
     const currentRows = useMemo(
-        () => rows.slice(startIndex, endIndex),
-        [rows, startIndex, endIndex]
+        () => sortedRows.slice(startIndex, endIndex),
+        [sortedRows, startIndex, endIndex]
     )
 
-    if (isLoading) {
+    if (isLoading || isFetching) {
         return (
             <BluryCard
                 isCentered={false}
@@ -146,7 +166,7 @@ export const DocumentTable = React.memo(function DocumentTable({
                     </TableHeader>
 
                     <TableBody className="bg-white/45">
-                        {rows.length === 0 ? (
+                        {sortedRows.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={COLUMN_COUNT} className="px-8 py-16 text-center">
                                     <div className="flex flex-col items-center gap-2">
