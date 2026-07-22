@@ -212,6 +212,48 @@ export async function POST(
             );
         }
 
+        const { data: profile } = await supabase
+            .from("profile")
+            .select("role")
+            .eq("id", user.id)
+            .maybeSingle()
+
+        const readClient =
+            profile?.role === Role.STUDENT
+                ? supabase
+                : createSupabaseServiceClient()
+
+        const { data: existingOffer, error: fetchError } = await readClient
+            .from("offer_letter")
+            .select(`
+                id,
+                application!inner (
+                    profile_id
+                )
+            `)
+            .eq("id", id)
+            .single()
+
+        if (fetchError || !existingOffer) {
+            return NextResponse.json(
+                { error: "Offer not found" },
+                { status: 404 }
+            )
+        }
+
+        const applicationRecord = existingOffer.application as {
+            profile_id?: string | null
+        } | null
+
+        if (
+            profile?.role === Role.STUDENT &&
+            applicationRecord?.profile_id !== user.id
+        ) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
+
+        const studentProfileId = applicationRecord?.profile_id ?? user.id
+
         // Convert base64 to buffer
         const base64Data =
             signatureDataUrl.replace(
@@ -228,10 +270,12 @@ export async function POST(
         const bucketName =
             "student-admission";
 
-        const objectPath = `signatures/${user.id}/${id}_signature.png`;
+        const objectPath = `signatures/${studentProfileId}/${id}_signature.png`;
+
+        const storageClient = createSupabaseServiceClient()
 
         const { error: uploadError } =
-            await supabase.storage
+            await storageClient.storage
                 .from(bucketName)
                 .upload(objectPath, buffer, {
                     contentType: "image/png",
@@ -258,63 +302,15 @@ export async function POST(
         // Get public URL
         const {
             data: { publicUrl },
-        } = supabase.storage
+        } = storageClient.storage
             .from(bucketName)
             .getPublicUrl(objectPath);
 
-        // Fetch offer
-        const {
-            data: offer,
-            error: fetchError,
-        } = await supabase
-            .from("offer_letter")
-            .select(`
-                id,
-                application!inner (
-                    profile_id
-                )
-            `)
-            .eq("id", id)
-            .single();
+        const writeClient = createSupabaseServiceClient()
 
-        if (fetchError || !offer) {
-            return NextResponse.json(
-                { error: "Offer not found" },
-                { status: 404 }
-            );
-        }
-
-        const studentProfileId =
-            (offer.application as any)
-                ?.profile_id;
-
-        // Update profile signature
-        const { error: profileError } =
-            await supabase
-                .from("profile")
-                .update({
-                    signature: publicUrl,
-                })
-                .eq("id", studentProfileId);
-
-        if (profileError) {
-            console.error(
-                "Profile update error:",
-                profileError
-            );
-
-            return NextResponse.json(
-                {
-                    error:
-                        "Failed to update profile",
-                },
-                { status: 500 }
-            );
-        }
-
-        // Update offer
+        // Signature is stored on offer_letter.file_url (profile has no signature column).
         const { error: offerError } =
-            await supabase
+            await writeClient
                 .from("offer_letter")
                 .update({
                     status: "ACCEPTED",
