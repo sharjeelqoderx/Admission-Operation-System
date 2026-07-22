@@ -148,6 +148,28 @@ export default function OfferDetailsPage() {
     const router = useRouter()
     const offerId = params?.["offer-id"] as string
     const { me } = useAuth()
+    const isSessionReady = !me.isLoading
+
+    const fetchOffer = useCallback(async () => {
+        const res = await fetch(`/api/offer/${offerId}`, {
+            credentials: "include",
+            cache: "no-store",
+        })
+        if (!res.ok) {
+            const json = await res.json().catch(() => ({}))
+            throw new Error(json.error || "Failed to fetch offer")
+        }
+        const json = await res.json()
+        return json.data
+    }, [offerId])
+
+    const { data: offer, isLoading, isError, refetch } = useQuery({
+        queryKey: ["offer", offerId],
+        queryFn: fetchOffer,
+        enabled: Boolean(offerId) && isSessionReady,
+        retry: false,
+    })
+
     const [copied, setCopied] = React.useState(false)
 
     const [isSignModalOpen, setIsSignModalOpen] = React.useState(false)
@@ -158,19 +180,6 @@ export default function OfferDetailsPage() {
     const [isDownloadingConditionalLetter, setIsDownloadingConditionalLetter] =
         React.useState(false)
     const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
-
-    const fetchOffer = useCallback(async () => {
-        const res = await fetch(`/api/offer/${offerId}`)
-        if (!res.ok) throw new Error("Failed to fetch offer")
-        const json = await res.json()
-        return json.data
-    }, [offerId])
-
-    const { data: offer, isLoading, isError, refetch } = useQuery({
-        queryKey: ["offer", offerId],
-        queryFn: fetchOffer,
-        enabled: Boolean(offerId),
-    })
 
     const handleCopySignLink = useCallback(async () => {
         if (!offer?.application?.student?.id) {
@@ -661,7 +670,7 @@ export default function OfferDetailsPage() {
         return <PageLoader />
     }
 
-    if (!offerId || isLoading) {
+    if (!offerId || !isSessionReady || isLoading) {
         return <PageLoader />
     }
 

@@ -140,16 +140,23 @@ function SignPageContent() {
     const canvasRef = React.useRef<HTMLCanvasElement | null>(null)
 
     const fetchOffer = useCallback(async () => {
-        const res = await fetch(`/api/public-offer/${offerId}`)
+        if (!offerId || !userId) {
+            throw new Error("Invalid sign link")
+        }
+
+        const res = await fetch(
+            `/api/public-offer/${offerId}?user_id=${encodeURIComponent(userId)}`,
+            { cache: "no-store" }
+        )
         if (!res.ok) throw new Error("Failed to fetch offer")
         const json = await res.json()
         return json.data
-    }, [offerId])
+    }, [offerId, userId])
 
     const { data: offer, isLoading, isError, refetch } = useQuery({
-        queryKey: ["offer", offerId],
+        queryKey: ["public-offer", offerId, userId],
         queryFn: fetchOffer,
-        enabled: Boolean(offerId),
+        enabled: Boolean(offerId && userId),
     })
 
     useEffect(() => {
@@ -262,9 +269,9 @@ function SignPageContent() {
             const response = await fetch(`/api/public-offer/${offerId}`, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ signatureDataUrl })
+                body: JSON.stringify({ signatureDataUrl, user_id: userId }),
             })
 
             if (!response.ok) {
@@ -281,7 +288,7 @@ function SignPageContent() {
         } finally {
             setIsSubmitting(false)
         }
-    }, [hasSigned, offerId, refetch])
+    }, [hasSigned, offerId, refetch, userId])
 
     const app = offer?.application
     const student = app?.student
@@ -678,7 +685,18 @@ function SignPageContent() {
         return <PageLoader />
     }
 
-    if (!offerId || isLoading) {
+    if (!offerId || !userId) {
+        return (
+            <div className="flex flex-col items-center justify-center py-40 gap-4">
+                <Typography className="font-bold text-gray-700">Invalid sign link</Typography>
+                <Typography className="text-sm text-gray-500">
+                    This link is missing required information. Please request a new link from your agent.
+                </Typography>
+            </div>
+        )
+    }
+
+    if (isLoading) {
         return <PageLoader />
     }
 

@@ -1,143 +1,100 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { withProfileDisplayName } from "@/lib/utils/profile";
+import { NextRequest, NextResponse } from "next/server"
+import { createSupabaseServiceClient } from "@/lib/supabase/server"
+import { withProfileDisplayName } from "@/lib/utils/profile"
+import {
+    isMissingOfferTemplateColumnError,
+    OFFER_DETAIL_SELECT_LEGACY,
+    OFFER_DETAIL_SELECT_WITH_TEMPLATE,
+} from "@/lib/offer/select-fields"
+
+type ProfileRelation = {
+    first_name?: string | null
+    last_name?: string | null
+} | null
+
+function pickProfile(
+    value: ProfileRelation | ProfileRelation[] | null | undefined
+): ProfileRelation {
+    return Array.isArray(value) ? value[0] ?? null : value ?? null
+}
+
+function canAccessPublicOffer(
+    application: { profile_id?: string | null } | null | undefined,
+    userId: string | null | undefined
+) {
+    if (!userId || !application?.profile_id) {
+        return false
+    }
+
+    return application.profile_id === userId
+}
+
+async function fetchOfferById(id: string) {
+    const supabase = createSupabaseServiceClient()
+
+    const primaryResult = await supabase
+        .from("offer_letter")
+        .select(OFFER_DETAIL_SELECT_WITH_TEMPLATE)
+        .eq("id", id)
+        .single()
+
+    const offerResult =
+        primaryResult.error && isMissingOfferTemplateColumnError(primaryResult.error.message)
+            ? await supabase
+                  .from("offer_letter")
+                  .select(OFFER_DETAIL_SELECT_LEGACY)
+                  .eq("id", id)
+                  .single()
+            : primaryResult
+
+    return offerResult
+}
 
 export async function GET(
     req: NextRequest,
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = await createSupabaseServerClient();
-
-        const { id } = await context.params;
-        console.log("PUBLIC OFFER GET: id is", id);
-
-        const { data: offer, error } = await supabase
-            .from("offer_letter")
-            .select(`
-                id,
-                status,
-                created_at,
-                accepted_at,
-                file_url,
-                feedback,
-                issued_by_profile_id,
-                application!inner (
-                    id,
-                    application_no,
-                    status,
-                    created_at,
-                    profile_id,
-                    submitted_by_profile_id,
-                    university_id,
-                    course_id,
-                    student:profile_id (
-                        id,
-                        first_name,
-                        last_name,
-                        avatar_url,
-                        email,
-                        phone,
-                        gender,
-                        date_of_birth,
-                        signature
-                    ),
-                    course:course_id (
-                        id,
-                        name,
-                        deadline_date,
-                        degree:degree_id (
-                            id,
-                            name,
-                            fees,
-                            intake_date,
-                            study_mode,
-                            duration,
-                            location,
-                            language_of_study
-                        )
-                    ),
-                    university:university_id (
-                        id,
-                        first_name,
-                        last_name
-                    ),
-                    agent:submitted_by_profile_id (
-                        id,
-                        first_name,
-                        last_name,
-                        email
-                    ),
-                    application_review (
-                        id,
-                        status,
-                        feedback,
-                        created_at,
-                        reviewed_by_profile_id
-                    )
-                )
-            `)
-            .eq("id", id)
-            .single();
-
-        console.log("PUBLIC OFFER GET: offer data is", offer);
-        console.log("PUBLIC OFFER GET: error is", error);
-
-        if (error || !offer) {
-            console.error(
-                "GET /api/public-offer/[id] error:",
-                error
-            );
-
-            return NextResponse.json(
-                {
-                    error: "Offer not found",
-                },
-                { status: 404 }
-            );
+        const userId = req.nextUrl.searchParams.get("user_id")
+        if (!userId) {
+            return NextResponse.json({ error: "Invalid sign link" }, { status: 400 })
         }
 
-        type ProfileRelation = {
-            first_name?: string | null
-            last_name?: string | null
-        } | null
+        const { id } = await context.params
+        const { data: offer, error } = await fetchOfferById(id)
 
-        const pickProfile = (
-            value: ProfileRelation | ProfileRelation[] | null | undefined
-        ): ProfileRelation => (Array.isArray(value) ? value[0] ?? null : value ?? null)
+        if (error || !offer) {
+            console.error("GET /api/public-offer/[id] error:", error)
+            return NextResponse.json({ error: "Offer not found" }, { status: 404 })
+        }
 
-        const application = offer.application as unknown as (Record<string, unknown> & {
+        const applicationRecord = offer.application as unknown as (Record<string, unknown> & {
+            profile_id?: string | null
             student?: ProfileRelation | ProfileRelation[] | null
             university?: ProfileRelation | ProfileRelation[] | null
             agent?: ProfileRelation | ProfileRelation[] | null
         }) | null
 
+        if (!canAccessPublicOffer(applicationRecord, userId)) {
+            return NextResponse.json({ error: "Invalid sign link" }, { status: 403 })
+        }
+
         const mappedOffer = {
             ...offer,
-            application: application
+            application: applicationRecord
                 ? {
-                      ...application,
-                      student: withProfileDisplayName(pickProfile(application.student)),
-                      university: withProfileDisplayName(pickProfile(application.university)),
-                      agent: withProfileDisplayName(pickProfile(application.agent)),
+                      ...applicationRecord,
+                      student: withProfileDisplayName(pickProfile(applicationRecord.student)),
+                      university: withProfileDisplayName(pickProfile(applicationRecord.university)),
+                      agent: withProfileDisplayName(pickProfile(applicationRecord.agent)),
                   }
-                : application,
-        };
+                : applicationRecord,
+        }
 
-        return NextResponse.json(
-            { data: mappedOffer },
-            { status: 200 }
-        );
+        return NextResponse.json({ data: mappedOffer }, { status: 200 })
     } catch (e) {
-        console.error(
-            "GET /api/public-offer/[id] error:",
-            e
-        );
-
-        return NextResponse.json(
-            { error: "Internal Server Error" },
-            { status: 500 }
-        );
+        console.error("GET /api/public-offer/[id] error:", e)
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
 }
 
@@ -146,122 +103,98 @@ export async function POST(
     context: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = await createSupabaseServerClient();
+        const { id } = await context.params
+        const { signatureDataUrl, user_id: userId } = await req.json()
 
-        const { id } = await context.params;
-
-        const { signatureDataUrl } =
-            await req.json();
+        if (!userId) {
+            return NextResponse.json({ error: "Invalid sign link" }, { status: 400 })
+        }
 
         if (!signatureDataUrl) {
-            return NextResponse.json(
-                {
-                    error:
-                        "Signature data is required",
-                },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "Signature data is required" }, { status: 400 })
         }
 
-        // Fetch offer
-        const {
-            data: offer,
-            error: fetchError,
-        } = await supabase
-            .from("offer_letter")
-            .select(`
-                id,
-                application!inner (
-                    profile_id
-                )
-            `)
-            .eq("id", id)
-            .single();
+        const { data: offer, error: fetchError } = await fetchOfferById(id)
 
         if (fetchError || !offer) {
-            return NextResponse.json(
-                { error: "Offer not found" },
-                { status: 404 }
-            );
+            return NextResponse.json({ error: "Offer not found" }, { status: 404 })
         }
 
-        const studentProfileId =
-            (offer.application as any)
-                ?.profile_id;
+        const applicationRecord = offer.application as unknown as {
+            profile_id?: string | null
+        } | null
 
-        // Update profile signature
-        const { error: profileError } =
-            await supabase
-                .from("profile")
-                .update({
-                    signature: signatureDataUrl,
-                })
-                .eq("id", studentProfileId);
+        if (!canAccessPublicOffer(applicationRecord, userId)) {
+            return NextResponse.json({ error: "Invalid sign link" }, { status: 403 })
+        }
+
+        const studentProfileId = applicationRecord?.profile_id
+        if (!studentProfileId) {
+            return NextResponse.json({ error: "Student profile not found" }, { status: 404 })
+        }
+
+        const base64Data = signatureDataUrl.replace(/^data:image\/\w+;base64,/, "")
+        const buffer = Buffer.from(base64Data, "base64")
+        const bucketName = "student-admission"
+        const objectPath = `signatures/${studentProfileId}/${id}_signature.png`
+
+        const supabase = createSupabaseServiceClient()
+
+        const { error: uploadError } = await supabase.storage
+            .from(bucketName)
+            .upload(objectPath, buffer, {
+                contentType: "image/png",
+                upsert: true,
+            })
+
+        if (uploadError) {
+            console.error("Signature upload error:", uploadError)
+            return NextResponse.json(
+                { error: "Failed to upload signature", details: uploadError.message },
+                { status: 500 }
+            )
+        }
+
+        const {
+            data: { publicUrl },
+        } = supabase.storage.from(bucketName).getPublicUrl(objectPath)
+
+        const { error: profileError } = await supabase
+            .from("profile")
+            .update({ signature: publicUrl })
+            .eq("id", studentProfileId)
 
         if (profileError) {
-            console.error(
-                "Profile update error:",
-                profileError
-            );
-
-            return NextResponse.json(
-                {
-                    error:
-                        "Failed to update profile",
-                },
-                { status: 500 }
-            );
+            console.error("Profile update error:", profileError)
+            return NextResponse.json({ error: "Failed to update profile" }, { status: 500 })
         }
 
-        // Update offer
-        const { error: offerError } =
-            await supabase
-                .from("offer_letter")
-                .update({
-                    status: "ACCEPTED",
-                    accepted_at:
-                        new Date().toISOString(),
-                    file_url: signatureDataUrl,
-                })
-                .eq("id", id);
+        const { error: offerError } = await supabase
+            .from("offer_letter")
+            .update({
+                status: "ACCEPTED",
+                accepted_at: new Date().toISOString(),
+                file_url: publicUrl,
+            })
+            .eq("id", id)
 
         if (offerError) {
-            console.error(
-                "Offer update error:",
-                offerError
-            );
-
+            console.error("Offer update error:", offerError)
             return NextResponse.json(
-                {
-                    error:
-                        "Failed to update offer letter",
-                    details:
-                        offerError.message,
-                },
+                { error: "Failed to update offer letter", details: offerError.message },
                 { status: 500 }
-            );
+            )
         }
 
+        return NextResponse.json({ success: true, url: publicUrl }, { status: 200 })
+    } catch (e: unknown) {
+        console.error("POST /api/public-offer/[id] error:", e)
         return NextResponse.json(
             {
-                success: true,
-                url: signatureDataUrl,
-            },
-            { status: 200 }
-        );
-    } catch (e: any) {
-        console.error(
-            "POST /api/public-offer/[id] error:",
-            e
-        );
-
-        return NextResponse.json(
-            {
-                error:
-                    "Internal Server Error",
-                details: e?.message,
+                error: "Internal Server Error",
+                details: e instanceof Error ? e.message : undefined,
             },
             { status: 500 }
-        );
+        )
     }
 }
