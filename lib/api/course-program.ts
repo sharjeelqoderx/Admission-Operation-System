@@ -106,6 +106,7 @@ export async function fetchCourseProgramById(
         .from("course")
         .select(COURSE_SELECT)
         .eq("id", courseId)
+        .eq("is_deleted", false)
         .maybeSingle()
 
     if (error) {

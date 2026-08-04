@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useParams } from "next/navigation"
 import { Typography } from "@/components/shared/Typography"
+import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
 import { Plus, AlertCircle } from "lucide-react"
 import Link from "next/link"
@@ -21,7 +22,15 @@ import {
 async function fetchCourseDetail(courseId: string): Promise<CourseProgram> {
     const res = await fetch(`/api/program/${courseId}`)
     const json = await res.json()
-    if (!res.ok) throw new Error(json.error ?? "Failed to fetch program")
+    if (!res.ok) {
+        const details =
+            typeof json.details === "string"
+                ? json.details
+                : json.details?.fieldErrors?.id?.[0]
+        throw new Error(
+            [json.error ?? "Failed to fetch program", details].filter(Boolean).join(": ")
+        )
+    }
     return json.data as CourseProgram
 }
 
@@ -108,7 +117,7 @@ export function AgentStudentProgramDetailPage() {
     const params = useParams()
     const courseId = params?.["program-id"] as string
 
-    const { data: course, isLoading, isError } = useQuery({
+    const { data: course, isLoading, isError, error } = useQuery({
         queryKey: ["program", courseId],
         queryFn: () => fetchCourseDetail(courseId),
         enabled: Boolean(courseId),
@@ -137,9 +146,16 @@ export function AgentStudentProgramDetailPage() {
 
     if (isError || !course) {
         return (
-            <div className="flex flex-col items-center justify-center py-40 gap-4">
+            <div className="flex flex-col items-center justify-center py-40 gap-4 px-4">
                 <AlertCircle className="size-12 text-red-400" />
-                <Typography className="font-bold text-gray-700">Failed to load program details</Typography>
+                <Typography className="font-bold text-gray-700">
+                    Failed to load program details
+                </Typography>
+                {error instanceof Error ? (
+                    <div className="w-full max-w-lg">
+                        <ErrorView message={error.message} />
+                    </div>
+                ) : null}
                 <Link href="/dashboard/program">
                     <Button variant="outline">Back to Catalog</Button>
                 </Link>

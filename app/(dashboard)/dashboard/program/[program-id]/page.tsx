@@ -4,7 +4,6 @@ import { fetchUniversityProgramDetailForPage } from "@/lib/program/university-se
 import { AgentStudentProgramDetailPage } from "../_components/agent-student-program-detail-page"
 import { UniversityProgramDetailPageContent } from "../_components/university-program/detail-page-content"
 import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
-import { Role } from "@/types/enums/role"
 
 type ProgramDetailPageProps = {
     params: Promise<{ "program-id": string }>

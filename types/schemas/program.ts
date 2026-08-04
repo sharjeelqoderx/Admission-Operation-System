@@ -1,9 +1,10 @@
 import { z } from "zod"
 import type { Tables } from "@/types/supabase"
+import { PostgresUuidSchema } from "@/types/schemas/uuid"
 
 export const ProgramListQuerySchema = z.object({
     search: z.string().trim().optional(),
-    level_id: z.string().uuid().optional(),
+    level_id: PostgresUuidSchema.optional(),
     intake_date: z.string().optional(),
     limit: z.coerce.number().int().min(1).max(100).default(10),
     offset: z.coerce.number().int().min(0).default(0),
@@ -12,7 +13,7 @@ export const ProgramListQuerySchema = z.object({
 export type ProgramListQuery = z.infer<typeof ProgramListQuerySchema>
 
 export const ProgramDetailParamsSchema = z.object({
-    id: z.string().uuid(),
+    id: PostgresUuidSchema,
 })
 
 export type ProgramDetailParams = z.infer<typeof ProgramDetailParamsSchema>
