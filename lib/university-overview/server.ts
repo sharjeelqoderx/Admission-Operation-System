@@ -10,7 +10,12 @@ import type {
     UniversityOverview,
 } from "@/types/schemas/university-overview"
 import type { StudentPipelineStatus } from "@/types/schemas/university-student"
-import { isUniversityStaffRole, resolveUniversityScopeId } from "@/lib/auth/university-role"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
+import {
+    applyUniversityIdFilter,
+    resolveUniversityApplicationScope,
+    type UniversityApplicationScope,
+} from "@/lib/auth/university-scope"
 import { Role } from "@/types/enums/role"
 
 type ApplicationRow = {
@@ -192,7 +197,7 @@ async function loadCoursesById(supabase: Awaited<ReturnType<typeof createSupabas
 }
 
 export async function fetchUniversityOverview(
-    universityId?: string | null
+    universityScope?: UniversityApplicationScope
 ): Promise<UniversityOverview> {
     const supabase = await createSupabaseServerClient()
 
@@ -201,8 +206,12 @@ export async function fetchUniversityOverview(
         .select("id, profile_id, application_no, status, created_at, course_id")
         .order("created_at", { ascending: false })
 
-    if (universityId) {
-        applicationsQuery = applicationsQuery.eq("university_id", universityId)
+    if (universityScope) {
+        applicationsQuery = applyUniversityIdFilter(
+            applicationsQuery,
+            "university_id",
+            universityScope
+        )
     }
 
     const { data: applications, error: applicationsError } = await applicationsQuery
@@ -226,10 +235,22 @@ export async function fetchUniversityOverview(
         .limit(RECENT_LIMIT)
     let programsStatusQuery = supabase.from("program").select("status")
 
-    if (universityId) {
-        programsCountQuery = programsCountQuery.eq("profile_id", universityId)
-        programsRecentQuery = programsRecentQuery.eq("profile_id", universityId)
-        programsStatusQuery = programsStatusQuery.eq("profile_id", universityId)
+    if (universityScope) {
+        programsCountQuery = applyUniversityIdFilter(
+            programsCountQuery,
+            "profile_id",
+            universityScope
+        )
+        programsRecentQuery = applyUniversityIdFilter(
+            programsRecentQuery,
+            "profile_id",
+            universityScope
+        )
+        programsStatusQuery = applyUniversityIdFilter(
+            programsStatusQuery,
+            "profile_id",
+            universityScope
+        )
     }
 
     const [
@@ -516,5 +537,7 @@ export async function fetchUniversityOverviewForPage(): Promise<UniversityOvervi
         return null
     }
 
-    return fetchUniversityOverview(resolveUniversityScopeId(profile?.role, user.id))
+    return fetchUniversityOverview(
+        await resolveUniversityApplicationScope(supabase, user.id, profile?.role ?? "")
+    )
 }

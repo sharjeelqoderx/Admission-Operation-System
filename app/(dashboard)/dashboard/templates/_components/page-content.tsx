@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ArrowLeft, Plus, Printer } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
+import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -33,6 +34,7 @@ type DeleteTemplateDialogProps = {
     template: DocumentTemplateListItem | null
     open: boolean
     isDeleting: boolean
+    deleteError: string | null
     onOpenChange: (open: boolean) => void
     onConfirm: () => void
 }
@@ -41,6 +43,7 @@ function DeleteTemplateDialog({
     template,
     open,
     isDeleting,
+    deleteError,
     onOpenChange,
     onConfirm,
 }: DeleteTemplateDialogProps) {
@@ -55,6 +58,7 @@ function DeleteTemplateDialog({
                             : "This action cannot be undone."}
                     </DialogDescription>
                 </DialogHeader>
+                {deleteError ? <ErrorView message={deleteError} /> : null}
                 <DialogFooter>
                     <Button
                         type="button"
@@ -91,6 +95,7 @@ function DocumentTemplatePageView({
     isSaving,
     isDeleting,
     deletingId,
+    deleteError,
     formError,
     setTitle,
     setBodyHtml,
@@ -99,20 +104,26 @@ function DocumentTemplatePageView({
     backToList,
     saveTemplate,
     deleteTemplateById,
+    clearDeleteError,
     refetchTemplates,
 }: DocumentTemplatePageLogicProps) {
     const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplateListItem | null>(
         null
     )
 
-    const handleOpenDeleteDialog = useCallback((template: DocumentTemplateListItem) => {
-        setTemplateToDelete(template)
-    }, [])
+    const handleOpenDeleteDialog = useCallback(
+        (template: DocumentTemplateListItem) => {
+            clearDeleteError()
+            setTemplateToDelete(template)
+        },
+        [clearDeleteError]
+    )
 
     const handleCloseDeleteDialog = useCallback(() => {
         if (isDeleting) return
+        clearDeleteError()
         setTemplateToDelete(null)
-    }, [isDeleting])
+    }, [clearDeleteError, isDeleting])
 
     const handleConfirmDelete = useCallback(async () => {
         if (!templateToDelete) return
@@ -181,6 +192,7 @@ function DocumentTemplatePageView({
                         template={templateToDelete}
                         open={templateToDelete !== null}
                         isDeleting={isDeleting}
+                        deleteError={deleteError}
                         onOpenChange={(open) => {
                             if (!open) handleCloseDeleteDialog()
                         }}

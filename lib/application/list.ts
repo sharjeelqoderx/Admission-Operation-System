@@ -23,6 +23,7 @@ import type { Database, Tables } from "@/types/supabase"
 import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 import { loadRejectionHistoryByApplicationIds } from "@/lib/application/review-meta"
+import { resolveUniversityApplicationScope } from "@/lib/auth/university-scope"
 
 const APPLICATION_LIST_SELECT = `
     id,
@@ -52,6 +53,7 @@ type ApplicationFilterContext = {
     filteredProfileIds?: string[] | null
     agentStudentProfileIds?: string[] | null
     scope?: "all"
+    universityScopeIds?: string[] | null
 }
 
 const EMPTY_APPLICATION_STATS: ApplicationListStats = {
@@ -495,7 +497,13 @@ function applyApplicationFilters(query: any, ctx: ApplicationFilterContext) {
             buildAgentApplicationOrFilter(ctx.userId, studentProfileIds)
         )
     } else if (isUniversityRole(ctx.role)) {
-        nextQuery = nextQuery.eq("university_id", ctx.userId)
+        if (ctx.universityScopeIds?.length === 1) {
+            nextQuery = nextQuery.eq("university_id", ctx.universityScopeIds[0])
+        } else if (ctx.universityScopeIds && ctx.universityScopeIds.length > 1) {
+            nextQuery = nextQuery.in("university_id", ctx.universityScopeIds)
+        } else {
+            nextQuery = nextQuery.eq("university_id", ctx.userId)
+        }
     }
 
     if (ctx.dateFrom) {
@@ -639,6 +647,13 @@ export async function fetchApplicationsList(
         }
     }
 
+    let universityScopeIds: string[] | null | undefined
+
+    if (isUniversityRole(role) && listScope !== "all") {
+        const universityScope = await resolveUniversityApplicationScope(supabase, userId, role)
+        universityScopeIds = universityScope.universityIds
+    }
+
     const filterContext: ApplicationFilterContext = {
         userId,
         role,
@@ -649,6 +664,7 @@ export async function fetchApplicationsList(
         filteredProfileIds,
         agentStudentProfileIds,
         scope: listScope,
+        universityScopeIds,
     }
 
     let stats: ApplicationListStats

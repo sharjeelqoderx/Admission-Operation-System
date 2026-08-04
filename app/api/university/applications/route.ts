@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
         const limit = Number(searchParams.get("limit") ?? "10")
 
         const data = await fetchUniversityApplicationList({
-            universityId: scope.universityId,
+            universityScope: scope,
             q,
             tab,
             page: Number.isFinite(page) ? page : 1,

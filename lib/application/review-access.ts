@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
+import {
+    isUniversityIdInScope,
+    resolveUniversityApplicationScope,
+} from "@/lib/auth/university-scope"
 import { Role } from "@/types/enums/role"
 import { canAgentAccessApplication } from "@/lib/api/agent-applications"
 
@@ -62,8 +66,11 @@ export async function assertCanReviewApplication(
         return { allowed: false }
     }
 
-    if (isUniversityRole(role) && application.university_id !== userId) {
-        return { allowed: false }
+    if (isUniversityRole(role)) {
+        const scope = await resolveUniversityApplicationScope(supabase, userId, role)
+        if (!isUniversityIdInScope(application.university_id, scope)) {
+            return { allowed: false }
+        }
     }
 
     return { allowed: true, application }

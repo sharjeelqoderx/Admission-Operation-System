@@ -16,6 +16,7 @@ import type {
 } from "@/types/schemas/offer"
 import type { Database } from "@/types/supabase"
 import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
+import { resolveUniversityApplicationScope } from "@/lib/auth/university-scope"
 import { Role } from "@/types/enums/role"
 
 type DbClient = SupabaseClient<Database>
@@ -48,13 +49,26 @@ function matchesCourse(offer: OfferListItem, courseId?: string) {
     return offer.application?.course?.id === courseId
 }
 
-function applyRoleFilter(offers: OfferListItem[], role: OfferRole, userId: string) {
+function applyRoleFilter(
+    offers: OfferListItem[],
+    role: OfferRole,
+    userId: string,
+    universityScopeIds: string[] | null
+) {
     if (role === Role.STUDENT) {
         return offers.filter((offer) => offer.application?.profile_id === userId)
     }
 
     if (isUniversityRole(role)) {
-        return offers.filter((offer) => offer.application?.university_id === userId)
+        if (universityScopeIds === null) {
+            return offers
+        }
+
+        return offers.filter((offer) =>
+            offer.application?.university_id
+                ? universityScopeIds.includes(offer.application.university_id)
+                : false
+        )
     }
 
     return offers
@@ -167,7 +181,15 @@ export async function fetchOffersList(
         options.role === Role.STUDENT ? userClient : createSupabaseServiceClient()
 
     const mapped = mapOfferRows(await fetchRawOffers(readClient as DbClient))
-    const roleFiltered = applyRoleFilter(mapped, options.role, options.userId)
+    const universityScope = isUniversityRole(options.role)
+        ? await resolveUniversityApplicationScope(userClient, options.userId, options.role)
+        : { universityIds: null }
+    const roleFiltered = applyRoleFilter(
+        mapped,
+        options.role,
+        options.userId,
+        universityScope.universityIds
+    )
     const filtered = roleFiltered
         .filter((offer) => matchesSearch(offer, searchTerm))
         .filter((offer) => matchesStatus(offer, options.status))

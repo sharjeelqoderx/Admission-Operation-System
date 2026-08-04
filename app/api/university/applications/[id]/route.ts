@@ -1,9 +1,8 @@
 import { NextRequest } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { ok, err } from "@/lib/api"
-import { fetchUniversityApplicationDetail } from "@/lib/application/university-server"
-import { isUniversityStaffRole, resolveUniversityScopeId } from "@/lib/auth/university-role"
-import { Role } from "@/types/enums/role"
+import { fetchUniversityApplicationDetail, resolveUniversityScope } from "@/lib/application/university-server"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
 
 export async function GET(
     _req: NextRequest,
@@ -30,10 +29,15 @@ export async function GET(
             return err("Forbidden", 403)
         }
 
+        const scope = await resolveUniversityScope(user.id, profile?.role ?? "")
+        if (!scope) {
+            return err("Forbidden", 403)
+        }
+
         const { id } = await params
         const data = await fetchUniversityApplicationDetail({
             applicationId: id,
-            universityId: resolveUniversityScopeId(profile?.role, user.id),
+            universityScope: scope,
             viewerRole: profile?.role,
             viewerId: user.id,
         })

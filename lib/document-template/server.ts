@@ -53,7 +53,8 @@ export async function softDeleteDocumentTemplate(id: string) {
     const rpcUnavailable =
         rpcMessage.includes("Could not find the function") ||
         rpcMessage.includes("does not exist") ||
-        rpcMessage.includes("schema cache")
+        rpcMessage.includes("schema cache") ||
+        rpcMessage.includes('invalid input value for enum role_enum: "UNIVERSITY"')
 
     if (!rpcUnavailable) {
         return { error: rpcError }
@@ -63,19 +64,21 @@ export async function softDeleteDocumentTemplate(id: string) {
     const payload = { is_deleted: true, updated_at: updatedAt }
     const serviceClient = tryCreateSupabaseServiceClient()
 
-    if (serviceClient) {
-        return serviceClient
+    const runUpdate = async (client: typeof supabase) => {
+        const { error } = await client
             .from("document_template")
             .update(payload)
             .eq("id", id)
             .eq("is_deleted", false)
+
+        return { error }
     }
 
-    return supabase
-        .from("document_template")
-        .update(payload)
-        .eq("id", id)
-        .eq("is_deleted", false)
+    if (serviceClient) {
+        return runUpdate(serviceClient)
+    }
+
+    return runUpdate(supabase)
 }
 
 function mapTemplateRow(row: DocumentTemplateRow): DocumentTemplateListItem {

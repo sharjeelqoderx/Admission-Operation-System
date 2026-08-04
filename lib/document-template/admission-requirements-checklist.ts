@@ -47,15 +47,19 @@ export type {
 
 function buildCheckboxCell(checked: boolean) {
     const size = 14
-    const border = 1.5
-    const inset = 2
+    const stroke = 1.5
+    const pad = stroke / 2
+    const inner = size - stroke
+    const cross = checked
+        ? `<line x1="${pad + 1}" y1="${pad + 1}" x2="${size - pad - 1}" y2="${size - pad - 1}" stroke="#000000" stroke-width="${stroke}" stroke-linecap="square"/>
+        <line x1="${size - pad - 1}" y1="${pad + 1}" x2="${pad + 1}" y2="${size - pad - 1}" stroke="#000000" stroke-width="${stroke}" stroke-linecap="square"/>`
+        : ""
 
-    if (!checked) {
-        return `<span class="requirement-checkbox" style="display:inline-block;width:${size}px;height:${size}px;min-width:${size}px;border:${border}px solid #000000;box-sizing:border-box;vertical-align:top;margin-top:2px;background:#ffffff;"></span>`
-    }
-
-    return `<span class="requirement-checkbox requirement-checkbox--completed" style="display:inline-block;width:${size}px;height:${size}px;min-width:${size}px;border:${border}px solid #000000;box-sizing:border-box;vertical-align:top;margin-top:2px;padding:${inset}px;background:#ffffff;">
-        <span style="display:block;width:100%;height:100%;background:#000000;box-sizing:border-box;"></span>
+    return `<span class="requirement-checkbox${checked ? " requirement-checkbox--completed" : ""}" style="display:inline-block;width:${size}px;height:${size}px;min-width:${size}px;vertical-align:top;margin-top:2px;line-height:0;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true" style="display:block;">
+            <rect x="${pad}" y="${pad}" width="${inner}" height="${inner}" fill="#ffffff" stroke="#000000" stroke-width="${stroke}"/>
+            ${cross}
+        </svg>
     </span>`
 }
 

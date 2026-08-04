@@ -25,6 +25,7 @@ export type DocumentTemplatePageLogicProps = {
     isSaving: boolean
     isDeleting: boolean
     deletingId: string | null
+    deleteError: string | null
     formError: string | null
     setTitle: (value: string) => void
     setBodyHtml: (value: string) => void
@@ -33,10 +34,22 @@ export type DocumentTemplatePageLogicProps = {
     backToList: () => void
     saveTemplate: () => Promise<void>
     deleteTemplateById: (id: string) => Promise<void>
+    clearDeleteError: () => void
     refetchTemplates: () => void
 }
 
 const EMPTY_TEMPLATE_HTML = DEFAULT_TEMPLATE_BODY_HTML
+
+function formatApiError(
+    json: { error?: string; details?: string },
+    fallback: string
+): string {
+    const base = json?.error ?? fallback
+    if (json?.details && typeof json.details === "string") {
+        return `${base}: ${json.details}`
+    }
+    return base
+}
 
 async function fetchDocumentTemplates(): Promise<DocumentTemplatesListResponse> {
     const res = await fetch("/api/document-template")
@@ -65,6 +78,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         const [title, setTitle] = useState("")
         const [bodyHtml, setBodyHtml] = useState(EMPTY_TEMPLATE_HTML)
         const [formError, setFormError] = useState<string | null>(null)
+        const [deleteError, setDeleteError] = useState<string | null>(null)
         const [deletingId, setDeletingId] = useState<string | null>(null)
 
         const templatesQuery = useQuery({
@@ -109,7 +123,9 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 })
                 const json = await res.json()
                 if (!res.ok) {
-                    throw new Error(json?.error ?? "Failed to delete document template")
+                    throw new Error(
+                        formatApiError(json, "Failed to delete document template")
+                    )
                 }
                 return json
             },
@@ -184,6 +200,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         const deleteTemplateById = useCallback(
             async (id: string) => {
                 setDeletingId(id)
+                setDeleteError(null)
                 const toastId = toast.loading("Deleting template...")
 
                 try {
@@ -194,12 +211,12 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                         backToList()
                     }
                 } catch (error) {
-                    toast.error(
+                    const message =
                         error instanceof Error
                             ? error.message
-                            : "Failed to delete document template",
-                        { id: toastId }
-                    )
+                            : "Failed to delete document template"
+                    setDeleteError(message)
+                    toast.error(message, { id: toastId })
                     throw error
                 } finally {
                     setDeletingId(null)
@@ -207,6 +224,10 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             },
             [activeTemplate?.id, backToList, deleteMutation]
         )
+
+        const clearDeleteError = useCallback(() => {
+            setDeleteError(null)
+        }, [])
 
         const logicProps: DocumentTemplatePageLogicProps = {
             templates,
@@ -225,6 +246,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             isSaving: updateMutation.isPending,
             isDeleting: deleteMutation.isPending,
             deletingId,
+            deleteError,
             formError,
             setTitle,
             setBodyHtml,
@@ -233,6 +255,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             backToList,
             saveTemplate,
             deleteTemplateById,
+            clearDeleteError,
             refetchTemplates: templatesQuery.refetch,
         }
 

@@ -7,6 +7,10 @@ import type {
 } from "@/types/schemas/application"
 import type { Database } from "@/types/supabase"
 import { isUniversityRole } from "@/lib/auth/university-role"
+import {
+    isUniversityIdInScope,
+    resolveUniversityApplicationScope,
+} from "@/lib/auth/university-scope"
 import { Role } from "@/types/enums/role"
 import { loadApplicationReviewMeta } from "@/lib/application/review-meta"
 
@@ -116,8 +120,11 @@ export async function fetchApplicationDetail(
         }
     }
 
-    if (isUniversityRole(role) && scope !== "all" && row.university_id !== userId) {
-        return { error: "Application not found" }
+    if (isUniversityRole(role) && scope !== "all") {
+        const universityScope = await resolveUniversityApplicationScope(supabase, userId, role)
+        if (!isUniversityIdInScope(row.university_id, universityScope)) {
+            return { error: "Application not found" }
+        }
     }
 
     const offerLetter = await fetchOfferForApplication(supabase, applicationId)

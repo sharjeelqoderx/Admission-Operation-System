@@ -7,10 +7,14 @@ import { formatIntakeDate } from "@/lib/utils/program"
 import { formatLocation } from "@/lib/utils/location"
 import { resolveStudentPipelineStatus } from "@/lib/student/pipeline-status"
 import { resolveQualificationLabel } from "@/lib/education/resolve-qualification"
-import { isUniversityStaffRole, isUniversityRole } from "@/lib/auth/university-role"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
+import {
+    applyUniversityIdFilter,
+    resolveUniversityApplicationScope,
+    type UniversityApplicationScope,
+} from "@/lib/auth/university-scope"
 import { canApproveApplicationForSignature } from "@/lib/application/review-access"
 import { loadApplicationReviewMeta, loadRejectionHistoryByApplicationIds } from "@/lib/application/review-meta"
-import { Role } from "@/types/enums/role"
 import type {
     UniversityApplicationDetail,
     UniversityApplicationDetailPageData,
@@ -42,15 +46,8 @@ export async function resolveUniversityScope(userId: string, role: string) {
         return null
     }
 
-    if (role === Role.SUPER_ADMIN) {
-        return { universityId: null as string | null }
-    }
-
-    if (isUniversityRole(role)) {
-        return { universityId: userId }
-    }
-
-    return { universityId: null as string | null }
+    const supabase = await createSupabaseServerClient()
+    return resolveUniversityApplicationScope(supabase, userId, role)
 }
 
 type ApplicationRow = {
@@ -295,7 +292,7 @@ function mapListItem(params: {
 }
 
 export async function fetchUniversityApplicationList(params: {
-    universityId?: string | null
+    universityScope?: UniversityApplicationScope
     q?: string
     tab?: UniversityApplicationTab
     page?: number
@@ -315,8 +312,12 @@ export async function fetchUniversityApplicationList(params: {
         )
         .order("created_at", { ascending: false })
 
-    if (params.universityId) {
-        applicationsQuery = applicationsQuery.eq("university_id", params.universityId)
+    if (params.universityScope) {
+        applicationsQuery = applyUniversityIdFilter(
+            applicationsQuery,
+            "university_id",
+            params.universityScope
+        )
     }
 
     const { data: allApplications, error: applicationsError } = await applicationsQuery
@@ -514,7 +515,7 @@ export async function fetchUniversityApplicationList(params: {
 
 export async function fetchUniversityApplicationDetail(params: {
     applicationId: string
-    universityId?: string | null
+    universityScope?: UniversityApplicationScope
     viewerRole?: string | null
     viewerId?: string | null
 }): Promise<UniversityApplicationDetail | null> {
@@ -527,8 +528,8 @@ export async function fetchUniversityApplicationDetail(params: {
         )
         .eq("id", params.applicationId)
 
-    if (params.universityId) {
-        applicationQuery = applicationQuery.eq("university_id", params.universityId)
+    if (params.universityScope?.universityIds) {
+        applicationQuery = applicationQuery.in("university_id", params.universityScope.universityIds)
     }
 
     const { data: application, error: applicationError } = await applicationQuery.maybeSingle()
@@ -807,7 +808,7 @@ export async function fetchUniversityApplicationsForPage(params?: {
 
     try {
         return await fetchUniversityApplicationList({
-            universityId: scope.universityId,
+            universityScope: scope,
             q: params?.q,
             tab: params?.tab,
             page: params?.page,
@@ -858,7 +859,7 @@ export async function fetchUniversityApplicationDetailForPage(
 
     const detail = await fetchUniversityApplicationDetail({
         applicationId,
-        universityId: scope.universityId,
+        universityScope: scope,
         viewerRole: profile?.role ?? null,
         viewerId: user.id,
     })

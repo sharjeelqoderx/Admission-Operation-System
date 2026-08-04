@@ -45,7 +45,7 @@ const sidebarRoutes = [
   {
     label: 'All Students',
     icon: Users2,
-    allowFor: [Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN, Role.AGENT],
+    allowFor: [Role.ADMIN, Role.MANAGEMENT, Role.AGENT],
     children: [
       {
         label: 'Add Student',
@@ -57,7 +57,7 @@ const sidebarRoutes = [
         label: 'View Student',
         href: '/dashboard/student',
         icon: Eye,
-        allowFor: [Role.AGENT, Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN],
+        allowFor: [Role.AGENT, Role.ADMIN, Role.MANAGEMENT],
       },
     ],
   },
