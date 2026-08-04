@@ -4,6 +4,8 @@ export const GradeTypeSchema = z.enum(["percentage", "gpa"])
 
 export type GradeType = z.infer<typeof GradeTypeSchema>
 
+export type OptionalGradeType = GradeType | ""
+
 export const AcademicItemSchema = z
     .object({
         qualification: z.string().uuid("Invalid degree"),
@@ -80,6 +82,30 @@ export function resolveGradeType(item: {
     }
 
     return "percentage"
+}
+
+export function resolveGradeTypeOptional(item: {
+    grade_type?: string | null
+    gpa?: string | number | null
+    obtained_marks?: string | number | null
+    total_marks?: string | number | null
+}): OptionalGradeType {
+    if (item.grade_type === "gpa" || item.grade_type === "percentage") {
+        return item.grade_type
+    }
+
+    if (item.gpa != null && item.gpa !== "") {
+        return "gpa"
+    }
+
+    if (
+        (item.obtained_marks != null && item.obtained_marks !== "") ||
+        (item.total_marks != null && item.total_marks !== "")
+    ) {
+        return "percentage"
+    }
+
+    return ""
 }
 
 export function createEmptyAcademicItem(): AcademicFormItem {

@@ -274,7 +274,12 @@ export async function PATCH(
                 continue
             }
 
-            const gradeType = row.grade_type === "gpa" ? "gpa" : "percentage"
+            const gradeType =
+                row.grade_type === "gpa"
+                    ? "gpa"
+                    : row.grade_type === "percentage"
+                      ? "percentage"
+                      : null
             const payload = {
                 profile_id: id,
                 qualification: row.qualification || "",

@@ -109,20 +109,11 @@ export const UniversityProgramListCard = memo(function UniversityProgramListCard
                     </div>
 
                     <div className="flex flex-wrap gap-x-5 gap-y-1">
-                        <Typography as="span" font="small" className="text-gray-500">
+                        {/* <Typography as="span" font="small" className="text-gray-500">
                             Created: {formatTimestamp(program.created_at)}
-                        </Typography>
+                        </Typography> */}
                         <Typography as="span" font="small" className="text-gray-500">
-                            Updated: {formatTimestamp(program.updated_at)}
-                        </Typography>
-                    </div>
-
-                    <div className="flex flex-wrap gap-x-5 gap-y-1">
-                        <Typography as="span" font="small" className="text-gray-500">
-                            Created: {formatTimestamp(program.created_at)}
-                        </Typography>
-                        <Typography as="span" font="small" className="text-gray-500">
-                            Updated: {formatTimestamp(program.updated_at)}
+                            Last Updated: {formatTimestamp(program.updated_at)}
                         </Typography>
                     </div>
                 </div>

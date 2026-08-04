@@ -10,7 +10,6 @@ import {
     Search,
 } from "lucide-react"
 import { PageLoader, Spinner } from "@/components/shared/page-loader"
-import { formatLocation } from "@/lib/utils/location"
 import { requiresApsRequirement } from "@/lib/utils/aps"
 import {
     Table,
@@ -71,7 +70,7 @@ type Props = {
     onPageChange: (page: number) => void
 }
 
-const COLUMN_COUNT = 12
+const COLUMN_COUNT = 10
 
 function formatCreatedDate(value: string) {
     return new Date(value).toLocaleDateString("en-US", {
@@ -161,20 +160,17 @@ export const StudentTable = React.memo(function StudentTable({
                     isFetching && "pointer-events-none opacity-50"
                 )}
             >
-                <Table className="w-full text-left border-collapse min-w-[1750px]">
+                <Table className="w-full text-left border-collapse min-w-[1400px]">
                     <TableHeader className="sticky top-0 z-10">
                         <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Student
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                Student ID
+                                Email
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Phone
-                            </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                Location
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Nationality
@@ -184,9 +180,6 @@ export const StudentTable = React.memo(function StudentTable({
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 APS Requirement
-                            </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                Guardian
                             </TableHead>
                             <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 DOB
@@ -261,34 +254,22 @@ export const StudentTable = React.memo(function StudentTable({
                                                     <Typography as="span" className="text-sm font-bold text-gray-900 capitalize">
                                                         {studentName}
                                                     </Typography>
-                                                    {student.profile?.email && (
-                                                        <Typography as="span" className="text-[11px] text-gray-500 font-light">
-                                                            {student.profile.email}
-                                                        </Typography>
-                                                    )}
+                                                    <Typography as="span" className="text-[11px] font-medium uppercase text-brand-blue-text">
+                                                        {student.student_code ?? "—"}
+                                                    </Typography>
                                                 </div>
                                             </div>
                                         </TableCell>
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-bold text-brand-blue-text uppercase">
-                                                {student.student_code ?? "—"}
+                                            <Typography as="span" className="text-sm font-medium text-gray-700">
+                                                {student.profile?.email ?? "—"}
                                             </Typography>
                                         </TableCell>
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">
                                             <Typography as="span" className="text-sm font-medium text-gray-700">
                                                 {student.profile?.phone ?? "—"}
-                                            </Typography>
-                                        </TableCell>
-
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-medium text-gray-700">
-                                                {formatLocation({
-                                                    city: student.city,
-                                                    state: student.state,
-                                                    country: student.country,
-                                                })}
                                             </Typography>
                                         </TableCell>
 
@@ -314,19 +295,6 @@ export const StudentTable = React.memo(function StudentTable({
                                             >
                                                 {apsRequired ? "Yes" : "No"}
                                             </Typography>
-                                        </TableCell>
-
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <div className="flex flex-col">
-                                                <Typography as="span" className="text-sm font-medium text-gray-700">
-                                                    {student.guardian_email ?? "—"}
-                                                </Typography>
-                                                {student.guardian_phone && (
-                                                    <Typography as="span" className="text-[11px] text-gray-500 font-light">
-                                                        {student.guardian_phone}
-                                                    </Typography>
-                                                )}
-                                            </div>
                                         </TableCell>
 
                                         <TableCell className="px-6 py-5 whitespace-nowrap">

@@ -27,7 +27,7 @@ import { StateSelect } from "@/components/shared/state-select"
 import { CitySelect } from "@/components/shared/city-select"
 import { Building, ChevronDown, School, FileUp, FileText, Plus, Upload, X, ClipboardList } from "lucide-react"
 import { PageLoader, Spinner } from "@/components/shared/page-loader"
-import { resolveGradeType, type GradeType } from "@/types/schemas/academic"
+import { resolveGradeTypeOptional, type GradeType } from "@/types/schemas/academic"
 import { Role } from "@/types/enums/role"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import { toast } from "sonner"
@@ -1041,7 +1041,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
             passport_file_url: undefined as File | undefined,
             academic_background: eduList?.length
                 ? eduList.map((e) => {
-                    const gradeType = resolveGradeType(e)
+                    const gradeType = resolveGradeTypeOptional(e)
                     return {
                         id: (e as { id?: string }).id?.trim() || undefined,
                         qualification: e.qualification ?? "",
@@ -1068,7 +1068,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                 : [{
                     qualification: "",
                     institution_name: "",
-                    grade_type: "percentage" as GradeType,
+                    grade_type: "",
                     gpa: "",
                     obtained_marks: "",
                     total_marks: "",
@@ -1156,7 +1156,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
             {
                 qualification: "",
                 institution_name: "",
-                grade_type: "percentage",
+                grade_type: "",
                 gpa: "",
                 obtained_marks: "",
                 total_marks: "",
@@ -1206,7 +1206,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                 </div>
 
                                 <div className="space-y-4 sm:space-y-6 min-w-0">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 min-w-0">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 min-w-0">
                                         <form.Field name="title">
                                             {(field) => (
                                                 <F field={field} label={mode === "create" ? "Title (Required)" : "Title"}>
@@ -1233,6 +1233,24 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                             )}
                                         </form.Field>
 
+                                        <form.Field name="first_name">
+                                            {(field) => (
+                                                <F field={field} label="First Name">
+                                                    <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter first name" className="w-full" />
+                                                </F>
+                                            )}
+                                        </form.Field>
+
+                                        <form.Field name="last_name">
+                                            {(field) => (
+                                                <F field={field} label="Last Name">
+                                                    <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter last name" className="w-full" />
+                                                </F>
+                                            )}
+                                        </form.Field>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 min-w-0">
                                         <form.Field name="gender">
                                             {(field) => (
                                                 <form.Subscribe selector={(s) => s.values.title}>
@@ -1261,24 +1279,6 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                             )}
                                         </form.Field>
 
-                                        <form.Field name="first_name">
-                                            {(field) => (
-                                                <F field={field} label="First Name">
-                                                    <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter first name" className="w-full" />
-                                                </F>
-                                            )}
-                                        </form.Field>
-
-                                        <form.Field name="last_name">
-                                            {(field) => (
-                                                <F field={field} label="Last Name">
-                                                    <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter last name" className="w-full" />
-                                                </F>
-                                            )}
-                                        </form.Field>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 min-w-0">
                                         <form.Field name="email">
                                             {(field) => (
                                                 <F field={field} label="Email">
@@ -1395,12 +1395,14 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                     <form.Field name="nationality">
                                         {(field) => (
                                             <F field={field} label="Nationality">
-                                                <Input
+                                                <CountrySelect
                                                     id={field.name}
                                                     value={field.state.value}
-                                                    onBlur={field.handleBlur}
-                                                    onChange={(e) => field.handleChange(e.target.value)}
-                                                    placeholder="Auto-filled from country — edit if different"
+                                                    onValueChange={(v) => {
+                                                        field.handleChange(v)
+                                                        field.handleBlur()
+                                                    }}
+                                                    placeholder="Select nationality"
                                                 />
                                             </F>
                                         )}
@@ -1452,6 +1454,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                             >
                                                 {(gradeType) => {
                                                     const isGpa = gradeType === "gpa"
+                                                    const isPercentage = gradeType === "percentage"
 
                                                     return (
                                                         <div className="flex flex-col md:flex-row flex-wrap gap-4">
@@ -1518,13 +1521,32 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                                             <form.Field name={`academic_background[${index}].grade_type`}>
                                                                 {(subField) => (
                                                                     <div className="flex-1 min-w-[160px]">
-                                                                        <F field={subField} label="Grade Type">
+                                                                        <F field={subField} label="Grade Type (Optional)">
                                                                             <Select
-                                                                                value={subField.state.value}
-                                                                                onValueChange={(v: GradeType) => {
-                                                                                    subField.handleChange(v)
+                                                                                value={subField.state.value || "none"}
+                                                                                onValueChange={(v) => {
+                                                                                    if (v === "none") {
+                                                                                        subField.handleChange("")
+                                                                                        subField.handleBlur()
+                                                                                        form.setFieldValue(
+                                                                                            `academic_background[${index}].gpa`,
+                                                                                            ""
+                                                                                        )
+                                                                                        form.setFieldValue(
+                                                                                            `academic_background[${index}].obtained_marks`,
+                                                                                            ""
+                                                                                        )
+                                                                                        form.setFieldValue(
+                                                                                            `academic_background[${index}].total_marks`,
+                                                                                            ""
+                                                                                        )
+                                                                                        return
+                                                                                    }
+
+                                                                                    const nextGradeType = v as GradeType
+                                                                                    subField.handleChange(nextGradeType)
                                                                                     subField.handleBlur()
-                                                                                    if (v === "gpa") {
+                                                                                    if (nextGradeType === "gpa") {
                                                                                         form.setFieldValue(
                                                                                             `academic_background[${index}].obtained_marks`,
                                                                                             ""
@@ -1542,9 +1564,10 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                                                                 }}
                                                                             >
                                                                                 <SelectTrigger className="h-12">
-                                                                                    <SelectValue placeholder="Select grade type" />
+                                                                                    <SelectValue placeholder="Optional" />
                                                                                 </SelectTrigger>
                                                                                 <SelectContent>
+                                                                                    <SelectItem value="none">Not specified</SelectItem>
                                                                                     <SelectItem value="percentage">Percentage</SelectItem>
                                                                                     <SelectItem value="gpa">GPA</SelectItem>
                                                                                 </SelectContent>
@@ -1558,7 +1581,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                                                 <form.Field name={`academic_background[${index}].gpa`}>
                                                                     {(subField) => (
                                                                         <div className="flex-1 min-w-[140px]">
-                                                                            <F field={subField} label="GPA">
+                                                                            <F field={subField} label="GPA (Optional)">
                                                                                 <Input
                                                                                     type="number"
                                                                                     step="0.01"
@@ -1580,12 +1603,14 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                                                         </div>
                                                                     )}
                                                                 </form.Field>
-                                                            ) : (
+                                                            ) : null}
+
+                                                            {isPercentage ? (
                                                                 <>
                                                                     <form.Field name={`academic_background[${index}].obtained_marks`}>
                                                                         {(subField) => (
                                                                             <div className="flex-1 min-w-[140px]">
-                                                                                <F field={subField} label="Obtained Marks">
+                                                                                <F field={subField} label="Obtained Marks (Optional)">
                                                                                     <Input
                                                                                         type="number"
                                                                                         placeholder="e.g. 850"
@@ -1608,7 +1633,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                                                     <form.Field name={`academic_background[${index}].total_marks`}>
                                                                         {(subField) => (
                                                                             <div className="flex-1 min-w-[140px]">
-                                                                                <F field={subField} label="Total Marks">
+                                                                                <F field={subField} label="Total Marks (Optional)">
                                                                                     <Input
                                                                                         type="number"
                                                                                         placeholder="e.g. 1100"
@@ -1628,7 +1653,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                                                         )}
                                                                     </form.Field>
                                                                 </>
-                                                            )}
+                                                            ) : null}
                                                         </div>
                                                     )
                                                 }}

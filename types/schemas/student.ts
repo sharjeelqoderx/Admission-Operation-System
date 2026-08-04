@@ -22,7 +22,7 @@ export const academicRecordSchema = z
         id: optionalRecordIdSchema,
         qualification: z.string().optional(),
         institution_name: z.string().optional(),
-        grade_type: GradeTypeSchema.optional(),
+        grade_type: z.union([GradeTypeSchema, z.literal("")]).optional(),
         gpa: z.string().optional(),
         obtained_marks: z.string().optional(),
         total_marks: z.string().optional(),
@@ -49,67 +49,46 @@ export const academicRecordSchema = z
             });
         }
         if (!val.grade_type) {
-            ctx.addIssue({
-                path: ["grade_type"],
-                code: "custom",
-                message: "Grade type is required",
-            });
-            return;
+            return
         }
+
         if (val.grade_type === "gpa") {
             if (!val.gpa?.trim()) {
-                ctx.addIssue({
-                    path: ["gpa"],
-                    code: "custom",
-                    message: "GPA is required",
-                });
-                return;
+                return
             }
             if (!/^\d+(\.\d{1,2})?$/.test(val.gpa.trim())) {
                 ctx.addIssue({
                     path: ["gpa"],
                     code: "custom",
                     message: "Must be a valid number",
-                });
-                return;
+                })
+                return
             }
-            const gpaValue = parseFloat(val.gpa);
+            const gpaValue = parseFloat(val.gpa)
             if (gpaValue < 0 || gpaValue > 4) {
                 ctx.addIssue({
                     path: ["gpa"],
                     code: "custom",
                     message: "GPA must be between 0 and 4",
-                });
+                })
             }
-            return;
+            return
         }
 
-        if (!val.obtained_marks?.trim()) {
-            ctx.addIssue({
-                path: ["obtained_marks"],
-                code: "custom",
-                message: "Obtained marks is required",
-            });
-        } else if (!/^\d+(\.\d{1,2})?$/.test(val.obtained_marks.trim())) {
+        if (val.obtained_marks?.trim() && !/^\d+(\.\d{1,2})?$/.test(val.obtained_marks.trim())) {
             ctx.addIssue({
                 path: ["obtained_marks"],
                 code: "custom",
                 message: "Must be a valid number",
-            });
+            })
         }
 
-        if (!val.total_marks?.trim()) {
-            ctx.addIssue({
-                path: ["total_marks"],
-                code: "custom",
-                message: "Total marks is required",
-            });
-        } else if (!/^\d+(\.\d{1,2})?$/.test(val.total_marks.trim())) {
+        if (val.total_marks?.trim() && !/^\d+(\.\d{1,2})?$/.test(val.total_marks.trim())) {
             ctx.addIssue({
                 path: ["total_marks"],
                 code: "custom",
                 message: "Must be a valid number",
-            });
+            })
         }
 
         if (
@@ -121,7 +100,7 @@ export const academicRecordSchema = z
                 path: ["obtained_marks"],
                 code: "custom",
                 message: "Obtained marks cannot exceed total marks",
-            });
+            })
         }
     })
 

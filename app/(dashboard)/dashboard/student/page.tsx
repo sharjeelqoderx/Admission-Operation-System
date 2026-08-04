@@ -7,7 +7,6 @@ import { PageLoader } from "@/components/shared/page-loader"
 import { PageContent } from "./_components/page-content"
 import { UniversityStudentListPageContent } from "./_components/university-student/page-content"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
-import { Role } from "@/types/enums/role"
 
 type StudentPageProps = {
     searchParams: Promise<{

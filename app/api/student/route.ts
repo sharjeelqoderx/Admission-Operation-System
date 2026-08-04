@@ -292,7 +292,7 @@ export async function POST(req: NextRequest) {
                 profile_id: newUserId,
                 qualification: item.qualification,
                 institution_name: item.institution_name,
-                grade_type: item.grade_type,
+                grade_type: item.grade_type || null,
                 gpa: item.grade_type === "gpa" && item.gpa ? parseFloat(item.gpa) : null,
                 obtained_marks:
                     item.grade_type === "percentage" && item.obtained_marks
