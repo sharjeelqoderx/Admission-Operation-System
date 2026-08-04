@@ -41,6 +41,9 @@ export type StudentFormPageData = {
         gpa?: number | string | null
         obtained_marks?: number | string | null
         total_marks?: number | string | null
+        qualification_degree?: {
+            level?: { name?: string | null } | null
+        } | null
     }> | {
         id?: string | null
         qualification?: string | null
@@ -49,6 +52,9 @@ export type StudentFormPageData = {
         gpa?: number | string | null
         obtained_marks?: number | string | null
         total_marks?: number | string | null
+        qualification_degree?: {
+            level?: { name?: string | null } | null
+        } | null
     } | null
 }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -14,7 +14,17 @@ import { useAuth } from "@/hooks/useAuth"
 import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { useDegrees } from "@/hooks/useDegrees"
 import { useLevels } from "@/hooks/useLevels"
-import { filterCoursesByQualificationLevel } from "@/lib/utils/levels"
+import {
+    filterCoursesForStudentQualification,
+    hasStudentQualification,
+} from "@/lib/utils/resolve-student-qualification"
+import {
+    getQualificationUpgradeMessage,
+    invalidateQualificationDocumentQueries,
+    isQualificationUpgrade,
+    type QualificationSnapshot,
+} from "@/lib/utils/qualification-upgrade"
+import { QualificationUpgradeDialog } from "@/components/shared/qualification-upgrade-dialog"
 import { resolveCourseDocumentTypes } from "@/lib/utils/course-documents"
 import { resolveApsDocumentType, withApsRequiredDocument } from "@/lib/utils/aps"
 import { formatProgramDate } from "@/lib/utils/program"
@@ -550,6 +560,7 @@ function SupportingDocumentsSection({
 
 export function Step4Application({ onBack }: { onBack: () => void }) {
     const router = useRouter()
+    const queryClient = useQueryClient()
     const { me } = useAuth()
     const { data: meData, isLoading, isFetching } = me
     const { data: degrees = [], isLoading: loadingDegrees } = useDegrees()
@@ -559,16 +570,27 @@ export function Step4Application({ onBack }: { onBack: () => void }) {
     const [applicationDocError, setApplicationDocError] = useState<string | null>(null)
     const [pendingFiles, setPendingFiles] = useState<Record<string, { front: File | null; back: File | null }>>({})
     const [isUploading, setIsUploading] = useState<Record<string, boolean>>({})
+    const [qualificationUpgradeNotice, setQualificationUpgradeNotice] = useState({
+        open: false,
+        title: "",
+        description: "",
+    })
 
     const studentProfileId = meData?.id ?? ""
 
-    const qualificationId = meData?.academic?.[0]?.qualification ?? ""
-    const qualificationLevelName = qualificationId
-        ? degrees.find((d) => d.id === qualificationId)?.level?.name
-        : null
-    const qualificationDegreeName = qualificationId
-        ? degrees.find((d) => d.id === qualificationId)?.name
-        : null
+    const qualificationSnapshot = useMemo((): QualificationSnapshot => {
+        const qualification = meData?.academic?.[0]?.qualification ?? ""
+        const degree = degrees.find((entry) => entry.id === qualification)
+
+        return {
+            qualification,
+            levelName: degree?.level?.name ?? null,
+            degreeName: degree?.name ?? null,
+        }
+    }, [degrees, meData?.academic])
+
+    const trackedQualificationRef = useRef<QualificationSnapshot>(qualificationSnapshot)
+    const hasQualification = hasStudentQualification(qualificationSnapshot)
 
     const { data: programsResponse } = useQuery({
         queryKey: ["programs"],
@@ -583,14 +605,10 @@ export function Step4Application({ onBack }: { onBack: () => void }) {
 
     const eligibleCourses = useMemo(
         () =>
-            qualificationId
-                ? filterCoursesByQualificationLevel(
-                      courses,
-                      qualificationLevelName,
-                      qualificationDegreeName
-                  )
+            hasQualification
+                ? filterCoursesForStudentQualification(courses, qualificationSnapshot)
                 : [],
-        [courses, qualificationId, qualificationLevelName, qualificationDegreeName]
+        [courses, hasQualification, qualificationSnapshot]
     )
 
     const { data: allDocumentTypes = [] } = useQuery({
@@ -635,6 +653,36 @@ export function Step4Application({ onBack }: { onBack: () => void }) {
         },
         enabled: !!studentProfileId,
     })
+
+    useEffect(() => {
+        if (isQualificationUpgrade(trackedQualificationRef.current, qualificationSnapshot)) {
+            const message = getQualificationUpgradeMessage(
+                trackedQualificationRef.current,
+                qualificationSnapshot
+            )
+            setQualificationUpgradeNotice({
+                open: true,
+                title: message.title,
+                description: message.description,
+            })
+            setSelectedCourseId("")
+            setPendingFiles({})
+            setApplicationDocError(null)
+            invalidateQualificationDocumentQueries(queryClient, studentProfileId)
+            void refetchDocuments()
+        }
+
+        trackedQualificationRef.current = qualificationSnapshot
+    }, [qualificationSnapshot, queryClient, refetchDocuments, studentProfileId])
+
+    useEffect(() => {
+        if (!selectedCourseId) return
+        if (eligibleCourses.some((course) => course.id === selectedCourseId)) return
+
+        setSelectedCourseId("")
+        setPendingFiles({})
+        setApplicationDocError(null)
+    }, [eligibleCourses, selectedCourseId])
 
     const mutation = useMutation({
         mutationFn: async () => {
@@ -760,13 +808,13 @@ export function Step4Application({ onBack }: { onBack: () => void }) {
         mutation.mutate()
     }, [applicationRequiredDocTypes, documents, mutation, pendingFiles, router, selectedCourseId])
 
-    if (isLoading || loadingDegrees || (isFetching && !qualificationId)) {
+    if (isLoading || loadingDegrees || (isFetching && !hasQualification)) {
         return <PageLoader />
     }
 
     return (
         <div className="space-y-6">
-            {!qualificationId ? (
+            {!hasQualification ? (
                 <div className="rounded-sm border border-dashed border-gray-200 bg-gray-50/50 px-4 py-6 text-center">
                     <Typography as="p" className="text-sm font-medium text-gray-500">
                         Select your highest degree in Academic Background to view available courses.
@@ -865,6 +913,15 @@ export function Step4Application({ onBack }: { onBack: () => void }) {
                     {mutation.error instanceof Error ? mutation.error.message : "Something went wrong"}
                 </Typography>
             )}
+
+            <QualificationUpgradeDialog
+                open={qualificationUpgradeNotice.open}
+                title={qualificationUpgradeNotice.title}
+                description={qualificationUpgradeNotice.description}
+                onOpenChange={(open) =>
+                    setQualificationUpgradeNotice((current) => ({ ...current, open }))
+                }
+            />
         </div>
     )
 }

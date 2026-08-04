@@ -3,6 +3,7 @@ import {
     buildDocumentPageWatermarkHtml,
     splitTemplateBodyIntoPages,
 } from "@/lib/document-template/a4-document"
+import { parseDocumentLayout } from "@/lib/document-template/header-footer"
 
 export function buildSignatureBlockHtml(options: {
     status: string
@@ -130,17 +131,22 @@ export function buildTemplateOfferLetterHtml(
 ): string {
     const title = options?.title ?? "Offer Letter"
     const signatureHtml = options?.signatureHtml ?? ""
-    const pages = splitTemplateBodyIntoPages(bodyHtml)
+    const layout = parseDocumentLayout(bodyHtml)
+    const pages = splitTemplateBodyIntoPages(layout.bodyHtml)
 
     const pageSections = pages
         .map((pageBody, index) => {
             const isLastPage = index === pages.length - 1
             const footerHtml = isLastPage ? signatureHtml : ""
+            const headerBlock = layout.headerHtml ?? ""
+            const documentFooterBlock = layout.footerHtml ?? ""
 
             return `<section class="a4-page">
                 ${buildDocumentPageWatermarkHtml()}
                 <div class="page-inner">
+                    ${headerBlock}
                     <div class="page-body">${pageBody}${footerHtml}</div>
+                    ${documentFooterBlock}
                 </div>
             </section>`
         })

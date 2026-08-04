@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useCallback, useEffect, useRef } from "react"
+import { memo, useCallback, useEffect, useRef, useState } from "react"
 import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
@@ -12,7 +12,6 @@ import { Table } from "@tiptap/extension-table"
 import { TableRow } from "@tiptap/extension-table-row"
 import { TableCell } from "@tiptap/extension-table-cell"
 import { TableHeader } from "@tiptap/extension-table-header"
-import { useMutation } from "@tanstack/react-query"
 import {
     AlignCenter,
     AlignLeft,
@@ -30,6 +29,8 @@ import {
     List,
     ListOrdered,
     Pilcrow,
+    PanelBottom,
+    PanelTop,
     Redo2,
     SeparatorHorizontal,
     Strikethrough,
@@ -38,10 +39,9 @@ import {
     UnderlineIcon,
     Undo2,
 } from "lucide-react"
-import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import { Typography } from "@/components/shared/Typography"
-import { ErrorView } from "@/components/shared/error-view"
 import { DocumentPageWatermark } from "./document-center-logo-placeholder"
 import {
     A4_DOCUMENT_CONTENT_CLASS,
@@ -58,6 +58,24 @@ import {
 import { DocumentPageBreak } from "@/lib/document-template/tiptap-document-page-break"
 import { TEMPLATE_DYNAMIC_SECTIONS, TEMPLATE_MERGE_VARIABLES } from "@/lib/document-template/variables"
 import { DocumentParagraph } from "@/lib/document-template/tiptap-document-paragraph"
+import {
+    buildFooterHtml,
+    buildHeaderHtml,
+    composeDocumentLayout,
+    DEFAULT_FOOTER_FIELDS,
+    DEFAULT_HEADER_FIELDS,
+    DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES,
+    parseDocumentLayout,
+    parseFooterHtml,
+    parseHeaderHtml,
+    type DocumentTemplateFooterFields,
+    type DocumentTemplateHeaderFields,
+} from "@/lib/document-template/header-footer"
+import type { DocumentTemplateAsset } from "@/types/schemas/document-template"
+import {
+    DocumentTemplateAssetsModal,
+    type DocumentTemplateAssetIntent,
+} from "./document-template-assets-modal"
 import { cn } from "@/lib/utils"
 
 type DocumentTemplateEditorProps = {
@@ -65,23 +83,6 @@ type DocumentTemplateEditorProps = {
     editable?: boolean
     onChange?: (html: string) => void
     className?: string
-}
-
-async function uploadTemplateImage(file: File): Promise<string> {
-    const formData = new FormData()
-    formData.set("file", file)
-
-    const res = await fetch("/api/document-template/upload-image", {
-        method: "POST",
-        body: formData,
-    })
-
-    const json = await res.json()
-    if (!res.ok || !json.success) {
-        throw new Error(json?.error ?? "Failed to upload image")
-    }
-
-    return json.data.url as string
 }
 
 function ToolbarButton({
@@ -117,13 +118,54 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
     onChange,
     className,
 }: DocumentTemplateEditorProps) {
-    const headerImageInputRef = useRef<HTMLInputElement>(null)
-    const logoImageInputRef = useRef<HTMLInputElement>(null)
-    const inlineImageInputRef = useRef<HTMLInputElement>(null)
+    const initialLayout = parseDocumentLayout(content)
 
-    const uploadImageMutation = useMutation({
-        mutationFn: uploadTemplateImage,
+    const [assetsModalOpen, setAssetsModalOpen] = useState(false)
+    const [assetsModalIntent, setAssetsModalIntent] = useState<DocumentTemplateAssetIntent | null>(
+        null
+    )
+    const [hasHeader, setHasHeader] = useState(() => Boolean(initialLayout.headerHtml))
+    const [hasFooter, setHasFooter] = useState(() => Boolean(initialLayout.footerHtml))
+    const [headerFields, setHeaderFields] = useState<DocumentTemplateHeaderFields>(() =>
+        initialLayout.headerHtml
+            ? (parseHeaderHtml(initialLayout.headerHtml) ?? DEFAULT_HEADER_FIELDS)
+            : DEFAULT_HEADER_FIELDS
+    )
+    const [footerFields, setFooterFields] = useState<DocumentTemplateFooterFields>(() =>
+        initialLayout.footerHtml
+            ? (parseFooterHtml(initialLayout.footerHtml) ?? DEFAULT_FOOTER_FIELDS)
+            : DEFAULT_FOOTER_FIELDS
+    )
+
+    const layoutRef = useRef({
+        hasHeader,
+        hasFooter,
+        headerFields,
+        footerFields,
     })
+
+    layoutRef.current = {
+        hasHeader,
+        hasFooter,
+        headerFields,
+        footerFields,
+    }
+
+    const emitComposedHtml = useCallback(
+        (bodyHtml: string) => {
+            const { hasHeader: showHeader, hasFooter: showFooter, headerFields: header, footerFields: footer } =
+                layoutRef.current
+
+            onChange?.(
+                composeDocumentLayout({
+                    headerHtml: showHeader ? buildHeaderHtml(header) : null,
+                    bodyHtml,
+                    footerHtml: showFooter ? buildFooterHtml(footer) : null,
+                })
+            )
+        },
+        [onChange]
+    )
 
     const editor = useEditor({
         extensions: [
@@ -160,11 +202,11 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
             TableHeader,
             TableCell,
         ],
-        content,
+        content: initialLayout.bodyHtml,
         editable,
         immediatelyRender: false,
         onUpdate: ({ editor: currentEditor }) => {
-            onChange?.(currentEditor.getHTML())
+            emitComposedHtml(currentEditor.getHTML())
         },
         editorProps: {
             attributes: {
@@ -175,8 +217,21 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
 
     useEffect(() => {
         if (!editor) return
-        if (editor.getHTML() !== content) {
-            editor.commands.setContent(content, { emitUpdate: false })
+
+        const layout = parseDocumentLayout(content)
+        setHasHeader(Boolean(layout.headerHtml))
+        setHasFooter(Boolean(layout.footerHtml))
+
+        if (layout.headerHtml) {
+            setHeaderFields(parseHeaderHtml(layout.headerHtml) ?? DEFAULT_HEADER_FIELDS)
+        }
+
+        if (layout.footerHtml) {
+            setFooterFields(parseFooterHtml(layout.footerHtml) ?? DEFAULT_FOOTER_FIELDS)
+        }
+
+        if (editor.getHTML() !== layout.bodyHtml) {
+            editor.commands.setContent(layout.bodyHtml, { emitUpdate: false })
         }
     }, [content, editor])
 
@@ -184,6 +239,58 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         if (!editor) return
         editor.setEditable(editable)
     }, [editable, editor])
+
+    const addDocumentHeader = useCallback(() => {
+        setHasHeader(true)
+        setHeaderFields(DEFAULT_HEADER_FIELDS)
+        layoutRef.current = {
+            ...layoutRef.current,
+            hasHeader: true,
+            headerFields: DEFAULT_HEADER_FIELDS,
+        }
+        emitComposedHtml(editor?.getHTML() ?? parseDocumentLayout(content).bodyHtml)
+    }, [content, editor, emitComposedHtml])
+
+    const removeDocumentHeader = useCallback(() => {
+        setHasHeader(false)
+        layoutRef.current = { ...layoutRef.current, hasHeader: false }
+        emitComposedHtml(editor?.getHTML() ?? parseDocumentLayout(content).bodyHtml)
+    }, [content, editor, emitComposedHtml])
+
+    const addDocumentFooter = useCallback(() => {
+        setHasFooter(true)
+        setFooterFields(DEFAULT_FOOTER_FIELDS)
+        layoutRef.current = {
+            ...layoutRef.current,
+            hasFooter: true,
+            footerFields: DEFAULT_FOOTER_FIELDS,
+        }
+        emitComposedHtml(editor?.getHTML() ?? parseDocumentLayout(content).bodyHtml)
+    }, [content, editor, emitComposedHtml])
+
+    const removeDocumentFooter = useCallback(() => {
+        setHasFooter(false)
+        layoutRef.current = { ...layoutRef.current, hasFooter: false }
+        emitComposedHtml(editor?.getHTML() ?? parseDocumentLayout(content).bodyHtml)
+    }, [content, editor, emitComposedHtml])
+
+    const updateHeaderFields = useCallback(
+        (next: DocumentTemplateHeaderFields) => {
+            setHeaderFields(next)
+            layoutRef.current = { ...layoutRef.current, headerFields: next }
+            emitComposedHtml(editor?.getHTML() ?? parseDocumentLayout(content).bodyHtml)
+        },
+        [content, editor, emitComposedHtml]
+    )
+
+    const updateFooterFields = useCallback(
+        (next: DocumentTemplateFooterFields) => {
+            setFooterFields(next)
+            layoutRef.current = { ...layoutRef.current, footerFields: next }
+            emitComposedHtml(editor?.getHTML() ?? parseDocumentLayout(content).bodyHtml)
+        },
+        [content, editor, emitComposedHtml]
+    )
 
     const insertLogoRow = useCallback(
         (align: "left" | "center" | "right" = "left") => {
@@ -255,67 +362,26 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         [editor]
     )
 
-    const handleImageUpload = useCallback(
-        async (
-            file: File,
-            options?: { asHeader?: boolean; asLogo?: boolean; width?: number }
-        ) => {
-            const toastId = toast.loading(
-                options?.asHeader
-                    ? "Uploading header image..."
-                    : options?.asLogo
-                      ? "Uploading logo..."
-                      : "Uploading image..."
-            )
+    const openAssetsModal = useCallback((intent: DocumentTemplateAssetIntent) => {
+        setAssetsModalIntent(intent)
+        setAssetsModalOpen(true)
+    }, [])
 
-            try {
-                const url = await uploadImageMutation.mutateAsync(file)
-
-                if (options?.asLogo) {
-                    insertLogoAtCursor(url, options.width)
-                } else {
-                    insertImage(url, options)
-                }
-
-                toast.success("Image uploaded successfully.", { id: toastId })
-            } catch (error) {
-                toast.error(
-                    error instanceof Error ? error.message : "Failed to upload image",
-                    { id: toastId }
-                )
+    const handleAssetSelect = useCallback(
+        (asset: DocumentTemplateAsset, intent: DocumentTemplateAssetIntent) => {
+            if (intent === "header-logo") {
+                updateHeaderFields({ ...layoutRef.current.headerFields, logoUrl: asset.url })
+                return
             }
-        },
-        [insertImage, insertLogoAtCursor, uploadImageMutation]
-    )
 
-    const onHeaderImageSelected = useCallback(
-        async (event: React.ChangeEvent<HTMLInputElement>) => {
-            const file = event.target.files?.[0]
-            event.target.value = ""
-            if (!file) return
-            await handleImageUpload(file, { asHeader: true })
-        },
-        [handleImageUpload]
-    )
+            if (intent === "logo") {
+                insertLogoAtCursor(asset.url)
+                return
+            }
 
-    const onInlineImageSelected = useCallback(
-        async (event: React.ChangeEvent<HTMLInputElement>) => {
-            const file = event.target.files?.[0]
-            event.target.value = ""
-            if (!file) return
-            await handleImageUpload(file)
+            insertImage(asset.url, intent === "header" ? { asHeader: true } : undefined)
         },
-        [handleImageUpload]
-    )
-
-    const onLogoImageSelected = useCallback(
-        async (event: React.ChangeEvent<HTMLInputElement>) => {
-            const file = event.target.files?.[0]
-            event.target.value = ""
-            if (!file) return
-            await handleImageUpload(file, { asLogo: true })
-        },
-        [handleImageUpload]
+        [insertImage, insertLogoAtCursor, updateHeaderFields]
     )
 
     const insertDocumentHeading = useCallback(() => {
@@ -355,8 +421,6 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
     if (!editor) {
         return null
     }
-
-    const isUploading = uploadImageMutation.isPending
 
     return (
         <div className={cn("space-y-3", className)}>
@@ -496,8 +560,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                             variant="outline"
                             size="xs"
                             className="gap-1.5"
-                            disabled={isUploading}
-                            onClick={() => headerImageInputRef.current?.click()}
+                            onClick={() => openAssetsModal("header")}
                         >
                             <ImageUp className="size-3.5" />
                             Header image
@@ -507,8 +570,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                             variant="outline"
                             size="xs"
                             className="gap-1.5"
-                            disabled={isUploading}
-                            onClick={() => inlineImageInputRef.current?.click()}
+                            onClick={() => openAssetsModal("inline")}
                         >
                             <ImageIcon className="size-3.5" />
                             Insert image
@@ -528,6 +590,140 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                             <Redo2 className="size-3.5" />
                         </ToolbarButton>
                     </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Typography as="span" font="small" className="mr-1 text-muted-foreground uppercase">
+                            Header &amp; footer
+                        </Typography>
+                        {hasHeader ? (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                className="gap-1.5"
+                                onClick={removeDocumentHeader}
+                            >
+                                <PanelTop className="size-3.5" />
+                                Remove header
+                            </Button>
+                        ) : (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                className="gap-1.5"
+                                onClick={addDocumentHeader}
+                            >
+                                <PanelTop className="size-3.5" />
+                                Add header
+                            </Button>
+                        )}
+                        {hasFooter ? (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                className="gap-1.5"
+                                onClick={removeDocumentFooter}
+                            >
+                                <PanelBottom className="size-3.5" />
+                                Remove footer
+                            </Button>
+                        ) : (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                className="gap-1.5"
+                                onClick={addDocumentFooter}
+                            >
+                                <PanelBottom className="size-3.5" />
+                                Add footer
+                            </Button>
+                        )}
+                    </div>
+
+                    {hasHeader ? (
+                        <div className="space-y-3 rounded-md border border-border/70 bg-background/80 p-3">
+                            <Typography as="span" font="small" className="font-semibold uppercase">
+                                Document header
+                            </Typography>
+                            <div className="flex flex-wrap items-start gap-3">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="xs"
+                                    className="gap-1.5"
+                                    onClick={() => openAssetsModal("header-logo")}
+                                >
+                                    <ImageUp className="size-3.5" />
+                                    Attach logo
+                                </Button>
+                                {headerFields.logoUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                        src={headerFields.logoUrl}
+                                        alt="Header logo preview"
+                                        className="max-h-12 w-auto object-contain"
+                                    />
+                                ) : null}
+                            </div>
+                            <div className="space-y-1.5">
+                                <Typography as="label" font="small" className="text-muted-foreground">
+                                    Contact text (right side)
+                                </Typography>
+                                <Textarea
+                                    value={headerFields.contactText}
+                                    rows={2}
+                                    onChange={(event) =>
+                                        updateHeaderFields({
+                                            ...headerFields,
+                                            contactText: event.target.value,
+                                        })
+                                    }
+                                />
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {hasFooter ? (
+                        <div className="space-y-3 rounded-md border border-border/70 bg-background/80 p-3">
+                            <Typography as="span" font="small" className="font-semibold uppercase">
+                                Document footer (4 columns)
+                            </Typography>
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                {(
+                                    [
+                                        ["column1", "Column 1"],
+                                        ["column2", "Column 2"],
+                                        ["column3", "Column 3"],
+                                        ["column4", "Column 4"],
+                                    ] as const
+                                ).map(([key, label]) => (
+                                    <div key={key} className="space-y-1.5">
+                                        <Typography as="label" font="small" className="text-muted-foreground">
+                                            {label}
+                                        </Typography>
+                                        <Textarea
+                                            value={footerFields[key]}
+                                            rows={4}
+                                            onChange={(event) =>
+                                                updateFooterFields({
+                                                    ...footerFields,
+                                                    [key]: event.target.value,
+                                                })
+                                            }
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : null}
+
+                    <Typography as="p" font="small" className="text-muted-foreground">
+                        Header and footer stay fixed at the top and bottom of each page — like Word.
+                        Only the center area is editable for letter content.
+                    </Typography>
 
                     <div className="flex flex-wrap items-center gap-2">
                         <Typography as="span" font="small" className="mr-1 text-muted-foreground uppercase">
@@ -570,8 +766,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                             variant="outline"
                             size="xs"
                             className="gap-1.5"
-                            disabled={isUploading}
-                            onClick={() => logoImageInputRef.current?.click()}
+                            onClick={() => openAssetsModal("logo")}
                         >
                             <ImageIcon className="size-3.5" />
                             Add logo
@@ -601,41 +796,9 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
 
                     <Typography as="p" font="small" className="text-muted-foreground">
                         Use Logo row for one line with multiple logos. Click Add logo again in the
-                        same row to place more logos side by side. Click a logo to resize it or use
-                        the on-image placement controls for left, center, and right positioning.
+                        same row to place more logos side by side. Images are picked from the shared
+                        template assets library so you can upload once and reuse them.
                     </Typography>
-
-                    <input
-                        ref={headerImageInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="hidden"
-                        onChange={onHeaderImageSelected}
-                    />
-                    <input
-                        ref={logoImageInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="hidden"
-                        onChange={onLogoImageSelected}
-                    />
-                    <input
-                        ref={inlineImageInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="hidden"
-                        onChange={onInlineImageSelected}
-                    />
-
-                    {uploadImageMutation.isError ? (
-                        <ErrorView
-                            message={
-                                uploadImageMutation.error instanceof Error
-                                    ? uploadImageMutation.error.message
-                                    : "Failed to upload image"
-                            }
-                        />
-                    ) : null}
 
                     <div className="space-y-2">
                         <Typography as="span" font="small" className="text-muted-foreground uppercase">
@@ -687,13 +850,38 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
             ) : null}
 
             <div className={A4_DOCUMENT_SHEET_WRAPPER_CLASS}>
-                <div className={A4_DOCUMENT_PAGE_CLASS}>
+                <div
+                    className={cn(
+                        A4_DOCUMENT_PAGE_CLASS,
+                        "flex flex-col",
+                        DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
+                    )}
+                >
                     <DocumentPageWatermark />
-                    <div className="relative z-10">
+                    {hasHeader ? (
+                        <div
+                            className="relative z-10 shrink-0"
+                            dangerouslySetInnerHTML={{ __html: buildHeaderHtml(headerFields) }}
+                        />
+                    ) : null}
+                    <div className="relative z-10 min-h-0 flex-1">
                         <EditorContent editor={editor} />
                     </div>
+                    {hasFooter ? (
+                        <div
+                            className="relative z-10 mt-auto shrink-0"
+                            dangerouslySetInnerHTML={{ __html: buildFooterHtml(footerFields) }}
+                        />
+                    ) : null}
                 </div>
             </div>
+
+            <DocumentTemplateAssetsModal
+                open={assetsModalOpen}
+                intent={assetsModalIntent}
+                onOpenChange={setAssetsModalOpen}
+                onSelect={handleAssetSelect}
+            />
         </div>
     )
 })

@@ -29,7 +29,13 @@ import { Building, ChevronDown, School, FileUp, FileText, Plus, Upload, X, Clipb
 import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { resolveGradeTypeOptional, type GradeType } from "@/types/schemas/academic"
 import { Role } from "@/types/enums/role"
-import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
+import {
+    filterCoursesByHighestEducation,
+    getHighestEducationLabel,
+    HIGHEST_EDUCATION_OPTIONS,
+    isHighestEducationLevel,
+    normalizeHighestEducationFromStored,
+} from "@/types/schemas/highest-education"
 import { toast } from "sonner"
 import { FilePreview } from "@/components/shared/FilePreview"
 import { cn } from "@/lib/utils"
@@ -37,7 +43,6 @@ import { isFileWithinSizeLimit, MAX_FILE_SIZE_ERROR_MESSAGE } from "@/lib/consta
 import { useLevels } from "@/hooks/useLevels"
 import type { CourseProgram } from "@/types/schemas/program"
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
-import { filterCoursesByQualificationLevel, getLevelBadgeStyle } from "@/lib/utils/levels"
 import { resolveCourseDocumentTypesForCourses } from "@/lib/utils/course-documents"
 import { resolveApsDocumentType, withApsRequiredDocument } from "@/lib/utils/aps"
 import {
@@ -56,6 +61,14 @@ import {
 } from "@/components/ui/tooltip"
 import type { StudentFormPageData } from "@/lib/student/server"
 import type { UserRole } from "@/types"
+import { QualificationUpgradeDialog } from "@/components/shared/qualification-upgrade-dialog"
+import {
+    getQualificationSnapshotFromEducation,
+    getQualificationUpgradeMessage,
+    invalidateQualificationDocumentQueries,
+    isQualificationUpgrade,
+    type QualificationSnapshot,
+} from "@/lib/utils/qualification-upgrade"
 
 function getFieldState(field: {
     state: { meta: { isTouched: boolean; isValid: boolean; errors?: unknown[] } }
@@ -398,12 +411,20 @@ const CourseSelect = React.memo(function CourseSelect({
     selectedCourseIds: string[]
     onChange: (courseIds: string[]) => void
 }) {
+    const formatCourseSelectLabel = useCallback((course: CourseProgram) => {
+        const meta = [course.degree?.level?.name, formatProgramDate(course.deadline_date)]
+            .filter(Boolean)
+            .join(" • ")
+
+        return meta ? `${course.name} — ${meta}` : course.name
+    }, [])
+
     if (courses.length === 0) {
         return (
             <div className="col-span-full space-y-2">
                 <FieldLabel>Courses</FieldLabel>
                 <Select disabled>
-                    <SelectTrigger className="h-12 w-full">
+                    <SelectTrigger className="h-12 w-full min-w-0 max-w-lg">
                         <SelectValue placeholder="No courses available for this qualification level." />
                     </SelectTrigger>
                 </Select>
@@ -412,26 +433,34 @@ const CourseSelect = React.memo(function CourseSelect({
     }
 
     return (
-        <div className="col-span-full space-y-2">
+        <div className="col-span-full space-y-2 min-w-0">
             <FieldLabel>Courses</FieldLabel>
             <Select
                 value={selectedCourseIds[0] || undefined}
                 onValueChange={(val) => onChange(val ? [val] : [])}
             >
-                <SelectTrigger className="h-12 w-full">
-                    <SelectValue placeholder="Select a course" />
+                <SelectTrigger className="h-12 w-full min-w-0 max-w-lg">
+                    <SelectValue placeholder="Select a course" className="truncate" />
                 </SelectTrigger>
-                <SelectContent className="max-h-60">
-                    {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
-                            {course.name}
-                            {course.degree?.level?.name || course.deadline_date
-                                ? ` — ${[course.degree?.level?.name, formatProgramDate(course.deadline_date)]
-                                      .filter(Boolean)
-                                      .join(" • ")}`
-                                : ""}
-                        </SelectItem>
-                    ))}
+                <SelectContent
+                    className="max-h-60 w-[var(--radix-select-trigger-width)] overflow-hidden"
+                    position="popper"
+                    align="start"
+                >
+                    {courses.map((course) => {
+                        const label = formatCourseSelectLabel(course)
+
+                        return (
+                            <SelectItem
+                                key={course.id}
+                                value={course.id}
+                                title={label}
+                                className="min-w-0 overflow-hidden [&>span:last-child]:!block [&>span:last-child]:!min-w-0 [&>span:last-child]:truncate"
+                            >
+                                {label}
+                            </SelectItem>
+                        )
+                    })}
                 </SelectContent>
             </Select>
         </div>
@@ -821,7 +850,6 @@ function SupportingDocumentsSection({
 export function StudentForm({ mode, studentId, defaultData, initialUser }: Props) {
     const router = useRouter()
     const queryClient = useQueryClient()
-    const { data: degrees = [], isLoading: loadingDegrees } = useDegrees()
 
     const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
     const [applicationDocError, setApplicationDocError] = useState<string | null>(null);
@@ -830,6 +858,23 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
     const [isDocumentsLoading, setIsDocumentsLoading] = useState(false);
     const [pendingFiles, setPendingFiles] = useState<Record<string, { front: File | null; back: File | null }>>({});
     const [isUploading, setIsUploading] = useState<Record<string, boolean>>({});
+    const [qualificationUpgradeNotice, setQualificationUpgradeNotice] = useState({
+        open: false,
+        title: "",
+        description: "",
+    });
+
+    const eduListForSnapshot = Array.isArray(defaultData?.education)
+        ? defaultData.education
+        : defaultData?.education
+            ? [defaultData.education]
+            : null
+    const initialQualificationSnapshot = useMemo(
+        () => getQualificationSnapshotFromEducation(eduListForSnapshot?.[0] ?? null),
+        [eduListForSnapshot]
+    )
+    const trackedQualificationRef = useRef<QualificationSnapshot>(initialQualificationSnapshot)
+    const qualificationUpgradeDetectedRef = useRef(false)
 
     const { me } = useAuth()
     const user = me.data ?? initialUser ?? undefined
@@ -873,6 +918,42 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
         setSelectedCourseIds([])
         setApplicationDocError(null)
     }, [])
+
+    const handleQualificationChange = useCallback(
+        (
+            previousQualification: string | undefined,
+            nextQualification: string,
+            applyChange: () => void
+        ) => {
+            const previousSnapshot: QualificationSnapshot = previousQualification
+                ? { qualification: previousQualification }
+                : trackedQualificationRef.current
+            const nextSnapshot: QualificationSnapshot = { qualification: nextQualification }
+
+            if (isQualificationUpgrade(previousSnapshot, nextSnapshot)) {
+                const message = getQualificationUpgradeMessage(previousSnapshot, nextSnapshot)
+                qualificationUpgradeDetectedRef.current = true
+                setQualificationUpgradeNotice({
+                    open: true,
+                    title: message.title,
+                    description: message.description,
+                })
+                clearCourseSelection()
+                setPendingFiles({})
+                invalidateQualificationDocumentQueries(queryClient, createdStudentId ?? studentId ?? undefined)
+                if (createdStudentId) {
+                    void refetchDocuments()
+                }
+            } else if (previousQualification !== nextQualification) {
+                clearCourseSelection()
+                setPendingFiles({})
+            }
+
+            applyChange()
+            trackedQualificationRef.current = nextSnapshot
+        },
+        [clearCourseSelection, createdStudentId, queryClient, refetchDocuments, studentId]
+    )
 
     const handleCourseSelectionChange = useCallback((courseIds: string[]) => {
         setSelectedCourseIds(courseIds)
@@ -1044,7 +1125,20 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                     const gradeType = resolveGradeTypeOptional(e)
                     return {
                         id: (e as { id?: string }).id?.trim() || undefined,
-                        qualification: e.qualification ?? "",
+                        qualification:
+                            normalizeHighestEducationFromStored(
+                                e.qualification,
+                                (
+                                    e as {
+                                        qualification_degree?: {
+                                            level?: { name?: string | null } | null
+                                        } | null
+                                    }
+                                ).qualification_degree?.level?.name
+                            ) ||
+                            (e.qualification && !isHighestEducationLevel(e.qualification)
+                                ? e.qualification
+                                : ""),
                         institution_name: e.institution_name ?? "",
                         grade_type: gradeType,
                         gpa:
@@ -1116,7 +1210,12 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                 if (!res.ok) throw new Error(json?.error ?? "Something went wrong")
 
                 queryClient.invalidateQueries({ queryKey: ["students"] })
-                if (mode === "edit") queryClient.invalidateQueries({ queryKey: ["students", studentId] })
+                if (mode === "edit") {
+                    queryClient.invalidateQueries({ queryKey: ["students", studentId] })
+                    if (qualificationUpgradeDetectedRef.current && studentId) {
+                        invalidateQualificationDocumentQueries(queryClient, studentId)
+                    }
+                }
                 router.push(mode === "edit" ? `/dashboard/student/${studentId}` : "/dashboard/student")
                 router.refresh()
             }
@@ -1461,37 +1560,39 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                                             <form.Field name={`academic_background[${index}].qualification`}>
                                                                 {(subField) => (
                                                                     <div className="flex-1 min-w-[200px]">
-                                                                        <F field={subField} label="Highest Degree">
+                                                                        <F field={subField} label="Highest Level of Education">
                                                                             <Select
                                                                                 value={subField.state.value || undefined}
                                                                                 onValueChange={(v) => {
-                                                                                    subField.handleChange(v)
-                                                                                    subField.handleBlur()
-                                                                                    clearCourseSelection()
+                                                                                    handleQualificationChange(
+                                                                                        subField.state.value,
+                                                                                        v,
+                                                                                        () => {
+                                                                                            subField.handleChange(
+                                                                                                v as typeof subField.state.value
+                                                                                            )
+                                                                                            subField.handleBlur()
+                                                                                        }
+                                                                                    )
                                                                                 }}
-                                                                                disabled={loadingDegrees}
                                                                             >
                                                                                 <SelectTrigger className="h-12">
-                                                                                    <SelectValue
-                                                                                        placeholder={
-                                                                                            loadingDegrees
-                                                                                                ? "Loading degrees..."
-                                                                                                : "Select highest degree"
-                                                                                        }
-                                                                                    />
+                                                                                    <SelectValue placeholder="Select highest level of education" />
                                                                                 </SelectTrigger>
                                                                                 <SelectContent>
-                                                                                    {!degrees.some(
-                                                                                        (d) => d.id === subField.state.value
-                                                                                    ) &&
-                                                                                        subField.state.value && (
-                                                                                            <SelectItem value={subField.state.value}>
-                                                                                                {subField.state.value}
+                                                                                    {subField.state.value &&
+                                                                                        !isHighestEducationLevel(subField.state.value) && (
+                                                                                            <SelectItem
+                                                                                                value={subField.state.value}
+                                                                                                disabled
+                                                                                            >
+                                                                                                {getHighestEducationLabel(subField.state.value) ||
+                                                                                                    "Previous selection — choose a new level"}
                                                                                             </SelectItem>
                                                                                         )}
-                                                                                    {degrees.map((degree) => (
-                                                                                        <SelectItem key={degree.id} value={degree.id}>
-                                                                                            {formatDegreeLabel(degree)}
+                                                                                    {HIGHEST_EDUCATION_OPTIONS.map((option) => (
+                                                                                        <SelectItem key={option.value} value={option.value}>
+                                                                                            {option.label}
                                                                                         </SelectItem>
                                                                                     ))}
                                                                                 </SelectContent>
@@ -1523,26 +1624,8 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                                                     <div className="flex-1 min-w-[160px]">
                                                                         <F field={subField} label="Grade Type (Optional)">
                                                                             <Select
-                                                                                value={subField.state.value || "none"}
+                                                                                value={subField.state.value || undefined}
                                                                                 onValueChange={(v) => {
-                                                                                    if (v === "none") {
-                                                                                        subField.handleChange("")
-                                                                                        subField.handleBlur()
-                                                                                        form.setFieldValue(
-                                                                                            `academic_background[${index}].gpa`,
-                                                                                            ""
-                                                                                        )
-                                                                                        form.setFieldValue(
-                                                                                            `academic_background[${index}].obtained_marks`,
-                                                                                            ""
-                                                                                        )
-                                                                                        form.setFieldValue(
-                                                                                            `academic_background[${index}].total_marks`,
-                                                                                            ""
-                                                                                        )
-                                                                                        return
-                                                                                    }
-
                                                                                     const nextGradeType = v as GradeType
                                                                                     subField.handleChange(nextGradeType)
                                                                                     subField.handleBlur()
@@ -1564,10 +1647,9 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                                                                 }}
                                                                             >
                                                                                 <SelectTrigger className="h-12">
-                                                                                    <SelectValue placeholder="Optional" />
+                                                                                    <SelectValue placeholder="Select grade type (optional)" />
                                                                                 </SelectTrigger>
                                                                                 <SelectContent>
-                                                                                    <SelectItem value="none">Not specified</SelectItem>
                                                                                     <SelectItem value="percentage">Percentage</SelectItem>
                                                                                     <SelectItem value="gpa">GPA</SelectItem>
                                                                                 </SelectContent>
@@ -1683,24 +1765,17 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                 <form.Subscribe
                                     selector={(state) => state.values.academic_background[0]?.qualification}
                                 >
-                                    {(qualificationId) => {
-                                        const selectedDegree = qualificationId
-                                            ? degrees.find((d) => d.id === qualificationId)
-                                            : null;
-                                        const eligibleCourses = qualificationId
-                                            ? filterCoursesByQualificationLevel(
-                                                  courses,
-                                                  selectedDegree?.level?.name,
-                                                  selectedDegree?.name
-                                              )
+                                    {(highestEducation) => {
+                                        const eligibleCourses = highestEducation
+                                            ? filterCoursesByHighestEducation(courses, highestEducation)
                                             : [];
 
                                         return (
                                             <div className="space-y-6">
-                                                {!qualificationId ? (
+                                                {!highestEducation || !isHighestEducationLevel(highestEducation) ? (
                                                     <div className="rounded-sm border border-dashed border-gray-200 bg-gray-50/50 px-4 py-6 text-center">
                                                         <Typography as="p" className="text-sm font-medium text-gray-500">
-                                                            Select your highest degree in Academic Background to view available courses.
+                                                            Select your highest level of education in Academic Background to view available courses.
                                                         </Typography>
                                                     </div>
                                                 ) : (
@@ -1772,6 +1847,15 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                     </FieldGroup>
                 </form>
             </div>
+
+            <QualificationUpgradeDialog
+                open={qualificationUpgradeNotice.open}
+                title={qualificationUpgradeNotice.title}
+                description={qualificationUpgradeNotice.description}
+                onOpenChange={(open) =>
+                    setQualificationUpgradeNotice((current) => ({ ...current, open }))
+                }
+            />
         </div>
 
     )

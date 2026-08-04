@@ -43,7 +43,18 @@ import type { StudentListItem } from "@/lib/student/list";
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program";
 import { resolveCourseDocumentTypes } from "@/lib/utils/course-documents";
 import { withApsRequiredDocument } from "@/lib/utils/aps";
-import { filterCoursesByQualificationLevel, getLevelBadgeStyle } from "@/lib/utils/levels";
+import { getLevelBadgeStyle } from "@/lib/utils/levels";
+import {
+    filterCoursesForStudentQualification,
+    getQualificationSnapshotFromEducation,
+    hasStudentQualification,
+} from "@/lib/utils/resolve-student-qualification";
+import {
+    getQualificationUpgradeMessage,
+    invalidateQualificationDocumentQueries,
+    isQualificationUpgrade,
+} from "@/lib/utils/qualification-upgrade";
+import { QualificationUpgradeDialog } from "@/components/shared/qualification-upgrade-dialog";
 import { useLevels } from "@/hooks/useLevels";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { ErrorView } from "@/components/shared/error-view";
@@ -194,6 +205,14 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
     const [isStep2Attempted, setIsStep2Attempted] = useState(false);
     const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
     const [duplicateError, setDuplicateError] = useState<string | null>(null);
+    const [qualificationUpgradeNotice, setQualificationUpgradeNotice] = useState({
+        open: false,
+        title: "",
+        description: "",
+    });
+    const trackedQualificationRef = useRef(
+        getQualificationSnapshotFromEducation(null)
+    );
     const router = useRouter();
     const searchParams = useSearchParams();
     const queryClient = useQueryClient();
@@ -407,17 +426,10 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
     });
     const allCourses: CourseProgram[] = Array.isArray(programsResponse?.data) ? programsResponse.data : [];
 
-    const qualificationLevelName = useMemo(() => {
-        return studentDetails?.education?.[0]?.qualification_degree?.level?.name ?? null;
-    }, [studentDetails?.education]);
-
-    const qualificationDegreeName = useMemo(() => {
-        const degree = studentDetails?.education?.[0]?.qualification_degree as
-            | { name?: string | null }
-            | null
-            | undefined
-        return degree?.name ?? null
-    }, [studentDetails?.education]);
+    const studentQualificationSnapshot = useMemo(
+        () => getQualificationSnapshotFromEducation(studentDetails?.education?.[0] ?? null),
+        [studentDetails?.education]
+    );
 
     const courses = useMemo(() => {
         const shouldFilterByQualification =
@@ -427,18 +439,14 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
             return allCourses;
         }
 
-        if (!qualificationLevelName && !qualificationDegreeName) {
+        if (!hasStudentQualification(studentQualificationSnapshot)) {
             return [];
         }
 
-        return filterCoursesByQualificationLevel(
-            allCourses,
-            qualificationLevelName,
-            qualificationDegreeName
-        );
-    }, [allCourses, user?.role, studentDetails, qualificationLevelName, qualificationDegreeName]);
+        return filterCoursesForStudentQualification(allCourses, studentQualificationSnapshot);
+    }, [allCourses, user?.role, studentDetails, studentQualificationSnapshot]);
 
-    const hasQualification = Boolean(qualificationLevelName || qualificationDegreeName);
+    const hasQualification = hasStudentQualification(studentQualificationSnapshot);
     const { data: levels = [] } = useLevels();
 
     const { data: programDetailResponse, isLoading: isCourseDetailLoading } = useQuery({
@@ -509,6 +517,65 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
         }
         prevCourseRef.current = selectedCourseId;
     }, [selectedCourseId, form]);
+
+    const prevStudentIdRef = useRef(selectedStudentId)
+    useEffect(() => {
+        if (prevStudentIdRef.current !== selectedStudentId) {
+            trackedQualificationRef.current = studentQualificationSnapshot
+            prevStudentIdRef.current = selectedStudentId
+        }
+    }, [selectedStudentId, studentQualificationSnapshot])
+
+    useEffect(() => {
+        if (!studentDetails?.education?.length) {
+            return;
+        }
+
+        const previousSnapshot = trackedQualificationRef.current
+        if (isQualificationUpgrade(previousSnapshot, studentQualificationSnapshot)) {
+            const message = getQualificationUpgradeMessage(
+                previousSnapshot,
+                studentQualificationSnapshot
+            )
+            setQualificationUpgradeNotice({
+                open: true,
+                title: message.title,
+                description: message.description,
+            })
+
+            if (
+                selectedCourseId &&
+                !courses.some((course) => course.id === selectedCourseId)
+            ) {
+                form.setFieldValue("course_id", "")
+                form.setFieldValue("document_ids", [])
+            }
+
+            if (selectedStudentId) {
+                invalidateQualificationDocumentQueries(queryClient, selectedStudentId)
+                void refetchDocuments()
+            }
+        }
+
+        trackedQualificationRef.current = studentQualificationSnapshot
+    }, [
+        courses,
+        form,
+        queryClient,
+        refetchDocuments,
+        selectedCourseId,
+        selectedStudentId,
+        studentDetails?.education,
+        studentQualificationSnapshot,
+    ])
+
+    useEffect(() => {
+        if (!selectedCourseId) return
+        if (courses.some((course) => course.id === selectedCourseId)) return
+
+        form.setFieldValue("course_id", "")
+        form.setFieldValue("document_ids", [])
+    }, [courses, form, selectedCourseId])
 
     // Auto-attach documents that match required/optional course types
     useEffect(() => {
@@ -818,6 +885,15 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
 
 
             </form>
+
+            <QualificationUpgradeDialog
+                open={qualificationUpgradeNotice.open}
+                title={qualificationUpgradeNotice.title}
+                description={qualificationUpgradeNotice.description}
+                onOpenChange={(open) =>
+                    setQualificationUpgradeNotice((current) => ({ ...current, open }))
+                }
+            />
         </div>
     );
 }

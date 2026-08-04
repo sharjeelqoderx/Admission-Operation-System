@@ -132,12 +132,32 @@ export const A4_DOCUMENT_PRINT_STYLES = `
         height: 100%;
         padding: 20mm 15mm;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .document-template-header {
+        margin-bottom: 16px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 12px;
+        flex-shrink: 0;
+    }
+    .document-template-footer {
+        margin-top: auto;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 12px;
+        flex-shrink: 0;
+    }
+    .document-template-header-logo {
+        max-height: 72px;
+        width: auto;
+        object-fit: contain;
     }
     .a4-page .page-body {
         position: relative;
         z-index: 1;
         width: 100%;
-        height: 100%;
+        flex: 1;
+        min-height: 0;
         overflow: hidden;
     }
     .${DOCUMENT_PAGE_WATERMARK_CLASS} {

@@ -7,6 +7,7 @@ import { Enums, Tables, TablesUpdate } from "@/types/supabase"
 import { loginSchema, otpSchema, signupSchema } from "@/types/schemas/auth"
 import { ApiResponse } from "@/lib/api"
 import { Role } from "@/types/enums/role"
+import { invalidateQualificationDocumentQueries } from "@/lib/utils/qualification-upgrade"
 
 type RoleEnum = Enums<"role_enum">
 type ProfileRow = Tables<"profile">
@@ -246,8 +247,9 @@ export function useAuth() {
     const academic = useMutation({
         mutationFn: (payload: AcademicPayload) =>
             post<{ message: string }>("/api/academic", payload),
-        onSuccess: () => {
+        onSuccess: (_data, variables) => {
             queryClient.invalidateQueries({ queryKey: ["me"] })
+            invalidateQualificationDocumentQueries(queryClient, variables.userId)
         },
     })
     const experience = useMutation({

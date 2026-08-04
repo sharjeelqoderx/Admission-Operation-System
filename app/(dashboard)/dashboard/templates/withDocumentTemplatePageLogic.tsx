@@ -9,7 +9,7 @@ import type {
 } from "@/types/schemas/document-template"
 import { DEFAULT_TEMPLATE_BODY_HTML } from "@/lib/document-template/a4-document"
 
-export type DocumentTemplatePageMode = "list" | "create" | "edit" | "view"
+export type DocumentTemplatePageMode = "list" | "edit" | "view"
 
 export type DocumentTemplatePageLogicProps = {
     templates: DocumentTemplateListItem[]
@@ -28,7 +28,6 @@ export type DocumentTemplatePageLogicProps = {
     formError: string | null
     setTitle: (value: string) => void
     setBodyHtml: (value: string) => void
-    openCreate: () => void
     openEdit: (template: DocumentTemplateListItem) => void
     openView: (template: DocumentTemplateListItem) => void
     backToList: () => void
@@ -79,24 +78,6 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             [templatesQuery.data?.data]
         )
 
-        const createMutation = useMutation({
-            mutationFn: async (payload: { title: string; body_html: string }) => {
-                const res = await fetch("/api/document-template", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload),
-                })
-                const json = await res.json()
-                if (!res.ok) {
-                    throw new Error(json?.error ?? "Failed to create document template")
-                }
-                return json
-            },
-            onSuccess: () => {
-                queryClient.invalidateQueries({ queryKey: ["document-templates"] })
-            },
-        })
-
         const updateMutation = useMutation({
             mutationFn: async ({
                 id,
@@ -144,11 +125,6 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             setActiveTemplate(null)
         }, [])
 
-        const openCreate = useCallback(() => {
-            resetEditorState()
-            setMode("create")
-        }, [resetEditorState])
-
         const openView = useCallback((template: DocumentTemplateListItem) => {
             setActiveTemplate(template)
             setTitle(template.title)
@@ -157,16 +133,13 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             setMode("view")
         }, [])
 
-        const openEdit = useCallback(
-            (template: DocumentTemplateListItem) => {
-                setActiveTemplate(template)
-                setTitle(template.title)
-                setBodyHtml(template.body_html || EMPTY_TEMPLATE_HTML)
-                setFormError(null)
-                setMode("edit")
-            },
-            []
-        )
+        const openEdit = useCallback((template: DocumentTemplateListItem) => {
+            setActiveTemplate(template)
+            setTitle(template.title)
+            setBodyHtml(template.body_html || EMPTY_TEMPLATE_HTML)
+            setFormError(null)
+            setMode("edit")
+        }, [])
 
         const backToList = useCallback(() => {
             resetEditorState()
@@ -181,27 +154,24 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 return
             }
 
+            if (!activeTemplate) {
+                setFormError("No template selected.")
+                return
+            }
+
             const payload = {
                 title: title.trim(),
                 body_html: bodyHtml,
             }
 
-            const toastId = toast.loading(
-                mode === "create" ? "Creating template..." : "Updating template..."
-            )
+            const toastId = toast.loading("Updating template...")
 
             try {
-                if (mode === "create") {
-                    await createMutation.mutateAsync(payload)
-                    toast.success("Document template created successfully.", { id: toastId })
-                } else if (mode === "edit" && activeTemplate) {
-                    await updateMutation.mutateAsync({
-                        id: activeTemplate.id,
-                        payload,
-                    })
-                    toast.success("Document template updated successfully.", { id: toastId })
-                }
-
+                await updateMutation.mutateAsync({
+                    id: activeTemplate.id,
+                    payload,
+                })
+                toast.success("Document template updated successfully.", { id: toastId })
                 backToList()
             } catch (error) {
                 const message =
@@ -209,15 +179,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 setFormError(message)
                 toast.error(message, { id: toastId })
             }
-        }, [
-            activeTemplate,
-            backToList,
-            bodyHtml,
-            createMutation,
-            mode,
-            title,
-            updateMutation,
-        ])
+        }, [activeTemplate, backToList, bodyHtml, title, updateMutation])
 
         const deleteTemplateById = useCallback(
             async (id: string) => {
@@ -260,13 +222,12 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             activeTemplate,
             title,
             bodyHtml,
-            isSaving: createMutation.isPending || updateMutation.isPending,
+            isSaving: updateMutation.isPending,
             isDeleting: deleteMutation.isPending,
             deletingId,
             formError,
             setTitle,
             setBodyHtml,
-            openCreate,
             openEdit,
             openView,
             backToList,

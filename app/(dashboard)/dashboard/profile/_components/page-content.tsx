@@ -55,6 +55,27 @@ import {
     normalizeDateValue,
 } from "@/types/schemas/academic"
 import type { ProfilePageData } from "@/lib/profile/server"
+import { QualificationUpgradeDialog } from "@/components/shared/qualification-upgrade-dialog"
+import {
+    getQualificationUpgradeMessage,
+    invalidateQualificationDocumentQueries,
+    isQualificationUpgrade,
+    type QualificationSnapshot,
+} from "@/lib/utils/qualification-upgrade"
+import type { DegreeOption } from "@/hooks/useDegrees"
+
+function buildProfileQualificationSnapshot(
+    academic: Pick<AcademicFormItem, "qualification">,
+    degrees: DegreeOption[]
+): QualificationSnapshot {
+    const degree = degrees.find((entry) => entry.id === academic.qualification)
+
+    return {
+        qualification: academic.qualification,
+        levelName: degree?.level?.name ?? null,
+        degreeName: degree?.name ?? null,
+    }
+}
 
 function genderFromTitle(title: string): "MALE" | "FEMALE" | undefined {
     switch (title) {
@@ -229,6 +250,11 @@ type PageContentProps = {
 function ProfilePageView({ initialData }: PageContentProps) {
     const queryClient = useQueryClient()
     const [showSuccess, setShowSuccess] = useState(false)
+    const [qualificationUpgradeNotice, setQualificationUpgradeNotice] = useState({
+        open: false,
+        title: "",
+        description: "",
+    })
     const { me } = useAuth()
     const user = (me.data as ProfilePageData | undefined) ?? initialData
     const isError = me.isError
@@ -367,6 +393,17 @@ function ProfilePageView({ initialData }: PageContentProps) {
 
     const saveAcademics = async () => {
         const value = form.state.values
+        const previousSnapshot = buildProfileQualificationSnapshot(
+            user?.academic?.[0]
+                ? mapAcademicToFormItem(user.academic[0])
+                : createEmptyAcademicItem(),
+            degrees
+        )
+        const nextSnapshot = buildProfileQualificationSnapshot(
+            value.academics[0] ?? createEmptyAcademicItem(),
+            degrees
+        )
+
         await academicMutation.mutateAsync({
             userId: user.id,
             academics: value.academics.map((a: AcademicFormItem) => ({
@@ -382,6 +419,17 @@ function ProfilePageView({ initialData }: PageContentProps) {
             })),
         })
         await queryClient.refetchQueries({ queryKey: ["me"] })
+
+        if (isQualificationUpgrade(previousSnapshot, nextSnapshot)) {
+            const message = getQualificationUpgradeMessage(previousSnapshot, nextSnapshot)
+            setQualificationUpgradeNotice({
+                open: true,
+                title: message.title,
+                description: message.description,
+            })
+            invalidateQualificationDocumentQueries(queryClient, user.id)
+        }
+
         setEditingSection(null)
     }
 
@@ -1676,6 +1724,15 @@ function ProfilePageView({ initialData }: PageContentProps) {
                     </DialogHeader>
                 </DialogContent>
             </Dialog>
+
+            <QualificationUpgradeDialog
+                open={qualificationUpgradeNotice.open}
+                title={qualificationUpgradeNotice.title}
+                description={qualificationUpgradeNotice.description}
+                onOpenChange={(open) =>
+                    setQualificationUpgradeNotice((current) => ({ ...current, open }))
+                }
+            />
         </main>
     )
 }

@@ -1,10 +1,10 @@
 "use client"
 
 import { memo, useCallback, useState } from "react"
-import { ArrowLeft, Plus, Printer, Save } from "lucide-react"
+import Link from "next/link"
+import { ArrowLeft, Plus, Printer } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
-import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -14,8 +14,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { DocumentTemplateEditor } from "./document-template-editor"
+import { DocumentTemplateFormView } from "./document-template-form-view"
 import { DocumentTemplatePreview } from "./document-template-preview"
 import { DocumentTemplateTable } from "./document-template-table"
 import {
@@ -95,7 +94,6 @@ function DocumentTemplatePageView({
     formError,
     setTitle,
     setBodyHtml,
-    openCreate,
     openEdit,
     openView,
     backToList,
@@ -152,9 +150,11 @@ function DocumentTemplatePageView({
                             </Typography>
                         </div>
                         {canCreateTemplate ? (
-                            <Button type="button" onClick={openCreate}>
-                                <Plus className="size-4" />
-                                Create Template
+                            <Button type="button" asChild>
+                                <Link href="/dashboard/templates/new">
+                                    <Plus className="size-4" />
+                                    Create Template
+                                </Link>
                             </Button>
                         ) : null}
                     </div>
@@ -191,13 +191,21 @@ function DocumentTemplatePageView({
         )
     }
 
-    const isViewMode = mode === "view"
-    const heading =
-        mode === "create"
-            ? "Create Document Template"
-            : mode === "edit"
-              ? "Edit Document Template"
-              : "View Document Template"
+    if (mode === "edit") {
+        return (
+            <DocumentTemplateFormView
+                heading="Edit Document Template"
+                title={title}
+                bodyHtml={bodyHtml}
+                isSaving={isSaving}
+                formError={formError}
+                onTitleChange={setTitle}
+                onBodyChange={setBodyHtml}
+                onSave={saveTemplate}
+                onBack={backToList}
+            />
+        )
+    }
 
     return (
         <main className="relative space-y-6">
@@ -214,58 +222,22 @@ function DocumentTemplatePageView({
                             Back to list
                         </Button>
                         <Typography as="h1" font="sub-heading" className="font-bold tracking-tight pt-4">
-                            {heading}
+                            View Document Template
                         </Typography>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                        {isViewMode ? (
-                            <Button type="button" variant="outline" className="gap-2" onClick={handlePrint}>
-                                <Printer className="size-4" />
-                                Print / Save as PDF
-                            </Button>
-                        ) : (
-                            <Button
-                                type="button"
-                                className="gap-2"
-                                disabled={isSaving}
-                                onClick={saveTemplate}
-                            >
-                                <Save className="size-4" />
-                                {isSaving ? "Saving..." : "Save Template"}
-                            </Button>
-                        )}
-                    </div>
+                    <Button type="button" variant="outline" className="gap-2" onClick={handlePrint}>
+                        <Printer className="size-4" />
+                        Print / Save as PDF
+                    </Button>
                 </div>
 
-                {!isViewMode ? (
-                    <div className="space-y-2">
-                        <Typography as="label" font="sub-text" className="font-semibold">
-                            Template title
-                        </Typography>
-                        <Input
-                            value={title}
-                            placeholder="e.g. Admission Offer Letter"
-                            onChange={(event) => setTitle(event.target.value)}
-                        />
-                    </div>
-                ) : null}
-
-                {formError ? <ErrorView message={formError} /> : null}
-
-                {isViewMode ? (
-                    <DocumentTemplatePreview
-                        title={title}
-                        bodyHtml={bodyHtml}
-                        useSampleData
-                        printable
-                    />
-                ) : (
-                    <DocumentTemplateEditor
-                        content={bodyHtml}
-                        onChange={setBodyHtml}
-                    />
-                )}
+                <DocumentTemplatePreview
+                    title={title}
+                    bodyHtml={bodyHtml}
+                    useSampleData
+                    printable
+                />
             </BluryCard>
         </main>
     )

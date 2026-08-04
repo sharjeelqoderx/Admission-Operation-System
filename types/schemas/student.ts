@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { fileWithinSizeLimit, MAX_FILE_SIZE_ERROR_MESSAGE } from "@/lib/constants/file-upload"
 import { GradeTypeSchema } from "@/types/schemas/academic"
+import { HighestEducationLevelSchema } from "@/types/schemas/highest-education"
 
 const optionalUploadFileSchema = z
     .union([
@@ -20,7 +21,7 @@ const optionalRecordIdSchema = z.string().optional()
 export const academicRecordSchema = z
     .object({
         id: optionalRecordIdSchema,
-        qualification: z.string().optional(),
+        qualification: z.union([HighestEducationLevelSchema, z.literal("")]).optional(),
         institution_name: z.string().optional(),
         grade_type: z.union([GradeTypeSchema, z.literal("")]).optional(),
         gpa: z.string().optional(),
@@ -38,7 +39,7 @@ export const academicRecordSchema = z
             ctx.addIssue({
                 path: ["qualification"],
                 code: "custom",
-                message: "Highest degree is required",
+                message: "Highest level of education is required",
             });
         }
         if (!val.institution_name?.trim()) {
@@ -132,10 +133,19 @@ const BaseStudentFormSchema = z.object({
     passport_file_url: optionalUploadFileSchema,
 })
 
-// Edit schema: relaxed academic validation
+// Edit schema: relaxed academic validation (allows legacy degree UUIDs in qualification)
 const relaxedAcademicRecordSchema = z.object({
     id: optionalRecordIdSchema,
-    qualification: z.string().optional(),
+    qualification: z
+        .union([
+            HighestEducationLevelSchema,
+            z.literal(""),
+            z.string().regex(
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+                "Invalid qualification value"
+            ),
+        ])
+        .optional(),
     institution_name: z.string().optional(),
     grade_type: z.union([GradeTypeSchema, z.literal("")]).optional(),
     gpa: z.string().optional(),

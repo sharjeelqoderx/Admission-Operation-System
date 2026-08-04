@@ -30,3 +30,14 @@ export type DocumentTemplatesListResponse = {
 export type DocumentTemplateDetailResponse = {
     data: DocumentTemplateListItem
 }
+
+export type DocumentTemplateAsset = {
+    name: string
+    path: string
+    url: string
+    created_at: string | null
+}
+
+export type DocumentTemplateAssetsResponse = {
+    data: DocumentTemplateAsset[]
+}

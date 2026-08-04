@@ -1,6 +1,7 @@
-
 "use client"
 
+import { useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { PageLoader } from "@/components/shared/page-loader"
@@ -10,6 +11,10 @@ import { useAuth } from "@/hooks/useAuth"
 import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { CourseBundlesTable } from "./course-bundles-table"
+import {
+    filterDegreeBundlesByQualification,
+    getQualificationSnapshotFromEducation,
+} from "@/lib/utils/resolve-student-qualification"
 
 type Props = {
     profileId?: string
@@ -36,7 +41,30 @@ export function CourseDocumentsView({
         error,
     } = useCourseDocumentBundles(resolvedProfileId)
 
-    if ((!profileId && userLoading) || isLoading) {
+    const { data: studentResponse, isLoading: isStudentLoading } = useQuery({
+        queryKey: ["student", resolvedProfileId],
+        queryFn: async () => {
+            const res = await fetch(`/api/student/${resolvedProfileId}`)
+            if (!res.ok) throw new Error("Failed to fetch student profile")
+            return res.json()
+        },
+        enabled: Boolean(resolvedProfileId),
+    })
+
+    const qualificationSnapshot = useMemo(
+        () =>
+            getQualificationSnapshotFromEducation(
+                studentResponse?.data?.education?.[0] ?? null
+            ),
+        [studentResponse?.data?.education]
+    )
+
+    const filteredBundles = useMemo(() => {
+        const bundles = data?.degree_bundles ?? []
+        return filterDegreeBundlesByQualification(bundles, qualificationSnapshot)
+    }, [data?.degree_bundles, qualificationSnapshot])
+
+    if ((!profileId && userLoading) || isLoading || isStudentLoading) {
         return <PageLoader />
     }
 
@@ -52,7 +80,6 @@ export function CourseDocumentsView({
         )
     }
 
-    const bundles = data?.degree_bundles ?? []
     const listStudentId = resolvedProfileId ?? ""
 
     return (
@@ -87,14 +114,14 @@ export function CourseDocumentsView({
                 </Typography>
             </BluryCard>
 
-            {bundles.length === 0 ? (
+            {filteredBundles.length === 0 ? (
                 <BluryCard isCentered={false} className="rounded-2xl">
                     <Typography as="p" font="sub-text" className="text-gray-600">
-                        No courses with degree requirements found.
+                        No courses with degree requirements found for the current highest qualification.
                     </Typography>
                 </BluryCard>
             ) : listStudentId ? (
-                <CourseBundlesTable bundles={bundles} studentId={listStudentId} />
+                <CourseBundlesTable bundles={filteredBundles} studentId={listStudentId} />
             ) : null}
         </div>
     )

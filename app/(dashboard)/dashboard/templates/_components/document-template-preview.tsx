@@ -8,8 +8,11 @@ import {
     A4_DOCUMENT_MULTI_PAGE_STACK_CLASS,
     A4_DOCUMENT_PAGE_CLASS,
     A4_DOCUMENT_SHEET_WRAPPER_CLASS,
-    splitTemplateBodyIntoPages,
 } from "@/lib/document-template/a4-document"
+import {
+    DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES,
+    splitTemplateLayoutIntoPages,
+} from "@/lib/document-template/header-footer"
 import {
     renderTemplateHtml,
     TEMPLATE_PREVIEW_SAMPLE_DATA,
@@ -36,7 +39,7 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
             ? renderTemplateHtml(bodyHtml, TEMPLATE_PREVIEW_SAMPLE_DATA)
             : bodyHtml
 
-        return splitTemplateBodyIntoPages(renderedHtml)
+        return splitTemplateLayoutIntoPages(renderedHtml)
     }, [bodyHtml, useSampleData])
 
     return (
@@ -46,19 +49,36 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
             </Typography>
             <div className={A4_DOCUMENT_SHEET_WRAPPER_CLASS}>
                 <div className={A4_DOCUMENT_MULTI_PAGE_STACK_CLASS}>
-                    {pages.map((pageHtml, index) => (
+                    {pages.map((page, index) => (
                         <div
                             key={`template-page-${index}`}
                             className={cn(
                                 A4_DOCUMENT_PAGE_CLASS,
+                                "flex flex-col",
+                                DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES,
                                 printable && "document-template-print-target"
                             )}
                         >
                             <DocumentPageWatermark />
+                            {page.headerHtml ? (
+                                <div
+                                    className="relative z-10 shrink-0"
+                                    dangerouslySetInnerHTML={{ __html: page.headerHtml }}
+                                />
+                            ) : null}
                             <div
-                                className={cn("relative z-10", A4_DOCUMENT_CONTENT_CLASS)}
-                                dangerouslySetInnerHTML={{ __html: pageHtml }}
+                                className={cn(
+                                    "relative z-10 min-h-0 flex-1",
+                                    A4_DOCUMENT_CONTENT_CLASS
+                                )}
+                                dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
                             />
+                            {page.footerHtml ? (
+                                <div
+                                    className="relative z-10 mt-auto shrink-0"
+                                    dangerouslySetInnerHTML={{ __html: page.footerHtml }}
+                                />
+                            ) : null}
                         </div>
                     ))}
                 </div>
