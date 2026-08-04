@@ -19,7 +19,7 @@ import { formatStudyMode } from "@/lib/utils/program"
 import { formatProgramDate } from "@/lib/utils/program"
 import { Clock, ExternalLink, GraduationCap, MapPin } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getDegreeLevels } from "./degree-documents-shared"
+import { getDegreeDocumentStats, getDegreeLevels } from "./degree-documents-shared"
 
 type Props = {
     bundles: DegreeDocumentBundle[]
@@ -69,6 +69,7 @@ export function CourseBundlesTable({ bundles, studentId }: Props) {
                     <TableBody className="bg-white/45">
                         {bundles.map((bundle, index) => {
                             const levels = getDegreeLevels(bundle.degree)
+                            const documentStats = getDegreeDocumentStats(bundle)
 
                             return (
                                 <TableRow
@@ -168,14 +169,15 @@ export function CourseBundlesTable({ bundles, studentId }: Props) {
                                         <div className="space-y-2 min-w-[120px]">
                                             <div className="flex items-center justify-between gap-2 text-xs">
                                                 <span className="text-gray-600">
-                                                    {bundle.uploaded_count}/{bundle.total_required}
+                                                    {documentStats.uploaded_count}/
+                                                    {documentStats.total_required}
                                                 </span>
                                                 <span className="font-semibold text-brand-byzantine">
-                                                    {bundle.completion_percentage}%
+                                                    {documentStats.completion_percentage}%
                                                 </span>
                                             </div>
                                             <Progress
-                                                value={bundle.completion_percentage}
+                                                value={documentStats.completion_percentage}
                                                 className="h-1.5"
                                             />
                                         </div>

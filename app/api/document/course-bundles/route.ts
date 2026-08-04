@@ -17,6 +17,10 @@ import {
     buildRejectionHistory,
     getLatestRejectionFeedback,
 } from "@/lib/document/rejection-history"
+import {
+    buildUniqueRequiredDocuments,
+    computeDocumentUploadStats,
+} from "@/lib/utils/course-documents"
 
 type DocumentRow = {
     id: string
@@ -266,33 +270,19 @@ export async function GET(req: NextRequest) {
                 const requirements =
                     degree.requirements?.filter((item) => item.document_type?.id) ?? []
 
-                const required_documents: CourseRequiredDocument[] = requirements.map(
-                    (requirement) => {
-                        const documentType = requirement.document_type!
-                        return {
-                            requirement_id: requirement.id,
-                            document_type_id: documentType.id,
-                            requirement_type: requirement.requirement_type ?? "REQUIRED",
-                            name: documentType.name,
-                            description: documentType.description,
-                            code: documentType.code,
-                            uploaded:
-                                latestDocumentByType.get(documentType.id) ?? null,
-                        }
+                const required_documents = buildUniqueRequiredDocuments({
+                    requirements,
+                    getUploaded: (documentTypeId) =>
+                        latestDocumentByType.get(documentTypeId) ?? null,
+                }) as CourseRequiredDocument[]
+
+                const stats = computeDocumentUploadStats(
+                    required_documents.map((item) => item.document_type_id),
+                    (documentTypeId) => {
+                        const uploaded = latestDocumentByType.get(documentTypeId)
+                        return (uploaded?.files?.length ?? 0) > 0
                     }
                 )
-
-                const mandatory_documents = required_documents.filter(
-                    (item) => item.requirement_type === "REQUIRED"
-                )
-                const total_required = mandatory_documents.length
-                const uploaded_count = mandatory_documents.filter(
-                    (item) => item.uploaded
-                ).length
-                const completion_percentage =
-                    total_required === 0
-                        ? 100
-                        : Math.round((uploaded_count / total_required) * 100)
 
                 const documentTypeIds = required_documents.map((item) => item.document_type_id)
                 const degreeLevel = degree.level?.id
@@ -320,9 +310,7 @@ export async function GET(req: NextRequest) {
                     },
                     courses: degreeCourses,
                     required_documents: sortRequiredDocumentsByLatest(required_documents),
-                    total_required,
-                    uploaded_count,
-                    completion_percentage,
+                    ...stats,
                 }
             })
             .sort((a, b) => getBundleLatestUploadTime(b) - getBundleLatestUploadTime(a))

@@ -16,6 +16,8 @@ import { formatStudyMode } from "@/lib/utils/program"
 import { ChevronLeft, Clock, GraduationCap, MapPin } from "lucide-react"
 import { DegreeDocumentsTable } from "./degree-documents-table"
 import {
+    formatDocumentLastUpdated,
+    getDegreeDocumentStats,
     getDegreeLevels,
     type PendingEntry,
     type PendingFilesMap,
@@ -125,6 +127,7 @@ export function DegreeDocumentsPanel({
     }
 
     const levels = getDegreeLevels(bundle.degree)
+    const documentStats = getDegreeDocumentStats(bundle)
 
     return (
         <div className="space-y-6">
@@ -173,23 +176,24 @@ export function DegreeDocumentsPanel({
                     )}
                 </div>
 
-                {bundle.courses.length > 0 && (
+                {/* {bundle.courses.length > 0 && (
                     <div className="text-sm text-gray-600">
-                        <span className="font-medium text-gray-800">Courses: </span>
+                        <span className="font-medium text-gray-800">Program: </span>
                         {bundle.courses.map((c) => c.name).join(", ")}
                     </div>
-                )}
+                )} */}
 
                 <div className="max-w-md space-y-2">
                     <div className="flex items-center justify-between gap-3 text-sm">
                         <span className="text-gray-600">
-                            {bundle.uploaded_count}/{bundle.total_required} documents uploaded
+                            {documentStats.uploaded_count}/{documentStats.total_required}{" "}
+                            documents uploaded
                         </span>
                         <span className="font-semibold text-brand-byzantine">
-                            {bundle.completion_percentage}%
+                            {documentStats.completion_percentage}%
                         </span>
                     </div>
-                    <Progress value={bundle.completion_percentage} className="h-1.5" />
+                    <Progress value={documentStats.completion_percentage} className="h-1.5" />
                 </div>
             </div>
 

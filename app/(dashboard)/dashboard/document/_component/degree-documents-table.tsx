@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/tooltip"
 import {
     formatDocumentStatus,
+    formatDocumentLastUpdated,
     getDocumentStatusBadgeClass,
     getPendingEntry,
     hasPendingFiles,
@@ -231,9 +232,7 @@ export function DegreeDocumentsTable({
                                     ) : null}
                                 </TableCell>
                                 <TableCell className="text-sm text-gray-500 whitespace-nowrap">
-                                    {uploaded?.updated_at
-                                        ? new Date(uploaded.updated_at).toLocaleDateString()
-                                        : null}
+                                    {formatDocumentLastUpdated(uploaded)}
                                 </TableCell>
                                 <TableCell>
                                     <div className="space-y-1">

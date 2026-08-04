@@ -1,4 +1,4 @@
-import type { DegreeDocumentBundle } from "@/types/schemas/document"
+import type { DegreeDocumentBundle, UploadedDocumentSummary } from "@/types/schemas/document"
 
 export type PendingEntry = {
     front: File | null
@@ -6,6 +6,37 @@ export type PendingEntry = {
 }
 
 export type PendingFilesMap = Record<string, PendingEntry>
+
+export function formatDocumentLastUpdated(
+    uploaded: UploadedDocumentSummary | null | undefined
+): string | null {
+    const value = uploaded?.updated_at ?? uploaded?.created_at
+    if (!value) return null
+
+    return new Date(value).toLocaleDateString()
+}
+
+export function hasUploadedDocumentFiles(
+    uploaded: UploadedDocumentSummary | null | undefined
+): boolean {
+    return (uploaded?.files?.length ?? 0) > 0
+}
+
+export function getDegreeDocumentStats(bundle: DegreeDocumentBundle) {
+    const documents = bundle.required_documents
+    const total_required = documents.length
+    const uploaded_count = documents.filter((document) =>
+        hasUploadedDocumentFiles(document.uploaded)
+    ).length
+    const completion_percentage =
+        total_required === 0 ? 100 : Math.round((uploaded_count / total_required) * 100)
+
+    return {
+        total_required,
+        uploaded_count,
+        completion_percentage,
+    }
+}
 
 export function getPendingKey(documentTypeId: string) {
     return documentTypeId

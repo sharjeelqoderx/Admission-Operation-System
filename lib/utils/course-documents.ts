@@ -122,6 +122,57 @@ export function resolveCourseDocumentTypes({
     }
 }
 
+export function computeDocumentUploadStats(
+    documentTypeIds: string[],
+    hasUpload: (documentTypeId: string) => boolean
+) {
+    const total_required = documentTypeIds.length
+    const uploaded_count = documentTypeIds.filter(hasUpload).length
+    const completion_percentage =
+        total_required === 0 ? 100 : Math.round((uploaded_count / total_required) * 100)
+
+    return {
+        total_required,
+        uploaded_count,
+        completion_percentage,
+    }
+}
+
+export function buildUniqueRequiredDocuments<
+    TRequirement extends CourseRequirementLike & {
+        id?: string
+        document_type?: {
+            id?: string
+            name?: string
+            description?: string | null
+            code?: string | null
+        } | null
+    },
+    TUploaded,
+>(params: {
+    requirements: TRequirement[]
+    getUploaded: (documentTypeId: string) => TUploaded | null | undefined
+}) {
+    const split = splitDocumentTypesByRequirement(params.requirements)
+
+    return split.required.map(({ id, name }) => {
+        const sourceRequirement = params.requirements.find(
+            (requirement) => requirement.document_type?.id === id
+        )
+        const documentType = sourceRequirement?.document_type
+
+        return {
+            requirement_id: sourceRequirement?.id ?? id,
+            document_type_id: id,
+            requirement_type: "REQUIRED" as const,
+            name: documentType?.name ?? name,
+            description: documentType?.description ?? null,
+            code: documentType?.code ?? null,
+            uploaded: params.getUploaded(id) ?? null,
+        }
+    })
+}
+
 export function resolveCourseDocumentTypesForCourses(
     courses: Array<{ id: string; degree?: { requirements?: CourseRequirementLike[] } | null }>,
     selectedCourseIds: string[],
