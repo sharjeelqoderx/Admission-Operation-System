@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { studentPipelineStatusSchema } from "@/types/schemas/university-student"
 
 export const agentKycStatusSchema = z.enum([
     "Pending",
@@ -47,7 +48,7 @@ export const universityAgentStudentSchema = z.object({
     student_code: z.string().nullable(),
     program_name: z.string().nullable(),
     intake_label: z.string().nullable(),
-    pipeline_status: z.enum(["Created", "Contract Sent", "Signed", "Completed"]),
+    pipeline_status: studentPipelineStatusSchema,
     submission_date: z.string().nullable(),
 })
 
