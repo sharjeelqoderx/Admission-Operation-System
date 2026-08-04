@@ -55,6 +55,28 @@ export function formatStudyMode(value?: string | null): string {
     return value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
+export function formatProgramDuration(value?: string | null): string {
+    if (!value?.trim()) return "N/A"
+
+    const trimmed = value.trim()
+    if (/^\d+$/.test(trimmed)) {
+        return `${trimmed} months`
+    }
+
+    return trimmed
+}
+
+export function formatTuitionFees(value?: string | null): string {
+    if (!value?.trim()) return "Contact University"
+
+    const trimmed = value.trim()
+    if (/^\d+([.,]\d+)?$/.test(trimmed)) {
+        return `€${trimmed}`
+    }
+
+    return trimmed.toLowerCase().includes("tuition") ? trimmed : `Tuition Fees: ${trimmed}`
+}
+
 export function matchesProgramCategory(course: CourseProgram, category: string): boolean {
     if (category === "ALL") return true
     return deriveProgramCategory(course.degree?.name) === category

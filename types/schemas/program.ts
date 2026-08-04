@@ -35,8 +35,32 @@ export type CourseDegree = Tables<"degree"> & {
     requirements: CourseRequirement[]
 }
 
+export type CourseProgramContent = Pick<
+    Tables<"program">,
+    | "id"
+    | "category"
+    | "location"
+    | "program_length"
+    | "program_detail"
+    | "admission_requirements"
+    | "perspectives"
+    | "prospects_after_graduation"
+    | "competency_model"
+    | "professional_skills"
+    | "management_skills"
+    | "status"
+>
+
+export type CourseProgramDocumentRequirement = {
+    id: string
+    document_type_id: string
+    name: string | null
+}
+
 export type CourseProgram = Tables<"course"> & {
     degree: CourseDegree | null
+    program?: CourseProgramContent | null
+    document_requirements?: CourseProgramDocumentRequirement[]
 }
 
 export type ProgramListResponse = {

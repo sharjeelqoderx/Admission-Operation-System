@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityProgramDetailForPage } from "@/lib/program/university-server"
+import { fetchCourseProgramById } from "@/lib/api/course-program"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { AgentStudentProgramDetailPage } from "../_components/agent-student-program-detail-page"
 import { UniversityProgramDetailPageContent } from "../_components/university-program/detail-page-content"
 import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
@@ -33,5 +35,17 @@ export default async function ProgramDetailPage({ params }: ProgramDetailPagePro
         )
     }
 
-    return <AgentStudentProgramDetailPage />
+    const supabase = await createSupabaseServerClient()
+    const initialCourse = await fetchCourseProgramById(supabase, programId)
+
+    if (!initialCourse) {
+        notFound()
+    }
+
+    return (
+        <AgentStudentProgramDetailPage
+            courseId={programId}
+            initialCourse={initialCourse}
+        />
+    )
 }
