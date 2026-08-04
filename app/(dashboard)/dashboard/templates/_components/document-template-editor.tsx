@@ -42,11 +42,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Typography } from "@/components/shared/Typography"
-import { DocumentPageWatermark } from "./document-center-logo-placeholder"
 import {
     A4_DOCUMENT_CONTENT_CLASS,
-    A4_DOCUMENT_PAGE_CLASS,
-    A4_DOCUMENT_SHEET_WRAPPER_CLASS,
     DEFAULT_CENTER_LOGO_WIDTH,
     DOCUMENT_IMAGE_CLASS,
     DOCUMENT_LOGO_LINE_CLASS,
@@ -56,6 +53,7 @@ import {
     buildLogoLineBlock,
 } from "@/lib/document-template/a4-document"
 import { DocumentPageBreak } from "@/lib/document-template/tiptap-document-page-break"
+import { DocumentTemplateA4PaginatedSheet } from "./document-template-a4-paginated-sheet"
 import { TEMPLATE_DYNAMIC_SECTIONS, TEMPLATE_MERGE_VARIABLES } from "@/lib/document-template/variables"
 import { DocumentParagraph } from "@/lib/document-template/tiptap-document-paragraph"
 import {
@@ -64,7 +62,6 @@ import {
     composeDocumentLayout,
     DEFAULT_FOOTER_FIELDS,
     DEFAULT_HEADER_FIELDS,
-    DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES,
     parseDocumentLayout,
     parseFooterHtml,
     parseHeaderHtml,
@@ -721,8 +718,9 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                     ) : null}
 
                     <Typography as="p" font="small" className="text-muted-foreground">
-                        Header and footer stay fixed at the top and bottom of each page — like Word.
-                        Only the center area is editable for letter content.
+                        Header and footer stay fixed at the top and bottom of every page — like
+                        Google Docs and Word. Only the center area is editable for letter content.
+                        When content exceeds one page, a new A4 page is added automatically.
                     </Typography>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -742,9 +740,8 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                     </div>
 
                     <Typography as="p" font="small" className="text-muted-foreground">
-                        Use Page break to start a new letter on the next page. One template can
-                        contain multiple pages — each page gets a centered background watermark in
-                        preview and PDF.
+                        Content flows across A4 pages automatically. Use Page break to force the
+                        next section onto a new page in preview and PDF.
                     </Typography>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -849,32 +846,14 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                 </div>
             ) : null}
 
-            <div className={A4_DOCUMENT_SHEET_WRAPPER_CLASS}>
-                <div
-                    className={cn(
-                        A4_DOCUMENT_PAGE_CLASS,
-                        "flex flex-col",
-                        DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
-                    )}
-                >
-                    <DocumentPageWatermark />
-                    {hasHeader ? (
-                        <div
-                            className="relative z-10 shrink-0"
-                            dangerouslySetInnerHTML={{ __html: buildHeaderHtml(headerFields) }}
-                        />
-                    ) : null}
-                    <div className="relative z-10 min-h-0 flex-1">
-                        <EditorContent editor={editor} />
-                    </div>
-                    {hasFooter ? (
-                        <div
-                            className="relative z-10 mt-auto shrink-0"
-                            dangerouslySetInnerHTML={{ __html: buildFooterHtml(footerFields) }}
-                        />
-                    ) : null}
-                </div>
-            </div>
+            <DocumentTemplateA4PaginatedSheet
+                hasHeader={hasHeader}
+                hasFooter={hasFooter}
+                headerHtml={buildHeaderHtml(headerFields)}
+                footerHtml={buildFooterHtml(footerFields)}
+            >
+                <EditorContent editor={editor} />
+            </DocumentTemplateA4PaginatedSheet>
 
             <DocumentTemplateAssetsModal
                 open={assetsModalOpen}

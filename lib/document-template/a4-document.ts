@@ -43,16 +43,33 @@ export const DOCUMENT_HEADING_STYLES = cn(
     "[&_h1.document-main-heading]:text-[24px] [&_h1.document-main-heading]:font-black"
 )
 
-/** A4 page shell — 210mm × 297mm with standard document margins. */
-export const A4_DOCUMENT_PAGE_CLASS = cn(
+/** Visual A4 sheet used as a background layer in the paginated editor. */
+export const A4_DOCUMENT_PAGE_SHELL_CLASS = cn(
     "a4-document-page",
     "relative mx-auto box-border overflow-hidden bg-white shadow-[0_4px_24px_rgba(0,0,0,0.12)]",
-    "w-[210mm] min-h-[297mm] max-w-full",
+    "w-[210mm] h-[297mm] min-h-[297mm] max-h-[297mm] max-w-full shrink-0"
+)
+
+/** A4 page shell — 210mm × 297mm with standard document margins. */
+export const A4_DOCUMENT_PAGE_CLASS = cn(
+    A4_DOCUMENT_PAGE_SHELL_CLASS,
     "px-[15mm] py-[20mm]"
 )
 
+export const A4_PAGE_HEIGHT_MM = 297
+export const A4_PAGE_WIDTH_MM = 210
+export const A4_PAGE_PADDING_X_MM = 15
+export const A4_PAGE_PADDING_Y_MM = 20
+export const A4_PAGE_STACK_GAP_PX = 16
+
+export function mmToPx(mm: number): number {
+    return (mm * 96) / 25.4
+}
+
+export const A4_PAGE_HEIGHT_PX = mmToPx(A4_PAGE_HEIGHT_MM)
+
 export const A4_DOCUMENT_CONTENT_CLASS = cn(
-    "prose prose-sm max-w-none w-full min-h-[calc(297mm-40mm)]",
+    "prose prose-sm max-w-none w-full",
     "focus:outline-none",
     DOCUMENT_HEADING_STYLES,
     "[&_table]:w-full [&_table]:border-collapse",
@@ -83,6 +100,9 @@ export const A4_DOCUMENT_CONTENT_CLASS = cn(
     "[&_.document-page-break-label]:uppercase [&_.document-page-break-label]:tracking-wide",
     "[&_.document-page-break-label]:text-slate-500"
 )
+
+/** Minimum body height for a single static preview / print page slice. */
+export const A4_DOCUMENT_PAGE_BODY_CLASS = cn(A4_DOCUMENT_CONTENT_CLASS, "min-h-[calc(297mm-40mm)]")
 
 export const A4_DOCUMENT_SHEET_WRAPPER_CLASS = cn(
     "flex justify-center overflow-x-auto rounded-lg border border-border bg-[#eef1f5] py-8 px-4"
