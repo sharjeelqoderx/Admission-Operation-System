@@ -4,10 +4,18 @@ import React, { useCallback, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type {
+    DocumentTemplateDetailResponse,
     DocumentTemplateListItem,
     DocumentTemplatesListResponse,
 } from "@/types/schemas/document-template"
 import { DEFAULT_TEMPLATE_BODY_HTML } from "@/lib/document-template/a4-document"
+import {
+    claimProgramInOptionsCache,
+    DOCUMENT_TEMPLATES_QUERY_KEY,
+    releaseProgramInOptionsCache,
+    removeDocumentTemplateFromCache,
+    upsertDocumentTemplateInCache,
+} from "@/lib/document-template/query-cache"
 
 export type DocumentTemplatePageMode = "list" | "edit" | "view"
 
@@ -93,9 +101,12 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         const [cloningId, setCloningId] = useState<string | null>(null)
 
         const templatesQuery = useQuery({
-            queryKey: ["document-templates"],
+            queryKey: DOCUMENT_TEMPLATES_QUERY_KEY,
             queryFn: fetchDocumentTemplates,
             initialData: { data: initialTemplates },
+            staleTime: Infinity,
+            refetchOnWindowFocus: false,
+            refetchOnMount: false,
         })
 
         const templates = useMemo(
@@ -120,11 +131,29 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 if (!res.ok) {
                     throw new Error(json?.error ?? "Failed to update document template")
                 }
-                return json
+                return json as DocumentTemplateDetailResponse
             },
-            onSuccess: () => {
-                queryClient.invalidateQueries({ queryKey: ["document-templates"] })
-                queryClient.invalidateQueries({ queryKey: ["document-template-program-options"] })
+            onSuccess: (response, variables) => {
+                const cached = queryClient.getQueryData<DocumentTemplatesListResponse>(
+                    DOCUMENT_TEMPLATES_QUERY_KEY
+                )
+                const previous = cached?.data.find((row) => row.id === variables.id)
+                const updated = response.data
+
+                upsertDocumentTemplateInCache(queryClient, updated)
+
+                if (previous?.program_id !== updated.program_id) {
+                    releaseProgramInOptionsCache(
+                        queryClient,
+                        previous?.program_id,
+                        previous?.program_label
+                    )
+                    claimProgramInOptionsCache(queryClient, updated.program_id, {
+                        keepForTemplateId: updated.id,
+                        programLabel: updated.program_label,
+                        templateTitle: updated.title,
+                    })
+                }
             },
         })
 
@@ -139,11 +168,19 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                         formatApiError(json, "Failed to delete document template")
                     )
                 }
-                return json
+                return { id }
             },
-            onSuccess: () => {
-                queryClient.invalidateQueries({ queryKey: ["document-templates"] })
-                queryClient.invalidateQueries({ queryKey: ["document-template-program-options"] })
+            onSuccess: ({ id }) => {
+                const cached = queryClient.getQueryData<DocumentTemplatesListResponse>(
+                    DOCUMENT_TEMPLATES_QUERY_KEY
+                )
+                const previous = cached?.data.find((row) => row.id === id)
+                removeDocumentTemplateFromCache(queryClient, id)
+                releaseProgramInOptionsCache(
+                    queryClient,
+                    previous?.program_id,
+                    previous?.program_label
+                )
             },
         })
 
@@ -162,11 +199,15 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 if (!res.ok) {
                     throw new Error(json?.error ?? "Failed to clone document template")
                 }
-                return json
+                return json as DocumentTemplateDetailResponse
             },
-            onSuccess: () => {
-                queryClient.invalidateQueries({ queryKey: ["document-templates"] })
-                queryClient.invalidateQueries({ queryKey: ["document-template-program-options"] })
+            onSuccess: (response) => {
+                upsertDocumentTemplateInCache(queryClient, response.data)
+                claimProgramInOptionsCache(queryClient, response.data.program_id, {
+                    keepForTemplateId: response.data.id,
+                    programLabel: response.data.program_label,
+                    templateTitle: response.data.title,
+                })
             },
         })
 

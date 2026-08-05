@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useCallback, useState } from "react"
 import Link from "next/link"
 import { Typography } from "@/components/shared/Typography"
 import {
@@ -8,6 +8,9 @@ import {
     ChevronRight,
     AlertCircle,
     Search,
+    Flame,
+    SquareArrowOutUpRight,
+    Trash2,
 } from "lucide-react"
 import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { requiresApsRequirement } from "@/lib/utils/aps"
@@ -23,6 +26,20 @@ import { BluryCard } from "@/components/shared/blury-card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 export type StudentRow = {
@@ -59,13 +76,15 @@ type Props = {
     isError: boolean
     errorMessage?: string
     deletingId: string | null
+    /** When true, show flame icon dropdown with View + Delete. Otherwise View button only. */
+    showActionsMenu?: boolean
     pagination?: {
         total: number
         page: number
         limit: number
         totalPages: number
     }
-    onDelete: (id: string, name: string) => void
+    onDelete?: (id: string, name: string) => void | Promise<void>
     onRetry: () => void
     onPageChange: (page: number) => void
 }
@@ -96,10 +115,28 @@ export const StudentTable = React.memo(function StudentTable({
     isError,
     errorMessage,
     deletingId,
+    showActionsMenu = false,
     pagination,
+    onDelete,
     onRetry,
     onPageChange,
 }: Props) {
+    const [studentToDelete, setStudentToDelete] = useState<{
+        id: string
+        name: string
+    } | null>(null)
+
+    const handleCloseDeleteDialog = useCallback(() => {
+        if (deletingId) return
+        setStudentToDelete(null)
+    }, [deletingId])
+
+    const handleConfirmDelete = useCallback(async () => {
+        if (!studentToDelete || !onDelete) return
+        await onDelete(studentToDelete.id, studentToDelete.name)
+        setStudentToDelete(null)
+    }, [onDelete, studentToDelete])
+
     if (isLoading) {
         return (
             <BluryCard
@@ -147,289 +184,389 @@ export const StudentTable = React.memo(function StudentTable({
     }
 
     return (
-        <BluryCard
-            isCentered={false}
-            blurAmount="backdrop-blur-lg"
-            blendColorClass="bg-white/10"
-            childClass="p-0!"
-            className="rounded-lg p-0 min-w-0"
-        >
-            <div
-                className={cn(
-                    "overflow-x-auto rounded-t-xl transition-opacity duration-200",
-                    isFetching && "pointer-events-none opacity-50"
-                )}
+        <>
+            <BluryCard
+                isCentered={false}
+                blurAmount="backdrop-blur-lg"
+                blendColorClass="bg-white/10"
+                childClass="p-0!"
+                className="rounded-lg p-0 min-w-0"
             >
-                <Table className="w-full text-left border-collapse min-w-[1400px]">
-                    <TableHeader className="sticky top-0 z-10">
-                        <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                Student
-                            </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                Email
-                            </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                Phone
-                            </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                Nationality
-                            </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                Highest Qualification
-                            </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                APS Requirement
-                            </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                DOB
-                            </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                Documents
-                            </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                Created
-                            </TableHead>
-                            <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
-                                Action
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-
-                    <TableBody className="bg-white/45">
-                        {!Array.isArray(students) || students.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={COLUMN_COUNT} className="px-8 py-16 text-center">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Search className="size-8 text-gray-300" />
-                                        <Typography as="p" className="text-sm font-medium text-gray-500">
-                                            No students found matching your search criteria.
-                                        </Typography>
-                                        <Typography as="p" className="text-xs text-gray-400">
-                                            Try adjusting your filters or search term.
-                                        </Typography>
-                                    </div>
-                                </TableCell>
+                <div
+                    className={cn(
+                        "overflow-x-auto rounded-t-xl transition-opacity duration-200",
+                        isFetching && "pointer-events-none opacity-50"
+                    )}
+                >
+                    <Table className="w-full text-left border-collapse min-w-[1400px]">
+                        <TableHeader className="sticky top-0 z-10">
+                            <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    Student
+                                </TableHead>
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    Email
+                                </TableHead>
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    Phone
+                                </TableHead>
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    Nationality
+                                </TableHead>
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    Highest Qualification
+                                </TableHead>
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    APS Requirement
+                                </TableHead>
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    DOB
+                                </TableHead>
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    Documents
+                                </TableHead>
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    Created
+                                </TableHead>
+                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                    Action
+                                </TableHead>
                             </TableRow>
-                        ) : (
-                            students.map((student, index) => {
-                                const studentName = student.profile?.name ?? "—"
-                                const initials = studentName
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .join("")
-                                    .slice(0, 2)
-                                    .toUpperCase()
+                        </TableHeader>
 
-                                const apsRequired =
-                                    student.aps_requirement ??
-                                    requiresApsRequirement(student.country)
-
-                                return (
-                                    <TableRow
-                                        key={student.id}
-                                        className={cn(
-                                            "border-b border-brand-secondary/15 transition-colors",
-                                            index % 2 === 0 ? "bg-white/70" : "bg-white/45",
-                                            "hover:bg-brand-secondary/5",
-                                            deletingId === student.id && "opacity-50"
-                                        )}
-                                    >
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <div className="flex items-center gap-3">
-                                                <Avatar className="size-10 rounded-xl border-2 border-white/50">
-                                                    <AvatarImage
-                                                        src={
-                                                            student.profile?.avatar_url ??
-                                                            `https://ui-avatars.com/api/?name=${encodeURIComponent(studentName)}&background=random`
-                                                        }
-                                                        alt={studentName}
-                                                        className="rounded-xl"
-                                                    />
-                                                    <AvatarFallback className="rounded-xl text-[12px] font-bold">
-                                                        {initials}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex flex-col">
-                                                    <Typography as="span" className="text-sm font-bold text-gray-900 capitalize">
-                                                        {studentName}
-                                                    </Typography>
-                                                    <Typography as="span" className="text-[11px] font-medium uppercase text-brand-blue-text">
-                                                        {student.student_code ?? "—"}
-                                                    </Typography>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-medium text-gray-700">
-                                                {student.profile?.email ?? "—"}
+                        <TableBody className="bg-white/45">
+                            {!Array.isArray(students) || students.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={COLUMN_COUNT} className="px-8 py-16 text-center">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <Search className="size-8 text-gray-300" />
+                                            <Typography as="p" className="text-sm font-medium text-gray-500">
+                                                No students found matching your search criteria.
                                             </Typography>
-                                        </TableCell>
-
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-medium text-gray-700">
-                                                {student.profile?.phone ?? "—"}
+                                            <Typography as="p" className="text-xs text-gray-400">
+                                                Try adjusting your filters or search term.
                                             </Typography>
-                                        </TableCell>
-
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-medium text-gray-600">
-                                                {student.nationality ?? "—"}
-                                            </Typography>
-                                        </TableCell>
-
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-medium text-gray-700">
-                                                {student.highest_qualification ?? "—"}
-                                            </Typography>
-                                        </TableCell>
-
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Typography
-                                                as="span"
-                                                className={cn(
-                                                    "text-sm font-bold",
-                                                    apsRequired ? "text-amber-700" : "text-gray-500"
-                                                )}
-                                            >
-                                                {apsRequired ? "Yes" : "No"}
-                                            </Typography>
-                                        </TableCell>
-
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-medium text-gray-600">
-                                                {formatDateOfBirth(student.profile?.date_of_birth)}
-                                            </Typography>
-                                        </TableCell>
-
-                                        <TableCell className="px-6 py-5 whitespace-nowrap min-w-[140px]">
-                                            <div className="flex flex-col gap-1.5">
-                                                {student.profile_id ? (
-                                                    <Link
-                                                        href={`/dashboard/document/student/${student.profile_id}`}
-                                                        className="block rounded-lg p-2 -m-2 hover:bg-brand-secondary/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-secondary/40"
-                                                        aria-label={`View documents for ${studentName}`}
-                                                    >
-                                                        <Typography as="span" className="text-sm font-bold text-brand-blue-text">
-                                                            {student.document_upload_percentage ?? 0}%
-                                                        </Typography>
-                                                        <Progress
-                                                            value={student.document_upload_percentage ?? 0}
-                                                            className="h-1.5 w-24 mt-1.5"
-                                                        />
-                                                        <Typography as="span" className="text-[11px] text-gray-500 font-light mt-1.5 block">
-                                                            {student.documents_uploaded_count ?? 0}/{student.total_document_types ?? 0} uploaded
-                                                        </Typography>
-                                                    </Link>
-                                                ) : (
-                                                    <>
-                                                        <Typography as="span" className="text-sm font-bold text-brand-blue-text">
-                                                            {student.document_upload_percentage ?? 0}%
-                                                        </Typography>
-                                                        <Progress
-                                                            value={student.document_upload_percentage ?? 0}
-                                                            className="h-1.5 w-24"
-                                                        />
-                                                        <Typography as="span" className="text-[11px] text-gray-500 font-light">
-                                                            {student.documents_uploaded_count ?? 0}/{student.total_document_types ?? 0} uploaded
-                                                        </Typography>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </TableCell>
-
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Typography as="span" className="text-sm font-medium text-gray-600">
-                                                {formatCreatedDate(student.created_at)}
-                                            </Typography>
-                                        </TableCell>
-
-                                        <TableCell className="px-6 py-5 whitespace-nowrap">
-                                            <Button
-                                                variant="outline"
-                                                className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
-                                                asChild
-                                            >
-                                                <Link href={`/dashboard/student/${student.profile_id}`}>
-                                                    View
-                                                </Link>
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                )
-                            })
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-
-            <div className="border-t-2 border-brand-secondary/20 bg-brand-secondary/10 rounded-b-xl">
-                <div className="px-8 py-5">
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1">
-                            {pagination ? (
-                                <>
-                                    <Typography as="span" className="text-[12px] font-light text-gray-500">
-                                        Showing
-                                    </Typography>
-                                    <Typography as="span" className="text-[12px] font-bold text-brand-blue-text mx-1">
-                                        {pagination.total === 0
-                                            ? 0
-                                            : Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total)}
-                                        –
-                                        {Math.min(pagination.page * pagination.limit, pagination.total)}
-                                    </Typography>
-                                    <Typography as="span" className="text-[12px] font-light text-gray-500">
-                                        of {pagination.total} entries
-                                    </Typography>
-                                </>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
                             ) : (
-                                <>
-                                    <Typography as="span" className="text-[12px] font-light text-gray-500">
-                                        Showing
-                                    </Typography>
-                                    <Typography as="span" className="text-[12px] font-bold text-brand-blue-text mx-1">
-                                        {students.length}
-                                    </Typography>
-                                    <Typography as="span" className="text-[12px] font-light text-gray-500">
-                                        entries
-                                    </Typography>
-                                </>
-                            )}
-                        </div>
+                                students.map((student, index) => {
+                                    const studentName = student.profile?.name ?? "—"
+                                    const initials = studentName
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .slice(0, 2)
+                                        .toUpperCase()
 
-                        <div className="flex items-center gap-2 shrink-0">
-                            {isFetching && <Spinner size="sm" />}
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => pagination && onPageChange(pagination.page - 1)}
-                                disabled={!pagination || pagination.page <= 1}
-                            >
-                                <ChevronLeft size={16} />
-                            </Button>
-                            {pagination && pagination.totalPages > 0 && (
-                                <Typography as="span" className="text-[12px] font-medium text-gray-600 min-w-[72px] text-center">
-                                    {pagination.page} / {pagination.totalPages}
-                                </Typography>
+                                    const apsRequired =
+                                        student.aps_requirement ??
+                                        requiresApsRequirement(student.country)
+                                    const isDeleting = deletingId === student.id
+
+                                    return (
+                                        <TableRow
+                                            key={student.id}
+                                            className={cn(
+                                                "border-b border-brand-secondary/15 transition-colors",
+                                                index % 2 === 0 ? "bg-white/70" : "bg-white/45",
+                                                "hover:bg-brand-secondary/5",
+                                                isDeleting && "opacity-50"
+                                            )}
+                                        >
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar className="size-10 rounded-xl border-2 border-white/50">
+                                                        <AvatarImage
+                                                            src={
+                                                                student.profile?.avatar_url ??
+                                                                `https://ui-avatars.com/api/?name=${encodeURIComponent(studentName)}&background=random`
+                                                            }
+                                                            alt={studentName}
+                                                            className="rounded-xl"
+                                                        />
+                                                        <AvatarFallback className="rounded-xl text-[12px] font-bold">
+                                                            {initials}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex flex-col">
+                                                        <Typography
+                                                            as="span"
+                                                            className="text-sm font-bold text-gray-900 capitalize"
+                                                        >
+                                                            {studentName}
+                                                        </Typography>
+                                                        <Typography
+                                                            as="span"
+                                                            className="text-[11px] font-medium uppercase text-brand-blue-text"
+                                                        >
+                                                            {student.student_code ?? "—"}
+                                                        </Typography>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <Typography as="span" className="text-sm font-medium text-gray-700">
+                                                    {student.profile?.email ?? "—"}
+                                                </Typography>
+                                            </TableCell>
+
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <Typography as="span" className="text-sm font-medium text-gray-700">
+                                                    {student.profile?.phone ?? "—"}
+                                                </Typography>
+                                            </TableCell>
+
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <Typography as="span" className="text-sm font-medium text-gray-600">
+                                                    {student.nationality ?? "—"}
+                                                </Typography>
+                                            </TableCell>
+
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <Typography as="span" className="text-sm font-medium text-gray-700">
+                                                    {student.highest_qualification ?? "—"}
+                                                </Typography>
+                                            </TableCell>
+
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <Typography
+                                                    as="span"
+                                                    className={cn(
+                                                        "text-sm font-bold",
+                                                        apsRequired ? "text-amber-700" : "text-gray-500"
+                                                    )}
+                                                >
+                                                    {apsRequired ? "Yes" : "No"}
+                                                </Typography>
+                                            </TableCell>
+
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <Typography as="span" className="text-sm font-medium text-gray-600">
+                                                    {formatDateOfBirth(student.profile?.date_of_birth)}
+                                                </Typography>
+                                            </TableCell>
+
+                                            <TableCell className="px-6 py-5 whitespace-nowrap min-w-[140px]">
+                                                <div className="flex flex-col gap-1.5">
+                                                    {student.profile_id ? (
+                                                        <Link
+                                                            href={`/dashboard/document/student/${student.profile_id}`}
+                                                            className="block rounded-lg p-2 -m-2 hover:bg-brand-secondary/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-secondary/40"
+                                                            aria-label={`View documents for ${studentName}`}
+                                                        >
+                                                            <Typography as="span" className="text-sm font-bold text-brand-blue-text">
+                                                                {student.document_upload_percentage ?? 0}%
+                                                            </Typography>
+                                                            <Progress
+                                                                value={student.document_upload_percentage ?? 0}
+                                                                className="h-1.5 w-24 mt-1.5"
+                                                            />
+                                                            <Typography as="span" className="text-[11px] text-gray-500 font-light mt-1.5 block">
+                                                                {student.documents_uploaded_count ?? 0}/{student.total_document_types ?? 0} uploaded
+                                                            </Typography>
+                                                        </Link>
+                                                    ) : (
+                                                        <>
+                                                            <Typography as="span" className="text-sm font-bold text-brand-blue-text">
+                                                                {student.document_upload_percentage ?? 0}%
+                                                            </Typography>
+                                                            <Progress
+                                                                value={student.document_upload_percentage ?? 0}
+                                                                className="h-1.5 w-24"
+                                                            />
+                                                            <Typography as="span" className="text-[11px] text-gray-500 font-light">
+                                                                {student.documents_uploaded_count ?? 0}/{student.total_document_types ?? 0} uploaded
+                                                            </Typography>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                <Typography as="span" className="text-sm font-medium text-gray-600">
+                                                    {formatCreatedDate(student.created_at)}
+                                                </Typography>
+                                            </TableCell>
+
+                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                                {showActionsMenu ? (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                disabled={isDeleting}
+                                                                aria-label={`Actions for ${studentName}`}
+                                                                className="size-9 rounded-lg border border-gray-200 bg-white/80 text-orange-500 hover:bg-white hover:border-gray-300 hover:text-orange-600"
+                                                            >
+                                                                {isDeleting ? (
+                                                                    <Spinner size="sm" />
+                                                                ) : (
+                                                                    <Flame className="size-4" />
+                                                                )}
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-44">
+                                                            <DropdownMenuItem asChild className="cursor-pointer">
+                                                                <Link
+                                                                    href={`/dashboard/student/${student.profile_id}`}
+                                                                    className="flex w-full items-center"
+                                                                >
+                                                                    <Typography
+                                                                        as="span"
+                                                                        className="text-sm font-semibold text-gray-800"
+                                                                    >
+                                                                        View
+                                                                    </Typography>
+                                                                    <SquareArrowOutUpRight className="size-4 shrink-0 text-gray-600 ml-auto" />
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                disabled={isDeleting}
+                                                                className="cursor-pointer text-red-600 focus:text-red-700"
+                                                                onClick={() =>
+                                                                    setStudentToDelete({
+                                                                        id: student.id,
+                                                                        name: studentName,
+                                                                    })
+                                                                }
+                                                            >
+                                                                <Typography
+                                                                    as="span"
+                                                                    className="text-sm font-semibold"
+                                                                >
+                                                                    Delete
+                                                                </Typography>
+                                                                <Trash2 className="size-4 shrink-0 ml-auto" />
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                ) : (
+                                                    <Button
+                                                        variant="outline"
+                                                        className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
+                                                        asChild
+                                                    >
+                                                        <Link href={`/dashboard/student/${student.profile_id}`}>
+                                                            View
+                                                        </Link>
+                                                    </Button>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })
                             )}
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => pagination && onPageChange(pagination.page + 1)}
-                                disabled={
-                                    !pagination ||
-                                    pagination.totalPages === 0 ||
-                                    pagination.page >= pagination.totalPages
-                                }
-                            >
-                                <ChevronRight size={16} />
-                            </Button>
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <div className="border-t-2 border-brand-secondary/20 bg-brand-secondary/10 rounded-b-xl">
+                    <div className="px-8 py-5">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1">
+                                {pagination ? (
+                                    <>
+                                        <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                            Showing
+                                        </Typography>
+                                        <Typography as="span" className="text-[12px] font-bold text-brand-blue-text mx-1">
+                                            {pagination.total === 0
+                                                ? 0
+                                                : Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total)}
+                                            –
+                                            {Math.min(pagination.page * pagination.limit, pagination.total)}
+                                        </Typography>
+                                        <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                            of {pagination.total} entries
+                                        </Typography>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                            Showing
+                                        </Typography>
+                                        <Typography as="span" className="text-[12px] font-bold text-brand-blue-text mx-1">
+                                            {students.length}
+                                        </Typography>
+                                        <Typography as="span" className="text-[12px] font-light text-gray-500">
+                                            entries
+                                        </Typography>
+                                    </>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                                {isFetching && <Spinner size="sm" />}
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => pagination && onPageChange(pagination.page - 1)}
+                                    disabled={!pagination || pagination.page <= 1}
+                                >
+                                    <ChevronLeft size={16} />
+                                </Button>
+                                {pagination && pagination.totalPages > 0 && (
+                                    <Typography as="span" className="text-[12px] font-medium text-gray-600 min-w-[72px] text-center">
+                                        {pagination.page} / {pagination.totalPages}
+                                    </Typography>
+                                )}
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => pagination && onPageChange(pagination.page + 1)}
+                                    disabled={
+                                        !pagination ||
+                                        pagination.totalPages === 0 ||
+                                        pagination.page >= pagination.totalPages
+                                    }
+                                >
+                                    <ChevronRight size={16} />
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </BluryCard>
+            </BluryCard>
+
+            {showActionsMenu ? (
+                <Dialog
+                    open={studentToDelete !== null}
+                    onOpenChange={(open) => {
+                        if (!open) handleCloseDeleteDialog()
+                    }}
+                >
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete student?</DialogTitle>
+                            <DialogDescription>
+                                {studentToDelete
+                                    ? `Delete "${studentToDelete.name}"? This permanently removes their profile and related records.`
+                                    : "This permanently removes the student profile and related records."}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={handleCloseDeleteDialog}
+                                disabled={Boolean(deletingId)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleConfirmDelete}
+                                disabled={Boolean(deletingId)}
+                            >
+                                {deletingId ? "Deleting..." : "Delete"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            ) : null}
+        </>
     )
 })

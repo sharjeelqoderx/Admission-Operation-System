@@ -8,6 +8,8 @@ import { Typography } from "@/components/shared/Typography"
 import { Input } from "@/components/ui/input"
 import { StudentTable } from "../../_components/StudentTable"
 import { BluryCard } from "@/components/shared/blury-card"
+import { useAuth } from "@/hooks/useAuth"
+import { Role } from "@/types/enums/role"
 import {
     withStudentDashboardLogic,
     type StudentDashboardViewProps,
@@ -22,6 +24,8 @@ const StatsDashboard = memo(function StatsDashboard({
     stats,
     statsLoading,
 }: Pick<StudentDashboardViewProps, "stats" | "statsLoading">) {
+    const { me } = useAuth()
+    const canCreateStudent = me.data?.role === Role.AGENT
     const totalStudents = stats.total_students ?? 0
     const activeApplications = stats.active_applications ?? 0
 
@@ -42,15 +46,18 @@ const StatsDashboard = memo(function StatsDashboard({
                         font="sub-text"
                         className="text-gray-500 font-medium max-w-2xl leading-relaxed"
                     >
-                        Initiate a new student profile and link them to global academic programs.
-                        Ensure all mandatory fields are verified before submission.
+                        {canCreateStudent
+                            ? "Initiate a new student profile and link them to global academic programs. Ensure all mandatory fields are verified before submission."
+                            : "Review all student profiles, documents, and application progress across the platform."}
                     </Typography>
                 </div>
-                <Link href="/dashboard/student/new">
-                    <Button className="px-6 gap-2 font-normal">
-                        <Plus size={24} className="text-white" /> New Student
-                    </Button>
-                </Link>
+                {canCreateStudent ? (
+                    <Link href="/dashboard/student/new">
+                        <Button className="px-6 gap-2 font-normal">
+                            <Plus size={24} className="text-white" /> New Student
+                        </Button>
+                    </Link>
+                ) : null}
             </div>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-16">
@@ -116,6 +123,9 @@ function StudentDashboardView({
     status,
     refetch,
 }: StudentDashboardViewProps) {
+    const { me } = useAuth()
+    const showActionsMenu = me.data?.role === Role.SUPER_ADMIN
+
     return (
         <main className="relative min-w-0">
             <div className="max-w-[1400px] mx-auto space-y-8 min-w-0">
@@ -163,7 +173,8 @@ function StudentDashboardView({
                         isFetching={isFetching}
                         isError={isError}
                         errorMessage={errorMessage}
-                        onDelete={handleDelete}
+                        showActionsMenu={showActionsMenu}
+                        onDelete={showActionsMenu ? handleDelete : undefined}
                         onRetry={refetch}
                         onPageChange={handlePageChange}
                         deletingId={deletingId}

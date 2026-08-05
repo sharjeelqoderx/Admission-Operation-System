@@ -6,7 +6,8 @@ import { fetchStudentDashboardPageData } from "@/lib/student/server"
 import { PageLoader } from "@/components/shared/page-loader"
 import { PageContent } from "./_components/page-content"
 import { UniversityStudentListPageContent } from "./_components/university-student/page-content"
-import { isUniversityStaffRole } from "@/lib/auth/university-role"
+import { isUniversityRole } from "@/lib/auth/university-role"
+import { Role } from "@/types/enums/role"
 
 type StudentPageProps = {
     searchParams: Promise<{
@@ -23,7 +24,9 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
         redirect("/login")
     }
 
-    if (isUniversityStaffRole(role)) {
+    // University partners (admin/management) use the university-scoped list.
+    // Super admin uses the same full student table as agents.
+    if (isUniversityRole(role)) {
         const params = await searchParams
         const initialOverview = await fetchUniversityStudentsForPage({
             q: params.q,
@@ -41,6 +44,10 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
                 <UniversityStudentListPageContent initialOverview={initialOverview} />
             </Suspense>
         )
+    }
+
+    if (role !== Role.AGENT && role !== Role.SUPER_ADMIN) {
+        redirect("/dashboard")
     }
 
     const params = await searchParams

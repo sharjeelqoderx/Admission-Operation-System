@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { DEFAULT_TEMPLATE_BODY_HTML } from "@/lib/document-template/a4-document"
+import {
+    claimProgramInOptionsCache,
+    upsertDocumentTemplateInCache,
+} from "@/lib/document-template/query-cache"
+import type { DocumentTemplateDetailResponse } from "@/types/schemas/document-template"
 import { DocumentTemplateFormView } from "../../_components/document-template-form-view"
 
 export const CreatePageContent = memo(function CreatePageContent() {
@@ -30,13 +35,17 @@ export const CreatePageContent = memo(function CreatePageContent() {
             if (!res.ok) {
                 throw new Error(json?.error ?? "Failed to create document template")
             }
-            return json
+            return json as DocumentTemplateDetailResponse
         },
-            onSuccess: () => {
-                queryClient.invalidateQueries({ queryKey: ["document-templates"] })
-                queryClient.invalidateQueries({ queryKey: ["document-template-program-options"] })
-            },
-        })
+        onSuccess: (response) => {
+            upsertDocumentTemplateInCache(queryClient, response.data)
+            claimProgramInOptionsCache(queryClient, response.data.program_id, {
+                keepForTemplateId: response.data.id,
+                programLabel: response.data.program_label,
+                templateTitle: response.data.title,
+            })
+        },
+    })
 
     const handleSave = useCallback(async () => {
         setFormError(null)
@@ -61,7 +70,6 @@ export const CreatePageContent = memo(function CreatePageContent() {
             })
             toast.success("Document template created successfully.", { id: toastId })
             router.push("/dashboard/templates")
-            router.refresh()
         } catch (error) {
             const message =
                 error instanceof Error ? error.message : "Failed to create document template"

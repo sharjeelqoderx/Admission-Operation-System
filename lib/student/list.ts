@@ -65,11 +65,11 @@ export async function fetchStudentsListForAgent(
         .eq("id", userId)
         .maybeSingle()
 
-    if (profile?.role !== Role.AGENT) {
+    if (profile?.role !== Role.AGENT && profile?.role !== Role.SUPER_ADMIN) {
         return { error: "Forbidden" }
     }
 
-    // Agents see all students (same staff-wide visibility as offers / applications).
+    // Agents and super admins see all students (same staff-wide visibility as offers / applications).
     const db = createSupabaseServiceClient()
 
     const q = options.q ?? ""
@@ -220,7 +220,7 @@ export async function fetchStudentDashboardStats(
         .eq("id", userId)
         .maybeSingle()
 
-    if (profile?.role !== Role.AGENT) {
+    if (profile?.role !== Role.AGENT && profile?.role !== Role.SUPER_ADMIN) {
         return null
     }
 
