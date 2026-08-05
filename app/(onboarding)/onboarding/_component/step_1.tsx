@@ -23,6 +23,7 @@ import { PageLoader } from "@/components/shared/page-loader"
 import { CountrySelect } from "@/components/shared/country-select"
 import { StateSelect } from "@/components/shared/state-select"
 import { CitySelect } from "@/components/shared/city-select"
+import { AddressFormFieldGroup } from "@/components/shared/address-form-field-group"
 
 function genderFromTitle(title: string): "male" | "female" | undefined {
     switch (title) {
@@ -304,73 +305,19 @@ function Step1Form({
                     )}
                 </form.Field>
 
-                <form.Field name="street_1">
-                    {(field) => (
+                <AddressFormFieldGroup
+                    form={form}
+                    isEditing
+                    renderField={({ field, label, children }) => (
                         <F
-                            label="Street 1"
+                            label={label}
                             isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
                             error={field.state.meta.errors?.[0]}
                         >
-                            <Input
-                                value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="Enter street line 1"
-                                className="w-full"
-                            />
+                            {children}
                         </F>
                     )}
-                </form.Field>
-
-                <form.Field name="street_2">
-                    {(field) => (
-                        <F
-                            label="Street 2"
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                        >
-                            <Input
-                                value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="Enter street line 2 (optional)"
-                                className="w-full"
-                            />
-                        </F>
-                    )}
-                </form.Field>
-
-                <form.Field name="street_3">
-                    {(field) => (
-                        <F
-                            label="Street 3"
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                        >
-                            <Input
-                                value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="Enter street line 3 (optional)"
-                                className="w-full"
-                            />
-                        </F>
-                    )}
-                </form.Field>
-
-                <form.Field name="post_code">
-                    {(field) => (
-                        <F
-                            label="Post Code"
-                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                            error={field.state.meta.errors?.[0]}
-                        >
-                            <Input
-                                value={field.state.value}
-                                onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="Enter post code (optional)"
-                                className="w-full"
-                            />
-                        </F>
-                    )}
-                </form.Field>
+                />
 
                 <form.Field name="guardianPhone">
                     {(field) => (

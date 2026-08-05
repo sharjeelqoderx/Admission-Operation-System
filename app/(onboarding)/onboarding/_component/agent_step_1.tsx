@@ -15,6 +15,7 @@ import { CitySelect } from "@/components/shared/city-select"
 import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { Typography } from "@/components/shared/Typography"
 import { AddressFieldsSchema } from "@/types/schemas/address"
+import { AddressFormFieldGroup } from "@/components/shared/address-form-field-group"
 
 const namePart = z
     .string()
@@ -357,65 +358,18 @@ function AgentStep1Form({
                     )}
                 </form.Subscribe>
 
-                <form.Field name="street_1">{(field) => {
-                    const { isInvalid, error } = getFieldState(field)
-                    return (
-                    <F isInvalid={isInvalid} error={error} label="Street 1">
-                        <Input
-                            id={field.name}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            placeholder="Enter street line 1"
-                        />
-                    </F>
-                    )
-                }}</form.Field>
-
-                <form.Field name="street_2">{(field) => {
-                    const { isInvalid, error } = getFieldState(field)
-                    return (
-                    <F isInvalid={isInvalid} error={error} label="Street 2">
-                        <Input
-                            id={field.name}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            placeholder="Enter street line 2 (optional)"
-                        />
-                    </F>
-                    )
-                }}</form.Field>
-
-                <form.Field name="street_3">{(field) => {
-                    const { isInvalid, error } = getFieldState(field)
-                    return (
-                    <F isInvalid={isInvalid} error={error} label="Street 3">
-                        <Input
-                            id={field.name}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            placeholder="Enter street line 3 (optional)"
-                        />
-                    </F>
-                    )
-                }}</form.Field>
-
-                <form.Field name="post_code">{(field) => {
-                    const { isInvalid, error } = getFieldState(field)
-                    return (
-                    <F isInvalid={isInvalid} error={error} label="Post Code">
-                        <Input
-                            id={field.name}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            placeholder="Enter post code (optional)"
-                        />
-                    </F>
-                    )
-                }}</form.Field>
+                <AddressFormFieldGroup
+                    form={form}
+                    isEditing
+                    renderField={({ field, label, children }) => {
+                        const { isInvalid, error } = getFieldState(field)
+                        return (
+                            <F isInvalid={isInvalid} error={error} label={label}>
+                                {children}
+                            </F>
+                        )
+                    }}
+                />
 
                 <div className="col-span-1 sm:col-span-2">
                     <form.Field name="website">{(field) => {

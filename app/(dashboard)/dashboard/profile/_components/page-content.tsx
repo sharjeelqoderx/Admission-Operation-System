@@ -63,6 +63,7 @@ import {
     type QualificationSnapshot,
 } from "@/lib/utils/qualification-upgrade"
 import type { DegreeOption } from "@/hooks/useDegrees"
+import { AddressFormFieldGroup } from "@/components/shared/address-form-field-group"
 
 function buildProfileQualificationSnapshot(
     academic: Pick<AcademicFormItem, "qualification">,
@@ -844,60 +845,15 @@ function ProfilePageView({ initialData }: PageContentProps) {
                                     </F>
                                 )}
                             </form.Field>
-                            <div className="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <form.Field name="street_1">
-                                    {(field) => (
-                                        <F field={field} label="Street 1">
-                                            {isEditingStudentDetails ? (
-                                                <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter street line 1" />
-                                            ) : (
-                                                <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                    <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                                </div>
-                                            )}
-                                        </F>
-                                    )}
-                                </form.Field>
-                                <form.Field name="street_2">
-                                    {(field) => (
-                                        <F field={field} label="Street 2">
-                                            {isEditingStudentDetails ? (
-                                                <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter street line 2 (optional)" />
-                                            ) : (
-                                                <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                    <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                                </div>
-                                            )}
-                                        </F>
-                                    )}
-                                </form.Field>
-                                <form.Field name="street_3">
-                                    {(field) => (
-                                        <F field={field} label="Street 3">
-                                            {isEditingStudentDetails ? (
-                                                <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter street line 3 (optional)" />
-                                            ) : (
-                                                <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                    <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                                </div>
-                                            )}
-                                        </F>
-                                    )}
-                                </form.Field>
-                                <form.Field name="post_code">
-                                    {(field) => (
-                                        <F field={field} label="Post Code">
-                                            {isEditingStudentDetails ? (
-                                                <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter post code (optional)" />
-                                            ) : (
-                                                <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                    <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                                </div>
-                                            )}
-                                        </F>
-                                    )}
-                                </form.Field>
-                            </div>
+                            <AddressFormFieldGroup
+                                form={form}
+                                isEditing={isEditingStudentDetails}
+                                renderField={({ field, label, children }) => (
+                                    <F field={field} label={label}>
+                                        {children}
+                                    </F>
+                                )}
+                            />
                             <form.Field name="guardian_email">
                                 {(field) => (
                                     <F field={field} label="Guardian Email (Optional)">
