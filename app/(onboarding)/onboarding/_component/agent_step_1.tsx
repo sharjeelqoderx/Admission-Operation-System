@@ -217,11 +217,11 @@ function AgentStep1Form({
                     <form.Field name="sameAsAgentName">{(field) => (
                         <div className="flex items-center gap-3">
                             <Checkbox
-                                id="same-as-agent-name"
+                                id="same-as-partner-name"
                                 checked={field.state.value}
                                 onCheckedChange={(checked) => applySameAsAgentName(checked === true)}
                             />
-                            <label htmlFor="same-as-agent-name" className="cursor-pointer">
+                            <label htmlFor="same-as-partner-name" className="cursor-pointer">
                                 <Typography font="text" className="text-sm">
                                     Same as above
                                 </Typography>

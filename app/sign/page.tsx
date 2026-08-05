@@ -690,7 +690,7 @@ function SignPageContent() {
             <div className="flex flex-col items-center justify-center py-40 gap-4">
                 <Typography className="font-bold text-gray-700">Invalid sign link</Typography>
                 <Typography className="text-sm text-gray-500">
-                    This link is missing required information. Please request a new link from your agent.
+                    This link is missing required information. Please request a new link from your university partner.
                 </Typography>
             </div>
         )

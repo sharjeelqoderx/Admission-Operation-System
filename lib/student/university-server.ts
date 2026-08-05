@@ -629,7 +629,7 @@ export async function fetchUniversityStudentDetail(params: {
         submission_source: agentProfileId
             ? {
                   organization:
-                      agentOrgByProfileId.get(agentProfileId) ?? "Education Partner",
+                      agentOrgByProfileId.get(agentProfileId) ?? "University Partner",
                   agent_name: agentNameByProfileId.get(agentProfileId) ?? null,
               }
             : null,

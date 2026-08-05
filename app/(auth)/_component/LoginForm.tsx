@@ -146,7 +146,7 @@ export function LoginForm() {
 
             <p className="text-center text-sm text-muted-foreground mt-4">
                 Don&apos;t have an account?{" "}
-                <Link href="/signup?role=agent" className="text-primary font-medium hover:underline">Sign Up</Link>
+                <Link href="/signup?role=partner" className="text-primary font-medium hover:underline">Sign Up</Link>
             </p>
         </BluryCard>
     )

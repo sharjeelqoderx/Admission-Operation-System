@@ -4,7 +4,7 @@ export enum AuthMode {
 }
 
 export enum UserRole {
-    AGENT = "agent",
+    AGENT = "partner",
     STUDENT = "student",
 }
 

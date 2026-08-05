@@ -36,7 +36,9 @@ export function SignupFirstStep({ onNext }: { onNext: () => void }) {
     const [showPassword, setShowPassword] = useState(false)
 
     const role = searchParams.get("role") ?? "student"
-    const normalizedRole = role.toUpperCase() as Role.STUDENT | Role.AGENT
+    const isPartnerRole =
+        role === "partner" || role === "university-partner" || role === "agent"
+    const normalizedRole = isPartnerRole ? Role.AGENT : Role.STUDENT
 
     const queryClient = useQueryClient()
     const { signup } = useAuth()

@@ -258,7 +258,7 @@ async function loadAgentOrganizations(
             formatFullName(
                 agent.contact_person_first_name,
                 agent.contact_person_last_name
-            ) || "Education Partner",
+            ) || "University Partner",
         ])
     )
 }
@@ -763,7 +763,7 @@ export async function fetchUniversityApplicationDetail(params: {
             ? null
             : {
                   organization:
-                      agentOrgByProfileId.get(agentProfileId!) ?? "Education Partner",
+                      agentOrgByProfileId.get(agentProfileId!) ?? "University Partner",
                   agent_name: agentName,
               },
         can_approve_for_signature: canApproveApplicationForSignature({

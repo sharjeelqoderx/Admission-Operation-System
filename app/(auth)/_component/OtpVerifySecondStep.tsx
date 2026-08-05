@@ -42,7 +42,11 @@ export const OtpVerifySecondStep = () => {
                     email,
                     otp: value.otp,
                 })
-                router.push("/onboarding?sidebar=false")
+                const role = searchParams.get("role")
+                const qs = new URLSearchParams({ sidebar: "false" })
+                if (role === "partner" || role === "university-partner") qs.set("role", "partner")
+                else if (role === "student") qs.set("role", "student")
+                router.push(`/onboarding?${qs.toString()}`)
             } catch (err: any) {
                 console.error(err.message)
             }

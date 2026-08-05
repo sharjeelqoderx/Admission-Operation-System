@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { useAuth } from "@/hooks/useAuth"
+import { Role } from "@/types/enums/role"
 
 import { PageLoader } from "@/components/shared/page-loader"
 
@@ -29,7 +30,7 @@ const STUDENT_STEPS = [
     { key: "step4", label: "Application" },
 ] as const
 
-const AGENT_STEPS = [
+const PARTNER_STEPS = [
     { key: "step1", label: "Profile" },
     { key: "step2", label: "KYC" },
     { key: "step3", label: "Contact" },
@@ -53,7 +54,7 @@ const STUDENT_DESCRIPTIONS: Record<Step, string> = {
     step4: "If you want to apply for a program, you can do it directly from here while completing your profile.",
 }
 
-const AGENT_TITLES: Record<Step, string> = {
+const PARTNER_TITLES: Record<Step, string> = {
     welcome: "",
     step1: "University Partner Profile",
     step2: "KYC / Verification",
@@ -61,7 +62,7 @@ const AGENT_TITLES: Record<Step, string> = {
     step4: "",
 }
 
-const AGENT_DESCRIPTIONS: Record<Step, string> = {
+const PARTNER_DESCRIPTIONS: Record<Step, string> = {
     welcome: "",
     step1: "",
     step2: "",
@@ -69,24 +70,24 @@ const AGENT_DESCRIPTIONS: Record<Step, string> = {
     step4: "",
 }
 
-function Stepper({ step, isAgent }: { step: Step; isAgent: boolean }) {
+function Stepper({ step, isPartner }: { step: Step; isPartner: boolean }) {
     const current = STEP_INDEX[step]
-    const steps = isAgent ? AGENT_STEPS : STUDENT_STEPS
-    const titles = isAgent ? AGENT_TITLES : STUDENT_TITLES
-    const descriptions = isAgent ? AGENT_DESCRIPTIONS : STUDENT_DESCRIPTIONS
+    const steps = isPartner ? PARTNER_STEPS : STUDENT_STEPS
+    const titles = isPartner ? PARTNER_TITLES : STUDENT_TITLES
+    const descriptions = isPartner ? PARTNER_DESCRIPTIONS : STUDENT_DESCRIPTIONS
 
     return (
         <div className="space-y-6">
             <div className="space-y-2">
                 <Typography font="small" className="text-brand-blue uppercase">
-                    Step {String(current + 1).padStart(2, "0")} of {isAgent ? "03" : "04"}
+                    Step {String(current + 1).padStart(2, "0")} of {isPartner ? "03" : "04"}
                 </Typography>
 
                 <div className="flex flex-wrap items-center gap-2">
                     <Typography as="h2" font="sub-heading" className="font-bold">
                         {titles[step]}
                     </Typography>
-                    {!isAgent && step === "step4" && (
+                    {!isPartner && step === "step4" && (
                         <Badge variant="outline">Optional</Badge>
                     )}
                 </div>
@@ -119,7 +120,11 @@ function OnboardingControllerInner() {
     const { data: meData, isLoading } = me
 
     const step = (searchParams.get("step") ?? "welcome") as Step
-    const isAgent = meData?.role?.toLowerCase() === "agent"
+    const urlRole = searchParams.get("role")
+    const isPartner =
+        meData?.role === Role.AGENT ||
+        urlRole === "partner" ||
+        urlRole === "university-partner"
 
     const navigate = (s: Step) => {
         const params = new URLSearchParams(searchParams.toString())
@@ -169,41 +174,41 @@ function OnboardingControllerInner() {
                 className="w-full max-w-[618px]"
             >
                 <div className="space-y-6">
-                    <Stepper step={step} isAgent={isAgent} />
+                    <Stepper step={step} isPartner={isPartner} />
 
-                    {!isAgent && step === "step1" && (
+                    {!isPartner && step === "step1" && (
                         <Step1Basic onNext={() => navigate("step2")} />
                     )}
-                    {!isAgent && step === "step2" && (
+                    {!isPartner && step === "step2" && (
                         <Step2Academic
                             onBack={() => navigate("step1")}
                             onNext={() => navigate("step3")}
                         />
                     )}
-                    {!isAgent && step === "step3" && (
+                    {!isPartner && step === "step3" && (
                         <Step3Experience
                             onBack={() => navigate("step2")}
                             onNext={() => navigate("step4")}
                         />
                     )}
-                    {!isAgent && step === "step4" && (
+                    {!isPartner && step === "step4" && (
                         <Step4Application onBack={() => navigate("step3")} />
                     )}
 
-                    {isAgent && step === "step1" && (
+                    {isPartner && step === "step1" && (
                         <AgentStep1
                             onNext={() => navigate("step2")}
                             onSkip={() => router.push("/dashboard")}
                         />
                     )}
-                    {isAgent && step === "step2" && (
+                    {isPartner && step === "step2" && (
                         <AgentStep2
                             onBack={() => navigate("step1")}
                             onNext={() => navigate("step3")}
                             onSkip={() => router.push("/dashboard")}
                         />
                     )}
-                    {isAgent && step === "step3" && (
+                    {isPartner && step === "step3" && (
                         <AgentStep3 onBack={() => navigate("step2")} />
                     )}
                 </div>

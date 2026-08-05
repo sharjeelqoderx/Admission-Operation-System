@@ -953,7 +953,7 @@ export default function OfferDetailsPage() {
                             {agent && (
                                 <div className="space-y-3 pb-4 border-b border-white/20">
                                     <Typography className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-                                        Submitted by agent
+                                        Submitted by University Partner
                                     </Typography>
                                     <Typography className="font-bold text-gray-800">{agent.name || "—"}</Typography>
                                     {agent.email && (

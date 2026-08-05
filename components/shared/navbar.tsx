@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, formatRoleLabel } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Role } from '@/types/enums/role';
 
@@ -62,12 +62,6 @@ const getTitleFromPathname = (pathname: string): string => {
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
 };
-
-const formatRoleDisplay = (role: string) =>
-    role
-        .split('_')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
 
 export function Navbar({
     userName = 'John Doe',
@@ -123,7 +117,7 @@ export function Navbar({
                         <Button variant="outline" className="h-14 gap-3 px-4 py-2 border border-brand-byzantine rounded-xl hover:bg-brand-byzantine/10 bg-brand-byzantine/5 transition-colors">
                             <div className="hidden sm:flex flex-col items-end">
                                 <span className="text-sm font-bold text-gray-800 leading-tight">{userName}</span>
-                                <span className="text-xs text-brand-byzantine font-medium">{formatRoleDisplay(userRole)}</span>
+                                <span className="text-xs text-brand-byzantine font-medium">{formatRoleLabel(userRole)}</span>
                             </div>
                             <Avatar className="w-9 h-9 border-2 border-purple-100">
                                 <AvatarImage src={userImage} alt={userName} />
@@ -140,7 +134,7 @@ export function Navbar({
                     <DropdownMenuContent align="end" className="w-56 mt-2">
                         <DropdownMenuItem className="flex flex-col items-start gap-1 cursor-pointer p-2">
                             <span className="font-bold text-gray-800">{userName}</span>
-                            <span className="text-xs text-brand-byzantine font-medium">{formatRoleDisplay(userRole)}</span>
+                            <span className="text-xs text-brand-byzantine font-medium">{formatRoleLabel(userRole)}</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

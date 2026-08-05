@@ -232,7 +232,7 @@ export const UniversityAgentDetailView = memo(function UniversityAgentDetailView
                                     <TableRow>
                                         <TableCell colSpan={5} className="px-6 py-10 text-center">
                                             <Typography as="span" font="sub-text" className="text-gray-500">
-                                                No students linked to this agent yet.
+                                                No students linked to this university partner yet.
                                             </Typography>
                                         </TableCell>
                                     </TableRow>

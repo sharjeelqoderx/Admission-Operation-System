@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 const page = () => {
-    redirect('/login?role=agent')
+    redirect('/login?role=partner')
     return null;
     return (
         <div className='min-h-screen animate-in fade-in slide-in-from-bottom-4 duration-500 flex-center p-8 sm:p-16'>
@@ -36,7 +36,7 @@ const page = () => {
                             </div>
                         </Card>
                     </Link>
-                    <Link href="/signup?role=agent" className='block'>
+                    <Link href="/signup?role=partner" className='block'>
                         <Card className='radius-md px-6 py-4 min-h-[100px] bg-brand-secondary flex items-center flex-row gap-3'>
                             <Button size={'icon-xl'} className='bg-white/10 backdrop-blur-md'>
                                 <HatGlasses size={34} />

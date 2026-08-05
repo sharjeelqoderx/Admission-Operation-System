@@ -275,14 +275,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               href={route.href}
               icon={<Icon className="w-5 h-5" />}
               label={
-                route.label === 'University Partner Profile'
+                route.href === '/dashboard/profile'
                   ? role === Role.STUDENT
                     ? 'Student Profile'
-                    : isUniversityRole(role)
-                      ? 'University Profile'
-                      : role === Role.SUPER_ADMIN
-                        ? 'Admin Profile'
-                      : route.label
+                    : role === Role.AGENT
+                      ? 'University Partner Profile'
+                      : isUniversityRole(role)
+                        ? 'University Profile'
+                        : role === Role.SUPER_ADMIN
+                          ? 'Admin Profile'
+                          : 'Profile'
                   : route.label
               }
               isActive={isRouteActive(pathname, route.href)}

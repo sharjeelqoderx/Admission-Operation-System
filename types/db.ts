@@ -1,5 +1,5 @@
 export type GenderEnum = "male" | "female" | "other"
-export type RoleEnum = "Agent" | "Student" | "Admin" | "Organization"
+export type RoleEnum = "University Partner" | "Student" | "Admin" | "Organization"
 
 export interface Profile {
     id: string

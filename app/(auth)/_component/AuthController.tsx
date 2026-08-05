@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { LoginForm } from "./LoginForm"
 import { SignupStepHandler } from './SignupStepHandler'
-const VALID_ROLES = ["agent", "student"]
+const VALID_ROLES = ["partner", "university-partner", "student"]
 
 interface Props {
     mode: AuthMode

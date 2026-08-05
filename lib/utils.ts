@@ -8,12 +8,19 @@ export function cn(...inputs: ClassValue[]) {
 
 const ROLE_DISPLAY_LABELS: Record<string, string> = {
   [Role.AGENT]: "University Partner",
+  agent: "University Partner",
+  partner: "University Partner",
+  "university-partner": "University Partner",
   [Role.STUDENT]: "Student",
-  [Role.ADMIN]: "University",
+  student: "Student",
+  [Role.ADMIN]: "Admin",
+  admin: "Admin",
   [Role.MANAGEMENT]: "Management",
+  management: "Management",
   [Role.SUPER_ADMIN]: "Admin",
+  super_admin: "Admin",
 }
 
 export function formatRoleLabel(role: string): string {
-  return ROLE_DISPLAY_LABELS[role] ?? role
+  return ROLE_DISPLAY_LABELS[role] ?? ROLE_DISPLAY_LABELS[role.toLowerCase()] ?? role
 }
