@@ -14,6 +14,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import type { DocumentTemplateProgramOptionsResponse } from "@/types/schemas/document-template"
+import { DOCUMENT_TEMPLATE_PROGRAM_OPTIONS_QUERY_KEY } from "@/lib/document-template/query-cache"
 
 type DocumentTemplateProgramSelectProps = {
     value: string | null
@@ -50,8 +51,11 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
     onChange,
 }: DocumentTemplateProgramSelectProps) {
     const programOptionsQuery = useQuery({
-        queryKey: ["document-template-program-options", excludeTemplateId ?? "new"],
+        queryKey: [...DOCUMENT_TEMPLATE_PROGRAM_OPTIONS_QUERY_KEY, excludeTemplateId ?? "new"],
         queryFn: () => fetchProgramOptions(excludeTemplateId),
+        staleTime: Infinity,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
     })
 
     const options = useMemo(
