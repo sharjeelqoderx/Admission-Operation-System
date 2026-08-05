@@ -21,6 +21,7 @@ type Props = {
     studentName?: string
     showBack?: boolean
     backHref?: string
+    backLabel?: string
 }
 
 export function CourseDocumentsView({
@@ -28,6 +29,7 @@ export function CourseDocumentsView({
     studentName,
     showBack = false,
     backHref = "/dashboard/document",
+    backLabel = "Back to documents",
 }: Props = {}) {
     const { me } = useAuth()
     const { data: user, isLoading: userLoading } = me
@@ -95,7 +97,7 @@ export function CourseDocumentsView({
                         className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-brand-byzantine transition-colors mb-2"
                     >
                         <ChevronLeft className="size-4" />
-                        Back to students
+                        {backLabel}
                     </Link>
                 )}
 
@@ -105,12 +107,12 @@ export function CourseDocumentsView({
                     className="font-bold tracking-tight"
                 >
                     {studentName
-                        ? `Course Documents for ${studentName}`
-                        : "Course Documents"}
+                        ? `Documents for ${studentName}`
+                        : "Student Documents"}
                 </Typography>
 
                 <Typography as="p" font="sub-text" className="text-gray-600">
-                    Browse programs and upload required documents for each course.
+                    View and upload required documents for this student by program.
                 </Typography>
             </BluryCard>
 

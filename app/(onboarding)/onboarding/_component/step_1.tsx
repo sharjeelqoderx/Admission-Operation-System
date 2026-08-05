@@ -23,8 +23,6 @@ import { PageLoader } from "@/components/shared/page-loader"
 import { CountrySelect } from "@/components/shared/country-select"
 import { StateSelect } from "@/components/shared/state-select"
 import { CitySelect } from "@/components/shared/city-select"
-import { AddressFormFieldGroup } from "@/components/shared/address-form-field-group"
-
 function genderFromTitle(title: string): "male" | "female" | undefined {
     switch (title) {
         case "Mr":
@@ -337,19 +335,22 @@ function Step1Form({
                     )}
                 </form.Field>
 
-                <AddressFormFieldGroup
-                    form={form}
-                    isEditing
-                    renderField={({ field, label, children }) => (
+                <form.Field name="post_code">
+                    {(field) => (
                         <F
-                            label={label}
+                            label="Postal Code"
                             isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
                             error={field.state.meta.errors?.[0]}
                         >
-                            {children}
+                            <Input
+                                value={field.state.value}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="Enter postal code"
+                                className="w-full"
+                            />
                         </F>
                     )}
-                />
+                </form.Field>
 
                 <form.Field name="guardianPhone">
                     {(field) => (

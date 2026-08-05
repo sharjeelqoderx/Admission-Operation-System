@@ -254,7 +254,7 @@ export const DocumentTable = React.memo(function DocumentTable({
                                                 mode="view-only"
                                                 viewHref={
                                                     getViewHref?.(row.student_id) ??
-                                                    `/dashboard/document/student/${row.student_id}`
+                                                    `/dashboard/document/student/${row.student_id}?from=documents`
                                                 }
                                             />
                                         </TableCell>

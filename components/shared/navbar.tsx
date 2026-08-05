@@ -39,8 +39,14 @@ const getTitleFromPathname = (pathname: string): string => {
     if (pathname === '/dashboard/agent') return 'University Partners';
 
     if (pathname.includes('/dashboard/document/student/')) {
-        return 'All Documents';
+        if (pathname.includes('/degree/')) {
+            return 'Program Documents';
+        }
+        return 'Student Documents';
     }
+
+    if (pathname === '/dashboard/document/all') return 'All Documents';
+    if (pathname === '/dashboard/document') return 'Documents';
 
     if (pathname === '/dashboard/document/new') return 'Upload File';
     if (pathname === '/dashboard/program') return 'All Programs';

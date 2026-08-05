@@ -15,8 +15,6 @@ import { CitySelect } from "@/components/shared/city-select"
 import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { Typography } from "@/components/shared/Typography"
 import { AddressFieldsSchema } from "@/types/schemas/address"
-import { AddressFormFieldGroup } from "@/components/shared/address-form-field-group"
-
 const namePart = z
     .string()
     .trim()
@@ -388,18 +386,20 @@ function AgentStep1Form({
                     )}
                 </form.Subscribe>
 
-                <AddressFormFieldGroup
-                    form={form}
-                    isEditing
-                    renderField={({ field, label, children }) => {
-                        const { isInvalid, error } = getFieldState(field)
-                        return (
-                            <F isInvalid={isInvalid} error={error} label={label}>
-                                {children}
-                            </F>
-                        )
-                    }}
-                />
+                <form.Field name="post_code">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="Postal Code">
+                        <Input
+                            id={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            placeholder="Enter postal code"
+                        />
+                    </F>
+                    )
+                }}</form.Field>
 
                 <div className="col-span-1 sm:col-span-2">
                     <form.Field name="website">{(field) => {

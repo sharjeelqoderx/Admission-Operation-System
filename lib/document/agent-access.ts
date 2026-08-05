@@ -29,11 +29,7 @@ export async function assertDocumentStaffCanAccessStudentProfile(
         return userId === studentProfileId
     }
 
-    if (role === Role.AGENT) {
-        return assertAgentCanAccessStudentProfile(supabase, userId, studentProfileId)
-    }
-
-    if (role === Role.SUPER_ADMIN) {
+    if (role === Role.AGENT || role === Role.SUPER_ADMIN) {
         const { data: studentRow } = await supabase
             .from("student")
             .select("profile_id")

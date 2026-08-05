@@ -352,7 +352,7 @@ export const StudentTable = React.memo(function StudentTable({
                                                 <div className="flex flex-col gap-1.5">
                                                     {student.profile_id ? (
                                                         <Link
-                                                            href={`/dashboard/document/student/${student.profile_id}`}
+                                                            href={`/dashboard/document/student/${student.profile_id}?from=students`}
                                                             className="block rounded-lg p-2 -m-2 hover:bg-brand-secondary/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-secondary/40"
                                                             aria-label={`View documents for ${studentName}`}
                                                         >

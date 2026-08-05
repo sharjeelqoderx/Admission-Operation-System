@@ -17,14 +17,9 @@ export const ADDRESS_FIELD_CONFIG = [
         placeholder: "Enter street line 2 (optional)",
     },
     {
-        name: "street_3" as const,
-        label: "Street 3",
-        placeholder: "Enter street line 3 (optional)",
-    },
-    {
         name: "post_code" as const,
-        label: "Post Code",
-        placeholder: "Enter post code (optional)",
+        label: "Postal Code",
+        placeholder: "Enter postal code",
     },
 ]
 

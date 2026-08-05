@@ -25,7 +25,6 @@ import { DatePicker } from "@/components/shared/date-picker"
 import { CountrySelect } from "@/components/shared/country-select"
 import { StateSelect } from "@/components/shared/state-select"
 import { CitySelect } from "@/components/shared/city-select"
-import { AddressFormFieldGroup } from "@/components/shared/address-form-field-group"
 import { Building, ChevronDown, School, FileUp, FileText, Plus, Upload, X, ClipboardList } from "lucide-react"
 import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { resolveGradeTypeOptional, type GradeType } from "@/types/schemas/academic"
@@ -1549,16 +1548,19 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                     )}
                                 </form.Field>
 
-                                <AddressFormFieldGroup
-                                    form={form}
-                                    isEditing
-                                    showHeading={false}
-                                    renderField={({ field, label, children }) => (
-                                        <F field={field} label={label}>
-                                            {children}
+                                <form.Field name="post_code">
+                                    {(field) => (
+                                        <F field={field} label="Postal Code">
+                                            <Input
+                                                id={field.name}
+                                                value={field.state.value ?? ""}
+                                                onBlur={field.handleBlur}
+                                                onChange={(e) => field.handleChange(e.target.value)}
+                                                placeholder="Enter postal code"
+                                            />
                                         </F>
                                     )}
-                                />
+                                </form.Field>
 
                                 <form.Field name="guardian_phone">
                                     {(field) => (

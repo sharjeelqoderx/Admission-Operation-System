@@ -80,13 +80,13 @@ function getDocumentVaultHref(
     if (!studentId) return null
 
     if (variant === "student") {
-        return `/dashboard/document/student/${studentId}`
+        return `/dashboard/document/student/${studentId}?from=applications`
     }
 
     const degreeId = app.course?.degree?.id
     if (!degreeId) return null
 
-    return `/dashboard/document/student/${studentId}/degree/${degreeId}`
+    return `/dashboard/document/student/${studentId}/degree/${degreeId}?from=applications`
 }
 
 export function DocumentVaultCell({

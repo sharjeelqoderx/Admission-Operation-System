@@ -14,13 +14,23 @@ export default function StudentDocumentsPage({ params }: PageProps) {
     const { "student-id": studentId } = use(params)
     const searchParams = useSearchParams()
 
-    const backHref = useMemo(
-        () =>
-            searchParams.get("from") === "all"
-                ? "/dashboard/document/all"
-                : "/dashboard/document",
-        [searchParams]
-    )
+    const backHref = useMemo(() => {
+        const from = searchParams.get("from")
+        if (from === "all") return "/dashboard/document/all"
+        if (from === "students") return "/dashboard/student"
+        if (from === "applications") return "/dashboard/application"
+        if (from === "documents") return "/dashboard/document"
+        return "/dashboard/document"
+    }, [searchParams])
+
+    const backLabel = useMemo(() => {
+        const from = searchParams.get("from")
+        if (from === "all") return "Back to all documents"
+        if (from === "students") return "Back to students"
+        if (from === "applications") return "Back to applications"
+        if (from === "documents") return "Back to documents"
+        return "Back to documents"
+    }, [searchParams])
 
     const { data: student, isLoading } = useQuery({
         queryKey: ["students", studentId],
@@ -43,6 +53,7 @@ export default function StudentDocumentsPage({ params }: PageProps) {
             studentName={student?.name ?? undefined}
             showBack
             backHref={backHref}
+            backLabel={backLabel}
         />
     )
 }
