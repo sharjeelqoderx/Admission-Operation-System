@@ -122,11 +122,13 @@ function DocumentTemplatePageView({
     )
     const [templateToClone, setTemplateToClone] = useState<DocumentTemplateListItem | null>(null)
     const [cloneTitle, setCloneTitle] = useState("")
+    const [cloneProgramId, setCloneProgramId] = useState<string | null>(null)
     const [cloneError, setCloneError] = useState<string | null>(null)
 
     const handleOpenCloneDialog = useCallback((template: DocumentTemplateListItem) => {
         setCloneError(null)
         setCloneTitle(getDefaultCloneTitle(template.title))
+        setCloneProgramId(null)
         setTemplateToClone(template)
     }, [])
 
@@ -134,6 +136,7 @@ function DocumentTemplatePageView({
         if (cloningId) return
         setCloneError(null)
         setCloneTitle("")
+        setCloneProgramId(null)
         setTemplateToClone(null)
     }, [cloningId])
 
@@ -151,6 +154,11 @@ function DocumentTemplatePageView({
             return
         }
 
+        if (!cloneProgramId) {
+            setCloneError("Select a program for this offer template.")
+            return
+        }
+
         setCloneError(null)
 
         try {
@@ -158,18 +166,21 @@ function DocumentTemplatePageView({
                 sourceId: templateToClone.id,
                 title: cloneTitle.trim(),
                 body_html: templateToClone.body_html,
+                program_id: cloneProgramId,
             })
             setTemplateToClone(null)
             setCloneTitle("")
+            setCloneProgramId(null)
         } catch {
             // Error toast is handled in cloneTemplate.
         }
-    }, [cloneTemplate, cloneTitle, templateToClone, templates])
+    }, [cloneProgramId, cloneTemplate, cloneTitle, templateToClone, templates])
 
     const handleViewFromClone = useCallback(
         (template: DocumentTemplateListItem) => {
             setCloneError(null)
             setCloneTitle("")
+            setCloneProgramId(null)
             setTemplateToClone(null)
             openView(template)
         },
@@ -272,6 +283,7 @@ function DocumentTemplatePageView({
                     <CloneTemplateDialog
                         template={templateToClone}
                         cloneTitle={cloneTitle}
+                        cloneProgramId={cloneProgramId}
                         cloneError={cloneError}
                         open={templateToClone !== null}
                         isCloning={cloningId !== null}
@@ -281,6 +293,10 @@ function DocumentTemplatePageView({
                         onTitleChange={(value) => {
                             setCloneError(null)
                             setCloneTitle(value)
+                        }}
+                        onProgramChange={(value) => {
+                            setCloneError(null)
+                            setCloneProgramId(value)
                         }}
                         onView={handleViewFromClone}
                         onConfirm={handleConfirmClone}

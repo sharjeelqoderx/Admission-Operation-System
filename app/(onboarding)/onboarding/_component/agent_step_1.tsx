@@ -14,6 +14,7 @@ import { StateSelect } from "@/components/shared/state-select"
 import { CitySelect } from "@/components/shared/city-select"
 import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { Typography } from "@/components/shared/Typography"
+import { AddressFieldsSchema } from "@/types/schemas/address"
 
 const namePart = z
     .string()
@@ -34,6 +35,10 @@ const schema = z
         primaryBaseState: z.string().trim().min(2, "State is required"),
         primaryBaseCity: z.string().trim().min(2, "City is required"),
         website: z.string().trim().refine(v => v === "" || v.includes("."), "Enter a valid URL").or(z.literal("")),
+        street_1: AddressFieldsSchema.shape.street_1,
+        street_2: AddressFieldsSchema.shape.street_2,
+        street_3: AddressFieldsSchema.shape.street_3,
+        post_code: AddressFieldsSchema.shape.post_code,
     })
     .superRefine((data, ctx) => {
         const agentFirst = namePart.safeParse(data.agentFirstName)
@@ -91,6 +96,10 @@ type AgentStep1Values = {
     primaryBaseCountry: string
     primaryBaseState: string
     primaryBaseCity: string
+    street_1: string
+    street_2: string
+    street_3: string
+    post_code: string
     website: string
 }
 
@@ -155,6 +164,10 @@ function AgentStep1Form({
             fd.append("country", value.primaryBaseCountry)
             fd.append("state", value.primaryBaseState)
             fd.append("city", value.primaryBaseCity)
+            fd.append("street_1", value.street_1)
+            fd.append("street_2", value.street_2)
+            fd.append("street_3", value.street_3)
+            fd.append("post_code", value.post_code)
             fd.append("website", value.website)
             await agentProfile.mutateAsync(fd)
             onNext()
@@ -344,6 +357,66 @@ function AgentStep1Form({
                     )}
                 </form.Subscribe>
 
+                <form.Field name="street_1">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="Street 1">
+                        <Input
+                            id={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            placeholder="Enter street line 1"
+                        />
+                    </F>
+                    )
+                }}</form.Field>
+
+                <form.Field name="street_2">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="Street 2">
+                        <Input
+                            id={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            placeholder="Enter street line 2 (optional)"
+                        />
+                    </F>
+                    )
+                }}</form.Field>
+
+                <form.Field name="street_3">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="Street 3">
+                        <Input
+                            id={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            placeholder="Enter street line 3 (optional)"
+                        />
+                    </F>
+                    )
+                }}</form.Field>
+
+                <form.Field name="post_code">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="Post Code">
+                        <Input
+                            id={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            placeholder="Enter post code (optional)"
+                        />
+                    </F>
+                    )
+                }}</form.Field>
+
                 <div className="col-span-1 sm:col-span-2">
                     <form.Field name="website">{(field) => {
                         const { isInvalid, error } = getFieldState(field)
@@ -385,6 +458,11 @@ export function AgentStep1({ onNext }: { onNext: () => void; onSkip: () => void 
         country?: string
         state?: string
         city?: string
+        street_1?: string
+        street_2?: string
+        street_3?: string
+        post_code?: string
+        address?: string
         website?: string
         gender?: string
     } | undefined
@@ -411,6 +489,10 @@ export function AgentStep1({ onNext }: { onNext: () => void; onSkip: () => void 
         primaryBaseCountry: agentProfile?.country ?? meData?.profile?.country ?? "",
         primaryBaseState: agentProfile?.state ?? meData?.profile?.state ?? "",
         primaryBaseCity: agentProfile?.city ?? meData?.profile?.city ?? "",
+        street_1: agentProfile?.street_1 ?? agentProfile?.address ?? meData?.profile?.street_1 ?? meData?.profile?.address ?? "",
+        street_2: agentProfile?.street_2 ?? meData?.profile?.street_2 ?? "",
+        street_3: agentProfile?.street_3 ?? meData?.profile?.street_3 ?? "",
+        post_code: agentProfile?.post_code ?? meData?.profile?.post_code ?? "",
         website: agentProfile?.website ?? "",
     }
 

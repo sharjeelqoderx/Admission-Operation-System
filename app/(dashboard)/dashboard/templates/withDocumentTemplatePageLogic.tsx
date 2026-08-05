@@ -41,6 +41,7 @@ export type DocumentTemplatePageLogicProps = {
         sourceId: string
         title: string
         body_html: string
+        program_id: string
     }) => Promise<void>
     clearDeleteError: () => void
     refetchTemplates: () => void
@@ -147,7 +148,11 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         })
 
         const cloneMutation = useMutation({
-            mutationFn: async (payload: { title: string; body_html: string }) => {
+            mutationFn: async (payload: {
+                title: string
+                body_html: string
+                program_id: string
+            }) => {
                 const res = await fetch("/api/document-template", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -265,7 +270,12 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         )
 
         const cloneTemplate = useCallback(
-            async (payload: { sourceId: string; title: string; body_html: string }) => {
+            async (payload: {
+                sourceId: string
+                title: string
+                body_html: string
+                program_id: string
+            }) => {
                 setCloningId(payload.sourceId)
                 const toastId = toast.loading("Cloning template...")
 
@@ -273,6 +283,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                     await cloneMutation.mutateAsync({
                         title: payload.title,
                         body_html: payload.body_html,
+                        program_id: payload.program_id,
                     })
                     toast.success("Document template cloned successfully.", { id: toastId })
                 } catch (error) {

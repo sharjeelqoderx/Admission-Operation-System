@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
             street_2: maybe("street_2"),
             street_3: maybe("street_3"),
             post_code: maybe("post_code"),
+            other_contact_number: maybe("other_contact_number"),
         }
 
         const parsed = agentProfileSchema.safeParse(body)
@@ -178,6 +179,9 @@ export async function POST(req: NextRequest) {
         if (data.street_2 !== undefined) agentPayload.street_2 = data.street_2
         if (data.street_3 !== undefined) agentPayload.street_3 = data.street_3
         if (data.post_code !== undefined) agentPayload.post_code = data.post_code
+        if (data.other_contact_number !== undefined) {
+            agentPayload.other_contact_number = data.other_contact_number
+        }
 
         const { error: agentError } = await supabase
             .from("agent")

@@ -331,6 +331,7 @@ export const agentProfileSchema = z.object({
     street_2: z.string().trim().optional(),
     street_3: z.string().trim().optional(),
     post_code: z.string().trim().optional(),
+    other_contact_number: z.string().trim().optional(),
 })
 
 /* =========================

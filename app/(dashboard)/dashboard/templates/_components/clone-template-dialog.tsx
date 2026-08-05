@@ -16,15 +16,18 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { DocumentTemplateListItem } from "@/types/schemas/document-template"
+import { DocumentTemplateProgramSelect } from "./document-template-program-select"
 
 type CloneTemplateDialogProps = {
     template: DocumentTemplateListItem | null
     cloneTitle: string
+    cloneProgramId: string | null
     cloneError: string | null
     open: boolean
     isCloning: boolean
     onOpenChange: (open: boolean) => void
     onTitleChange: (value: string) => void
+    onProgramChange: (value: string | null) => void
     onView: (template: DocumentTemplateListItem) => void
     onConfirm: () => void
 }
@@ -66,11 +69,13 @@ export function validateCloneTemplateTitle(
 export const CloneTemplateDialog = memo(function CloneTemplateDialog({
     template,
     cloneTitle,
+    cloneProgramId,
     cloneError,
     open,
     isCloning,
     onOpenChange,
     onTitleChange,
+    onProgramChange,
     onView,
     onConfirm,
 }: CloneTemplateDialogProps) {
@@ -92,8 +97,9 @@ export const CloneTemplateDialog = memo(function CloneTemplateDialog({
                 <DialogHeader>
                     <DialogTitle>Clone template</DialogTitle>
                     <DialogDescription>
-                        Choose a new title for the cloned template. The clone cannot keep the same
-                        name as the original. Use View to open the full template preview first.
+                        Choose a new title and assign a program for the cloned template. The clone
+                        cannot keep the same name as the original. Use View to open the full template
+                        preview first.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -119,6 +125,12 @@ export const CloneTemplateDialog = memo(function CloneTemplateDialog({
                                 </Typography>
                             </Typography>
                         </div>
+
+                        <DocumentTemplateProgramSelect
+                            value={cloneProgramId}
+                            disabled={isCloning}
+                            onChange={onProgramChange}
+                        />
 
                         <Button
                             type="button"
