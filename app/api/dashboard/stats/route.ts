@@ -23,11 +23,11 @@ export async function GET() {
             .eq("id", user.id)
             .maybeSingle()
 
-        if (profile?.role !== Role.AGENT) {
+        if (profile?.role !== Role.AGENT && profile?.role !== Role.SUPER_ADMIN) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        // Agents see system-wide ops stats (same visibility as all-apps / offers / docs).
+        // Agents and super admins see system-wide ops stats (same visibility as all-apps / offers / docs).
         const db = createSupabaseServiceClient()
 
         const [studentsResult, applicationsResult, pendingResult] = await Promise.all([
