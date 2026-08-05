@@ -4,7 +4,7 @@ import { memo } from "react"
 import { Input } from "@/components/ui/input"
 import { Typography } from "@/components/shared/Typography"
 
-type AddressFieldName = "street_1" | "street_2" | "street_3" | "post_code"
+type AddressFieldName = "street_1" | "street_2" | "post_code"
 
 type AddressFormFieldsProps = {
     isEditing: boolean
@@ -29,8 +29,7 @@ export const AddressFormFields = memo(function AddressFormFields({
     }> = [
         { name: "street_1", label: "Street 1", placeholder: "Enter street line 1" },
         { name: "street_2", label: "Street 2", placeholder: "Enter street line 2 (optional)" },
-        { name: "street_3", label: "Street 3", placeholder: "Enter street line 3 (optional)" },
-        { name: "post_code", label: "Post Code", placeholder: "Enter post code (optional)" },
+        { name: "post_code", label: "Postal Code", placeholder: "Enter postal code (optional)" },
     ]
 
     return (
