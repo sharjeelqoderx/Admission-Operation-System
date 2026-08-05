@@ -1435,6 +1435,34 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                     )}
                                 </form.Field>
 
+                                <form.Field name="street_1">
+                                    {(field) => (
+                                        <F field={field} label="Street 1">
+                                            <Input
+                                                id={field.name}
+                                                value={field.state.value}
+                                                onBlur={field.handleBlur}
+                                                onChange={(e) => field.handleChange(e.target.value)}
+                                                placeholder="Enter street line 1"
+                                            />
+                                        </F>
+                                    )}
+                                </form.Field>
+
+                                <form.Field name="street_2">
+                                    {(field) => (
+                                        <F field={field} label="Street 2">
+                                            <Input
+                                                id={field.name}
+                                                value={field.state.value}
+                                                onBlur={field.handleBlur}
+                                                onChange={(e) => field.handleChange(e.target.value)}
+                                                placeholder="Enter street line 2 (optional)"
+                                            />
+                                        </F>
+                                    )}
+                                </form.Field>
+
                                 <form.Field name="country">
                                     {(field) => (
                                         <F field={field} label="Country">
@@ -1479,7 +1507,12 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                     )}
                                 </form.Subscribe>
 
-                                <form.Subscribe selector={(s) => ({ country: s.values.country, state: s.values.state })}>
+                                <form.Subscribe
+                                    selector={(s) => ({
+                                        country: s.values.country,
+                                        state: s.values.state,
+                                    })}
+                                >
                                     {({ country, state }) => (
                                         <form.Field name="city">
                                             {(field) => (
@@ -1499,50 +1532,32 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                     )}
                                 </form.Subscribe>
 
-                                    <form.Field name="nationality">
-                                        {(field) => (
-                                            <F field={field} label="Nationality">
-                                                <CountrySelect
-                                                    id={field.name}
-                                                    value={field.state.value}
-                                                    onValueChange={(v) => {
-                                                        field.handleChange(v)
-                                                        field.handleBlur()
-                                                    }}
-                                                    placeholder="Select nationality"
-                                                />
-                                            </F>
-                                        )}
-                                    </form.Field>
-
-                                <form.Field name="street_1">
+                                <form.Field name="nationality">
                                     {(field) => (
-                                        <F field={field} label="Street 1">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter street line 1" />
-                                        </F>
-                                    )}
-                                </form.Field>
-
-                                <form.Field name="street_2">
-                                    {(field) => (
-                                        <F field={field} label="Street 2">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter street line 2 (optional)" />
-                                        </F>
-                                    )}
-                                </form.Field>
-
-                                <form.Field name="street_3">
-                                    {(field) => (
-                                        <F field={field} label="Street 3">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter street line 3 (optional)" />
+                                        <F field={field} label="Nationality">
+                                            <CountrySelect
+                                                id={field.name}
+                                                value={field.state.value}
+                                                onValueChange={(v) => {
+                                                    field.handleChange(v)
+                                                    field.handleBlur()
+                                                }}
+                                                placeholder="Select nationality"
+                                            />
                                         </F>
                                     )}
                                 </form.Field>
 
                                 <form.Field name="post_code">
                                     {(field) => (
-                                        <F field={field} label="Post Code">
-                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter post code (optional)" />
+                                        <F field={field} label="Postal Code">
+                                            <Input
+                                                id={field.name}
+                                                value={field.state.value}
+                                                onBlur={field.handleBlur}
+                                                onChange={(e) => field.handleChange(e.target.value)}
+                                                placeholder="Enter postal code (optional)"
+                                            />
                                         </F>
                                     )}
                                 </form.Field>
@@ -1563,7 +1578,14 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                 <form.Field name="guardian_email">
                                     {(field) => (
                                         <F field={field} label="Parent/Guardian Email">
-                                            <Input id={field.name} type="email" value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter your guardian Email" />
+                                            <Input
+                                                id={field.name}
+                                                type="email"
+                                                value={field.state.value}
+                                                onBlur={field.handleBlur}
+                                                onChange={(e) => field.handleChange(e.target.value)}
+                                                placeholder="Enter your guardian Email"
+                                            />
                                         </F>
                                     )}
                                 </form.Field>
