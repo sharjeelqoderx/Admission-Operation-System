@@ -832,10 +832,11 @@ function ProfilePageView({ initialData }: PageContentProps) {
                                 {(field) => (
                                     <F field={field} label="Nationality">
                                         {isEditingStudentDetails ? (
-                                            <Input
+                                            <CountrySelect
+                                                id={field.name}
                                                 value={field.state.value}
-                                                onChange={(e) => field.handleChange(e.target.value)}
-                                                placeholder="Auto-filled from country — edit if different"
+                                                onValueChange={field.handleChange}
+                                                placeholder="Select nationality"
                                             />
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
@@ -1427,19 +1428,6 @@ function ProfilePageView({ initialData }: PageContentProps) {
                                     </F>
                                 )}
                             </form.Field>
-                            <form.Field name="nationality">
-                                {(field) => (
-                                    <F field={field} label="Nationality">
-                                        {isEditing ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Nationality" />
-                                        ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                            </div>
-                                        )}
-                                    </F>
-                                )}
-                            </form.Field>
                             <form.Field name="website">
                                 {(field) => (
                                     <F field={field} label="Website">
@@ -1475,6 +1463,144 @@ function ProfilePageView({ initialData }: PageContentProps) {
                                         ) : (
                                             <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
                                                 <Typography className="text-gray-800 font-medium">{field.state.value || "0"}</Typography>
+                                            </div>
+                                        )}
+                                    </F>
+                                )}
+                            </form.Field>
+                            <form.Field name="country">
+                                {(field) => (
+                                    <F field={field} label="Country">
+                                        {isEditing ? (
+                                            <CountrySelect
+                                                value={field.state.value}
+                                                onValueChange={(v) => {
+                                                    const previousCountry = field.state.value
+                                                    const currentNationality = form.getFieldValue("nationality")
+                                                    field.handleChange(v)
+                                                    form.setFieldValue("state", "")
+                                                    form.setFieldValue("city", "")
+                                                    if (
+                                                        !currentNationality ||
+                                                        currentNationality === previousCountry
+                                                    ) {
+                                                        form.setFieldValue("nationality", v)
+                                                    }
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                            </div>
+                                        )}
+                                    </F>
+                                )}
+                            </form.Field>
+                            <form.Subscribe selector={(s) => s.values.country}>
+                                {(country) => (
+                                    <form.Field name="state">
+                                        {(field) => (
+                                            <F field={field} label="State">
+                                                {isEditing ? (
+                                                    <StateSelect
+                                                        country={country}
+                                                        value={field.state.value}
+                                                        onValueChange={(v) => {
+                                                            field.handleChange(v)
+                                                            form.setFieldValue("city", "")
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                        <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                                    </div>
+                                                )}
+                                            </F>
+                                        )}
+                                    </form.Field>
+                                )}
+                            </form.Subscribe>
+                            <form.Subscribe selector={(s) => ({ country: s.values.country, state: s.values.state })}>
+                                {({ country, state }) => (
+                                    <form.Field name="city">
+                                        {(field) => (
+                                            <F field={field} label="City">
+                                                {isEditing ? (
+                                                    <CitySelect
+                                                        country={country}
+                                                        state={state}
+                                                        value={field.state.value}
+                                                        onValueChange={field.handleChange}
+                                                    />
+                                                ) : (
+                                                    <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                        <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                                    </div>
+                                                )}
+                                            </F>
+                                        )}
+                                    </form.Field>
+                                )}
+                            </form.Subscribe>
+                            <form.Field name="nationality">
+                                {(field) => (
+                                    <F field={field} label="Nationality">
+                                        {isEditing ? (
+                                            <CountrySelect
+                                                id={field.name}
+                                                value={field.state.value}
+                                                onValueChange={field.handleChange}
+                                                placeholder="Select nationality"
+                                            />
+                                        ) : (
+                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                            </div>
+                                        )}
+                                    </F>
+                                )}
+                            </form.Field>
+                            <AddressFormFieldGroup
+                                form={form}
+                                isEditing={isEditing}
+                                renderField={({ field, label, children }) => (
+                                    <F field={field} label={label}>
+                                        {children}
+                                    </F>
+                                )}
+                            />
+                            <form.Field name="other_contact_number">
+                                {(field) => (
+                                    <F field={field} label="Alternate Phone">
+                                        {isEditing ? (
+                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Alternate Phone" />
+                                        ) : (
+                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                            </div>
+                                        )}
+                                    </F>
+                                )}
+                            </form.Field>
+                        </div>
+                    </BluryCard>
+                )}
+
+                {isUniversityRole(role) && (
+                    <BluryCard isCentered={false} childClass="space-y-8" className="rounded-2xl">
+                        <div className="flex items-center gap-3 border-b border-white/20 pb-4">
+                            <Building className="size-5 text-gray-700" />
+                            <Typography font="title">University Profile</Typography>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <form.Field name="website">
+                                {(field) => (
+                                    <F field={field} label="Official Website">
+                                        {isEditing ? (
+                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Official Website" />
+                                        ) : (
+                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
                                             </div>
                                         )}
                                     </F>
@@ -1546,158 +1672,15 @@ function ProfilePageView({ initialData }: PageContentProps) {
                                     </form.Field>
                                 )}
                             </form.Subscribe>
-                            <form.Field name="other_contact_number">
-                                {(field) => (
-                                    <F field={field} label="Alternate Phone">
-                                        {isEditing ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Alternate Phone" />
-                                        ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                            </div>
-                                        )}
+                            <AddressFormFieldGroup
+                                form={form}
+                                isEditing={isEditing}
+                                renderField={({ field, label, children }) => (
+                                    <F field={field} label={label}>
+                                        {children}
                                     </F>
                                 )}
-                            </form.Field>
-                            <div className="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                {(["street_1", "street_2", "street_3", "post_code"] as const).map((fieldName) => (
-                                    <form.Field key={fieldName} name={fieldName}>
-                                        {(field) => (
-                                            <F
-                                                field={field}
-                                                label={
-                                                    fieldName === "street_1"
-                                                        ? "Street 1"
-                                                        : fieldName === "street_2"
-                                                          ? "Street 2"
-                                                          : fieldName === "street_3"
-                                                            ? "Street 3"
-                                                            : "Post Code"
-                                                }
-                                            >
-                                                {isEditing ? (
-                                                    <Input
-                                                        value={field.state.value}
-                                                        onChange={(e) => field.handleChange(e.target.value)}
-                                                        placeholder={
-                                                            fieldName === "post_code"
-                                                                ? "Enter post code (optional)"
-                                                                : fieldName === "street_1"
-                                                                  ? "Enter street line 1"
-                                                                  : `Enter ${fieldName.replace("_", " ")} (optional)`
-                                                        }
-                                                    />
-                                                ) : (
-                                                    <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                        <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                                    </div>
-                                                )}
-                                            </F>
-                                        )}
-                                    </form.Field>
-                                ))}
-                            </div>
-                        </div>
-                    </BluryCard>
-                )}
-
-                {isUniversityRole(role) && (
-                    <BluryCard isCentered={false} childClass="space-y-8" className="rounded-2xl">
-                        <div className="flex items-center gap-3 border-b border-white/20 pb-4">
-                            <Building className="size-5 text-gray-700" />
-                            <Typography font="title">University Profile</Typography>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <form.Field name="website">
-                                {(field) => (
-                                    <F field={field} label="Official Website">
-                                        {isEditing ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Official Website" />
-                                        ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                            </div>
-                                        )}
-                                    </F>
-                                )}
-                            </form.Field>
-                            <form.Field name="country">
-                                {(field) => (
-                                    <F field={field} label="Country">
-                                        {isEditing ? (
-                                            <CountrySelect value={field.state.value} onValueChange={field.handleChange} />
-                                        ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                            </div>
-                                        )}
-                                    </F>
-                                )}
-                            </form.Field>
-                            <form.Field name="state">
-                                {(field) => (
-                                    <F field={field} label="State">
-                                        {isEditing ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your state" />
-                                        ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                            </div>
-                                        )}
-                                    </F>
-                                )}
-                            </form.Field>
-                            <form.Field name="city">
-                                {(field) => (
-                                    <F field={field} label="City">
-                                        {isEditing ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your city" />
-                                        ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                            </div>
-                                        )}
-                                    </F>
-                                )}
-                            </form.Field>
-                            <div className="col-span-1 sm:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                {(["street_1", "street_2", "street_3", "post_code"] as const).map((fieldName) => (
-                                    <form.Field key={fieldName} name={fieldName}>
-                                        {(field) => (
-                                            <F
-                                                field={field}
-                                                label={
-                                                    fieldName === "street_1"
-                                                        ? "Street 1"
-                                                        : fieldName === "street_2"
-                                                          ? "Street 2"
-                                                          : fieldName === "street_3"
-                                                            ? "Street 3"
-                                                            : "Post Code"
-                                                }
-                                            >
-                                                {isEditing ? (
-                                                    <Input
-                                                        value={field.state.value}
-                                                        onChange={(e) => field.handleChange(e.target.value)}
-                                                        placeholder={
-                                                            fieldName === "post_code"
-                                                                ? "Enter post code (optional)"
-                                                                : fieldName === "street_1"
-                                                                  ? "Enter street line 1"
-                                                                  : `Enter ${fieldName.replace("_", " ")} (optional)`
-                                                        }
-                                                    />
-                                                ) : (
-                                                    <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                        <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                                    </div>
-                                                )}
-                                            </F>
-                                        )}
-                                    </form.Field>
-                                ))}
-                            </div>
+                            />
                             <div className="col-span-1 sm:col-span-2 lg:col-span-3">
                                 <form.Field name="description">
                                     {(field) => (

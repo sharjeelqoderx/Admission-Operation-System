@@ -304,6 +304,36 @@ function AgentStep1Form({
                     )
                 }}</form.Field>
 
+                <form.Field name="street_1">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="Street 1">
+                        <Input
+                            id={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            placeholder="Enter street line 1"
+                        />
+                    </F>
+                    )
+                }}</form.Field>
+
+                <form.Field name="street_2">{(field) => {
+                    const { isInvalid, error } = getFieldState(field)
+                    return (
+                    <F isInvalid={isInvalid} error={error} label="Street 2">
+                        <Input
+                            id={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            placeholder="Enter street line 2 (optional)"
+                        />
+                    </F>
+                    )
+                }}</form.Field>
+
                 <form.Field name="primaryBaseCountry">{(field) => {
                     const { isInvalid, error } = getFieldState(field)
                     return (

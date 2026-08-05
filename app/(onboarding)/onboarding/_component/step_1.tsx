@@ -215,6 +215,40 @@ function Step1Form({
                     )}
                 </form.Field>
 
+                <form.Field name="street_1">
+                    {(field) => (
+                        <F
+                            label="Street 1"
+                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                            error={field.state.meta.errors?.[0]}
+                        >
+                            <Input
+                                value={field.state.value}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="Enter street line 1"
+                                className="w-full"
+                            />
+                        </F>
+                    )}
+                </form.Field>
+
+                <form.Field name="street_2">
+                    {(field) => (
+                        <F
+                            label="Street 2"
+                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                            error={field.state.meta.errors?.[0]}
+                        >
+                            <Input
+                                value={field.state.value}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="Enter street line 2 (optional)"
+                                className="w-full"
+                            />
+                        </F>
+                    )}
+                </form.Field>
+
                 <form.Field name="country">
                     {(field) => (
                         <F
@@ -288,20 +322,18 @@ function Step1Form({
 
                 <form.Field name="nationality">
                     {(field) => (
-                        <div className="sm:col-span-2">
-                            <F
-                                label="Nationality"
-                                isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
-                                error={field.state.meta.errors?.[0]}
-                            >
-                                <Input
-                                    value={field.state.value}
-                                    onChange={(e) => field.handleChange(e.target.value)}
-                                    placeholder="Auto-filled from country — edit if different"
-                                    className="w-full"
-                                />
-                            </F>
-                        </div>
+                        <F
+                            label="Nationality"
+                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                            error={field.state.meta.errors?.[0]}
+                        >
+                            <CountrySelect
+                                id={field.name}
+                                value={field.state.value}
+                                onValueChange={field.handleChange}
+                                placeholder="Select nationality"
+                            />
+                        </F>
                     )}
                 </form.Field>
 
