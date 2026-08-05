@@ -72,6 +72,11 @@ type AuthUserResponse = {
         street_2: NonNullable<StudentRow["street_2"]> | ""
         street_3: NonNullable<StudentRow["street_3"]> | ""
         post_code: NonNullable<StudentRow["post_code"]> | ""
+        address: NonNullable<StudentRow["address"]> | ""
+        zip_code: NonNullable<StudentRow["zip_code"]> | ""
+        website: NonNullable<AgentRow["website"]> | ""
+        other_contact_number: NonNullable<AgentRow["other_contact_number"]> | ""
+        experience_years: AgentRow["experience_years"] | null
         contact_person_first_name: NonNullable<AgentRow["contact_person_first_name"]> | ""
         contact_person_last_name: NonNullable<AgentRow["contact_person_last_name"]> | ""
     }
