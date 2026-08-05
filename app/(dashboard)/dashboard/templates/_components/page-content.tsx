@@ -19,6 +19,11 @@ import { DocumentTemplateFormView } from "./document-template-form-view"
 import { DocumentTemplatePreview } from "./document-template-preview"
 import { DocumentTemplateTable } from "./document-template-table"
 import {
+    CloneTemplateDialog,
+    getDefaultCloneTitle,
+    validateCloneTemplateTitle,
+} from "./clone-template-dialog"
+import {
     withDocumentTemplatePageLogic,
     type DocumentTemplatePageLogicProps,
 } from "../withDocumentTemplatePageLogic"
@@ -90,25 +95,85 @@ function DocumentTemplatePageView({
     isError,
     errorMessage,
     mode,
+    activeTemplate,
     title,
     bodyHtml,
+    programId,
     isSaving,
     isDeleting,
     deletingId,
+    cloningId,
     deleteError,
     formError,
     setTitle,
     setBodyHtml,
+    setProgramId,
     openEdit,
     openView,
     backToList,
     saveTemplate,
     deleteTemplateById,
+    cloneTemplate,
     clearDeleteError,
     refetchTemplates,
 }: DocumentTemplatePageLogicProps) {
     const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplateListItem | null>(
         null
+    )
+    const [templateToClone, setTemplateToClone] = useState<DocumentTemplateListItem | null>(null)
+    const [cloneTitle, setCloneTitle] = useState("")
+    const [cloneError, setCloneError] = useState<string | null>(null)
+
+    const handleOpenCloneDialog = useCallback((template: DocumentTemplateListItem) => {
+        setCloneError(null)
+        setCloneTitle(getDefaultCloneTitle(template.title))
+        setTemplateToClone(template)
+    }, [])
+
+    const handleCloseCloneDialog = useCallback(() => {
+        if (cloningId) return
+        setCloneError(null)
+        setCloneTitle("")
+        setTemplateToClone(null)
+    }, [cloningId])
+
+    const handleConfirmClone = useCallback(async () => {
+        if (!templateToClone) return
+
+        const validationError = validateCloneTemplateTitle(
+            cloneTitle,
+            templateToClone,
+            templates
+        )
+
+        if (validationError) {
+            setCloneError(validationError)
+            return
+        }
+
+        setCloneError(null)
+
+        try {
+            await cloneTemplate({
+                sourceId: templateToClone.id,
+                title: cloneTitle.trim(),
+                body_html: templateToClone.body_html,
+            })
+            setTemplateToClone(null)
+            setCloneTitle("")
+        } catch {
+            // Error toast is handled in cloneTemplate.
+        }
+    }, [cloneTemplate, cloneTitle, templateToClone, templates])
+
+    const handleViewFromClone = useCallback(
+        (template: DocumentTemplateListItem) => {
+            setCloneError(null)
+            setCloneTitle("")
+            setTemplateToClone(null)
+            openView(template)
+        },
+        [openView]
     )
 
     const handleOpenDeleteDialog = useCallback(
@@ -178,11 +243,14 @@ function DocumentTemplatePageView({
                         isError={isError}
                         errorMessage={errorMessage}
                         deletingId={deletingId}
+                        cloningId={cloningId}
                         onView={openView}
                         onEdit={openEdit}
+                        onClone={handleOpenCloneDialog}
                         onDelete={handleOpenDeleteDialog}
                         onRetry={refetchTemplates}
                         viewOnly={false}
+                        canClone={canCreateTemplate}
                         canDelete={canDeleteTemplate}
                     />
                 </div>
@@ -199,6 +267,25 @@ function DocumentTemplatePageView({
                         onConfirm={handleConfirmDelete}
                     />
                 ) : null}
+
+                {canCreateTemplate ? (
+                    <CloneTemplateDialog
+                        template={templateToClone}
+                        cloneTitle={cloneTitle}
+                        cloneError={cloneError}
+                        open={templateToClone !== null}
+                        isCloning={cloningId !== null}
+                        onOpenChange={(open) => {
+                            if (!open) handleCloseCloneDialog()
+                        }}
+                        onTitleChange={(value) => {
+                            setCloneError(null)
+                            setCloneTitle(value)
+                        }}
+                        onView={handleViewFromClone}
+                        onConfirm={handleConfirmClone}
+                    />
+                ) : null}
             </main>
         )
     }
@@ -209,10 +296,13 @@ function DocumentTemplatePageView({
                 heading="Edit Document Template"
                 title={title}
                 bodyHtml={bodyHtml}
+                programId={programId}
+                templateId={activeTemplate?.id ?? null}
                 isSaving={isSaving}
                 formError={formError}
                 onTitleChange={setTitle}
                 onBodyChange={setBodyHtml}
+                onProgramChange={setProgramId}
                 onSave={saveTemplate}
                 onBack={backToList}
             />

@@ -22,18 +22,26 @@ export type DocumentTemplatePageLogicProps = {
     activeTemplate: DocumentTemplateListItem | null
     title: string
     bodyHtml: string
+    programId: string | null
     isSaving: boolean
     isDeleting: boolean
     deletingId: string | null
+    cloningId: string | null
     deleteError: string | null
     formError: string | null
     setTitle: (value: string) => void
     setBodyHtml: (value: string) => void
+    setProgramId: (value: string | null) => void
     openEdit: (template: DocumentTemplateListItem) => void
     openView: (template: DocumentTemplateListItem) => void
     backToList: () => void
     saveTemplate: () => Promise<void>
     deleteTemplateById: (id: string) => Promise<void>
+    cloneTemplate: (payload: {
+        sourceId: string
+        title: string
+        body_html: string
+    }) => Promise<void>
     clearDeleteError: () => void
     refetchTemplates: () => void
 }
@@ -77,9 +85,11 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         const [activeTemplate, setActiveTemplate] = useState<DocumentTemplateListItem | null>(null)
         const [title, setTitle] = useState("")
         const [bodyHtml, setBodyHtml] = useState(EMPTY_TEMPLATE_HTML)
+        const [programId, setProgramId] = useState<string | null>(null)
         const [formError, setFormError] = useState<string | null>(null)
         const [deleteError, setDeleteError] = useState<string | null>(null)
         const [deletingId, setDeletingId] = useState<string | null>(null)
+        const [cloningId, setCloningId] = useState<string | null>(null)
 
         const templatesQuery = useQuery({
             queryKey: ["document-templates"],
@@ -98,7 +108,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 payload,
             }: {
                 id: string
-                payload: { title: string; body_html: string }
+                payload: { title: string; body_html: string; program_id?: string | null }
             }) => {
                 const res = await fetch(`/api/document-template/${id}`, {
                     method: "PATCH",
@@ -113,6 +123,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             },
             onSuccess: () => {
                 queryClient.invalidateQueries({ queryKey: ["document-templates"] })
+                queryClient.invalidateQueries({ queryKey: ["document-template-program-options"] })
             },
         })
 
@@ -131,12 +142,33 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             },
             onSuccess: () => {
                 queryClient.invalidateQueries({ queryKey: ["document-templates"] })
+                queryClient.invalidateQueries({ queryKey: ["document-template-program-options"] })
+            },
+        })
+
+        const cloneMutation = useMutation({
+            mutationFn: async (payload: { title: string; body_html: string }) => {
+                const res = await fetch("/api/document-template", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                })
+                const json = await res.json()
+                if (!res.ok) {
+                    throw new Error(json?.error ?? "Failed to clone document template")
+                }
+                return json
+            },
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ["document-templates"] })
+                queryClient.invalidateQueries({ queryKey: ["document-template-program-options"] })
             },
         })
 
         const resetEditorState = useCallback(() => {
             setTitle("")
             setBodyHtml(EMPTY_TEMPLATE_HTML)
+            setProgramId(null)
             setFormError(null)
             setActiveTemplate(null)
         }, [])
@@ -153,6 +185,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             setActiveTemplate(template)
             setTitle(template.title)
             setBodyHtml(template.body_html || EMPTY_TEMPLATE_HTML)
+            setProgramId(template.program_id ?? null)
             setFormError(null)
             setMode("edit")
         }, [])
@@ -175,9 +208,15 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 return
             }
 
+            if (!programId) {
+                setFormError("Select a program for this offer template.")
+                return
+            }
+
             const payload = {
                 title: title.trim(),
                 body_html: bodyHtml,
+                program_id: programId,
             }
 
             const toastId = toast.loading("Updating template...")
@@ -195,7 +234,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 setFormError(message)
                 toast.error(message, { id: toastId })
             }
-        }, [activeTemplate, backToList, bodyHtml, title, updateMutation])
+        }, [activeTemplate, backToList, bodyHtml, programId, title, updateMutation])
 
         const deleteTemplateById = useCallback(
             async (id: string) => {
@@ -225,6 +264,31 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             [activeTemplate?.id, backToList, deleteMutation]
         )
 
+        const cloneTemplate = useCallback(
+            async (payload: { sourceId: string; title: string; body_html: string }) => {
+                setCloningId(payload.sourceId)
+                const toastId = toast.loading("Cloning template...")
+
+                try {
+                    await cloneMutation.mutateAsync({
+                        title: payload.title,
+                        body_html: payload.body_html,
+                    })
+                    toast.success("Document template cloned successfully.", { id: toastId })
+                } catch (error) {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "Failed to clone document template"
+                    toast.error(message, { id: toastId })
+                    throw error
+                } finally {
+                    setCloningId(null)
+                }
+            },
+            [cloneMutation]
+        )
+
         const clearDeleteError = useCallback(() => {
             setDeleteError(null)
         }, [])
@@ -243,18 +307,22 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             activeTemplate,
             title,
             bodyHtml,
+            programId,
             isSaving: updateMutation.isPending,
             isDeleting: deleteMutation.isPending,
             deletingId,
+            cloningId,
             deleteError,
             formError,
             setTitle,
             setBodyHtml,
+            setProgramId,
             openEdit,
             openView,
             backToList,
             saveTemplate,
             deleteTemplateById,
+            cloneTemplate,
             clearDeleteError,
             refetchTemplates: templatesQuery.refetch,
         }

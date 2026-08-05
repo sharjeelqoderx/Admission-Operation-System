@@ -29,6 +29,12 @@ export type StudentFormPageData = {
         state?: string | null
         city?: string | null
         nationality?: string | null
+        street_1?: string | null
+        street_2?: string | null
+        street_3?: string | null
+        post_code?: string | null
+        address?: string | null
+        zip_code?: string | null
         guardian_email?: string | null
         guardian_phone?: string | null
         passport_file_url?: string | null

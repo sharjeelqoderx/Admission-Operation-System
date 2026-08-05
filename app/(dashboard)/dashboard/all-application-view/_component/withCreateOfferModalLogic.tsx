@@ -1,22 +1,12 @@
 "use client"
 
-import { useCallback, useMemo, useState, type ComponentType } from "react"
+import { useCallback, useMemo, type ComponentType } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import type { DocumentTemplatesListResponse } from "@/types/schemas/document-template"
 import type {
     OfferChecklistPreviewResponse,
     OfferTemplateChecklistPreview,
 } from "@/types/schemas/offer"
-
-async function fetchDocumentTemplates(): Promise<DocumentTemplatesListResponse> {
-    const res = await fetch("/api/document-template")
-    const json = await res.json()
-    if (!res.ok) {
-        throw new Error(json?.error ?? "Failed to fetch document templates")
-    }
-    return json
-}
 
 async function fetchOfferChecklistPreview(
     applicationId: string
@@ -26,7 +16,11 @@ async function fetchOfferChecklistPreview(
     )
     const json = await res.json()
     if (!res.ok) {
-        throw new Error(json?.error ?? "Failed to fetch checklist preview")
+        const details =
+            typeof json?.details === "object" && json.details !== null
+                ? JSON.stringify(json.details)
+                : undefined
+        throw new Error(json?.error ?? details ?? "Failed to fetch offer preview")
     }
     return json
 }
@@ -37,16 +31,15 @@ export type CreateOfferModalLogicProps = {
     applicationId: string
     studentName?: string | null
     onOfferCreated?: (offerId: string) => void
-    templates: DocumentTemplatesListResponse["data"]
-    checklistByTemplateId: Record<string, OfferTemplateChecklistPreview>
+    programLabel: string | null
+    templatePreview: OfferTemplateChecklistPreview | null
     isLoading: boolean
     isError: boolean
     errorMessage: string
     onRetry: () => void
-    selectedTemplateId: string | null
-    onSelectTemplate: (templateId: string) => void
     onCreateOffer: () => void
     isCreating: boolean
+    canCreateOffer: boolean
 }
 
 type CreateOfferModalContainerProps = {
@@ -68,43 +61,22 @@ export function withCreateOfferModalLogic(
         onOfferCreated,
     }: CreateOfferModalContainerProps) {
         const queryClient = useQueryClient()
-        const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
 
-        const templatesQuery = useQuery({
-            queryKey: ["document-templates"],
-            queryFn: fetchDocumentTemplates,
-            enabled: open,
-        })
-
-        const checklistPreviewQuery = useQuery({
+        const previewQuery = useQuery({
             queryKey: ["offer-checklist-preview", applicationId],
             queryFn: () => fetchOfferChecklistPreview(applicationId),
             enabled: open && Boolean(applicationId),
         })
 
-        const templates = useMemo(() => {
-            const rows = templatesQuery.data?.data
-            return Array.isArray(rows) ? rows : []
-        }, [templatesQuery.data?.data])
-
-        const checklistByTemplateId = useMemo(() => {
-            const rows = checklistPreviewQuery.data?.data?.templates
-            if (!Array.isArray(rows)) return {}
-
-            return rows.reduce<Record<string, OfferTemplateChecklistPreview>>((acc, row) => {
-                acc[row.template_id] = row
-                return acc
-            }, {})
-        }, [checklistPreviewQuery.data?.data?.templates])
+        const preview = previewQuery.data?.data
 
         const createOfferMutation = useMutation({
-            mutationFn: async (documentTemplateId: string) => {
+            mutationFn: async () => {
                 const res = await fetch("/api/offer", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         application_id: applicationId,
-                        document_template_id: documentTemplateId,
                     }),
                 })
                 const json = await res.json()
@@ -120,7 +92,6 @@ export function withCreateOfferModalLogic(
                 queryClient.invalidateQueries({
                     queryKey: ["offer-checklist-preview", applicationId],
                 })
-                setSelectedTemplateId(null)
                 onOpenChange(false)
                 onOfferCreated?.(data.id)
             },
@@ -129,63 +100,43 @@ export function withCreateOfferModalLogic(
             },
         })
 
-        const handleOpenChange = useCallback(
-            (nextOpen: boolean) => {
-                if (!nextOpen) {
-                    setSelectedTemplateId(null)
-                }
-                onOpenChange(nextOpen)
-            },
-            [onOpenChange]
-        )
-
-        const handleSelectTemplate = useCallback((templateId: string) => {
-            setSelectedTemplateId(templateId)
-        }, [])
-
         const handleCreateOffer = useCallback(() => {
-            if (!selectedTemplateId) {
-                toast.error("Please select a template first")
+            if (!preview?.template) {
+                toast.error("No offer template is assigned to this program.")
                 return
             }
-            createOfferMutation.mutate(selectedTemplateId)
-        }, [createOfferMutation, selectedTemplateId])
+            createOfferMutation.mutate()
+        }, [createOfferMutation, preview?.template])
 
         const handleRetry = useCallback(() => {
-            void templatesQuery.refetch()
-            void checklistPreviewQuery.refetch()
-        }, [checklistPreviewQuery, templatesQuery])
+            void previewQuery.refetch()
+        }, [previewQuery])
 
-        const isLoading =
-            (templatesQuery.isLoading || checklistPreviewQuery.isLoading) && templates.length === 0
-        const isError =
-            !isLoading &&
-            (templatesQuery.isError || checklistPreviewQuery.isError) &&
-            templates.length === 0
+        const isLoading = previewQuery.isLoading && !preview
+        const isError = !isLoading && previewQuery.isError
         const errorMessage =
-            (templatesQuery.error instanceof Error
-                ? templatesQuery.error.message
-                : checklistPreviewQuery.error instanceof Error
-                  ? checklistPreviewQuery.error.message
-                  : "Failed to load offer templates")
+            previewQuery.error instanceof Error
+                ? previewQuery.error.message
+                : "Failed to load offer preview"
+
+        const canCreateOffer = Boolean(preview?.template)
 
         return (
             <Component
                 open={open}
-                onOpenChange={handleOpenChange}
+                onOpenChange={onOpenChange}
                 applicationId={applicationId}
                 studentName={studentName}
                 onOfferCreated={onOfferCreated}
-                templates={templates}
-                checklistByTemplateId={checklistByTemplateId}
+                programLabel={preview?.program_label ?? null}
+                templatePreview={preview?.template ?? null}
                 isLoading={isLoading}
                 isError={isError}
                 errorMessage={errorMessage}
                 onRetry={handleRetry}
-                selectedTemplateId={selectedTemplateId}
-                onSelectTemplate={handleSelectTemplate}
                 onCreateOffer={handleCreateOffer}
                 isCreating={createOfferMutation.isPending}
+                canCreateOffer={canCreateOffer}
             />
         )
     }

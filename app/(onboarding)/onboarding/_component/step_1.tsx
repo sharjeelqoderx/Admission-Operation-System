@@ -61,6 +61,10 @@ function Step1Form({
         state: string
         city: string
         nationality: string
+        street_1: string
+        street_2: string
+        street_3: string
+        post_code: string
         guardianEmail: string
         guardianPhone: string
         avatar_url: File | string | null
@@ -95,6 +99,10 @@ function Step1Form({
                 fd.append("state", value.state)
                 fd.append("city", value.city)
                 fd.append("nationality", value.nationality)
+                fd.append("street_1", value.street_1)
+                fd.append("street_2", value.street_2)
+                fd.append("street_3", value.street_3)
+                fd.append("post_code", value.post_code)
                 fd.append("guardianEmail", value.guardianEmail)
                 fd.append("guardianPhone", value.guardianPhone)
                 if (value.avatar_url) fd.append("avatar_url", value.avatar_url)
@@ -296,6 +304,74 @@ function Step1Form({
                     )}
                 </form.Field>
 
+                <form.Field name="street_1">
+                    {(field) => (
+                        <F
+                            label="Street 1"
+                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                            error={field.state.meta.errors?.[0]}
+                        >
+                            <Input
+                                value={field.state.value}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="Enter street line 1"
+                                className="w-full"
+                            />
+                        </F>
+                    )}
+                </form.Field>
+
+                <form.Field name="street_2">
+                    {(field) => (
+                        <F
+                            label="Street 2"
+                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                            error={field.state.meta.errors?.[0]}
+                        >
+                            <Input
+                                value={field.state.value}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="Enter street line 2 (optional)"
+                                className="w-full"
+                            />
+                        </F>
+                    )}
+                </form.Field>
+
+                <form.Field name="street_3">
+                    {(field) => (
+                        <F
+                            label="Street 3"
+                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                            error={field.state.meta.errors?.[0]}
+                        >
+                            <Input
+                                value={field.state.value}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="Enter street line 3 (optional)"
+                                className="w-full"
+                            />
+                        </F>
+                    )}
+                </form.Field>
+
+                <form.Field name="post_code">
+                    {(field) => (
+                        <F
+                            label="Post Code"
+                            isInvalid={field.state.meta.isTouched && !field.state.meta.isValid}
+                            error={field.state.meta.errors?.[0]}
+                        >
+                            <Input
+                                value={field.state.value}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="Enter post code (optional)"
+                                className="w-full"
+                            />
+                        </F>
+                    )}
+                </form.Field>
+
                 <form.Field name="guardianPhone">
                     {(field) => (
                         <F
@@ -376,6 +452,10 @@ export function Step1Basic({ onNext }: { onNext: () => void }) {
         state: meData?.profile?.state ?? "",
         city: meData?.profile?.city ?? "",
         nationality: meData?.profile?.nationality ?? meData?.profile?.country ?? "",
+        street_1: meData?.profile?.street_1 ?? "",
+        street_2: meData?.profile?.street_2 ?? "",
+        street_3: meData?.profile?.street_3 ?? "",
+        post_code: meData?.profile?.post_code ?? "",
         guardianEmail: meData?.profile?.guardianEmail ?? "",
         guardianPhone: meData?.profile?.guardianPhone ?? "",
         avatar_url: meData?.avatarUrl ?? null,

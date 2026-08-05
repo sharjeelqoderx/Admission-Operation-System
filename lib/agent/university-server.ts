@@ -7,6 +7,7 @@ import { resolveStudentPipelineStatus } from "@/lib/student/pipeline-status"
 import { formatFullName } from "@/lib/utils/profile"
 import { formatIntakeDate } from "@/lib/utils/program"
 import { formatLocation } from "@/lib/utils/location"
+import { formatAddressLines } from "@/types/schemas/address"
 import type {
     UniversityAgentDetail,
     UniversityAgentListItem,
@@ -25,6 +26,10 @@ type AgentRow = {
     state: string | null
     city: string | null
     address: string | null
+    street_1?: string | null
+    street_2?: string | null
+    street_3?: string | null
+    post_code?: string | null
     nationality: string | null
     experience_years: number | null
     website: string | null
@@ -468,12 +473,24 @@ export async function fetchUniversityAgentDetail(profileId: string): Promise<Uni
         agency_info: {
             agency_name: getAgencyLabel(agentRow) || null,
             address:
-                agentRow.address ??
-                formatLocation({
-                    city: agentRow.city,
-                    state: agentRow.state,
-                    country: agentRow.country,
-                }),
+                formatAddressLines({
+                    street_1: agentRow.street_1,
+                    street_2: agentRow.street_2,
+                    street_3: agentRow.street_3,
+                    post_code: agentRow.post_code,
+                }) !== "—"
+                    ? formatAddressLines({
+                          street_1: agentRow.street_1,
+                          street_2: agentRow.street_2,
+                          street_3: agentRow.street_3,
+                          post_code: agentRow.post_code,
+                      })
+                    : agentRow.address ??
+                      formatLocation({
+                          city: agentRow.city,
+                          state: agentRow.state,
+                          country: agentRow.country,
+                      }),
             experience_years: agentRow.experience_years,
             phone: profile.phone,
             other_contact_number: agentRow.other_contact_number,
@@ -486,7 +503,20 @@ export async function fetchUniversityAgentDetail(profileId: string): Promise<Uni
             phone: profile.phone,
             other_contact_number: agentRow.other_contact_number,
             website: agentRow.website,
-            address: agentRow.address,
+            address:
+                formatAddressLines({
+                    street_1: agentRow.street_1,
+                    street_2: agentRow.street_2,
+                    street_3: agentRow.street_3,
+                    post_code: agentRow.post_code,
+                }) !== "—"
+                    ? formatAddressLines({
+                          street_1: agentRow.street_1,
+                          street_2: agentRow.street_2,
+                          street_3: agentRow.street_3,
+                          post_code: agentRow.post_code,
+                      })
+                    : agentRow.address,
         },
         documents: kyc?.documents ?? [],
         students: mappedStudents,

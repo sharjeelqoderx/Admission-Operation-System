@@ -6,6 +6,7 @@ import {
 } from "@/lib/supabase/server"
 import { provisionAuthUser } from "@/lib/supabase/provision-auth-user"
 import { StudentCreateFormSchema } from "@/types/schemas/student"
+import { normalizeAddressFields } from "@/types/schemas/address"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { upsertStudentDocument } from "@/lib/supabase/upsert-student-document"
 import { STUDENT_DOCUMENT_TYPE_IDS } from "@/lib/constants/document-types"
@@ -100,6 +101,10 @@ export async function POST(req: NextRequest) {
             state: getString("state"),
             city: getString("city"),
             nationality: getString("nationality"),
+            street_1: getString("street_1"),
+            street_2: getString("street_2"),
+            street_3: getString("street_3"),
+            post_code: getString("post_code"),
             guardian_email: getString("guardian_email"),
             guardian_phone: getString("guardian_phone"),
             avatar_url: getFile("avatar_url"),
@@ -259,6 +264,13 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        const addressFields = normalizeAddressFields({
+            street_1: validatedData.street_1,
+            street_2: validatedData.street_2,
+            street_3: validatedData.street_3,
+            post_code: validatedData.post_code,
+        })
+
         const { error: studentError } = await supabaseService.from("student").upsert(
             {
                 profile_id: newUserId,
@@ -272,6 +284,7 @@ export async function POST(req: NextRequest) {
                 guardian_phone: validatedData.guardian_phone || null,
                 passport_file_url: passportUpload?.publicUrl ?? null,
                 aps_requirement: requiresApsRequirement(validatedData.country),
+                ...addressFields,
             },
             { onConflict: "profile_id" }
         )

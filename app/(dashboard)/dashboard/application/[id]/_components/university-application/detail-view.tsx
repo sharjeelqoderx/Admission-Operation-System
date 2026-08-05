@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useCallback, useState } from "react"
+import { memo, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -15,10 +15,11 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
-import { PageLoader } from "@/components/shared/page-loader"
+import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { StudentProgressCard } from "@/app/(dashboard)/dashboard/student/[student-id]/_components/university-student/progress-card"
-import { CreateOfferModal } from "@/app/(dashboard)/dashboard/all-application-view/_component/CreateOfferModal"
+import { MissingOfferTemplateAlert } from "@/app/(dashboard)/dashboard/all-application-view/_component/missing-offer-template-alert"
+import { useCreateOfferAction } from "@/app/(dashboard)/dashboard/all-application-view/_component/useCreateOfferAction"
 import { ApplicationReviewHistoryCard } from "@/app/(dashboard)/dashboard/application/_components/application-review-history-card"
 import { RejectApplicationDialog } from "@/app/(dashboard)/dashboard/application/_components/reject-application-dialog"
 import { applicationDetailCardClassName } from "@/app/(dashboard)/dashboard/application/_components/application-detail-card-styles"
@@ -67,6 +68,7 @@ function DetailField({
 }
 
 export const UniversityApplicationDetailView = memo(function UniversityApplicationDetailView({
+    applicationId,
     detail,
     isLoading,
     isError,
@@ -79,11 +81,24 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
     onRejectDialogOpenChange,
     onRejectSubmit,
 }: UniversityApplicationDetailLogicProps) {
-    const [offerModalOpen, setOfferModalOpen] = useState(false)
+    const {
+        handleCreateOffer,
+        handleCreateOfferWithoutTemplate,
+        isCreatingOffer,
+        isCreatingOfferWithoutTemplate,
+        missingTemplateAlert,
+        closeMissingTemplateAlert,
+    } = useCreateOfferAction({
+        applicationId,
+        studentName: detail?.student_name,
+        invalidateQueryKeys: [["university-application-detail", applicationId]],
+        onOfferCreated: onRetry,
+    })
 
-    const handleOpenOfferModal = useCallback(() => {
-        setOfferModalOpen(true)
-    }, [])
+    const handleApproveApplication = useCallback(() => {
+        if (isCreatingOffer) return
+        handleCreateOffer()
+    }, [handleCreateOffer, isCreatingOffer])
 
     if (isLoading) {
         return <PageLoader />
@@ -151,10 +166,18 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
                         ) : null}
                         {detail.can_approve_for_signature ? (
                             <Button
-                                className="h-10 rounded-xl bg-brand-byzantine px-5 text-sm font-medium hover:bg-brand-byzantine/90"
-                                onClick={handleOpenOfferModal}
+                                className="h-10 gap-2 rounded-xl bg-brand-byzantine px-5 text-sm font-medium hover:bg-brand-byzantine/90"
+                                disabled={isCreatingOffer}
+                                onClick={handleApproveApplication}
                             >
-                                Approve
+                                {isCreatingOffer ? (
+                                    <>
+                                        <Spinner size="sm" />
+                                        Creating offer...
+                                    </>
+                                ) : (
+                                    "Approve"
+                                )}
                             </Button>
                         ) : null}
                     </div>
@@ -295,11 +318,16 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
                 </div>
             </div>
 
-            <CreateOfferModal
-                open={offerModalOpen}
-                onOpenChange={setOfferModalOpen}
-                applicationId={detail.id}
-                studentName={detail.student_name}
+            <MissingOfferTemplateAlert
+                open={missingTemplateAlert.open}
+                title={missingTemplateAlert.title}
+                description={missingTemplateAlert.description}
+                allowCreateWithoutTemplate={missingTemplateAlert.allowCreateWithoutTemplate}
+                isCreatingWithoutTemplate={isCreatingOfferWithoutTemplate}
+                onCreateWithoutTemplate={handleCreateOfferWithoutTemplate}
+                onOpenChange={(open) => {
+                    if (!open) closeMissingTemplateAlert()
+                }}
             />
 
             <RejectApplicationDialog

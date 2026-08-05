@@ -11,6 +11,25 @@ import type { Database } from "@/types/supabase"
 import { Role } from "@/types/enums/role"
 
 type DocumentTemplateRow = Database["public"]["Tables"]["document_template"]["Row"]
+
+type ProgramSummaryRow = Pick<
+    Database["public"]["Tables"]["program"]["Row"],
+    "id" | "name" | "category" | "location"
+>
+
+function formatProgramLabel(program: ProgramSummaryRow | null | undefined): string | null {
+    if (!program) return null
+    const name = program.name?.trim() || "Untitled program"
+    const details = [program.category, program.location].filter(Boolean).join(" • ")
+    return details ? `${name} (${details})` : name
+}
+
+function pickProgramRelation(
+    value: ProgramSummaryRow | ProgramSummaryRow[] | null | undefined
+): ProgramSummaryRow | null {
+    if (!value) return null
+    return Array.isArray(value) ? value[0] ?? null : value
+}
 type StaffRole = Role.SUPER_ADMIN | Role.ADMIN | Role.MANAGEMENT | Role.AGENT
 
 const DOCUMENT_TEMPLATE_STAFF_ROLES: StaffRole[] = [
@@ -81,7 +100,10 @@ export async function softDeleteDocumentTemplate(id: string) {
     return runUpdate(supabase)
 }
 
-function mapTemplateRow(row: DocumentTemplateRow): DocumentTemplateListItem {
+function mapTemplateRow(
+    row: DocumentTemplateRow,
+    program?: ProgramSummaryRow | null
+): DocumentTemplateListItem {
     const storedVariables = Array.isArray(row.variables)
         ? row.variables.filter((item): item is string => typeof item === "string")
         : []
@@ -103,6 +125,8 @@ function mapTemplateRow(row: DocumentTemplateRow): DocumentTemplateListItem {
         checklist_items: checklistItems,
         checklist_profile:
             typeof row.checklist_profile === "string" ? row.checklist_profile : null,
+        program_id: row.program_id ?? null,
+        program_label: formatProgramLabel(program),
         created_by_profile_id: row.created_by_profile_id,
         created_at: row.created_at,
         updated_at: row.updated_at,
@@ -123,7 +147,10 @@ export async function fetchDocumentTemplatesForPage(): Promise<DocumentTemplateL
 
     const { data, error } = await supabase
         .from("document_template")
-        .select("*")
+        .select(`
+            *,
+            program:program_id ( id, name, category, location )
+        `)
         .eq("is_deleted", false)
         .order("updated_at", { ascending: false })
 
@@ -131,7 +158,12 @@ export async function fetchDocumentTemplatesForPage(): Promise<DocumentTemplateL
         throw new Error(error.message)
     }
 
-    return (data ?? []).map(mapTemplateRow)
+    return (data ?? []).map((row) => {
+        const { program, ...templateRow } = row as DocumentTemplateRow & {
+            program?: ProgramSummaryRow | ProgramSummaryRow[] | null
+        }
+        return mapTemplateRow(templateRow, pickProgramRelation(program))
+    })
 }
 
 export async function fetchDocumentTemplateById(
@@ -150,7 +182,10 @@ export async function fetchDocumentTemplateById(
 
     const { data, error } = await supabase
         .from("document_template")
-        .select("*")
+        .select(`
+            *,
+            program:program_id ( id, name, category, location )
+        `)
         .eq("id", id)
         .eq("is_deleted", false)
         .maybeSingle()
@@ -159,7 +194,13 @@ export async function fetchDocumentTemplateById(
         throw new Error(error.message)
     }
 
-    return data ? mapTemplateRow(data) : null
+    if (!data) return null
+
+    const { program, ...templateRow } = data as DocumentTemplateRow & {
+        program?: ProgramSummaryRow | ProgramSummaryRow[] | null
+    }
+
+    return mapTemplateRow(templateRow, pickProgramRelation(program))
 }
 
 export { mapTemplateRow }

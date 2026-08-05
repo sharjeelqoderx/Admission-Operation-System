@@ -5,6 +5,7 @@ import {
     mapTemplateRow,
     softDeleteDocumentTemplate,
 } from "@/lib/document-template/server"
+import { assertProgramAvailableForTemplate } from "@/lib/document-template/program-assignment"
 import { extractTemplateVariables } from "@/lib/document-template/variables"
 import { DocumentTemplateUpdateSchema } from "@/types/schemas/document-template"
 
@@ -28,7 +29,10 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
         const { data, error } = await supabase
             .from("document_template")
-            .select("*")
+            .select(`
+                *,
+                program:program_id ( id, name, category, location )
+            `)
             .eq("id", id)
             .eq("is_deleted", false)
             .maybeSingle()
@@ -44,7 +48,10 @@ export async function GET(_req: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: "Document template not found" }, { status: 404 })
         }
 
-        return NextResponse.json({ data: mapTemplateRow(data) })
+        const { program, ...templateRow } = data
+        const programRelation = Array.isArray(program) ? program[0] : program
+
+        return NextResponse.json({ data: mapTemplateRow(templateRow, programRelation ?? null) })
     } catch {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
@@ -105,6 +112,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             title?: string
             body_html?: string
             variables?: string[]
+            program_id?: string | null
             updated_at: string
         } = {
             updated_at: new Date().toISOString(),
@@ -119,12 +127,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             updatePayload.variables = extractTemplateVariables(validated.body_html)
         }
 
+        if (validated.program_id !== undefined) {
+            if (validated.program_id) {
+                await assertProgramAvailableForTemplate(supabase, validated.program_id, id)
+            }
+            updatePayload.program_id = validated.program_id
+        }
+
         const { data, error } = await supabase
             .from("document_template")
             .update(updatePayload)
             .eq("id", id)
             .eq("is_deleted", false)
-            .select("*")
+            .select(`
+                *,
+                program:program_id ( id, name, category, location )
+            `)
             .maybeSingle()
 
         if (error) {
@@ -141,8 +159,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             )
         }
 
+        const { program, ...templateRow } = data
+        const programRelation = Array.isArray(program) ? program[0] : program
+
         return NextResponse.json({
-            data: mapTemplateRow(data),
+            data: mapTemplateRow(templateRow, programRelation ?? null),
             message: "Document template updated successfully",
         })
     } catch (e: unknown) {

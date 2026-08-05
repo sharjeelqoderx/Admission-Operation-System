@@ -111,7 +111,7 @@ export async function renderOfferBodyHtml(
 
     const { data: studentRecord } = await supabase
         .from("student")
-        .select("address, city, state, country, zip_code")
+        .select("street_1, street_2, street_3, post_code, city, state, country, address, zip_code")
         .eq("profile_id", params.application.profile_id)
         .maybeSingle()
 
@@ -134,6 +134,10 @@ export async function renderOfferBodyHtml(
                       ...student,
                       title: studentProfile?.title ?? null,
                       date_of_birth: studentProfile?.date_of_birth ?? null,
+                      street_1: studentRecord?.street_1 ?? null,
+                      street_2: studentRecord?.street_2 ?? null,
+                      street_3: studentRecord?.street_3 ?? null,
+                      post_code: studentRecord?.post_code ?? null,
                       address: studentRecord?.address ?? null,
                       city: studentRecord?.city ?? null,
                       state: studentRecord?.state ?? null,

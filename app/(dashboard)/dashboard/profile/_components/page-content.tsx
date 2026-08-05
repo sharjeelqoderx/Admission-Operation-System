@@ -114,8 +114,10 @@ function getProfileFormValues(user?: ProfilePageData | null) {
         state: user?.profile?.state ?? "",
         city: user?.profile?.city ?? "",
         nationality: user?.profile?.nationality ?? country,
-        address: user?.profile?.address ?? "",
-        zip_code: user?.profile?.zip_code ?? "",
+        street_1: user?.profile?.street_1 ?? user?.profile?.address ?? "",
+        street_2: user?.profile?.street_2 ?? "",
+        street_3: user?.profile?.street_3 ?? "",
+        post_code: user?.profile?.post_code ?? user?.profile?.zip_code ?? "",
         guardian_email:
             user?.profile?.guardian_email ?? user?.profile?.guardianEmail ?? "",
         guardian_phone:
@@ -155,7 +157,12 @@ const STUDENT_TABS: { id: StudentTab; label: string; icon: React.ComponentType<{
 function buildStudentProfileFormData(
     value: Record<string, unknown>,
     user: { avatarUrl?: string | null },
-    extra?: { address?: string; zip_code?: string }
+    extra?: {
+        street_1?: string
+        street_2?: string
+        street_3?: string
+        post_code?: string
+    }
 ) {
     const fd = new FormData()
     fd.append("title", String(value.title ?? ""))
@@ -173,8 +180,10 @@ function buildStudentProfileFormData(
     fd.append("nationality", String(value.nationality ?? ""))
     fd.append("guardianEmail", String(value.guardian_email ?? ""))
     fd.append("guardianPhone", String(value.guardian_phone ?? ""))
-    if (extra?.address !== undefined) fd.append("address", extra.address)
-    if (extra?.zip_code !== undefined) fd.append("zip_code", extra.zip_code)
+    if (extra?.street_1 !== undefined) fd.append("street_1", extra.street_1)
+    if (extra?.street_2 !== undefined) fd.append("street_2", extra.street_2)
+    if (extra?.street_3 !== undefined) fd.append("street_3", extra.street_3)
+    if (extra?.post_code !== undefined) fd.append("post_code", extra.post_code)
     const avatar = value.avatar
     if (avatar instanceof File) {
         fd.append("avatar_url", avatar)
@@ -376,7 +385,12 @@ function ProfilePageView({ initialData }: PageContentProps) {
 
     const saveBasicInfo = async () => {
         const value = form.state.values
-        const fd = buildStudentProfileFormData(value, user)
+        const fd = buildStudentProfileFormData(value, user, {
+            street_1: value.street_1,
+            street_2: value.street_2,
+            street_3: value.street_3,
+            post_code: value.post_code,
+        })
         await mutation.mutateAsync(fd)
         setEditingSection(null)
     }
@@ -384,8 +398,10 @@ function ProfilePageView({ initialData }: PageContentProps) {
     const saveStudentDetails = async () => {
         const value = form.state.values
         const fd = buildStudentProfileFormData(value, user, {
-            address: value.address,
-            zip_code: value.zip_code,
+            street_1: value.street_1,
+            street_2: value.street_2,
+            street_3: value.street_3,
+            post_code: value.post_code,
         })
         await mutation.mutateAsync(fd)
         setEditingSection(null)
@@ -828,12 +844,51 @@ function ProfilePageView({ initialData }: PageContentProps) {
                                     </F>
                                 )}
                             </form.Field>
-                            <div className="col-span-1 sm:col-span-2">
-                                <form.Field name="address">
+                            <div className="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <form.Field name="street_1">
                                     {(field) => (
-                                        <F field={field} label="Full Address">
+                                        <F field={field} label="Street 1">
                                             {isEditingStudentDetails ? (
-                                                <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Full Address" />
+                                                <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter street line 1" />
+                                            ) : (
+                                                <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                    <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                                </div>
+                                            )}
+                                        </F>
+                                    )}
+                                </form.Field>
+                                <form.Field name="street_2">
+                                    {(field) => (
+                                        <F field={field} label="Street 2">
+                                            {isEditingStudentDetails ? (
+                                                <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter street line 2 (optional)" />
+                                            ) : (
+                                                <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                    <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                                </div>
+                                            )}
+                                        </F>
+                                    )}
+                                </form.Field>
+                                <form.Field name="street_3">
+                                    {(field) => (
+                                        <F field={field} label="Street 3">
+                                            {isEditingStudentDetails ? (
+                                                <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter street line 3 (optional)" />
+                                            ) : (
+                                                <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                    <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                                </div>
+                                            )}
+                                        </F>
+                                    )}
+                                </form.Field>
+                                <form.Field name="post_code">
+                                    {(field) => (
+                                        <F field={field} label="Post Code">
+                                            {isEditingStudentDetails ? (
+                                                <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter post code (optional)" />
                                             ) : (
                                                 <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
                                                     <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
@@ -843,19 +898,6 @@ function ProfilePageView({ initialData }: PageContentProps) {
                                     )}
                                 </form.Field>
                             </div>
-                            <form.Field name="zip_code">
-                                {(field) => (
-                                    <F field={field} label="Zip Code">
-                                        {isEditingStudentDetails ? (
-                                            <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Zip Code" />
-                                        ) : (
-                                            <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                            </div>
-                                        )}
-                                    </F>
-                                )}
-                            </form.Field>
                             <form.Field name="guardian_email">
                                 {(field) => (
                                     <F field={field} label="Guardian Email (Optional)">
@@ -1561,20 +1603,43 @@ function ProfilePageView({ initialData }: PageContentProps) {
                                     </F>
                                 )}
                             </form.Field>
-                            <div className="col-span-1 sm:col-span-2">
-                                <form.Field name="address">
-                                    {(field) => (
-                                        <F field={field} label="Full Address">
-                                            {isEditing ? (
-                                                <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Full Address" />
-                                            ) : (
-                                                <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                    <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                                </div>
-                                            )}
-                                        </F>
-                                    )}
-                                </form.Field>
+                            <div className="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                {(["street_1", "street_2", "street_3", "post_code"] as const).map((fieldName) => (
+                                    <form.Field key={fieldName} name={fieldName}>
+                                        {(field) => (
+                                            <F
+                                                field={field}
+                                                label={
+                                                    fieldName === "street_1"
+                                                        ? "Street 1"
+                                                        : fieldName === "street_2"
+                                                          ? "Street 2"
+                                                          : fieldName === "street_3"
+                                                            ? "Street 3"
+                                                            : "Post Code"
+                                                }
+                                            >
+                                                {isEditing ? (
+                                                    <Input
+                                                        value={field.state.value}
+                                                        onChange={(e) => field.handleChange(e.target.value)}
+                                                        placeholder={
+                                                            fieldName === "post_code"
+                                                                ? "Enter post code (optional)"
+                                                                : fieldName === "street_1"
+                                                                  ? "Enter street line 1"
+                                                                  : `Enter ${fieldName.replace("_", " ")} (optional)`
+                                                        }
+                                                    />
+                                                ) : (
+                                                    <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                        <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                                    </div>
+                                                )}
+                                            </F>
+                                        )}
+                                    </form.Field>
+                                ))}
                             </div>
                         </div>
                     </BluryCard>
@@ -1639,20 +1704,43 @@ function ProfilePageView({ initialData }: PageContentProps) {
                                     </F>
                                 )}
                             </form.Field>
-                            <div className="col-span-1 sm:col-span-2 lg:col-span-3">
-                                <form.Field name="address">
-                                    {(field) => (
-                                        <F field={field} label="Full Address">
-                                            {isEditing ? (
-                                                <Input value={field.state.value} onChange={(e) => field.handleChange(e.target.value)} placeholder="Enter your Full Address" />
-                                            ) : (
-                                                <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
-                                                    <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
-                                                </div>
-                                            )}
-                                        </F>
-                                    )}
-                                </form.Field>
+                            <div className="col-span-1 sm:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                {(["street_1", "street_2", "street_3", "post_code"] as const).map((fieldName) => (
+                                    <form.Field key={fieldName} name={fieldName}>
+                                        {(field) => (
+                                            <F
+                                                field={field}
+                                                label={
+                                                    fieldName === "street_1"
+                                                        ? "Street 1"
+                                                        : fieldName === "street_2"
+                                                          ? "Street 2"
+                                                          : fieldName === "street_3"
+                                                            ? "Street 3"
+                                                            : "Post Code"
+                                                }
+                                            >
+                                                {isEditing ? (
+                                                    <Input
+                                                        value={field.state.value}
+                                                        onChange={(e) => field.handleChange(e.target.value)}
+                                                        placeholder={
+                                                            fieldName === "post_code"
+                                                                ? "Enter post code (optional)"
+                                                                : fieldName === "street_1"
+                                                                  ? "Enter street line 1"
+                                                                  : `Enter ${fieldName.replace("_", " ")} (optional)`
+                                                        }
+                                                    />
+                                                ) : (
+                                                    <div className="p-3 bg-white/10 rounded-lg border border-white/5 min-h-12 flex items-center">
+                                                        <Typography className="text-gray-800 font-medium">{field.state.value || "N/A"}</Typography>
+                                                    </div>
+                                                )}
+                                            </F>
+                                        )}
+                                    </form.Field>
+                                ))}
                             </div>
                             <div className="col-span-1 sm:col-span-2 lg:col-span-3">
                                 <form.Field name="description">

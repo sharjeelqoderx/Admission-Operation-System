@@ -53,7 +53,7 @@ export function buildStudentSignatureHtml(
 export const TEMPLATE_PREVIEW_SAMPLE_DATA: Record<string, string> = {
     student_name: "John Doe",
     student_title: "Mr.",
-    student_address: "123 Academic Street<br />Berlin, BE 10115<br />Germany",
+    student_address: "123 Academic Street<br />Suite 4B<br />Building C<br />Berlin, BE 10115<br />Germany",
     student_date_of_birth: "January 15, 1998",
     student_signature: `<span class="document-student-signature-preview">${STUDENT_SIGNATURE_PREVIEW_SVG}</span>`,
     course_name: "Business Administration",

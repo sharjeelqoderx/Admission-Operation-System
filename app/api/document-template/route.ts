@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { assertProgramAvailableForTemplate } from "@/lib/document-template/program-assignment"
 import { mapTemplateRow } from "@/lib/document-template/server"
 import { extractTemplateVariables } from "@/lib/document-template/variables"
 import { DocumentTemplateFormSchema } from "@/types/schemas/document-template"
@@ -19,7 +20,10 @@ export async function GET() {
 
         const { data, error } = await supabase
             .from("document_template")
-            .select("*")
+            .select(`
+                *,
+                program:program_id ( id, name, category, location )
+            `)
             .eq("is_deleted", false)
             .order("updated_at", { ascending: false })
 
@@ -31,7 +35,11 @@ export async function GET() {
         }
 
         return NextResponse.json({
-            data: (data ?? []).map(mapTemplateRow),
+            data: (data ?? []).map((row) => {
+                const { program, ...templateRow } = row
+                const programRelation = Array.isArray(program) ? program[0] : program
+                return mapTemplateRow(templateRow, programRelation ?? null)
+            }),
         })
     } catch {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
@@ -55,15 +63,23 @@ export async function POST(req: NextRequest) {
         const validated = DocumentTemplateFormSchema.parse(json)
         const variables = extractTemplateVariables(validated.body_html)
 
+        if (validated.program_id) {
+            await assertProgramAvailableForTemplate(supabase, validated.program_id)
+        }
+
         const { data, error } = await supabase
             .from("document_template")
             .insert({
                 title: validated.title,
                 body_html: validated.body_html,
                 variables,
+                program_id: validated.program_id ?? null,
                 created_by_profile_id: user.id,
             })
-            .select("*")
+            .select(`
+                *,
+                program:program_id ( id, name, category, location )
+            `)
             .single()
 
         if (error || !data) {
@@ -73,8 +89,14 @@ export async function POST(req: NextRequest) {
             )
         }
 
+        const { program, ...templateRow } = data
+        const programRelation = Array.isArray(program) ? program[0] : program
+
         return NextResponse.json(
-            { data: mapTemplateRow(data), message: "Document template created successfully" },
+            {
+                data: mapTemplateRow(templateRow, programRelation ?? null),
+                message: "Document template created successfully",
+            },
             { status: 201 }
         )
     } catch (e: unknown) {

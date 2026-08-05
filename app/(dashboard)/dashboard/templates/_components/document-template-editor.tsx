@@ -6,6 +6,7 @@ import StarterKit from "@tiptap/starter-kit"
 import Placeholder from "@tiptap/extension-placeholder"
 import TextAlign from "@tiptap/extension-text-align"
 import Underline from "@tiptap/extension-underline"
+import { Color, FontSize, TextStyle } from "@tiptap/extension-text-style"
 import Link from "@tiptap/extension-link"
 import ImageResize from "tiptap-extension-resize-image"
 import { Table } from "@tiptap/extension-table"
@@ -54,6 +55,7 @@ import {
 } from "@/lib/document-template/a4-document"
 import { DocumentPageBreak } from "@/lib/document-template/tiptap-document-page-break"
 import { DocumentTemplateA4PaginatedSheet } from "./document-template-a4-paginated-sheet"
+import { DocumentTemplateTextStyleControls } from "./document-template-text-style-controls"
 import { TEMPLATE_DYNAMIC_SECTIONS, TEMPLATE_MERGE_VARIABLES } from "@/lib/document-template/variables"
 import { DocumentParagraph } from "@/lib/document-template/tiptap-document-paragraph"
 import {
@@ -179,6 +181,11 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
             TextAlign.configure({
                 types: ["heading", "paragraph"],
             }),
+            TextStyle,
+            Color.configure({
+                types: ["textStyle"],
+            }),
+            FontSize,
             Underline,
             Link.configure({
                 openOnClick: false,
@@ -472,6 +479,8 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                             Document title
                         </Button>
                     </div>
+
+                    <DocumentTemplateTextStyleControls editor={editor} />
 
                     <div className="flex flex-wrap items-center gap-2">
                         <ToolbarButton

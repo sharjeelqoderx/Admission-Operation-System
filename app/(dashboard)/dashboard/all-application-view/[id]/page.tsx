@@ -1,13 +1,13 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
 import { BluryCard } from "@/components/shared/blury-card"
-import { PageLoader } from "@/components/shared/page-loader"
+import { PageLoader, Spinner } from "@/components/shared/page-loader"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ApplicationStatusBadge } from "@/app/(dashboard)/dashboard/application/_components/application-status-badge"
 import { formatFullName } from "@/lib/utils/profile"
@@ -26,7 +26,8 @@ import {
     Award,
     ExternalLink,
 } from "lucide-react"
-import { CreateOfferModal } from "../_component/CreateOfferModal"
+import { MissingOfferTemplateAlert } from "../_component/missing-offer-template-alert"
+import { useCreateOfferAction } from "../_component/useCreateOfferAction"
 import { useAuth } from "@/hooks/useAuth"
 
 export default function AllApplicationViewDetailsPage() {
@@ -34,7 +35,6 @@ export default function AllApplicationViewDetailsPage() {
     const router = useRouter()
     const { me } = useAuth()
     const id = params?.id as string
-    const [offerModalOpen, setOfferModalOpen] = useState(false)
 
     const canCreateOffer =
         me.isSuccess &&
@@ -69,16 +69,26 @@ export default function AllApplicationViewDetailsPage() {
 
     const isOfferCreationDisabled = application?.status === "REJECTED"
 
-    const handleOfferCreated = useCallback(
-        () => {
-            router.push("/dashboard/all-application-view")
-        },
-        [router]
-    )
+    const studentNameForOffer = application
+        ? formatFullName(application.student?.first_name, application.student?.last_name, "—")
+        : null
 
-    const handleOpenOfferModal = useCallback(() => {
-        setOfferModalOpen(true)
-    }, [])
+    const handleOfferCreated = useCallback(() => {
+        router.push("/dashboard/all-application-view")
+    }, [router])
+
+    const {
+        handleCreateOffer,
+        handleCreateOfferWithoutTemplate,
+        isCreatingOffer,
+        isCreatingOfferWithoutTemplate,
+        missingTemplateAlert,
+        closeMissingTemplateAlert,
+    } = useCreateOfferAction({
+        applicationId: id,
+        studentName: studentNameForOffer,
+        onOfferCreated: handleOfferCreated,
+    })
 
     if (isLoading) return <PageLoader />
 
@@ -243,7 +253,8 @@ export default function AllApplicationViewDetailsPage() {
                                 </Typography>
                             </div>
                             <Typography className="text-sm text-gray-600 leading-relaxed">
-                                Generate an offer letter for this application using one of your saved templates.
+                                Create an offer using the template assigned to this application&apos;s
+                                program.
                             </Typography>
 
                             {existingOffer ? (
@@ -262,21 +273,39 @@ export default function AllApplicationViewDetailsPage() {
                                     </Link>
                                     <Button
                                         className="w-full h-10 rounded-xl gap-2 font-bold text-xs bg-brand-secondary hover:bg-brand-secondary/90"
-                                        onClick={handleOpenOfferModal}
-                                        disabled={isOfferCreationDisabled}
+                                        onClick={handleCreateOffer}
+                                        disabled={isOfferCreationDisabled || isCreatingOffer}
                                     >
-                                        <Award className="size-4" />
-                                        Create Another Offer
+                                        {isCreatingOffer ? (
+                                            <>
+                                                <Spinner size="sm" />
+                                                Creating offer...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Award className="size-4" />
+                                                Create Another Offer
+                                            </>
+                                        )}
                                     </Button>
                                 </div>
                             ) : (
                                 <Button
                                     className="w-full h-10 rounded-xl gap-2 font-bold text-xs bg-brand-secondary hover:bg-brand-secondary/90"
-                                    onClick={handleOpenOfferModal}
-                                    disabled={isOfferCreationDisabled}
+                                    onClick={handleCreateOffer}
+                                    disabled={isOfferCreationDisabled || isCreatingOffer}
                                 >
-                                    <Award className="size-4" />
-                                    Create Offer for this Application
+                                    {isCreatingOffer ? (
+                                        <>
+                                            <Spinner size="sm" />
+                                            Creating offer...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Award className="size-4" />
+                                            Create Offer for this Application
+                                        </>
+                                    )}
                                 </Button>
                             )}
                         </BluryCard>
@@ -345,12 +374,16 @@ export default function AllApplicationViewDetailsPage() {
                 </div>
             </div>
 
-            <CreateOfferModal
-                open={offerModalOpen}
-                onOpenChange={setOfferModalOpen}
-                applicationId={id}
-                studentName={studentName}
-                onOfferCreated={handleOfferCreated}
+            <MissingOfferTemplateAlert
+                open={missingTemplateAlert.open}
+                title={missingTemplateAlert.title}
+                description={missingTemplateAlert.description}
+                allowCreateWithoutTemplate={missingTemplateAlert.allowCreateWithoutTemplate}
+                isCreatingWithoutTemplate={isCreatingOfferWithoutTemplate}
+                onCreateWithoutTemplate={handleCreateOfferWithoutTemplate}
+                onOpenChange={(open) => {
+                    if (!open) closeMissingTemplateAlert()
+                }}
             />
         </div>
     )

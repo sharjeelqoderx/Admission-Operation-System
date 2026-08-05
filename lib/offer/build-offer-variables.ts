@@ -19,6 +19,10 @@ export type OfferStudentTemplateContext = {
     title?: string | null
     date_of_birth?: string | null
     signature?: string | null
+    street_1?: string | null
+    street_2?: string | null
+    street_3?: string | null
+    post_code?: string | null
     address?: string | null
     city?: string | null
     state?: string | null
@@ -123,6 +127,10 @@ export function buildOfferTemplateVariables(
         student_name: studentName,
         student_title: application.student?.title?.trim() || "—",
         student_address: formatPostalAddress({
+            street_1: application.student?.street_1,
+            street_2: application.student?.street_2,
+            street_3: application.student?.street_3,
+            post_code: application.student?.post_code,
             address: application.student?.address,
             city: application.student?.city,
             state: application.student?.state,

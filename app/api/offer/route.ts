@@ -12,6 +12,10 @@ import { buildChecklistProofsSnapshot } from "@/lib/document-template/checklist-
 import { resolveTemplateChecklistItems } from "@/lib/document-template/resolve-checklist-items";
 import { fetchOffersList } from "@/lib/offer/list";
 import { isMissingOfferTemplateColumnError } from "@/lib/offer/select-fields";
+import {
+    fetchDocumentTemplateForProgramId,
+    resolveApplicationProgramId,
+} from "@/lib/document-template/program-assignment";
 import { withProfileDisplayName } from "@/lib/utils/profile";
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role";
@@ -129,6 +133,7 @@ export async function POST(req: NextRequest) {
                 student:profile!profile_id ( first_name, last_name, title, date_of_birth ),
                 course:course_id (
                     name,
+                    program_id,
                     degree:degree_id ( name, fees, intake_date, duration )
                 ),
                 university:profile!university_id ( first_name, last_name )
@@ -140,15 +145,156 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Application not found" }, { status: 404 });
         }
 
+        const createWithoutTemplate = validated.create_without_template === true;
+        const programId = await resolveApplicationProgramId(supabase, validated.application_id);
+
+        if (!programId && !createWithoutTemplate) {
+            return NextResponse.json(
+                {
+                    error: "This application's course is not linked to a program. Link the course to a program before creating an offer.",
+                },
+                { status: 400 }
+            );
+        }
+
+        let documentTemplateId = validated.document_template_id ?? null;
+
+        if (!documentTemplateId && !createWithoutTemplate && programId) {
+            const linkedTemplate = await fetchDocumentTemplateForProgramId(supabase, programId);
+
+            if (!linkedTemplate) {
+                return NextResponse.json(
+                    {
+                        error: "No offer template is connected with this program.",
+                    },
+                    { status: 400 }
+                );
+            }
+
+            documentTemplateId = linkedTemplate.id;
+        }
+
+        if (createWithoutTemplate && !documentTemplateId) {
+            const minimalInsertPayload = {
+                application_id: validated.application_id,
+                document_template_id: null,
+                body_html: null,
+                checklist_items: null,
+                checklist_proofs: null,
+                issued_by_profile_id: user.id,
+                status: "PENDING" as const,
+            };
+
+            const minimalSelect =
+                "id, status, created_at, body_html, document_template_id, application_id, checklist_items, checklist_proofs";
+
+            let minimalInsertResult = await supabase
+                .from("offer_letter")
+                .insert(minimalInsertPayload)
+                .select(minimalSelect)
+                .single();
+
+            if (
+                minimalInsertResult.error &&
+                isMissingOfferTemplateColumnError(minimalInsertResult.error.message)
+            ) {
+                minimalInsertResult = await supabase
+                    .from("offer_letter")
+                    .insert({
+                        application_id: validated.application_id,
+                        issued_by_profile_id: user.id,
+                        status: "PENDING",
+                    })
+                    .select("id, status, created_at, application_id")
+                    .single();
+            }
+
+            if (minimalInsertResult.error && isOfferInsertRlsError(minimalInsertResult.error)) {
+                const serviceClient = tryCreateSupabaseServiceClient();
+
+                if (serviceClient) {
+                    minimalInsertResult = await serviceClient
+                        .from("offer_letter")
+                        .insert(minimalInsertPayload)
+                        .select(minimalSelect)
+                        .single();
+
+                    if (
+                        minimalInsertResult.error &&
+                        isMissingOfferTemplateColumnError(minimalInsertResult.error.message)
+                    ) {
+                        minimalInsertResult = await serviceClient
+                            .from("offer_letter")
+                            .insert({
+                                application_id: validated.application_id,
+                                issued_by_profile_id: user.id,
+                                status: "PENDING",
+                            })
+                            .select("id, status, created_at, application_id")
+                            .single();
+                    }
+                } else {
+                    console.error("POST /api/offer RLS error:", minimalInsertResult.error);
+                    return NextResponse.json(
+                        {
+                            error: "Failed to create offer",
+                            details: minimalInsertResult.error.message,
+                            hint: OFFER_INSERT_POLICY_HINT,
+                        },
+                        { status: 500 }
+                    );
+                }
+            }
+
+            const { data: minimalOffer, error: minimalInsertError } = minimalInsertResult;
+
+            if (minimalInsertError || !minimalOffer) {
+                console.error("POST /api/offer error:", minimalInsertError);
+                return NextResponse.json(
+                    {
+                        error: "Failed to create offer",
+                        details: minimalInsertError?.message ?? "Could not insert offer.",
+                        hint: isOfferInsertRlsError(minimalInsertError)
+                            ? OFFER_INSERT_POLICY_HINT
+                            : undefined,
+                    },
+                    { status: 500 }
+                );
+            }
+
+            return NextResponse.json(
+                { data: minimalOffer, message: "Offer created successfully" },
+                { status: 201 }
+            );
+        }
+
+        if (!documentTemplateId) {
+            return NextResponse.json(
+                {
+                    error: "No offer template is connected with this program.",
+                },
+                { status: 400 }
+            );
+        }
+
         const { data: templateRow, error: templateError } = await supabase
             .from("document_template")
             .select("*")
-            .eq("id", validated.document_template_id)
+            .eq("id", documentTemplateId)
             .eq("is_deleted", false)
             .single();
 
         if (templateError || !templateRow) {
             return NextResponse.json({ error: "Document template not found" }, { status: 404 });
+        }
+
+        if (templateRow.program_id !== programId) {
+            return NextResponse.json(
+                {
+                    error: "The selected offer template does not belong to this application's program.",
+                },
+                { status: 400 }
+            );
         }
 
         const template = mapTemplateRow(templateRow);
@@ -173,7 +319,7 @@ export async function POST(req: NextRequest) {
 
         const { data: studentRecord } = await supabase
             .from("student")
-            .select("address, city, state, country, zip_code")
+            .select("street_1, street_2, street_3, post_code, city, state, country, address, zip_code")
             .eq("profile_id", application.profile_id)
             .maybeSingle();
 
@@ -204,6 +350,10 @@ export async function POST(req: NextRequest) {
                     ...student,
                     title: studentProfile?.title ?? null,
                     date_of_birth: studentProfile?.date_of_birth ?? null,
+                    street_1: studentRecord?.street_1 ?? null,
+                    street_2: studentRecord?.street_2 ?? null,
+                    street_3: studentRecord?.street_3 ?? null,
+                    post_code: studentRecord?.post_code ?? null,
                     address: studentRecord?.address ?? null,
                     city: studentRecord?.city ?? null,
                     state: studentRecord?.state ?? null,
@@ -224,7 +374,7 @@ export async function POST(req: NextRequest) {
 
         const insertPayload = {
             application_id: validated.application_id,
-            document_template_id: validated.document_template_id,
+            document_template_id: documentTemplateId,
             body_html: renderedBodyHtml,
             checklist_items: checklistItems.length > 0 ? checklistItems : null,
             checklist_proofs: checklistProofs,

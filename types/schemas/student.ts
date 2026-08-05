@@ -2,6 +2,7 @@ import { z } from "zod"
 import { fileWithinSizeLimit, MAX_FILE_SIZE_ERROR_MESSAGE } from "@/lib/constants/file-upload"
 import { GradeTypeSchema } from "@/types/schemas/academic"
 import { HighestEducationLevelSchema } from "@/types/schemas/highest-education"
+import { AddressFieldsSchema } from "@/types/schemas/address"
 
 const optionalUploadFileSchema = z
     .union([
@@ -118,6 +119,10 @@ const BaseStudentFormSchema = z.object({
     state: z.string().min(1, "State is required"),
     city: z.string().min(1, "City is required"),
     nationality: z.string().min(1, "Nationality is required"),
+    street_1: AddressFieldsSchema.shape.street_1,
+    street_2: AddressFieldsSchema.shape.street_2,
+    street_3: AddressFieldsSchema.shape.street_3,
+    post_code: AddressFieldsSchema.shape.post_code,
     guardian_email: z.union([
         z.literal(""),
         z.string().trim().email("Invalid guardian email format"),

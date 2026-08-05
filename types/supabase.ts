@@ -26,8 +26,12 @@ export type Database = {
           id: string
           nationality: string | null
           other_contact_number: string | null
+          post_code: string | null
           profile_id: string
           state: string | null
+          street_1: string | null
+          street_2: string | null
+          street_3: string | null
           updated_at: string
           website: string | null
         }
@@ -42,8 +46,12 @@ export type Database = {
           id?: string
           nationality?: string | null
           other_contact_number?: string | null
+          post_code?: string | null
           profile_id: string
           state?: string | null
+          street_1?: string | null
+          street_2?: string | null
+          street_3?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -58,8 +66,12 @@ export type Database = {
           id?: string
           nationality?: string | null
           other_contact_number?: string | null
+          post_code?: string | null
           profile_id?: string
           state?: string | null
+          street_1?: string | null
+          street_2?: string | null
+          street_3?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -690,6 +702,7 @@ export type Database = {
           created_by_profile_id: string
           id: string
           is_deleted: boolean
+          program_id: string | null
           title: string
           updated_at: string
           variables: Json
@@ -702,6 +715,7 @@ export type Database = {
           created_by_profile_id: string
           id?: string
           is_deleted?: boolean
+          program_id?: string | null
           title: string
           updated_at?: string
           variables?: Json
@@ -714,6 +728,7 @@ export type Database = {
           created_by_profile_id?: string
           id?: string
           is_deleted?: boolean
+          program_id?: string | null
           title?: string
           updated_at?: string
           variables?: Json
@@ -724,6 +739,13 @@ export type Database = {
             columns: ["created_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_template_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "program"
             referencedColumns: ["id"]
           },
         ]
@@ -1303,8 +1325,12 @@ export type Database = {
           id: string
           nationality: string | null
           passport_file_url: string | null
+          post_code: string | null
           profile_id: string
           state: string | null
+          street_1: string | null
+          street_2: string | null
+          street_3: string | null
           student_code: string | null
           updated_at: string
           zip_code: string | null
@@ -1321,8 +1347,12 @@ export type Database = {
           id?: string
           nationality?: string | null
           passport_file_url?: string | null
+          post_code?: string | null
           profile_id: string
           state?: string | null
+          street_1?: string | null
+          street_2?: string | null
+          street_3?: string | null
           student_code?: string | null
           updated_at?: string
           zip_code?: string | null
@@ -1339,8 +1369,12 @@ export type Database = {
           id?: string
           nationality?: string | null
           passport_file_url?: string | null
+          post_code?: string | null
           profile_id?: string
           state?: string | null
+          street_1?: string | null
+          street_2?: string | null
+          street_3?: string | null
           student_code?: string | null
           updated_at?: string
           zip_code?: string | null
@@ -1370,8 +1404,12 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          post_code: string | null
           profile_id: string
           state: string | null
+          street_1: string | null
+          street_2: string | null
+          street_3: string | null
           updated_at: string
           website: string | null
         }
@@ -1382,8 +1420,12 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          post_code?: string | null
           profile_id: string
           state?: string | null
+          street_1?: string | null
+          street_2?: string | null
+          street_3?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -1394,8 +1436,12 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          post_code?: string | null
           profile_id?: string
           state?: string | null
+          street_1?: string | null
+          street_2?: string | null
+          street_3?: string | null
           updated_at?: string
           website?: string | null
         }

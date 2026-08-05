@@ -9,6 +9,7 @@ import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DocumentTemplateEditor } from "./document-template-editor"
+import { DocumentTemplateProgramSelect } from "./document-template-program-select"
 
 type Props = {
     heading: string
@@ -16,10 +17,13 @@ type Props = {
     onBack?: () => void
     title: string
     bodyHtml: string
+    programId: string | null
+    templateId?: string | null
     isSaving: boolean
     formError: string | null
     onTitleChange: (value: string) => void
     onBodyChange: (html: string) => void
+    onProgramChange: (programId: string | null) => void
     onSave: () => void
     saveLabel?: string
 }
@@ -30,10 +34,13 @@ export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
     onBack,
     title,
     bodyHtml,
+    programId,
+    templateId = null,
     isSaving,
     formError,
     onTitleChange,
     onBodyChange,
+    onProgramChange,
     onSave,
     saveLabel = "Save Template",
 }: Props) {
@@ -86,6 +93,13 @@ export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
                         onChange={(event) => onTitleChange(event.target.value)}
                     />
                 </div>
+
+                <DocumentTemplateProgramSelect
+                    value={programId}
+                    excludeTemplateId={templateId}
+                    disabled={isSaving}
+                    onChange={onProgramChange}
+                />
 
                 {formError ? <ErrorView message={formError} /> : null}
 

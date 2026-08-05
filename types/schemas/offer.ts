@@ -1,8 +1,10 @@
 import { z } from "zod"
+import { PostgresUuidSchema } from "@/types/schemas/uuid"
 
 export const CreateOfferSchema = z.object({
-    application_id: z.string().uuid("Invalid application id"),
-    document_template_id: z.string().uuid("Invalid document template id"),
+    application_id: PostgresUuidSchema,
+    document_template_id: PostgresUuidSchema.optional(),
+    create_without_template: z.boolean().optional(),
 })
 
 export type CreateOfferInput = z.infer<typeof CreateOfferSchema>
@@ -103,7 +105,7 @@ export const offerDashboardPageDataSchema = z.object({
 export type OfferDashboardPageData = z.infer<typeof offerDashboardPageDataSchema>
 
 export const OfferChecklistPreviewQuerySchema = z.object({
-    application_id: z.string().uuid("Invalid application id"),
+    application_id: PostgresUuidSchema,
 })
 
 export const OfferChecklistPreviewItemSchema = z.object({
@@ -113,7 +115,8 @@ export const OfferChecklistPreviewItemSchema = z.object({
 })
 
 export const OfferTemplateChecklistPreviewSchema = z.object({
-    template_id: z.string().uuid(),
+    template_id: PostgresUuidSchema,
+    template_title: z.string(),
     total_count: z.number().int().nonnegative(),
     fulfilled_count: z.number().int().nonnegative(),
     items: z.array(OfferChecklistPreviewItemSchema),
@@ -121,7 +124,9 @@ export const OfferTemplateChecklistPreviewSchema = z.object({
 
 export const OfferChecklistPreviewResponseSchema = z.object({
     data: z.object({
-        templates: z.array(OfferTemplateChecklistPreviewSchema),
+        program_id: PostgresUuidSchema.nullable(),
+        program_label: z.string().nullable(),
+        template: OfferTemplateChecklistPreviewSchema.nullable(),
     }),
 })
 

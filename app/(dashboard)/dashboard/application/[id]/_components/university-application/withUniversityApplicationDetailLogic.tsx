@@ -9,6 +9,7 @@ import type {
 } from "@/types/schemas/university-application"
 
 export type UniversityApplicationDetailLogicProps = {
+    applicationId: string
     detail?: UniversityApplicationDetail
     isLoading: boolean
     isError: boolean
@@ -110,6 +111,7 @@ export function withUniversityApplicationDetailLogic(
 
         return (
             <Component
+                applicationId={applicationId}
                 detail={detail}
                 isLoading={isLoading}
                 isError={isError}

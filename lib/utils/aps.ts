@@ -27,7 +27,7 @@ export function resolveApsDocumentType(
     )
 }
 
-/** Adds APS Certificate to required supporting documents for APS-country students. */
+/** Ensures APS Certificate stays optional (never required) for APS-country students during applications. */
 export function withApsRequiredDocument(
     split: SplitCourseDocumentTypes,
     country: string | null | undefined,
@@ -38,14 +38,16 @@ export function withApsRequiredDocument(
     }
 
     const apsDoc = apsDocumentType ?? resolveApsDocumentType()
+    const required = split.required.filter((documentType) => documentType.id !== apsDoc.id)
+    const optionalHasAps = split.optional.some((documentType) => documentType.id === apsDoc.id)
 
-    if (split.required.some((documentType) => documentType.id === apsDoc.id)) {
-        return split
+    if (optionalHasAps) {
+        return { required, optional: split.optional }
     }
 
     return {
-        required: [...split.required, apsDoc],
-        optional: split.optional.filter((documentType) => documentType.id !== apsDoc.id),
+        required,
+        optional: [...split.optional, apsDoc],
     }
 }
 

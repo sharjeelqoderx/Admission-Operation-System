@@ -100,6 +100,10 @@ function buildStudentFormData(value: StudentInput): FormData {
     fd.set("state", value.state)
     fd.set("city", value.city)
     fd.set("nationality", value.nationality)
+    fd.set("street_1", value.street_1)
+    fd.set("street_2", value.street_2 ?? "")
+    fd.set("street_3", value.street_3 ?? "")
+    fd.set("post_code", value.post_code ?? "")
     fd.set("guardian_email", value.guardian_email)
     fd.set("guardian_phone", value.guardian_phone)
     fd.set("academic_background", JSON.stringify(value.academic_background))
@@ -1116,6 +1120,10 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                 defaultData?.student?.nationality ??
                 defaultData?.student?.country ??
                 "",
+            street_1: defaultData?.student?.street_1 ?? defaultData?.student?.address ?? "",
+            street_2: defaultData?.student?.street_2 ?? "",
+            street_3: defaultData?.student?.street_3 ?? "",
+            post_code: defaultData?.student?.post_code ?? defaultData?.student?.zip_code ?? "",
             guardian_email: defaultData?.student?.guardian_email ?? "",
             guardian_phone: defaultData?.student?.guardian_phone ?? "",
             avatar_url: undefined as File | undefined,
@@ -1507,7 +1515,37 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
                                         )}
                                     </form.Field>
 
+                                <form.Field name="street_1">
+                                    {(field) => (
+                                        <F field={field} label="Street 1">
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter street line 1" />
+                                        </F>
+                                    )}
+                                </form.Field>
 
+                                <form.Field name="street_2">
+                                    {(field) => (
+                                        <F field={field} label="Street 2">
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter street line 2 (optional)" />
+                                        </F>
+                                    )}
+                                </form.Field>
+
+                                <form.Field name="street_3">
+                                    {(field) => (
+                                        <F field={field} label="Street 3">
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter street line 3 (optional)" />
+                                        </F>
+                                    )}
+                                </form.Field>
+
+                                <form.Field name="post_code">
+                                    {(field) => (
+                                        <F field={field} label="Post Code">
+                                            <Input id={field.name} value={field.state.value} onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)} placeholder="Enter post code (optional)" />
+                                        </F>
+                                    )}
+                                </form.Field>
 
                                 <form.Field name="guardian_phone">
                                     {(field) => (

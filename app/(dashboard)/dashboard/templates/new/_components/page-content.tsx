@@ -12,10 +12,15 @@ export const CreatePageContent = memo(function CreatePageContent() {
     const queryClient = useQueryClient()
     const [title, setTitle] = useState("")
     const [bodyHtml, setBodyHtml] = useState(DEFAULT_TEMPLATE_BODY_HTML)
+    const [programId, setProgramId] = useState<string | null>(null)
     const [formError, setFormError] = useState<string | null>(null)
 
     const createMutation = useMutation({
-        mutationFn: async (payload: { title: string; body_html: string }) => {
+        mutationFn: async (payload: {
+            title: string
+            body_html: string
+            program_id: string
+        }) => {
             const res = await fetch("/api/document-template", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -27,10 +32,11 @@ export const CreatePageContent = memo(function CreatePageContent() {
             }
             return json
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["document-templates"] })
-        },
-    })
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ["document-templates"] })
+                queryClient.invalidateQueries({ queryKey: ["document-template-program-options"] })
+            },
+        })
 
     const handleSave = useCallback(async () => {
         setFormError(null)
@@ -40,12 +46,18 @@ export const CreatePageContent = memo(function CreatePageContent() {
             return
         }
 
+        if (!programId) {
+            setFormError("Select a program for this offer template.")
+            return
+        }
+
         const toastId = toast.loading("Creating template...")
 
         try {
             await createMutation.mutateAsync({
                 title: title.trim(),
                 body_html: bodyHtml,
+                program_id: programId,
             })
             toast.success("Document template created successfully.", { id: toastId })
             router.push("/dashboard/templates")
@@ -56,7 +68,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
             setFormError(message)
             toast.error(message, { id: toastId })
         }
-    }, [bodyHtml, createMutation, router, title])
+    }, [bodyHtml, createMutation, programId, router, title])
 
     return (
         <DocumentTemplateFormView
@@ -64,10 +76,12 @@ export const CreatePageContent = memo(function CreatePageContent() {
             backHref="/dashboard/templates"
             title={title}
             bodyHtml={bodyHtml}
+            programId={programId}
             isSaving={createMutation.isPending}
             formError={formError}
             onTitleChange={setTitle}
             onBodyChange={setBodyHtml}
+            onProgramChange={setProgramId}
             onSave={handleSave}
             saveLabel="Create Template"
         />

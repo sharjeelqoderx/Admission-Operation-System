@@ -60,6 +60,10 @@ export type ProfilePageData = {
         contact_person_last_name?: string
         address?: string
         zip_code?: string
+        street_1?: string
+        street_2?: string
+        street_3?: string
+        post_code?: string
         website?: string
         experience_years?: string
         description?: string

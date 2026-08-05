@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Gender } from "..";
 import { fileWithinSizeLimit, MAX_FILE_SIZE_LABEL } from "@/lib/constants/file-upload";
 import { Role } from "@/types/enums/role";
+import { AddressFieldsSchema } from "@/types/schemas/address";
 
 /* =========================
    HELPERS
@@ -272,6 +273,10 @@ export const profileStep1Schema = z.object({
         .string()
         .min(1, "Nationality is required")
         .min(2, "Nationality is too short"),
+    street_1: AddressFieldsSchema.shape.street_1,
+    street_2: AddressFieldsSchema.shape.street_2,
+    street_3: AddressFieldsSchema.shape.street_3,
+    post_code: AddressFieldsSchema.shape.post_code,
     guardianEmail: z.union([
         z.literal(""),
         z.string().trim().email("Invalid guardian email format"),
@@ -322,7 +327,10 @@ export const agentProfileSchema = z.object({
     city: z.string().trim().min(2).optional(),
     website: z.string().trim().optional(),
     experience_years: z.number().min(0).optional(),
-    address: z.string().trim().min(5).optional(),
+    street_1: z.string().trim().min(1).optional(),
+    street_2: z.string().trim().optional(),
+    street_3: z.string().trim().optional(),
+    post_code: z.string().trim().optional(),
 })
 
 /* =========================

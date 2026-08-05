@@ -61,13 +61,13 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Application not found" }, { status: 404 })
         }
 
-        const templates = await buildOfferChecklistPreviewForApplication(
+        const preview = await buildOfferChecklistPreviewForApplication(
             supabase,
             applicationResult.id,
             applicationResult.profile_id
         )
 
-        return NextResponse.json({ data: { templates } }, { status: 200 })
+        return NextResponse.json({ data: preview }, { status: 200 })
     } catch (e) {
         console.error("GET /api/offer/checklist-preview error:", e)
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })

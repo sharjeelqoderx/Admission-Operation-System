@@ -5,6 +5,7 @@ import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import { getFileSizeLimitError, isFileWithinSizeLimit } from "@/lib/constants/file-upload"
 
 import { profileStep1Schema } from "@/types/schemas/auth"
+import { normalizeAddressFields } from "@/types/schemas/address"
 import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
@@ -79,6 +80,13 @@ export async function POST(req: NextRequest) {
                     student_code = `STU-${code}`
                 }
 
+                const addressFields = normalizeAddressFields({
+                    street_1: validData.street_1,
+                    street_2: validData.street_2,
+                    street_3: validData.street_3,
+                    post_code: validData.post_code,
+                })
+
                 const { error } = await supabase
                     .from("student")
                     .upsert({
@@ -90,8 +98,7 @@ export async function POST(req: NextRequest) {
                         nationality: validData.nationality,
                         guardian_email: validData.guardianEmail || null,
                         guardian_phone: validData.guardianPhone || null,
-                        address: typeof data.address === "string" ? data.address : null,
-                        zip_code: typeof data.zip_code === "string" ? data.zip_code : null,
+                        ...addressFields,
                     }, { onConflict: "profile_id" })
                 
                 if (error) return err(error.message, 500)
@@ -134,6 +141,13 @@ export async function POST(req: NextRequest) {
         }
 
         // Update role-specific table (non-student)
+        const addressFields = normalizeAddressFields({
+            street_1: typeof data.street_1 === "string" ? data.street_1 : undefined,
+            street_2: typeof data.street_2 === "string" ? data.street_2 : undefined,
+            street_3: typeof data.street_3 === "string" ? data.street_3 : undefined,
+            post_code: typeof data.post_code === "string" ? data.post_code : undefined,
+        })
+
         if (role === Role.AGENT) {
             const { error } = await supabase
                 .from("agent")
@@ -145,7 +159,7 @@ export async function POST(req: NextRequest) {
                     country: data.country,
                     state: data.state,
                     city: data.city,
-                    address: data.address,
+                    ...addressFields,
                     other_contact_number: data.other_contact_number,
                     website: data.website,
                     experience_years: data.experience_years ? Number(data.experience_years) : undefined,
@@ -160,7 +174,7 @@ export async function POST(req: NextRequest) {
                     country: data.country,
                     state: data.state,
                     city: data.city,
-                    address: data.address,
+                    ...addressFields,
                     description: data.description,
                 }, { onConflict: "profile_id" })
             if (error) return err(error.message, 500)

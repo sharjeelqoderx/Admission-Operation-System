@@ -1,11 +1,11 @@
 "use client"
 
 import { memo } from "react"
-import { AlertCircle, Eye, FileText, Pencil, Trash2 } from "lucide-react"
+import { AlertCircle, FileText } from "lucide-react"
 import { PageLoader } from "@/components/shared/page-loader"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
-import { Button } from "@/components/ui/button"
+import { DocumentTemplateRowActionsMenu } from "./document-template-row-actions-menu"
 import {
     Table,
     TableBody,
@@ -24,16 +24,19 @@ type DocumentTemplateTableProps = {
     isError: boolean
     errorMessage?: string
     deletingId: string | null
+    cloningId: string | null
     onView: (template: DocumentTemplateListItem) => void
     onEdit: (template: DocumentTemplateListItem) => void
+    onClone: (template: DocumentTemplateListItem) => void
     onDelete: (template: DocumentTemplateListItem) => void
     onRetry: () => void
     viewOnly?: boolean
+    canClone?: boolean
     canDelete?: boolean
 }
 
-const COLUMN_COUNT = 4
-const ACTION_COLUMN_WIDTH = "w-[190px]"
+const COLUMN_COUNT = 5
+const ACTION_COLUMN_WIDTH = "w-[88px]"
 
 function formatDate(value: string) {
     return new Date(value).toLocaleDateString("en-US", {
@@ -42,9 +45,6 @@ function formatDate(value: string) {
         year: "numeric",
     })
 }
-
-const actionIconButtonClassName =
-    "size-9 shrink-0 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg shadow-sm"
 
 function formatVariablesLabel(variables: string[]) {
     if (variables.length === 0) return "—"
@@ -57,11 +57,14 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
     isError,
     errorMessage,
     deletingId,
+    cloningId,
     onView,
     onEdit,
+    onClone,
     onDelete,
     onRetry,
     viewOnly = false,
+    canClone = false,
     canDelete = true,
 }: DocumentTemplateTableProps) {
     if (isLoading) {
@@ -120,19 +123,22 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
             className="rounded-lg p-0"
         >
             <div className="w-full overflow-x-auto rounded-xl max-w-full pb-2">
-                <Table className="w-full table-fixed text-left border-collapse min-w-[640px]">
+                <Table className="w-full table-fixed text-left border-collapse min-w-[760px]">
                     <TableHeader className="sticky top-0 z-10">
                         <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
-                            <TableHead className="w-[200px] max-w-[200px] px-4 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                            <TableHead className="w-[180px] max-w-[180px] px-4 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Title
                             </TableHead>
-                            <TableHead className="w-[120px] px-4 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                            <TableHead className="w-[180px] max-w-[180px] px-4 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                Program
+                            </TableHead>
+                            <TableHead className="w-[100px] px-4 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Variables
                             </TableHead>
                             <TableHead className="w-[110px] px-4 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                 Updated
                             </TableHead>
-                            <TableHead className={`${ACTION_COLUMN_WIDTH} px-4 py-4 text-right text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase`}>
+                            <TableHead className={`${ACTION_COLUMN_WIDTH} px-4 py-4 text-center text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase`}>
                                 Action
                             </TableHead>
                         </TableRow>
@@ -164,7 +170,7 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                         deletingId === template.id && "opacity-50"
                                     )}
                                 >
-                                    <TableCell className="max-w-[200px] px-4 py-5">
+                                    <TableCell className="max-w-[180px] px-4 py-5">
                                         <span className="block truncate" title={template.title}>
                                             <Typography as="span" className="text-sm font-bold text-gray-900">
                                                 {template.title}
@@ -172,9 +178,23 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                         </span>
                                     </TableCell>
 
+                                    <TableCell className="max-w-[180px] px-4 py-5">
+                                        <span
+                                            className="block truncate"
+                                            title={template.program_label ?? undefined}
+                                        >
+                                            <Typography
+                                                as="span"
+                                                className="text-xs font-medium text-gray-600"
+                                            >
+                                                {template.program_label ?? "Not assigned"}
+                                            </Typography>
+                                        </span>
+                                    </TableCell>
+
                                     <TableCell className="px-4 py-5">
                                         <span
-                                            className="block max-w-[120px] truncate"
+                                            className="block max-w-[100px] truncate"
                                             title={formatVariablesLabel(template.variables)}
                                         >
                                             <Typography
@@ -194,44 +214,22 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                         </Typography>
                                     </TableCell>
 
-                                    <TableCell className={`${ACTION_COLUMN_WIDTH} px-3 py-5 whitespace-nowrap`}>
-                                        <div className="flex items-center justify-end gap-1.5">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="h-9 gap-1.5 rounded-lg px-3"
-                                                aria-label={`View ${template.title}`}
-                                                onClick={() => onView(template)}
-                                            >
-                                                <Eye className="size-4" />
-                                                View
-                                            </Button>
-                                            {!viewOnly ? (
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className={actionIconButtonClassName}
-                                                    aria-label={`Edit ${template.title}`}
-                                                    onClick={() => onEdit(template)}
-                                                >
-                                                    <Pencil className="size-4" />
-                                                </Button>
-                                            ) : null}
-                                            {canDelete ? (
-                                                <Button
-                                                    type="button"
-                                                    variant="destructive"
-                                                    size="icon"
-                                                    className="size-9 shrink-0 rounded-lg shadow-sm"
-                                                    aria-label={`Delete ${template.title}`}
-                                                    disabled={deletingId === template.id}
-                                                    onClick={() => onDelete(template)}
-                                                >
-                                                    <Trash2 className="size-4" />
-                                                </Button>
-                                            ) : null}
+                                    <TableCell className={`${ACTION_COLUMN_WIDTH} px-4 py-5 whitespace-nowrap`}>
+                                        <div className="flex items-center justify-center">
+                                            <DocumentTemplateRowActionsMenu
+                                                template={template}
+                                                isBusy={
+                                                    deletingId === template.id ||
+                                                    cloningId === template.id
+                                                }
+                                                viewOnly={viewOnly}
+                                                canClone={canClone}
+                                                canDelete={canDelete}
+                                                onView={onView}
+                                                onEdit={onEdit}
+                                                onClone={onClone}
+                                                onDelete={onDelete}
+                                            />
                                         </div>
                                     </TableCell>
                                 </TableRow>

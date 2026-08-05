@@ -6,19 +6,32 @@ export type LocationParts = {
 
 /** Formats a postal address for HTML document templates. */
 export function formatPostalAddress(parts: {
-    address?: string | null
+    street_1?: string | null
+    street_2?: string | null
+    street_3?: string | null
+    post_code?: string | null
     city?: string | null
     state?: string | null
     country?: string | null
+    /** @deprecated legacy single-line address */
+    address?: string | null
+    /** @deprecated legacy post code column */
     zip_code?: string | null
 }): string {
     const lines: string[] = []
 
-    if (parts.address?.trim()) {
+    const streetLines = [parts.street_1, parts.street_2, parts.street_3].filter(
+        (value): value is string => typeof value === "string" && value.trim().length > 0
+    )
+
+    if (streetLines.length > 0) {
+        lines.push(...streetLines.map((line) => line.trim()))
+    } else if (parts.address?.trim()) {
         lines.push(parts.address.trim())
     }
 
-    const locality = [parts.city, parts.state, parts.zip_code]
+    const postCode = parts.post_code?.trim() || parts.zip_code?.trim() || null
+    const locality = [parts.city, parts.state, postCode]
         .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
         .join(", ")
 
