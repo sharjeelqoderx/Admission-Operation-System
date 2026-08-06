@@ -133,8 +133,9 @@ export async function POST(req: NextRequest) {
                 student:profile!profile_id ( first_name, last_name, title, date_of_birth ),
                 course:course_id (
                     name,
+                    deadline_date,
                     program_id,
-                    degree:degree_id ( name, fees, intake_date, duration )
+                    degree:degree_id ( name, fees, intake_date, intake_starts_on, duration )
                 ),
                 university:profile!university_id ( first_name, last_name )
             `)
@@ -367,6 +368,10 @@ export async function POST(req: NextRequest) {
             {
                 itemIds: checklistItems,
                 proofs: checklistProofs,
+            },
+            {
+                locale: template.locale,
+                templateDates: template.template_dates,
             }
         );
 

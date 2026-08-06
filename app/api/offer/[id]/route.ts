@@ -9,6 +9,7 @@ import {
     OFFER_DETAIL_SELECT_LEGACY,
     OFFER_DETAIL_SELECT_WITH_TEMPLATE,
 } from "@/lib/offer/select-fields";
+import { parseDocumentTemplateWatermark } from "@/lib/document-template/watermark"
 import { renderOfferBodyHtml } from "@/lib/offer/render-offer-body-html";
 import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role";
@@ -153,9 +154,25 @@ export async function GET(
                   })
                 : null
 
+        let templateWatermark = null
+        const documentTemplateId = (offer as { document_template_id?: string | null })
+            .document_template_id
+
+        if (documentTemplateId) {
+            const { data: templateRow } = await supabase
+                .from("document_template")
+                .select("watermark")
+                .eq("id", documentTemplateId)
+                .eq("is_deleted", false)
+                .maybeSingle()
+
+            templateWatermark = parseDocumentTemplateWatermark(templateRow?.watermark)
+        }
+
         const mappedOffer = {
             ...offer,
             rendered_body_html: renderedBodyHtml,
+            template_watermark: templateWatermark,
             application: mappedApplication,
         };
 

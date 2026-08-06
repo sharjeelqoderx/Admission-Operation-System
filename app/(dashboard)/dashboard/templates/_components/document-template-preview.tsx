@@ -23,13 +23,23 @@ import {
 import { paginateBodyHtmlByA4Height } from "@/lib/document-template/a4-pagination"
 import {
     renderTemplateHtml,
-    TEMPLATE_PREVIEW_SAMPLE_DATA,
+    buildTemplatePreviewSampleData,
+    TEMPLATE_GREETING_VARIABLES,
+    TEMPLATE_MERGE_VARIABLES,
+    TEMPLATE_DYNAMIC_SECTIONS,
 } from "@/lib/document-template/variables"
+import { ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE } from "@/lib/document-template/checklist-items"
+import type { DocumentTemplateDates } from "@/lib/document-template/date-variables"
+import type { DocumentTemplateWatermark } from "@/lib/document-template/watermark"
+import type { TemplateLocale } from "@/types/schemas/document-template"
 import { cn } from "@/lib/utils"
 
 type DocumentTemplatePreviewProps = {
     title: string
     bodyHtml: string
+    locale?: TemplateLocale
+    templateDates?: DocumentTemplateDates | null
+    watermark?: DocumentTemplateWatermark | null
     useSampleData?: boolean
     className?: string
     printable?: boolean
@@ -57,14 +67,19 @@ function measureHtmlBlockHeight(html: string, widthPx: number, className: string
 export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
     title,
     bodyHtml,
+    locale = "en",
+    templateDates = null,
+    watermark = null,
     useSampleData = true,
     className,
     printable = false,
 }: DocumentTemplatePreviewProps) {
     const renderedHtml = useMemo(
         () =>
-            useSampleData ? renderTemplateHtml(bodyHtml, TEMPLATE_PREVIEW_SAMPLE_DATA) : bodyHtml,
-        [bodyHtml, useSampleData]
+            useSampleData
+                ? renderTemplateHtml(bodyHtml, buildTemplatePreviewSampleData(locale, templateDates))
+                : bodyHtml,
+        [bodyHtml, locale, templateDates, useSampleData]
     )
 
     const layout = useMemo(() => parseDocumentLayout(renderedHtml), [renderedHtml])
@@ -134,7 +149,7 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
                                 printable && "document-template-print-target"
                             )}
                         >
-                            <DocumentPageWatermark />
+                            <DocumentPageWatermark watermark={watermark} />
                             {page.headerHtml ? (
                                 <div
                                     className="relative z-10 shrink-0"

@@ -10,6 +10,7 @@ import {
     type ReactNode,
 } from "react"
 import { DocumentPageWatermark } from "./document-center-logo-placeholder"
+import type { DocumentTemplateWatermark } from "@/lib/document-template/watermark"
 import {
     A4_DOCUMENT_PAGE_CLASS,
     A4_DOCUMENT_SHEET_WRAPPER_CLASS,
@@ -33,6 +34,7 @@ type DocumentTemplateA4PaginatedSheetProps = {
     hasFooter: boolean
     headerHtml: string
     footerHtml: string
+    watermark?: DocumentTemplateWatermark | null
     children: ReactNode
     className?: string
 }
@@ -50,6 +52,7 @@ export const DocumentTemplateA4PaginatedSheet = memo(function DocumentTemplateA4
     hasFooter,
     headerHtml,
     footerHtml,
+    watermark,
     children,
     className,
 }: DocumentTemplateA4PaginatedSheetProps) {
@@ -195,7 +198,7 @@ export const DocumentTemplateA4PaginatedSheet = memo(function DocumentTemplateA4
                             height: A4_PAGE_HEIGHT_PX,
                         }}
                     >
-                        <DocumentPageWatermark />
+                        <DocumentPageWatermark watermark={watermark} />
                         {hasHeader ? (
                             <div
                                 className="relative z-10 shrink-0 bg-white"

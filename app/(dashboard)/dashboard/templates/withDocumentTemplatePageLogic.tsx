@@ -7,7 +7,15 @@ import type {
     DocumentTemplateDetailResponse,
     DocumentTemplateListItem,
     DocumentTemplatesListResponse,
+    TemplateLocale,
 } from "@/types/schemas/document-template"
+import { DEFAULT_TEMPLATE_LOCALE } from "@/lib/document-template/locale"
+import { EMPTY_DOCUMENT_TEMPLATE_DATES } from "@/lib/document-template/date-variables"
+import type { DocumentTemplateDates } from "@/lib/document-template/date-variables"
+import {
+    DEFAULT_DOCUMENT_TEMPLATE_WATERMARK,
+    type DocumentTemplateWatermark,
+} from "@/lib/document-template/watermark"
 import { DEFAULT_TEMPLATE_BODY_HTML } from "@/lib/document-template/a4-document"
 import {
     claimProgramInOptionsCache,
@@ -30,6 +38,9 @@ export type DocumentTemplatePageLogicProps = {
     activeTemplate: DocumentTemplateListItem | null
     title: string
     bodyHtml: string
+    locale: TemplateLocale
+    templateDates: DocumentTemplateDates
+    watermark: DocumentTemplateWatermark
     programId: string | null
     isSaving: boolean
     isDeleting: boolean
@@ -39,6 +50,9 @@ export type DocumentTemplatePageLogicProps = {
     formError: string | null
     setTitle: (value: string) => void
     setBodyHtml: (value: string) => void
+    setLocale: (value: TemplateLocale) => void
+    setTemplateDates: (value: DocumentTemplateDates) => void
+    setWatermark: (value: DocumentTemplateWatermark) => void
     setProgramId: (value: string | null) => void
     openEdit: (template: DocumentTemplateListItem) => void
     openView: (template: DocumentTemplateListItem) => void
@@ -49,6 +63,9 @@ export type DocumentTemplatePageLogicProps = {
         sourceId: string
         title: string
         body_html: string
+        locale: TemplateLocale
+        template_dates: DocumentTemplateDates
+        watermark: DocumentTemplateWatermark
         program_id: string
     }) => Promise<void>
     clearDeleteError: () => void
@@ -94,6 +111,13 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         const [activeTemplate, setActiveTemplate] = useState<DocumentTemplateListItem | null>(null)
         const [title, setTitle] = useState("")
         const [bodyHtml, setBodyHtml] = useState(EMPTY_TEMPLATE_HTML)
+        const [locale, setLocale] = useState<TemplateLocale>(DEFAULT_TEMPLATE_LOCALE)
+        const [templateDates, setTemplateDates] = useState<DocumentTemplateDates>({
+            ...EMPTY_DOCUMENT_TEMPLATE_DATES,
+        })
+        const [watermark, setWatermark] = useState<DocumentTemplateWatermark>({
+            ...DEFAULT_DOCUMENT_TEMPLATE_WATERMARK,
+        })
         const [programId, setProgramId] = useState<string | null>(null)
         const [formError, setFormError] = useState<string | null>(null)
         const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -120,7 +144,14 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 payload,
             }: {
                 id: string
-                payload: { title: string; body_html: string; program_id?: string | null }
+                payload: {
+                    title: string
+                    body_html: string
+                    locale?: TemplateLocale
+                    template_dates?: DocumentTemplateDates
+                    watermark?: DocumentTemplateWatermark
+                    program_id?: string | null
+                }
             }) => {
                 const res = await fetch(`/api/document-template/${id}`, {
                     method: "PATCH",
@@ -188,6 +219,9 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             mutationFn: async (payload: {
                 title: string
                 body_html: string
+                locale: TemplateLocale
+                template_dates: DocumentTemplateDates
+                watermark: DocumentTemplateWatermark
                 program_id: string
             }) => {
                 const res = await fetch("/api/document-template", {
@@ -214,6 +248,9 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         const resetEditorState = useCallback(() => {
             setTitle("")
             setBodyHtml(EMPTY_TEMPLATE_HTML)
+            setLocale(DEFAULT_TEMPLATE_LOCALE)
+            setTemplateDates({ ...EMPTY_DOCUMENT_TEMPLATE_DATES })
+            setWatermark({ ...DEFAULT_DOCUMENT_TEMPLATE_WATERMARK })
             setProgramId(null)
             setFormError(null)
             setActiveTemplate(null)
@@ -223,6 +260,9 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             setActiveTemplate(template)
             setTitle(template.title)
             setBodyHtml(template.body_html || EMPTY_TEMPLATE_HTML)
+            setLocale(template.locale ?? DEFAULT_TEMPLATE_LOCALE)
+            setTemplateDates(template.template_dates ?? { ...EMPTY_DOCUMENT_TEMPLATE_DATES })
+            setWatermark(template.watermark ?? { ...DEFAULT_DOCUMENT_TEMPLATE_WATERMARK })
             setFormError(null)
             setMode("view")
         }, [])
@@ -231,6 +271,9 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             setActiveTemplate(template)
             setTitle(template.title)
             setBodyHtml(template.body_html || EMPTY_TEMPLATE_HTML)
+            setLocale(template.locale ?? DEFAULT_TEMPLATE_LOCALE)
+            setTemplateDates(template.template_dates ?? { ...EMPTY_DOCUMENT_TEMPLATE_DATES })
+            setWatermark(template.watermark ?? { ...DEFAULT_DOCUMENT_TEMPLATE_WATERMARK })
             setProgramId(template.program_id ?? null)
             setFormError(null)
             setMode("edit")
@@ -262,6 +305,9 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             const payload = {
                 title: title.trim(),
                 body_html: bodyHtml,
+                locale,
+                template_dates: templateDates,
+                watermark,
                 program_id: programId,
             }
 
@@ -280,7 +326,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 setFormError(message)
                 toast.error(message, { id: toastId })
             }
-        }, [activeTemplate, backToList, bodyHtml, programId, title, updateMutation])
+        }, [activeTemplate, backToList, bodyHtml, locale, programId, templateDates, title, updateMutation, watermark])
 
         const deleteTemplateById = useCallback(
             async (id: string) => {
@@ -315,6 +361,9 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 sourceId: string
                 title: string
                 body_html: string
+                locale: TemplateLocale
+                template_dates: DocumentTemplateDates
+                watermark: DocumentTemplateWatermark
                 program_id: string
             }) => {
                 setCloningId(payload.sourceId)
@@ -324,6 +373,9 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                     await cloneMutation.mutateAsync({
                         title: payload.title,
                         body_html: payload.body_html,
+                        locale: payload.locale,
+                        template_dates: payload.template_dates,
+                        watermark: payload.watermark,
                         program_id: payload.program_id,
                     })
                     toast.success("Document template cloned successfully.", { id: toastId })
@@ -359,6 +411,9 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             activeTemplate,
             title,
             bodyHtml,
+            locale,
+            templateDates,
+            watermark,
             programId,
             isSaving: updateMutation.isPending,
             isDeleting: deleteMutation.isPending,
@@ -368,6 +423,9 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             formError,
             setTitle,
             setBodyHtml,
+            setLocale,
+            setTemplateDates,
+            setWatermark,
             setProgramId,
             openEdit,
             openView,

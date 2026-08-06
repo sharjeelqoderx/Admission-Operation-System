@@ -122,11 +122,14 @@ export function buildLegacyLetterHeadHtml(options: {
         </body></html>`
 }
 
+import type { DocumentTemplateWatermark } from "@/lib/document-template/watermark"
+
 export function buildTemplateOfferLetterHtml(
     bodyHtml: string,
     options?: {
         title?: string
         signatureHtml?: string
+        watermark?: DocumentTemplateWatermark | null
     }
 ): string {
     const title = options?.title ?? "Offer Letter"
@@ -142,7 +145,7 @@ export function buildTemplateOfferLetterHtml(
             const documentFooterBlock = layout.footerHtml ?? ""
 
             return `<section class="a4-page">
-                ${buildDocumentPageWatermarkHtml()}
+                ${buildDocumentPageWatermarkHtml(options?.watermark)}
                 <div class="page-inner">
                     ${headerBlock}
                     <div class="page-body">${pageBody}${footerHtml}</div>

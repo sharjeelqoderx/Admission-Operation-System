@@ -15,6 +15,7 @@ import { TableCell } from "@tiptap/extension-table-cell"
 import { TableHeader } from "@tiptap/extension-table-header"
 import {
     AlignCenter,
+    AlignJustify,
     AlignLeft,
     AlignRight,
     Columns3,
@@ -29,6 +30,8 @@ import {
     Link2,
     List,
     ListOrdered,
+    CalendarPlus,
+    Droplets,
     Pilcrow,
     PanelBottom,
     PanelTop,
@@ -42,6 +45,13 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { Typography } from "@/components/shared/Typography"
 import {
     A4_DOCUMENT_CONTENT_CLASS,
@@ -56,20 +66,40 @@ import {
 import { DocumentPageBreak } from "@/lib/document-template/tiptap-document-page-break"
 import { DocumentTemplateA4PaginatedSheet } from "./document-template-a4-paginated-sheet"
 import { DocumentTemplateTextStyleControls } from "./document-template-text-style-controls"
-import { TEMPLATE_DYNAMIC_SECTIONS, TEMPLATE_MERGE_VARIABLES } from "@/lib/document-template/variables"
+import {
+    TEMPLATE_DYNAMIC_SECTIONS,
+    TEMPLATE_GREETING_VARIABLES,
+    TEMPLATE_MERGE_VARIABLES,
+} from "@/lib/document-template/variables"
+import { ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE } from "@/lib/document-template/checklist-items"
+import { Input } from "@/components/ui/input"
+import {
+    TEMPLATE_DATE_INSERT_OPTIONS,
+    getTemplateDateInsertOptionById,
+    getTemplateDateInsertOptionLabel,
+    type DocumentTemplateDates,
+} from "@/lib/document-template/date-variables"
+import {
+    DEFAULT_DOCUMENT_TEMPLATE_WATERMARK,
+    EMPTY_DOCUMENT_TEMPLATE_WATERMARK,
+    isWatermarkVisible,
+    type DocumentTemplateWatermark,
+} from "@/lib/document-template/watermark"
+import type { TemplateLocale } from "@/types/schemas/document-template"
 import { DocumentParagraph } from "@/lib/document-template/tiptap-document-paragraph"
 import {
     buildFooterHtml,
     buildHeaderHtml,
     composeDocumentLayout,
     DEFAULT_FOOTER_FIELDS,
-    DEFAULT_HEADER_FIELDS,
+    getDefaultHeaderFields,
     parseDocumentLayout,
     parseFooterHtml,
     parseHeaderHtml,
     type DocumentTemplateFooterFields,
     type DocumentTemplateHeaderFields,
 } from "@/lib/document-template/header-footer"
+import { isDefaultHeaderContactText } from "@/lib/document-template/locale"
 import type { DocumentTemplateAsset } from "@/types/schemas/document-template"
 import {
     DocumentTemplateAssetsModal,
@@ -79,6 +109,11 @@ import { cn } from "@/lib/utils"
 
 type DocumentTemplateEditorProps = {
     content: string
+    locale?: TemplateLocale
+    templateDates?: DocumentTemplateDates
+    onTemplateDatesChange?: (value: DocumentTemplateDates) => void
+    watermark?: DocumentTemplateWatermark
+    onWatermarkChange?: (value: DocumentTemplateWatermark) => void
     editable?: boolean
     onChange?: (html: string) => void
     className?: string
@@ -113,6 +148,11 @@ function ToolbarButton({
 
 export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
     content,
+    locale = "en",
+    templateDates,
+    onTemplateDatesChange,
+    watermark = DEFAULT_DOCUMENT_TEMPLATE_WATERMARK,
+    onWatermarkChange,
     editable = true,
     onChange,
     className,
@@ -120,6 +160,10 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
     const initialLayout = parseDocumentLayout(content)
 
     const [assetsModalOpen, setAssetsModalOpen] = useState(false)
+    const [selectedDateOptionId, setSelectedDateOptionId] = useState(
+        TEMPLATE_DATE_INSERT_OPTIONS[0].id
+    )
+    const [selectedDateValue, setSelectedDateValue] = useState("")
     const [assetsModalIntent, setAssetsModalIntent] = useState<DocumentTemplateAssetIntent | null>(
         null
     )
@@ -127,8 +171,8 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
     const [hasFooter, setHasFooter] = useState(() => Boolean(initialLayout.footerHtml))
     const [headerFields, setHeaderFields] = useState<DocumentTemplateHeaderFields>(() =>
         initialLayout.headerHtml
-            ? (parseHeaderHtml(initialLayout.headerHtml) ?? DEFAULT_HEADER_FIELDS)
-            : DEFAULT_HEADER_FIELDS
+            ? (parseHeaderHtml(initialLayout.headerHtml) ?? getDefaultHeaderFields(locale))
+            : getDefaultHeaderFields(locale)
     )
     const [footerFields, setFooterFields] = useState<DocumentTemplateFooterFields>(() =>
         initialLayout.footerHtml
@@ -180,6 +224,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
             }),
             TextAlign.configure({
                 types: ["heading", "paragraph"],
+                alignments: ["left", "center", "right", "justify"],
             }),
             TextStyle,
             Color.configure({
@@ -227,7 +272,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         setHasFooter(Boolean(layout.footerHtml))
 
         if (layout.headerHtml) {
-            setHeaderFields(parseHeaderHtml(layout.headerHtml) ?? DEFAULT_HEADER_FIELDS)
+            setHeaderFields(parseHeaderHtml(layout.headerHtml) ?? getDefaultHeaderFields(locale))
         }
 
         if (layout.footerHtml) {
@@ -245,15 +290,16 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
     }, [editable, editor])
 
     const addDocumentHeader = useCallback(() => {
+        const nextHeaderFields = getDefaultHeaderFields(locale)
         setHasHeader(true)
-        setHeaderFields(DEFAULT_HEADER_FIELDS)
+        setHeaderFields(nextHeaderFields)
         layoutRef.current = {
             ...layoutRef.current,
             hasHeader: true,
-            headerFields: DEFAULT_HEADER_FIELDS,
+            headerFields: nextHeaderFields,
         }
         emitComposedHtml(editor?.getHTML() ?? parseDocumentLayout(content).bodyHtml)
-    }, [content, editor, emitComposedHtml])
+    }, [content, editor, emitComposedHtml, locale])
 
     const removeDocumentHeader = useCallback(() => {
         setHasHeader(false)
@@ -286,6 +332,21 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         },
         [content, editor, emitComposedHtml]
     )
+
+    useEffect(() => {
+        if (!hasHeader) return
+
+        const current = layoutRef.current.headerFields
+        if (!isDefaultHeaderContactText(current.contactText)) return
+
+        const nextContactText = getDefaultHeaderFields(locale).contactText
+        if (current.contactText === nextContactText) return
+
+        updateHeaderFields({
+            ...current,
+            contactText: nextContactText,
+        })
+    }, [hasHeader, locale, updateHeaderFields])
 
     const updateFooterFields = useCallback(
         (next: DocumentTemplateFooterFields) => {
@@ -342,7 +403,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
     )
 
     const alignCurrentLogoRow = useCallback(
-        (align: "left" | "center" | "right") => {
+        (align: "left" | "center" | "right" | "justify") => {
             editor?.chain().focus().setTextAlign(align).run()
         },
         [editor]
@@ -383,9 +444,18 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                 return
             }
 
+            if (intent === "watermark") {
+                onWatermarkChange?.({
+                    ...watermark,
+                    enabled: true,
+                    image_url: asset.url,
+                })
+                return
+            }
+
             insertImage(asset.url, intent === "header" ? { asHeader: true } : undefined)
         },
-        [insertImage, insertLogoAtCursor, updateHeaderFields]
+        [insertImage, insertLogoAtCursor, onWatermarkChange, updateHeaderFields, watermark]
     )
 
     const insertDocumentHeading = useCallback(() => {
@@ -409,6 +479,35 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         },
         [editor]
     )
+
+    const selectedDateOption =
+        getTemplateDateInsertOptionById(selectedDateOptionId) ?? TEMPLATE_DATE_INSERT_OPTIONS[0]
+
+    useEffect(() => {
+        if (!selectedDateOption.configKey || !templateDates) {
+            setSelectedDateValue("")
+            return
+        }
+        setSelectedDateValue(templateDates[selectedDateOption.configKey] ?? "")
+    }, [selectedDateOption.configKey, selectedDateOptionId, templateDates])
+
+    const handleAddDateField = useCallback(() => {
+        if (selectedDateOption.configKey && onTemplateDatesChange && templateDates) {
+            if (!selectedDateValue.trim()) return
+            onTemplateDatesChange({
+                ...templateDates,
+                [selectedDateOption.configKey]: selectedDateValue,
+            })
+        }
+        insertVariable(selectedDateOption.mergeKey)
+    }, [
+        insertVariable,
+        onTemplateDatesChange,
+        selectedDateOption.configKey,
+        selectedDateOption.mergeKey,
+        selectedDateValue,
+        templateDates,
+    ])
 
     const setLink = useCallback(() => {
         if (!editor) return
@@ -546,6 +645,13 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                         >
                             <AlignRight className="size-3.5" />
                         </ToolbarButton>
+                        <ToolbarButton
+                            label="Justify"
+                            active={editor.isActive({ textAlign: "justify" })}
+                            onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+                        >
+                            <AlignJustify className="size-3.5" />
+                        </ToolbarButton>
                         <ToolbarButton label="Add link" onClick={setLink}>
                             <Link2 className="size-3.5" />
                         </ToolbarButton>
@@ -676,7 +782,9 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                             </div>
                             <div className="space-y-1.5">
                                 <Typography as="label" font="small" className="text-muted-foreground">
-                                    Contact text (right side)
+                                    {locale === "de"
+                                        ? "Kontaktzeile (rechts, logo-höhe)"
+                                        : "Contact text (right, aligned with logo)"}
                                 </Typography>
                                 <Textarea
                                     value={headerFields.contactText}
@@ -798,6 +906,13 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                         >
                             <AlignRight className="size-3.5" />
                         </ToolbarButton>
+                        <ToolbarButton
+                            label="Justify logo row"
+                            active={editor.isActive({ textAlign: "justify" })}
+                            onClick={() => alignCurrentLogoRow("justify")}
+                        >
+                            <AlignJustify className="size-3.5" />
+                        </ToolbarButton>
                     </div>
 
                     <Typography as="p" font="small" className="text-muted-foreground">
@@ -808,10 +923,124 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
 
                     <div className="space-y-2">
                         <Typography as="span" font="small" className="text-muted-foreground uppercase">
+                            Insert salutation &amp; name
+                        </Typography>
+                        <div className="flex flex-wrap gap-2">
+                            {TEMPLATE_GREETING_VARIABLES.map((variable) => (
+                                <Button
+                                    key={variable.key}
+                                    type="button"
+                                    variant="outline"
+                                    size="xs"
+                                    onClick={() => insertVariable(variable.key)}
+                                    title={"description" in variable ? variable.description : variable.label}
+                                >
+                                    {`{{${variable.key}}}`}
+                                </Button>
+                            ))}
+                        </div>
+                        <Typography as="p" font="small" className="text-muted-foreground">
+                            {locale === "de"
+                                ? "Volle Anredezeile, z. B. Sehr geehrter Herr …"
+                                : "Full salutation line, e.g. Dear Mr. …"}
+                        </Typography>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Typography as="span" font="small" className="text-muted-foreground uppercase shrink-0">
+                            Watermark
+                        </Typography>
+                        <Button
+                            type="button"
+                            variant={isWatermarkVisible(watermark) ? "default" : "outline"}
+                            size="xs"
+                            className="gap-1"
+                            onClick={() =>
+                                onWatermarkChange?.({
+                                    ...watermark,
+                                    enabled: !watermark.enabled,
+                                })
+                            }
+                        >
+                            <Droplets className="size-3.5" />
+                            {isWatermarkVisible(watermark)
+                                ? locale === "de"
+                                    ? "An"
+                                    : "On"
+                                : locale === "de"
+                                  ? "Aus"
+                                  : "Off"}
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            onClick={() => openAssetsModal("watermark")}
+                            disabled={!onWatermarkChange}
+                        >
+                            {locale === "de" ? "Bild wählen" : "Choose image"}
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            onClick={() => onWatermarkChange?.({ ...EMPTY_DOCUMENT_TEMPLATE_WATERMARK })}
+                            disabled={!isWatermarkVisible(watermark) || !onWatermarkChange}
+                        >
+                            {locale === "de" ? "Entfernen" : "Remove"}
+                        </Button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Typography as="span" font="small" className="text-muted-foreground uppercase shrink-0">
+                            Date
+                        </Typography>
+                        <Select value={selectedDateOptionId} onValueChange={setSelectedDateOptionId}>
+                            <SelectTrigger className="h-8 w-[min(100%,220px)] text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {TEMPLATE_DATE_INSERT_OPTIONS.map((option) => (
+                                    <SelectItem key={option.id} value={option.id}>
+                                        {getTemplateDateInsertOptionLabel(option, locale)}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {selectedDateOption.configKey ? (
+                            <Input
+                                type="date"
+                                className="h-8 w-[150px] text-xs"
+                                value={selectedDateValue}
+                                onChange={(event) => setSelectedDateValue(event.target.value)}
+                            />
+                        ) : null}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="xs"
+                            className="gap-1 shrink-0"
+                            disabled={
+                                Boolean(selectedDateOption.configKey) && !selectedDateValue.trim()
+                            }
+                            onClick={handleAddDateField}
+                        >
+                            <CalendarPlus className="size-3.5" />
+                            {locale === "de" ? "Hinzufügen" : "Add"}
+                        </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Typography as="span" font="small" className="text-muted-foreground uppercase">
                             Insert dynamic field
                         </Typography>
                         <div className="flex flex-wrap gap-2">
-                            {TEMPLATE_MERGE_VARIABLES.map((variable) => (
+                            {TEMPLATE_MERGE_VARIABLES.filter(
+                                (variable) =>
+                                    !TEMPLATE_GREETING_VARIABLES.some(
+                                        (greeting) => greeting.key === variable.key
+                                    )
+                            ).map((variable) => (
                                 <Button
                                     key={variable.key}
                                     type="button"
@@ -831,6 +1060,19 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                             Insert dynamic section
                         </Typography>
                         <div className="flex flex-wrap gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="xs"
+                                className="gap-1.5"
+                                onClick={() => insertDynamicSection(ADMISSION_REQUIREMENTS_CHECKLIST_VARIABLE)}
+                                title={`Checklist in ${locale === "de" ? "German" : "English"} based on template language`}
+                            >
+                                <ListChecks className="size-3.5" />
+                                {locale === "de"
+                                    ? "Admission checklist (Deutsch)"
+                                    : "Admission checklist (English)"}
+                            </Button>
                             {TEMPLATE_DYNAMIC_SECTIONS.map((section) => (
                                 <Button
                                     key={section.key}
@@ -860,6 +1102,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                 hasFooter={hasFooter}
                 headerHtml={buildHeaderHtml(headerFields)}
                 footerHtml={buildFooterHtml(footerFields)}
+                watermark={watermark}
             >
                 <EditorContent editor={editor} />
             </DocumentTemplateA4PaginatedSheet>

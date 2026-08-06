@@ -702,10 +702,13 @@ export type Database = {
           created_by_profile_id: string
           id: string
           is_deleted: boolean
+          locale: string
           program_id: string | null
+          template_dates: Json
           title: string
           updated_at: string
           variables: Json
+          watermark: Json
         }
         Insert: {
           body_html?: string
@@ -715,23 +718,29 @@ export type Database = {
           created_by_profile_id: string
           id?: string
           is_deleted?: boolean
+          locale?: string
           program_id?: string | null
+          template_dates?: Json
           title: string
           updated_at?: string
           variables?: Json
+          watermark?: Json
         }
         Update: {
           body_html?: string
           checklist_items?: Json
           checklist_profile?: string | null
+          locale?: string
           created_at?: string
           created_by_profile_id?: string
           id?: string
           is_deleted?: boolean
           program_id?: string | null
+          template_dates?: Json
           title?: string
           updated_at?: string
           variables?: Json
+          watermark?: Json
         }
         Relationships: [
           {

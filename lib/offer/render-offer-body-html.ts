@@ -3,6 +3,8 @@ import "server-only"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 import { extractTemplateVariables, renderTemplateHtml } from "@/lib/document-template/variables"
+import { normalizeTemplateLocale } from "@/lib/document-template/locale"
+import { parseDocumentTemplateDates } from "@/lib/document-template/date-variables"
 import {
     buildOfferTemplateVariables,
     type OfferApplicationContext,
@@ -31,8 +33,8 @@ function pickProfile(
     return Array.isArray(value) ? value[0] ?? null : value ?? null
 }
 
-function formatIssueDate(value: string): string {
-    return new Date(value).toLocaleDateString("en-US", {
+function formatIssueDate(value: string, locale: "de" | "en"): string {
+    return new Date(value).toLocaleDateString(locale === "de" ? "de-DE" : "en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -68,11 +70,13 @@ export async function renderOfferBodyHtml(
     let sourceHtml = params.bodyHtml?.trim() || null
     let templateChecklistItems: AdmissionRequirementId[] = []
     let templateChecklistProfile: string | null = null
+    let templateLocale: "de" | "en" = "en"
+    let templateDates = parseDocumentTemplateDates(null)
 
     if (params.documentTemplateId) {
         const { data: templateRow } = await supabase
             .from("document_template")
-            .select("body_html, checklist_items, checklist_profile")
+            .select("body_html, checklist_items, checklist_profile, locale, template_dates")
             .eq("id", params.documentTemplateId)
             .eq("is_deleted", false)
             .maybeSingle()
@@ -80,6 +84,9 @@ export async function renderOfferBodyHtml(
         if (templateRow?.body_html?.trim()) {
             sourceHtml = templateRow.body_html
         }
+
+        templateLocale = normalizeTemplateLocale(templateRow?.locale)
+        templateDates = parseDocumentTemplateDates(templateRow?.template_dates)
 
         templateChecklistProfile =
             typeof templateRow?.checklist_profile === "string"
@@ -152,11 +159,16 @@ export async function renderOfferBodyHtml(
         {
             itemIds: resolvedChecklistItems,
             proofs: parseChecklistProofs(params.checklistProofs),
+        },
+        {
+            locale: templateLocale,
+            issueDate: params.createdAt,
+            templateDates,
         }
     )
 
     if (params.createdAt) {
-        variables.issue_date = formatIssueDate(params.createdAt)
+        variables.issue_date = formatIssueDate(params.createdAt, templateLocale)
     }
 
     return renderTemplateHtml(sourceHtml, variables)

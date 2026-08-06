@@ -26,10 +26,25 @@ export function splitTemplateBodyIntoPages(bodyHtml: string): string[] {
 }
 
 export function buildDocumentPageWatermarkHtml(
-    logoSrc = DEFAULT_PLACEHOLDER_LOGO_SRC,
-    sizePx = PLACEHOLDER_LOGO_SIZE_PX
+    watermark?: {
+        enabled?: boolean
+        image_url?: string | null
+        opacity?: number
+        size_px?: number
+    } | null
 ): string {
-    return `<div class="${DOCUMENT_PAGE_WATERMARK_CLASS}" aria-hidden="true"><img src="${logoSrc}" alt="" width="${sizePx}" height="${sizePx}" /></div>`
+    if (watermark?.enabled === false) {
+        return ""
+    }
+
+    const logoSrc = watermark?.image_url?.trim() || DEFAULT_PLACEHOLDER_LOGO_SRC
+    const sizePx = watermark?.size_px && watermark.size_px > 0 ? watermark.size_px : PLACEHOLDER_LOGO_SIZE_PX
+    const opacity =
+        typeof watermark?.opacity === "number" && watermark.opacity >= 0 && watermark.opacity <= 1
+            ? watermark.opacity
+            : 0.12
+
+    return `<div class="${DOCUMENT_PAGE_WATERMARK_CLASS}" aria-hidden="true" style="--watermark-size:${sizePx}px;--watermark-opacity:${opacity};"><img src="${logoSrc}" alt="" width="${sizePx}" height="${sizePx}" style="opacity:${opacity};width:${sizePx}px;height:${sizePx}px;" /></div>`
 }
 
 export const A4_DOCUMENT_MULTI_PAGE_STACK_CLASS = cn("flex flex-col items-center gap-4")
@@ -161,16 +176,40 @@ export const A4_DOCUMENT_PRINT_STYLES = `
         padding-bottom: 12px;
         flex-shrink: 0;
     }
-    .document-template-footer {
-        margin-top: auto;
-        border-top: 1px solid #e5e7eb;
-        padding-top: 12px;
-        flex-shrink: 0;
+    .document-template-header-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 16px;
+    }
+    .document-template-header-brand {
+        display: flex;
+        align-items: center;
+        flex: 0 1 auto;
     }
     .document-template-header-logo {
         max-height: 72px;
         width: auto;
         object-fit: contain;
+    }
+    .document-template-header-contact,
+    .document-template-header [data-header-contact] {
+        margin: 0 0 0 auto;
+        flex: 0 1 auto;
+        text-align: right;
+        font-size: 10px;
+        font-weight: 500;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #8E9BB0 !important;
+        line-height: 1.4;
+        white-space: nowrap;
+    }
+    .document-template-footer {
+        margin-top: auto;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 12px;
+        flex-shrink: 0;
     }
     .a4-page .page-body {
         position: relative;
@@ -190,12 +229,12 @@ export const A4_DOCUMENT_PRINT_STYLES = `
         pointer-events: none;
     }
     .${DOCUMENT_PAGE_WATERMARK_CLASS} img {
-        width: ${PLACEHOLDER_LOGO_SIZE_PX}px;
-        height: ${PLACEHOLDER_LOGO_SIZE_PX}px;
+        width: var(--watermark-size, ${PLACEHOLDER_LOGO_SIZE_PX}px);
+        height: var(--watermark-size, ${PLACEHOLDER_LOGO_SIZE_PX}px);
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
-        opacity: 0.12;
+        opacity: var(--watermark-opacity, 0.12);
     }
     img { max-width: 100%; height: auto; }
     table { width: 100%; border-collapse: collapse; }

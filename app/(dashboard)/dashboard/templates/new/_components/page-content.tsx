@@ -6,10 +6,22 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { DEFAULT_TEMPLATE_BODY_HTML } from "@/lib/document-template/a4-document"
 import {
+    EMPTY_DOCUMENT_TEMPLATE_DATES,
+    type DocumentTemplateDates,
+} from "@/lib/document-template/date-variables"
+import { DEFAULT_TEMPLATE_LOCALE } from "@/lib/document-template/locale"
+import {
+    DEFAULT_DOCUMENT_TEMPLATE_WATERMARK,
+    type DocumentTemplateWatermark,
+} from "@/lib/document-template/watermark"
+import {
     claimProgramInOptionsCache,
     upsertDocumentTemplateInCache,
 } from "@/lib/document-template/query-cache"
-import type { DocumentTemplateDetailResponse } from "@/types/schemas/document-template"
+import type {
+    DocumentTemplateDetailResponse,
+    TemplateLocale,
+} from "@/types/schemas/document-template"
 import { DocumentTemplateFormView } from "../../_components/document-template-form-view"
 
 export const CreatePageContent = memo(function CreatePageContent() {
@@ -17,6 +29,13 @@ export const CreatePageContent = memo(function CreatePageContent() {
     const queryClient = useQueryClient()
     const [title, setTitle] = useState("")
     const [bodyHtml, setBodyHtml] = useState(DEFAULT_TEMPLATE_BODY_HTML)
+    const [locale, setLocale] = useState<TemplateLocale>(DEFAULT_TEMPLATE_LOCALE)
+    const [templateDates, setTemplateDates] = useState<DocumentTemplateDates>({
+        ...EMPTY_DOCUMENT_TEMPLATE_DATES,
+    })
+    const [watermark, setWatermark] = useState<DocumentTemplateWatermark>({
+        ...DEFAULT_DOCUMENT_TEMPLATE_WATERMARK,
+    })
     const [programId, setProgramId] = useState<string | null>(null)
     const [formError, setFormError] = useState<string | null>(null)
 
@@ -24,6 +43,9 @@ export const CreatePageContent = memo(function CreatePageContent() {
         mutationFn: async (payload: {
             title: string
             body_html: string
+            locale: TemplateLocale
+            template_dates: DocumentTemplateDates
+            watermark: DocumentTemplateWatermark
             program_id: string
         }) => {
             const res = await fetch("/api/document-template", {
@@ -66,6 +88,9 @@ export const CreatePageContent = memo(function CreatePageContent() {
             await createMutation.mutateAsync({
                 title: title.trim(),
                 body_html: bodyHtml,
+                locale,
+                template_dates: templateDates,
+                watermark,
                 program_id: programId,
             })
             toast.success("Document template created successfully.", { id: toastId })
@@ -76,7 +101,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
             setFormError(message)
             toast.error(message, { id: toastId })
         }
-    }, [bodyHtml, createMutation, programId, router, title])
+    }, [bodyHtml, createMutation, locale, programId, router, templateDates, title, watermark])
 
     return (
         <DocumentTemplateFormView
@@ -84,11 +109,17 @@ export const CreatePageContent = memo(function CreatePageContent() {
             backHref="/dashboard/templates"
             title={title}
             bodyHtml={bodyHtml}
+            locale={locale}
+            templateDates={templateDates}
+            watermark={watermark}
             programId={programId}
             isSaving={createMutation.isPending}
             formError={formError}
             onTitleChange={setTitle}
             onBodyChange={setBodyHtml}
+            onLocaleChange={setLocale}
+            onTemplateDatesChange={setTemplateDates}
+            onWatermarkChange={setWatermark}
             onProgramChange={setProgramId}
             onSave={handleSave}
             saveLabel="Create Template"

@@ -1,11 +1,19 @@
 import { cn } from "@/lib/utils"
 
 import { splitTemplateBodyIntoPages } from "@/lib/document-template/a4-document"
+import {
+    getDefaultHeaderContactText,
+    type TemplateLocale,
+} from "@/lib/document-template/locale"
 
 export const DOCUMENT_TEMPLATE_HEADER_CLASS = "document-template-header"
 export const DOCUMENT_TEMPLATE_FOOTER_CLASS = "document-template-footer"
 export const DOCUMENT_TEMPLATE_BODY_CLASS = "document-template-body"
 export const DOCUMENT_TEMPLATE_HEADER_LOGO_CLASS = "document-template-header-logo"
+export const DOCUMENT_TEMPLATE_HEADER_INNER_CLASS = "document-template-header-inner"
+export const DOCUMENT_TEMPLATE_HEADER_BRAND_CLASS = "document-template-header-brand"
+export const DOCUMENT_TEMPLATE_HEADER_CONTACT_CLASS = "document-template-header-contact"
+export const DOCUMENT_TEMPLATE_HEADER_CONTACT_COLOR = "#8E9BB0"
 
 const HEADER_BLOCK_REGEX = new RegExp(
     `<div\\s+class="${DOCUMENT_TEMPLATE_HEADER_CLASS}"[^>]*data-document-region="header"[^>]*>[\\s\\S]*?<\\/div>`,
@@ -44,10 +52,15 @@ export type DocumentTemplateFooterFields = {
     column4: string
 }
 
-export const DEFAULT_HEADER_FIELDS: DocumentTemplateHeaderFields = {
-    logoUrl: "",
-    contactText:
-        "FHM // International Office // Ravensberger Str. 10 G // 33602 Bielefeld",
+export const DEFAULT_HEADER_FIELDS: DocumentTemplateHeaderFields = getDefaultHeaderFields("en")
+
+export function getDefaultHeaderFields(
+    locale: TemplateLocale = "en"
+): DocumentTemplateHeaderFields {
+    return {
+        logoUrl: "",
+        contactText: getDefaultHeaderContactText(locale),
+    }
 }
 
 export const DEFAULT_FOOTER_FIELDS: DocumentTemplateFooterFields = {
@@ -67,6 +80,16 @@ export const DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES = cn(
     "[&_.document-template-footer]:pt-3",
     "[&_.document-template-header-logo]:max-h-[72px] [&_.document-template-header-logo]:w-auto",
     "[&_.document-template-header-logo]:object-contain",
+    "[&_.document-template-header-contact]:m-0 [&_.document-template-header-contact]:ml-auto",
+    "[&_.document-template-header-contact]:shrink-0 [&_.document-template-header-contact]:text-right",
+    "[&_.document-template-header-contact]:text-[10px] [&_[data-header-contact]]:text-[10px]",
+    "[&_.document-template-header-contact]:!text-[#8E9BB0] [&_[data-header-contact]]:!text-[#8E9BB0]",
+    "[&_.document-template-header-contact]:font-medium [&_.document-template-header-contact]:leading-snug",
+    "[&_.document-template-header-contact]:font-[Arial,Helvetica,sans-serif]",
+    "[&_.document-template-header-inner]:flex [&_.document-template-header-inner]:w-full",
+    "[&_.document-template-header-inner]:items-center [&_.document-template-header-inner]:justify-between",
+    "[&_.document-template-header-inner]:gap-4",
+    "[&_.document-template-header-brand]:flex [&_.document-template-header-brand]:items-center",
     "[&_.document-template-header-logo-placeholder]:inline-block [&_.document-template-header-logo-placeholder]:h-12",
     "[&_.document-template-header-logo-placeholder]:w-[120px] [&_.document-template-header-logo-placeholder]:rounded",
     "[&_.document-template-header-logo-placeholder]:border [&_.document-template-header-logo-placeholder]:border-dashed",
@@ -112,14 +135,10 @@ export function buildHeaderHtml(fields: DocumentTemplateHeaderFields): string {
         : `<span class="document-template-header-logo-placeholder" data-header-logo aria-hidden="true"></span>`
 
     return `<div class="${DOCUMENT_TEMPLATE_HEADER_CLASS}" data-document-region="header">
-  <table style="width:100%;border:none;border-collapse:collapse;">
-    <tr>
-      <td style="width:50%;vertical-align:top;border:none;padding:0;">${logoBlock}</td>
-      <td style="width:50%;vertical-align:top;text-align:right;border:none;padding:0;font-size:11px;color:#374151;line-height:1.5;">
-        <p data-header-contact style="margin:0;">${textToHtmlParagraph(fields.contactText)}</p>
-      </td>
-    </tr>
-  </table>
+  <div class="${DOCUMENT_TEMPLATE_HEADER_INNER_CLASS}" style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:16px;">
+    <div class="${DOCUMENT_TEMPLATE_HEADER_BRAND_CLASS}" style="display:flex;align-items:center;flex:0 1 auto;">${logoBlock}</div>
+    <span data-header-contact class="${DOCUMENT_TEMPLATE_HEADER_CONTACT_CLASS}" style="display:block;margin:0;margin-left:auto;flex:0 1 auto;text-align:right;font-size:10px;font-weight:500;font-family:Arial,Helvetica,sans-serif;color:${DOCUMENT_TEMPLATE_HEADER_CONTACT_COLOR};line-height:1.4;white-space:nowrap;">${textToHtmlParagraph(fields.contactText)}</span>
+  </div>
 </div>`
 }
 
@@ -152,7 +171,9 @@ export function parseHeaderHtml(html: string): DocumentTemplateHeaderFields | nu
     if (!normalized) return null
 
     const logoMatch = normalized.match(/data-header-logo[^>]*src="([^"]*)"/i)
-    const contactMatch = normalized.match(/data-header-contact[^>]*>([\s\S]*?)<\/p>/i)
+    const contactMatch = normalized.match(
+        /data-header-contact[^>]*>([\s\S]*?)<\/(?:p|span)>/i
+    )
 
     return {
         logoUrl: logoMatch?.[1]?.trim() ?? "",
@@ -213,6 +234,13 @@ export function parseDocumentLayout(fullHtml: string): DocumentTemplateLayout {
 
     const bodyWrapperMatch = remaining.match(BODY_WRAPPER_REGEX)
     const bodyHtml = bodyWrapperMatch ? bodyWrapperMatch[1].trim() : remaining
+
+    if (headerHtml) {
+        const headerFields = parseHeaderHtml(headerHtml)
+        if (headerFields) {
+            headerHtml = buildHeaderHtml(headerFields)
+        }
+    }
 
     return { headerHtml, bodyHtml, footerHtml }
 }

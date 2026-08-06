@@ -113,6 +113,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             body_html?: string
             variables?: string[]
             program_id?: string | null
+            locale?: string
+            template_dates?: Record<string, string | null>
+            watermark?: Record<string, unknown>
             updated_at: string
         } = {
             updated_at: new Date().toISOString(),
@@ -132,6 +135,18 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
                 await assertProgramAvailableForTemplate(supabase, validated.program_id, id)
             }
             updatePayload.program_id = validated.program_id
+        }
+
+        if (validated.locale !== undefined) {
+            updatePayload.locale = validated.locale
+        }
+
+        if (validated.template_dates !== undefined) {
+            updatePayload.template_dates = validated.template_dates
+        }
+
+        if (validated.watermark !== undefined) {
+            updatePayload.watermark = validated.watermark
         }
 
         const { data, error } = await supabase

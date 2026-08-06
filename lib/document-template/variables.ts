@@ -1,22 +1,57 @@
 import {
+    buildTemplateDatePreviewSampleData,
+    buildTemplateDateVariables,
+    type DocumentTemplateDates,
+} from "@/lib/document-template/date-variables"
+import {
     ADMISSION_REQUIREMENTS_CHECKLIST_DE_VARIABLE,
     ADMISSION_REQUIREMENTS_CHECKLIST_EN_VARIABLE,
     buildAdmissionRequirementsChecklistPreviewHtml,
 } from "@/lib/document-template/admission-requirements-checklist"
+import {
+    buildStudentGreeting,
+    formatLocalizedTitle,
+    normalizeStudentTitle,
+    signatureNotAvailableLabel,
+    type TemplateLocale,
+} from "@/lib/document-template/locale"
+
+export const TEMPLATE_GREETING_VARIABLES = [
+    {
+        key: "student_greeting",
+        label: "Salutation (follows template language)",
+        description:
+            "Full greeting line, e.g. Sehr geehrter Herr Max Mustermann, or Dear Mr. John Doe,",
+    },
+    {
+        key: "student_greeting_de",
+        label: "Salutation (German only)",
+        description: "Always German: Sehr geehrter Herr / Sehr geehrte Frau …",
+    },
+    {
+        key: "student_greeting_en",
+        label: "Salutation (English only)",
+        description: "Always English: Dear Mr. / Dear Mrs. / Dear Ms. …",
+    },
+    { key: "student_first_name", label: "First Name" },
+    { key: "student_last_name", label: "Last Name" },
+    {
+        key: "student_title",
+        label: "Title (follows template language)",
+        description: "Herr/Frau in German, Mr./Mrs./Ms. in English",
+    },
+    { key: "student_name", label: "Full Name" },
+] as const
 
 export const TEMPLATE_MERGE_VARIABLES = [
-    { key: "student_name", label: "Student Name" },
-    { key: "student_title", label: "Student Title" },
+    ...TEMPLATE_GREETING_VARIABLES,
     { key: "student_address", label: "Student Address" },
-    { key: "student_date_of_birth", label: "Date of Birth" },
     { key: "student_signature", label: "Student Signature" },
     { key: "course_name", label: "Course Name" },
     { key: "degree_name", label: "Degree Name" },
     { key: "university_name", label: "University Name" },
     { key: "application_no", label: "Application Number" },
-    { key: "issue_date", label: "Issue Date" },
     { key: "fees", label: "Fees" },
-    { key: "intake_date", label: "Intake Date" },
     { key: "duration", label: "Course Duration" },
 ] as const
 
@@ -39,39 +74,87 @@ const STUDENT_SIGNATURE_PREVIEW_SVG = `<svg xmlns="http://www.w3.org/2000/svg" w
 
 export function buildStudentSignatureHtml(
     signatureUrl?: string | null,
-    options?: { alt?: string }
+    options?: { alt?: string; locale?: TemplateLocale }
 ): string {
     const alt = options?.alt ?? "Student Signature"
+    const locale = options?.locale ?? "en"
 
     if (signatureUrl) {
         return `<img src="${signatureUrl}" alt="${alt}" class="document-student-signature" style="display:inline-block;max-width:180px;height:auto;object-fit:contain;background:transparent;" />`
     }
 
-    return `<span class="document-student-signature-placeholder" style="display:inline-block;color:#9ca3af;font-style:italic;font-size:12px;">Signature not available</span>`
+    return `<span class="document-student-signature-placeholder" style="display:inline-block;color:#9ca3af;font-style:italic;font-size:12px;">${signatureNotAvailableLabel(locale)}</span>`
 }
 
-export const TEMPLATE_PREVIEW_SAMPLE_DATA: Record<string, string> = {
-    student_name: "John Doe",
-    student_title: "Mr.",
-    student_address: "123 Academic Street<br />Suite 4B<br />Building C<br />Berlin, BE 10115<br />Germany",
-    student_date_of_birth: "January 15, 1998",
-    student_signature: `<span class="document-student-signature-preview">${STUDENT_SIGNATURE_PREVIEW_SVG}</span>`,
-    course_name: "Business Administration",
-    degree_name: "Bachelor of Business",
-    university_name: "Fachhochschule des Mittelstands",
-    application_no: "APP-2026-001",
-    issue_date: new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    }),
-    fees: "€ 12,500",
-    intake_date: "October 2026",
-    duration: "3 years",
-    [ADMISSION_REQUIREMENTS_CHECKLIST_DE_VARIABLE]: buildAdmissionRequirementsChecklistPreviewHtml("de"),
-    [ADMISSION_REQUIREMENTS_CHECKLIST_EN_VARIABLE]: buildAdmissionRequirementsChecklistPreviewHtml("en"),
-    admission_requirements_checklist: buildAdmissionRequirementsChecklistPreviewHtml("en"),
+export function buildTemplatePreviewSampleData(
+    locale: TemplateLocale = "en",
+    templateDates?: DocumentTemplateDates | null
+): Record<string, string> {
+    const firstName = locale === "de" ? "Max" : "John"
+    const lastName = locale === "de" ? "Mustermann" : "Doe"
+    const studentName = `${firstName} ${lastName}`
+    const sampleTitle = "Mr" as const
+
+    return {
+        student_greeting: buildStudentGreeting({
+            title: sampleTitle,
+            firstName,
+            lastName,
+            locale,
+        }),
+        student_greeting_de: buildStudentGreeting({
+            title: sampleTitle,
+            firstName,
+            lastName,
+            locale: "de",
+        }),
+        student_greeting_en: buildStudentGreeting({
+            title: sampleTitle,
+            firstName,
+            lastName,
+            locale: "en",
+        }),
+        student_first_name: firstName,
+        student_last_name: lastName,
+        student_name: studentName,
+        student_title: formatLocalizedTitle(sampleTitle, locale),
+        student_address:
+            locale === "de"
+                ? "Musterstraße 123<br />Wohnung 4B<br />Gebäude C<br />Berlin, 10115<br />Deutschland"
+                : "123 Academic Street<br />Suite 4B<br />Building C<br />Berlin, BE 10115<br />Germany",
+        student_signature: `<span class="document-student-signature-preview">${STUDENT_SIGNATURE_PREVIEW_SVG}</span>`,
+        course_name: locale === "de" ? "Betriebswirtschaftslehre" : "Business Administration",
+        degree_name:
+            locale === "de" ? "Bachelor of Business" : "Bachelor of Business",
+        university_name: "Fachhochschule des Mittelstands",
+        application_no: "APP-2026-001",
+        fees: "€ 12,500",
+        duration: locale === "de" ? "3 Jahre" : "3 years",
+        ...(templateDates &&
+        Object.values(templateDates).some(
+            (value) => typeof value === "string" && value.trim().length > 0
+        )
+            ? buildTemplateDateVariables({
+                  locale,
+                  issueDate: "2026-02-01",
+                  studentDateOfBirth: "1998-01-15",
+                  applicationDeadline: "2026-01-15",
+                  intakeStartDate: templateDates.program_period_start,
+                  duration: "4 years",
+                  templateDates,
+              })
+            : buildTemplateDatePreviewSampleData(locale)),
+        [ADMISSION_REQUIREMENTS_CHECKLIST_DE_VARIABLE]:
+            buildAdmissionRequirementsChecklistPreviewHtml("de"),
+        [ADMISSION_REQUIREMENTS_CHECKLIST_EN_VARIABLE]:
+            buildAdmissionRequirementsChecklistPreviewHtml("en"),
+        admission_requirements_checklist: buildAdmissionRequirementsChecklistPreviewHtml(locale),
+    }
 }
+
+/** @deprecated Use buildTemplatePreviewSampleData(locale) for locale-aware preview. */
+export const TEMPLATE_PREVIEW_SAMPLE_DATA: Record<string, string> =
+    buildTemplatePreviewSampleData("en")
 
 export function extractTemplateVariables(html: string): string[] {
     const matches = html.matchAll(/\{\{\s*([\w.]+)\s*\}\}/g)

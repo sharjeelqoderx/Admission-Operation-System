@@ -3,19 +3,33 @@
 import { memo } from "react"
 import Image from "next/image"
 import {
-    DEFAULT_PLACEHOLDER_LOGO_SRC,
-    DOCUMENT_PAGE_WATERMARK_CLASS,
     PLACEHOLDER_LOGO_SIZE_PX,
+    DOCUMENT_PAGE_WATERMARK_CLASS,
 } from "@/lib/document-template/a4-document"
+import {
+    isWatermarkVisible,
+    resolveWatermarkImageSrc,
+    type DocumentTemplateWatermark,
+} from "@/lib/document-template/watermark"
 import { cn } from "@/lib/utils"
 
 type DocumentPageWatermarkProps = {
+    watermark?: DocumentTemplateWatermark | null
     className?: string
 }
 
 export const DocumentPageWatermark = memo(function DocumentPageWatermark({
+    watermark,
     className,
 }: DocumentPageWatermarkProps) {
+    if (!isWatermarkVisible(watermark)) {
+        return null
+    }
+
+    const imageSrc = resolveWatermarkImageSrc(watermark!)
+    const sizePx = watermark?.size_px ?? PLACEHOLDER_LOGO_SIZE_PX
+    const opacity = watermark?.opacity ?? 0.12
+
     return (
         <div
             className={cn(
@@ -24,16 +38,24 @@ export const DocumentPageWatermark = memo(function DocumentPageWatermark({
                 className
             )}
             aria-hidden
+            style={
+                {
+                    "--watermark-size": `${sizePx}px`,
+                    "--watermark-opacity": opacity,
+                } as React.CSSProperties
+            }
         >
             <Image
-                src={DEFAULT_PLACEHOLDER_LOGO_SRC}
+                src={imageSrc}
                 alt=""
-                width={PLACEHOLDER_LOGO_SIZE_PX}
-                height={PLACEHOLDER_LOGO_SIZE_PX}
-                className="max-h-full max-w-full object-contain opacity-[0.12]"
+                width={sizePx}
+                height={sizePx}
+                unoptimized={imageSrc.startsWith("http")}
+                className="max-h-full max-w-full object-contain"
                 style={{
-                    width: PLACEHOLDER_LOGO_SIZE_PX,
-                    height: PLACEHOLDER_LOGO_SIZE_PX,
+                    width: sizePx,
+                    height: sizePx,
+                    opacity,
                 }}
             />
         </div>

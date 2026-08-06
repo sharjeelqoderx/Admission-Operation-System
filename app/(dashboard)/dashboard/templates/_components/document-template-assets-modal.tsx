@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils"
 
 export const DOCUMENT_TEMPLATE_ASSETS_QUERY_KEY = ["document-template-assets"] as const
 
-export type DocumentTemplateAssetIntent = "header" | "header-logo" | "inline" | "logo"
+export type DocumentTemplateAssetIntent = "header" | "header-logo" | "inline" | "logo" | "watermark"
 
 type Props = {
     open: boolean
@@ -64,6 +64,8 @@ function getIntentLabel(intent: DocumentTemplateAssetIntent | null): string {
             return "document header logo"
         case "logo":
             return "logo"
+        case "watermark":
+            return "watermark"
         default:
             return "image"
     }

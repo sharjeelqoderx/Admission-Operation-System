@@ -73,6 +73,9 @@ export async function POST(req: NextRequest) {
                 title: validated.title,
                 body_html: validated.body_html,
                 variables,
+                locale: validated.locale,
+                template_dates: validated.template_dates ?? {},
+                watermark: validated.watermark ?? undefined,
                 program_id: validated.program_id ?? null,
                 created_by_profile_id: user.id,
             })

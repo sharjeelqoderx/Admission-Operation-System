@@ -4,8 +4,15 @@ import {
     createSupabaseServerClient,
     tryCreateSupabaseServiceClient,
 } from "@/lib/supabase/server"
+import { normalizeTemplateLocale } from "@/lib/document-template/locale"
+import { parseDocumentTemplateDates } from "@/lib/document-template/date-variables"
+import {
+    parseDocumentTemplateWatermark,
+    type DocumentTemplateWatermark,
+} from "@/lib/document-template/watermark"
 import { resolveTemplateChecklistItems } from "@/lib/document-template/resolve-checklist-items"
 import { extractTemplateVariables } from "@/lib/document-template/variables"
+import type { TemplateLocale } from "@/types/schemas/document-template"
 import type { DocumentTemplateListItem } from "@/types/schemas/document-template"
 import type { Database } from "@/types/supabase"
 import { Role } from "@/types/enums/role"
@@ -121,6 +128,9 @@ function mapTemplateRow(
         id: row.id,
         title: row.title,
         body_html: row.body_html,
+        locale: normalizeTemplateLocale(row.locale) as TemplateLocale,
+        template_dates: parseDocumentTemplateDates(row.template_dates),
+        watermark: parseDocumentTemplateWatermark(row.watermark) as DocumentTemplateWatermark,
         variables,
         checklist_items: checklistItems,
         checklist_profile:

@@ -98,6 +98,9 @@ function DocumentTemplatePageView({
     activeTemplate,
     title,
     bodyHtml,
+    locale,
+    templateDates,
+    watermark,
     programId,
     isSaving,
     isDeleting,
@@ -107,6 +110,9 @@ function DocumentTemplatePageView({
     formError,
     setTitle,
     setBodyHtml,
+    setLocale,
+    setTemplateDates,
+    setWatermark,
     setProgramId,
     openEdit,
     openView,
@@ -166,6 +172,9 @@ function DocumentTemplatePageView({
                 sourceId: templateToClone.id,
                 title: cloneTitle.trim(),
                 body_html: templateToClone.body_html,
+                locale: templateToClone.locale,
+                template_dates: templateToClone.template_dates,
+                watermark: templateToClone.watermark,
                 program_id: cloneProgramId,
             })
             setTemplateToClone(null)
@@ -312,12 +321,18 @@ function DocumentTemplatePageView({
                 heading="Edit Document Template"
                 title={title}
                 bodyHtml={bodyHtml}
+                locale={locale}
+                templateDates={templateDates}
+                watermark={watermark}
                 programId={programId}
                 templateId={activeTemplate?.id ?? null}
                 isSaving={isSaving}
                 formError={formError}
                 onTitleChange={setTitle}
                 onBodyChange={setBodyHtml}
+                onLocaleChange={setLocale}
+                onTemplateDatesChange={setTemplateDates}
+                onWatermarkChange={setWatermark}
                 onProgramChange={setProgramId}
                 onSave={saveTemplate}
                 onBack={backToList}
@@ -353,6 +368,9 @@ function DocumentTemplatePageView({
                 <DocumentTemplatePreview
                     title={title}
                     bodyHtml={bodyHtml}
+                    locale={locale}
+                    templateDates={templateDates}
+                    watermark={watermark}
                     useSampleData
                     printable
                 />

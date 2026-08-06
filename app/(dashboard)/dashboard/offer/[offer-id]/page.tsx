@@ -530,6 +530,7 @@ export default function OfferDetailsPage() {
         const html = buildTemplateOfferLetterHtml(conditionalLetterBodyHtml, {
             title: `Conditional Letter – ${student?.name || "Applicant"}`,
             signatureHtml,
+            watermark: offer?.template_watermark ?? null,
         })
 
         const win = window.open("", "_blank")
@@ -537,7 +538,7 @@ export default function OfferDetailsPage() {
             win.document.write(html)
             win.document.close()
         }
-    }, [acceptedAt, conditionalLetterBodyHtml, offer?.file_url, offer?.status, student?.name])
+    }, [acceptedAt, conditionalLetterBodyHtml, offer?.file_url, offer?.status, offer?.template_watermark, student?.name])
 
     const handleDownloadConditionalLetter = useCallback(async () => {
         if (!conditionalLetterBodyHtml) {
@@ -599,6 +600,7 @@ export default function OfferDetailsPage() {
                 buildTemplateOfferLetterHtml(conditionalLetterBodyHtml, {
                     title: `Conditional Letter – ${student?.name || "Applicant"}`,
                     signatureHtml,
+                    watermark: offer?.template_watermark ?? null,
                 })
             )
             iframeDoc.close()
