@@ -92,6 +92,7 @@ import {
     buildHeaderHtml,
     composeDocumentLayout,
     DEFAULT_FOOTER_FIELDS,
+    DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES,
     getDefaultHeaderFields,
     parseDocumentLayout,
     parseFooterHtml,
@@ -760,7 +761,14 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                             <Typography as="span" font="small" className="font-semibold uppercase">
                                 Document header
                             </Typography>
-                            <div className="flex flex-wrap items-start gap-3">
+                            <div
+                                className={cn(
+                                    "rounded-md border border-border/60 bg-white px-4 py-3",
+                                    DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
+                                )}
+                                dangerouslySetInnerHTML={{ __html: buildHeaderHtml(headerFields) }}
+                            />
+                            <div className="flex flex-wrap items-center gap-3">
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -769,22 +777,35 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                                     onClick={() => openAssetsModal("header-logo")}
                                 >
                                     <ImageUp className="size-3.5" />
-                                    Attach logo
+                                    {headerFields.logoUrl
+                                        ? locale === "de"
+                                            ? "Logo ändern"
+                                            : "Change logo"
+                                        : locale === "de"
+                                          ? "Logo hinzufügen"
+                                          : "Attach logo"}
                                 </Button>
                                 {headerFields.logoUrl ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                        src={headerFields.logoUrl}
-                                        alt="Header logo preview"
-                                        className="max-h-12 w-auto object-contain"
-                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="xs"
+                                        onClick={() =>
+                                            updateHeaderFields({
+                                                ...headerFields,
+                                                logoUrl: "",
+                                            })
+                                        }
+                                    >
+                                        {locale === "de" ? "Logo entfernen" : "Remove logo"}
+                                    </Button>
                                 ) : null}
                             </div>
                             <div className="space-y-1.5">
                                 <Typography as="label" font="small" className="text-muted-foreground">
                                     {locale === "de"
-                                        ? "Kontaktzeile (rechts, logo-höhe)"
-                                        : "Contact text (right, aligned with logo)"}
+                                        ? "Kontaktzeile (rechts, auf Logo-Höhe zentriert)"
+                                        : "Contact text (right, vertically centered with logo)"}
                                 </Typography>
                                 <Textarea
                                     value={headerFields.contactText}

@@ -13,7 +13,8 @@ export const DOCUMENT_TEMPLATE_HEADER_LOGO_CLASS = "document-template-header-log
 export const DOCUMENT_TEMPLATE_HEADER_INNER_CLASS = "document-template-header-inner"
 export const DOCUMENT_TEMPLATE_HEADER_BRAND_CLASS = "document-template-header-brand"
 export const DOCUMENT_TEMPLATE_HEADER_CONTACT_CLASS = "document-template-header-contact"
-export const DOCUMENT_TEMPLATE_HEADER_CONTACT_COLOR = "#8E9BB0"
+export const DOCUMENT_TEMPLATE_HEADER_CONTACT_COLOR = "#7D89A6"
+export const DOCUMENT_TEMPLATE_HEADER_LOGO_MAX_HEIGHT_PX = 52
 
 const HEADER_BLOCK_REGEX = new RegExp(
     `<div\\s+class="${DOCUMENT_TEMPLATE_HEADER_CLASS}"[^>]*data-document-region="header"[^>]*>[\\s\\S]*?<\\/div>`,
@@ -78,22 +79,24 @@ export const DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES = cn(
     "[&_.document-template-header]:pb-3",
     "[&_.document-template-footer]:mt-auto [&_.document-template-footer]:border-t [&_.document-template-footer]:border-border/60",
     "[&_.document-template-footer]:pt-3",
-    "[&_.document-template-header-logo]:max-h-[72px] [&_.document-template-header-logo]:w-auto",
+    "[&_.document-template-header-logo]:max-h-[52px] [&_.document-template-header-logo]:w-auto",
     "[&_.document-template-header-logo]:object-contain",
     "[&_.document-template-header-contact]:m-0 [&_.document-template-header-contact]:ml-auto",
-    "[&_.document-template-header-contact]:shrink-0 [&_.document-template-header-contact]:text-right",
+    "[&_.document-template-header-contact]:shrink-0 [&_.document-template-header-contact]:self-center",
+    "[&_.document-template-header-contact]:text-right",
     "[&_.document-template-header-contact]:text-[10px] [&_[data-header-contact]]:text-[10px]",
-    "[&_.document-template-header-contact]:!text-[#8E9BB0] [&_[data-header-contact]]:!text-[#8E9BB0]",
-    "[&_.document-template-header-contact]:font-medium [&_.document-template-header-contact]:leading-snug",
+    "[&_.document-template-header-contact]:!text-[#7D89A6] [&_[data-header-contact]]:!text-[#7D89A6]",
+    "[&_.document-template-header-contact]:font-normal [&_.document-template-header-contact]:leading-snug",
     "[&_.document-template-header-contact]:font-[Arial,Helvetica,sans-serif]",
     "[&_.document-template-header-inner]:flex [&_.document-template-header-inner]:w-full",
     "[&_.document-template-header-inner]:items-center [&_.document-template-header-inner]:justify-between",
     "[&_.document-template-header-inner]:gap-4",
-    "[&_.document-template-header-brand]:flex [&_.document-template-header-brand]:items-center",
-    "[&_.document-template-header-logo-placeholder]:inline-block [&_.document-template-header-logo-placeholder]:h-12",
-    "[&_.document-template-header-logo-placeholder]:w-[120px] [&_.document-template-header-logo-placeholder]:rounded",
+    "[&_.document-template-header-brand]:flex [&_.document-template-header-brand]:min-h-[52px]",
+    "[&_.document-template-header-brand]:items-center [&_.document-template-header-brand]:shrink-0",
+    "[&_.document-template-header-logo-placeholder]:inline-block [&_.document-template-header-logo-placeholder]:h-[52px]",
+    "[&_.document-template-header-logo-placeholder]:w-[140px] [&_.document-template-header-logo-placeholder]:rounded-sm",
     "[&_.document-template-header-logo-placeholder]:border [&_.document-template-header-logo-placeholder]:border-dashed",
-    "[&_.document-template-header-logo-placeholder]:border-border [&_.document-template-header-logo-placeholder]:bg-muted/30"
+    "[&_.document-template-header-logo-placeholder]:border-border/70 [&_.document-template-header-logo-placeholder]:bg-transparent"
 )
 
 function escapeHtml(value: string): string {
@@ -129,15 +132,25 @@ export function buildDefaultFooterHtml(): string {
     return buildFooterHtml(DEFAULT_FOOTER_FIELDS)
 }
 
+function extractHeaderLogoUrl(html: string): string {
+    const logoElementMatch = html.match(/<img\b[^>]*\bdata-header-logo\b[^>]*>/i)
+    if (!logoElementMatch) {
+        return ""
+    }
+
+    const srcMatch = logoElementMatch[0].match(/\bsrc="([^"]*)"/i)
+    return srcMatch?.[1]?.trim() ?? ""
+}
+
 export function buildHeaderHtml(fields: DocumentTemplateHeaderFields): string {
     const logoBlock = fields.logoUrl.trim()
-        ? `<img src="${escapeHtml(fields.logoUrl.trim())}" alt="University logo" class="${DOCUMENT_TEMPLATE_HEADER_LOGO_CLASS}" data-header-logo style="max-height:72px;width:auto;object-fit:contain;" />`
+        ? `<img data-header-logo src="${escapeHtml(fields.logoUrl.trim())}" alt="University logo" class="${DOCUMENT_TEMPLATE_HEADER_LOGO_CLASS}" style="max-height:${DOCUMENT_TEMPLATE_HEADER_LOGO_MAX_HEIGHT_PX}px;width:auto;object-fit:contain;display:block;" />`
         : `<span class="document-template-header-logo-placeholder" data-header-logo aria-hidden="true"></span>`
 
     return `<div class="${DOCUMENT_TEMPLATE_HEADER_CLASS}" data-document-region="header">
   <div class="${DOCUMENT_TEMPLATE_HEADER_INNER_CLASS}" style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:16px;">
-    <div class="${DOCUMENT_TEMPLATE_HEADER_BRAND_CLASS}" style="display:flex;align-items:center;flex:0 1 auto;">${logoBlock}</div>
-    <span data-header-contact class="${DOCUMENT_TEMPLATE_HEADER_CONTACT_CLASS}" style="display:block;margin:0;margin-left:auto;flex:0 1 auto;text-align:right;font-size:10px;font-weight:500;font-family:Arial,Helvetica,sans-serif;color:${DOCUMENT_TEMPLATE_HEADER_CONTACT_COLOR};line-height:1.4;white-space:nowrap;">${textToHtmlParagraph(fields.contactText)}</span>
+    <div class="${DOCUMENT_TEMPLATE_HEADER_BRAND_CLASS}" style="display:flex;align-items:center;flex:0 0 auto;min-height:${DOCUMENT_TEMPLATE_HEADER_LOGO_MAX_HEIGHT_PX}px;">${logoBlock}</div>
+    <span data-header-contact class="${DOCUMENT_TEMPLATE_HEADER_CONTACT_CLASS}" style="display:block;margin:0;margin-left:auto;flex:0 1 auto;align-self:center;text-align:right;font-size:10px;font-weight:400;font-family:Arial,Helvetica,sans-serif;color:${DOCUMENT_TEMPLATE_HEADER_CONTACT_COLOR};line-height:1.4;white-space:nowrap;">${textToHtmlParagraph(fields.contactText)}</span>
   </div>
 </div>`
 }
@@ -170,13 +183,12 @@ export function parseHeaderHtml(html: string): DocumentTemplateHeaderFields | nu
     const normalized = html.trim()
     if (!normalized) return null
 
-    const logoMatch = normalized.match(/data-header-logo[^>]*src="([^"]*)"/i)
     const contactMatch = normalized.match(
         /data-header-contact[^>]*>([\s\S]*?)<\/(?:p|span)>/i
     )
 
     return {
-        logoUrl: logoMatch?.[1]?.trim() ?? "",
+        logoUrl: extractHeaderLogoUrl(normalized),
         contactText: contactMatch ? stripHtml(contactMatch[1]) : DEFAULT_HEADER_FIELDS.contactText,
     }
 }
