@@ -68,9 +68,6 @@ export function shouldShowAllCoursesForQualification(
   if (level === "foundation" || level.includes("studienkolleg")) return true
   if (degreeName.includes("studienkolleg")) return true
 
-  // Degree selected but no mapped academic level — show full catalog
-  if (!qualificationLevelName?.trim() && qualificationDegreeName?.trim()) return true
-
   return false
 }
 
@@ -87,6 +84,7 @@ export function getTargetCourseLevelNames(
 
   const priority = getLevelPriority(qualificationLevelName)
   if (priority === 6) return ["Master"]
+  if (priority > 0 && priority < 6) return ["Bachelor", "Foundation"]
 
   return []
 }
@@ -119,7 +117,9 @@ export function filterCoursesByQualificationLevel<
     return courses
   }
 
-  const targetLevelNames = getTargetCourseLevelNames(qualificationLevelName)
+  const nameForMapping =
+    qualificationLevelName?.trim() || qualificationDegreeName?.trim() || null
+  const targetLevelNames = getTargetCourseLevelNames(nameForMapping)
   if (targetLevelNames.length === 0) return []
 
   return courses.filter((course) =>

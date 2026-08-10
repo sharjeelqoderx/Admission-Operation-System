@@ -42,27 +42,63 @@ export function getHighestEducationLabel(value: string | null | undefined): stri
     return option?.label ?? value
 }
 
+function matchesHigherSecondaryLevel(normalized: string): boolean {
+    return (
+        normalized.includes("matric") ||
+        normalized.includes("intermediate") ||
+        normalized.includes("high school") ||
+        normalized.includes("o level") ||
+        normalized.includes("a level") ||
+        normalized.includes("higher secondary") ||
+        normalized.includes("12th") ||
+        normalized.includes("associate")
+    )
+}
+
+function matchesMasterLevel(normalized: string): boolean {
+    return (
+        normalized.includes("master") ||
+        normalized.includes("mba") ||
+        normalized.includes("mphil") ||
+        normalized.includes("phd") ||
+        normalized.includes("doctorate")
+    )
+}
+
 /** Map legacy degree UUID / level names to the fixed highest-education keys when possible. */
 export function normalizeHighestEducationFromStored(
     qualification: string | null | undefined,
-    levelName?: string | null
+    levelName?: string | null,
+    degreeName?: string | null
 ): HighestEducationLevel | "" {
     if (qualification && isHighestEducationLevel(qualification)) {
         return qualification
     }
 
-    const normalizedLevel = levelName?.trim().toLowerCase() ?? ""
+    const candidates = [levelName, degreeName]
+        .filter((value): value is string => Boolean(value?.trim()))
+        .map((value) => value.trim().toLowerCase())
 
-    if (normalizedLevel.includes("foundation") || normalizedLevel.includes("diploma")) {
-        return "higher_secondary"
-    }
+    for (const normalized of candidates) {
+        if (normalized.includes("foundation") || normalized.includes("diploma")) {
+            return "higher_secondary"
+        }
 
-    if (normalizedLevel.includes("bachelor")) {
-        return "bachelor_completed"
-    }
+        if (matchesHigherSecondaryLevel(normalized)) {
+            return "higher_secondary"
+        }
 
-    if (normalizedLevel.includes("master") || normalizedLevel === "mba") {
-        return "master"
+        if (normalized.includes("bachelor") && normalized.includes("ongoing")) {
+            return "bachelor_ongoing"
+        }
+
+        if (normalized.includes("bachelor")) {
+            return "bachelor_completed"
+        }
+
+        if (matchesMasterLevel(normalized)) {
+            return "master"
+        }
     }
 
     return ""

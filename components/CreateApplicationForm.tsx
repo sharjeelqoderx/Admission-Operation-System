@@ -368,7 +368,10 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
     const selectedStudentId = useStore(form.store, (state) => state.values.profile_id);
     const selectedCourseId = useStore(form.store, (state) => state.values.course_id) || courseIdParam || "";
 
-    const { data: studentDetailsResponse } = useQuery({
+    const {
+        data: studentDetailsResponse,
+        isLoading: isStudentDetailsLoading,
+    } = useQuery({
         queryKey: ["student", selectedStudentId],
         queryFn: async () => {
             if (!selectedStudentId) return null;
@@ -379,6 +382,8 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
         enabled: !!selectedStudentId
     });
     const studentDetails: ApplicationStudentDetail | undefined = studentDetailsResponse?.data;
+    const isStudentQualificationLoading =
+        Boolean(selectedStudentId) && isStudentDetailsLoading && !studentDetails;
 
     const { data: documentsResponse, isLoading: isDocumentsLoading, refetch: refetchDocuments } = useQuery({
         queryKey: ["student-documents", selectedStudentId, selectedCourseId],
@@ -419,7 +424,7 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
     const { data: programsResponse } = useQuery({
         queryKey: ["programs"],
         queryFn: async () => {
-            const res = await fetch("/api/program?limit=50");
+            const res = await fetch("/api/program?limit=100");
             if (!res.ok) throw new Error("Failed to fetch courses");
             return res.json();
         }
@@ -433,10 +438,15 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
 
     const courses = useMemo(() => {
         const shouldFilterByQualification =
-            user?.role === Role.STUDENT || (studentDetails && user?.role === Role.AGENT);
+            user?.role === Role.STUDENT ||
+            (Boolean(selectedStudentId) && user?.role === Role.AGENT);
 
         if (!shouldFilterByQualification) {
             return allCourses;
+        }
+
+        if (isStudentQualificationLoading || !studentDetails) {
+            return [];
         }
 
         if (!hasStudentQualification(studentQualificationSnapshot)) {
@@ -444,9 +454,18 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
         }
 
         return filterCoursesForStudentQualification(allCourses, studentQualificationSnapshot);
-    }, [allCourses, user?.role, studentDetails, studentQualificationSnapshot]);
+    }, [
+        allCourses,
+        user?.role,
+        selectedStudentId,
+        isStudentQualificationLoading,
+        studentDetails,
+        studentQualificationSnapshot,
+    ]);
 
-    const hasQualification = hasStudentQualification(studentQualificationSnapshot);
+    const hasQualification =
+        !isStudentQualificationLoading &&
+        hasStudentQualification(studentQualificationSnapshot);
     const { data: levels = [] } = useLevels();
 
     const { data: programDetailResponse, isLoading: isCourseDetailLoading } = useQuery({
@@ -842,6 +861,7 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
                         form={form}
                         courses={courses}
                         hasQualification={hasQualification}
+                        isStudentQualificationLoading={isStudentQualificationLoading}
                         students={students}
                         studentDetails={studentDetails}
                         selectedStudentId={selectedStudentId}
@@ -1432,6 +1452,7 @@ function Step2({
     form,
     courses,
     hasQualification,
+    isStudentQualificationLoading = false,
     students,
     studentDetails,
     selectedStudentId,
@@ -1453,6 +1474,7 @@ function Step2({
     form: CreateApplicationFormApi;
     courses: CourseProgram[];
     hasQualification: boolean;
+    isStudentQualificationLoading?: boolean;
     students: StudentListItem[];
     studentDetails?: ApplicationStudentDetail;
     selectedStudentId: string;
@@ -1714,14 +1736,25 @@ function Step2({
                                     <TableRow>
                                         <TableCell colSpan={6} className="px-8 py-20 text-center">
                                             <div className="flex flex-col items-center gap-2">
-                                                <Search className="size-8 text-gray-300" />
-                                                <Typography as="p" className="text-sm font-medium text-gray-500">
-                                                    {!hasQualification
-                                                        ? "Add the student's highest degree in their academic background to view eligible courses."
-                                                        : courses.length === 0
-                                                          ? "No courses available for this qualification level."
-                                                          : "No courses found matching your filters."}
-                                                </Typography>
+                                                {isStudentQualificationLoading ? (
+                                                    <>
+                                                        <Spinner size="md" />
+                                                        <Typography as="p" className="text-sm font-medium text-gray-500">
+                                                            Loading eligible courses for the selected student...
+                                                        </Typography>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Search className="size-8 text-gray-300" />
+                                                        <Typography as="p" className="text-sm font-medium text-gray-500">
+                                                            {!hasQualification
+                                                                ? "Add the student's highest degree in their academic background to view eligible courses."
+                                                                : courses.length === 0
+                                                                  ? "No courses available for this qualification level."
+                                                                  : "No courses found matching your filters."}
+                                                        </Typography>
+                                                    </>
+                                                )}
                                             </div>
                                         </TableCell>
                                     </TableRow>

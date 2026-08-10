@@ -48,8 +48,9 @@ function getTargetLevelsForSnapshot(snapshot: QualificationSnapshot): string[] {
         return getTargetCourseLevelsForHighestEducation(tier)
     }
 
-    if (snapshot.levelName?.trim()) {
-        return getTargetCourseLevelNames(snapshot.levelName)
+    if (snapshot.levelName?.trim() || snapshot.degreeName?.trim()) {
+        const mappingName = snapshot.levelName?.trim() || snapshot.degreeName?.trim() || ""
+        return getTargetCourseLevelNames(mappingName)
     }
 
     return []

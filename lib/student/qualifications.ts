@@ -1,4 +1,9 @@
 import { getLevelPriority } from "@/lib/utils/levels"
+import {
+    getHighestEducationLabel,
+    isHighestEducationLevel,
+    type HighestEducationLevel,
+} from "@/types/schemas/highest-education"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 
@@ -63,6 +68,39 @@ export async function resolveQualificationsById(
     return qualificationById
 }
 
+function getStoredQualificationPriority(
+    qualificationId: string,
+    resolved?: ResolvedQualification
+): number {
+    if (isHighestEducationLevel(qualificationId)) {
+        const enumPriority: Record<HighestEducationLevel, number> = {
+            higher_secondary: getLevelPriority("diploma"),
+            bachelor_ongoing: getLevelPriority("bachelor"),
+            bachelor_completed: getLevelPriority("bachelor"),
+            master: getLevelPriority("master"),
+        }
+        return enumPriority[qualificationId]
+    }
+
+    if (resolved) {
+        return getLevelPriority(resolved.level?.name ?? resolved.name)
+    }
+
+    return 0
+}
+
+function getStoredQualificationName(
+    qualificationId: string,
+    resolved?: ResolvedQualification
+): string | null {
+    if (isHighestEducationLevel(qualificationId)) {
+        const label = getHighestEducationLabel(qualificationId)
+        return label || null
+    }
+
+    return resolved?.name ?? null
+}
+
 export function resolveHighestQualificationName(
     educationRows: Array<{ qualification: string | null }>,
     qualificationById: Map<string, ResolvedQualification>
@@ -73,13 +111,14 @@ export function resolveHighestQualificationName(
     for (const row of educationRows) {
         if (!row.qualification) continue
 
-        const qualification = qualificationById.get(row.qualification)
-        if (!qualification) continue
+        const resolved = qualificationById.get(row.qualification)
+        const name = getStoredQualificationName(row.qualification, resolved)
+        if (!name) continue
 
-        const priority = getLevelPriority(qualification.level?.name ?? qualification.name)
+        const priority = getStoredQualificationPriority(row.qualification, resolved)
         if (priority > highestPriority) {
             highestPriority = priority
-            highestName = qualification.name
+            highestName = name
         }
     }
 

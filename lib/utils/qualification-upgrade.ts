@@ -40,7 +40,8 @@ export function resolveQualificationTier(
 ): HighestEducationLevel | "" {
     return normalizeHighestEducationFromStored(
         snapshot.qualification,
-        snapshot.levelName
+        snapshot.levelName,
+        snapshot.degreeName
     )
 }
 
@@ -51,8 +52,9 @@ function getTargetLevelKey(snapshot: QualificationSnapshot): string {
         return getTargetCourseLevelsForHighestEducation(tier).slice().sort().join("|")
     }
 
-    if (snapshot.levelName?.trim()) {
-        return getTargetCourseLevelNames(snapshot.levelName).slice().sort().join("|")
+    if (snapshot.levelName?.trim() || snapshot.degreeName?.trim()) {
+        const mappingName = snapshot.levelName?.trim() || snapshot.degreeName?.trim() || ""
+        return getTargetCourseLevelNames(mappingName).slice().sort().join("|")
     }
 
     return ""
