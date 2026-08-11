@@ -14,6 +14,7 @@ import {
     GraduationCap,
     Landmark,
     Layers,
+    Mail,
     MapPin,
     Menu,
     MessageSquare,
@@ -27,6 +28,7 @@ import {
     Users,
     X,
 } from "lucide-react"
+import { StudentStoriesSection } from "@/app/_components/student-stories-section"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
 
@@ -288,6 +290,57 @@ const testimonials = [
     { quote: "I chose Düren for the AI & Data Science programme because the cost of living is much lower than Berlin. I worked 20 hours a week at a local tech company which paid my rent entirely. The professors had industry backgrounds — no theory-only lecturers.", name: "Wei Zhong", degree: "M.Sc. AI & Data Science · China", role: "Now: Data Scientist, Tech Solutions, Aachen", avatar: "WZ" },
 ]
 
+/** Set `youtubeId` to the YouTube video ID for each story to enable embed playback. */
+const videoStories = [
+    {
+        id: "priya-journey",
+        youtubeId: "ftaXMKV3ffE",
+        title: "From India to Berlin — My FHM Journey",
+        name: "Priya Sharma",
+        subtitle: "M.Sc. AI & Data Science · India",
+        duration: "2:34",
+        avatar: "PS",
+    },
+    {
+        id: "chukwuemeka-germany",
+        youtubeId: "ftaXMKV3ffE",
+        title: "Why I Chose Germany Over the UK",
+        name: "Chukwuemeka Obi",
+        subtitle: "MBA General Tech Mgmt · Nigeria",
+        duration: "3:12",
+        avatar: "CO",
+    },
+    {
+        id: "fatima-frankfurt",
+        youtubeId: "ftaXMKV3ffE",
+        title: "From Egypt to Frankfurt in 18 Months",
+        name: "Fatima Al-Hassan",
+        subtitle: "M.A. International Management · Egypt",
+        duration: "2:58",
+        avatar: "FA",
+    },
+    {
+        id: "berlin-campus",
+        youtubeId: "ftaXMKV3ffE",
+        title: "FHM Berlin Campus — Official Tour",
+        name: "FHM International",
+        subtitle: "Berlin Campus · Ernst-Reuter-Platz",
+        duration: "4:15",
+        avatar: "FHM",
+        kind: "campus" as const,
+    },
+    {
+        id: "welcome-center",
+        youtubeId: "ftaXMKV3ffE",
+        title: "Your First Week in Germany — WelcomeCenter",
+        name: "WelcomeCenter Team",
+        subtitle: "FHM International Support",
+        duration: "3:40",
+        avatar: "WC",
+        kind: "guide" as const,
+    },
+]
+
 const accreditations = [
     { icon: "🏛️", text: "State-Recognised University" },
     { icon: "🇩🇪", text: "German Ministry of Education" },
@@ -332,14 +385,46 @@ const welcomeServices = [
 ]
 
 const faqItems = [
-    "Do I need to speak German for English-taught programmes?",
-    "How long does the German student visa take?",
-    "Can I work while studying in Germany?",
-    "What is the minimum academic score required?",
-    "Is IELTS mandatory? What if I don't have a score yet?",
-    "What happens after I graduate — can I stay in Germany?",
-    "How much does it cost in total to study at FHM?",
-    "How long does the application process take?",
+    {
+        question: "Do I need to speak German for English-taught programmes?",
+        answer:
+            "No. All Bachelor and Master programmes at FHM International are taught entirely in English. You do not need any German language skills to apply or study. However, we recommend learning basic German as it helps with daily life and significantly improves your job prospects in Germany after graduation. FHM offers free German language modules as part of most programmes.",
+    },
+    {
+        question: "How long does the German student visa take?",
+        answer:
+            "The German student visa typically takes 6–12 weeks from application to approval. Once you receive your offer letter from FHM, you apply at your local German Embassy or Consulate. FHM's WelcomeCenter provides full visa guidance and issues the official enrollment letter required for your application. Apply at least 3 months before your intended start date.",
+    },
+    {
+        question: "Can I work while studying in Germany?",
+        answer:
+            "Yes. International students in Germany can legally work up to 20 hours per week during the semester, and full-time (unlimited hours) during official semester breaks. Germany's minimum wage is €12.82/hour (2024), so 20 hours/week generates approximately €1,000/month — which comfortably covers most students' monthly living costs.",
+    },
+    {
+        question: "What is the minimum academic score required?",
+        answer:
+            "Requirements vary by programme. For Bachelor programmes, a minimum of 70% overall in your 10th and 12th grade is generally required (55% for International Business Administration at the Berlin campus). For Master programmes, a Bachelor's degree with a minimum of 55–60% is required. Our admissions team can review your transcripts and advise if you meet the criteria before you apply.",
+    },
+    {
+        question: "Is IELTS mandatory? What if I don't have a score yet?",
+        answer:
+            "IELTS 6.0 (or equivalent TOEFL 72+) is the standard requirement. However, if you completed your previous degree entirely in English, you may be exempt from providing a separate language certificate. If you haven't taken IELTS yet, you can still submit a conditional application — FHM can issue a conditional offer letter while you prepare for the test, which is sufficient for visa processing in most countries.",
+    },
+    {
+        question: "What happens after I graduate — can I stay in Germany?",
+        answer:
+            "Absolutely. After graduation, you receive an 18-month Job Seeker Visa which allows you to remain in Germany and find employment. Once employed in a role matching your qualification at the required salary threshold, you can apply for the EU Blue Card — a permanent work and residence permit with a fast-track to permanent residency (as little as 21 months for German speakers, 33 months otherwise). Germany actively wants skilled graduates to stay.",
+    },
+    {
+        question: "How much does it cost in total to study at FHM?",
+        answer:
+            "Tuition ranges from €13,500 (Study College/PSP) to €28,070 (some Bachelor programmes), payable over the duration of study in instalments. Add approximately €700–1,000/month for living costs. Working 20 hours/week can cover most or all of your living expenses. Compare this to the UK (£20,000+/yr tuition, £1,500+/month living) and Germany is significantly more affordable for the same quality of European degree.",
+    },
+    {
+        question: "How long does the application process take?",
+        answer:
+            "From submitting your application to receiving an offer letter typically takes 5–10 business days. Our admissions counsellors review every application personally and contact you within 24 hours of submission. Once documents are verified and the offer issued, the visa process begins — total time from application to arriving in Germany is typically 3–4 months.",
+    },
 ]
 
 const applyFeatures = ["Free Application", "5-Day Response", "Visa Support Included", "WelcomeCenter On Arrival", "Dedicated Counsellor", "Multiple Intakes / Year"]
@@ -349,6 +434,37 @@ const applySteps = [
     { title: "Counsellor contacts you within 24 hrs", description: "Personalised programme advice and eligibility check" },
     { title: "Submit documents & receive offer letter", description: "Official offer issued for your German student visa application" },
     { title: "Arrive in Germany — we welcome you!", description: "WelcomeCenter support from day one on campus" },
+]
+
+const footerProgrammes = [
+    { label: "Master Programmes", href: "#programs" },
+    { label: "Bachelor Programmes", href: "#programs" },
+    { label: "Study College / PSP", href: "#programs" },
+    { label: "Healthcare BSc", href: "#programs" },
+    { label: "All Programmes ↗", href: "#programs" },
+]
+
+const footerInformation = [
+    { label: "Studying in Germany", href: "#study-germany" },
+    { label: "Welcome Center", href: "#india-offices" },
+    { label: "International Office", href: "https://www.fhm-international.de/en/international-office/" },
+    { label: "Pathway to Success", href: "#journey" },
+    { label: "News & Events", href: "#" },
+    { label: "Partner Certification", href: "#" },
+]
+
+const footerContact = [
+    { icon: MapPin, lines: ["Ravensberger Str. 10G", "33602 Bielefeld, Germany"] },
+    { icon: Mail, lines: ["international@fh-mittelstand.de"] },
+    { icon: Phone, lines: ["+49 521 96655 100"] },
+    { icon: Globe, lines: ["www.fhm-international.de/en"] },
+]
+
+const footerSocial = [
+    { label: "LinkedIn", href: "#", glyph: "in" },
+    { label: "Facebook", href: "#", glyph: "f" },
+    { label: "Instagram", href: "#", glyph: "◎" },
+    { label: "YouTube", href: "#", glyph: "▶" },
 ]
 
 export const metadata: Metadata = {
@@ -373,9 +489,9 @@ export default function LandingPage() {
                             </Link>
                         ))}
                     </nav>
-                    <Link href="#apply" className="hidden sm:block">
+                    {/* <Link href="#apply" className="hidden sm:block">
                         <Button className={`${gradBtn} px-5`}>Apply Now →</Button>
-                    </Link>
+                    </Link> */}
                     <details className="group relative xl:hidden">
                         <summary className="flex cursor-pointer list-none items-center rounded-lg p-2 hover:bg-muted [&::-webkit-details-marker]:hidden">
                             <Menu className="size-6 group-open:hidden" />
@@ -385,7 +501,7 @@ export default function LandingPage() {
                             {navLinks.map((link) => (
                                 <Link key={link.label} href={link.href} className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-brand-byzantine/5">{link.label}</Link>
                             ))}
-                            <Link href="#apply" className="mt-3 block"><Button className={`w-full ${gradBtn}`}>Apply Now →</Button></Link>
+                            {/* <Link href="#apply" className="mt-3 block"><Button className={`w-full ${gradBtn}`}>Apply Now →</Button></Link> */}
                         </div>
                     </details>
                 </div>
@@ -411,10 +527,10 @@ export default function LandingPage() {
                         <Typography as="p" font="text-lg" className="max-w-lg text-muted-foreground">
                             Practice-oriented Bachelor, Master and Healthcare programmes for international students. Earn a state-recognised German degree and launch a global career.
                         </Typography>
-                        <div className="flex flex-wrap gap-3">
+                        {/* <div className="flex flex-wrap gap-3">
                             <Link href="#apply"><Button size="lg" className={gradBtn}>Apply Now →</Button></Link>
                             <Link href="#programs"><Button variant="outline" size="lg" className="rounded-xl border-gray-200 bg-white font-semibold text-brand-primary">Explore All Programmes</Button></Link>
-                        </div>
+                        </div> */}
                         <div className="flex flex-wrap gap-6 border-t border-gray-100 pt-4 sm:gap-10">
                             {[{ v: "22+", l: "Programmes Offered" }, { v: "6", l: "Campus Locations" }, { v: "50+", l: "Global Partners" }].map((s, i) => (
                                 <div key={s.l} className={`${i > 0 ? "border-l border-gray-200 pl-6 sm:pl-10" : ""}`}>
@@ -515,10 +631,10 @@ export default function LandingPage() {
                                     </Typography>
                                     {prog.extra && <Typography as="p" font="sub-text" className="mb-4 w-full text-muted-foreground">{prog.extra}</Typography>}
                                     <Typography as="p" font="sub-text" className="mb-4 w-full text-brand-primary">▸ Entry Requirements</Typography>
-                                    <div className="mt-auto flex w-full gap-2 pt-2">
+                                    {/* <div className="mt-auto flex w-full gap-2 pt-2">
                                         <Button variant="secondary" className="flex-1 rounded-xl bg-brand-byzantine/10 text-brand-byzantine">View Full Details ↗</Button>
                                         <Link href="#apply" className="flex-1"><Button className={`w-full ${gradBtn}`}>Apply Now →</Button></Link>
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
                         ))}
@@ -677,11 +793,11 @@ export default function LandingPage() {
                                 </tbody>
                             </table>
                         </div>
-                        <div className="border-t border-gray-100 bg-white p-3 sm:p-4">
+                        {/* <div className="border-t border-gray-100 bg-white p-3 sm:p-4">
                             <Link href="#apply" className="block">
                                 <Button className={`w-full ${gradBtn} py-2.5 text-sm`}>Apply for Germany Now →</Button>
                             </Link>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
             </section>
@@ -739,26 +855,7 @@ export default function LandingPage() {
                     <Typography as="p" font="text" className="mx-auto mb-8 max-w-3xl text-muted-foreground">
                         Hear directly from international students who chose FHM and built their careers in Germany — in their own words and on video.
                     </Typography>
-                    <div className="mb-10 inline-flex rounded-full border border-gray-200 bg-white p-1">
-                        <button type="button" className={`rounded-full px-5 py-2 text-sm font-semibold ${gradBtn}`}>💬 Written Reviews</button>
-                        <button type="button" className="rounded-full px-5 py-2 text-sm font-semibold text-muted-foreground">▶ Video Stories</button>
-                    </div>
-                    <div className="grid gap-6 text-left sm:grid-cols-2 lg:grid-cols-3">
-                        {testimonials.map((item) => (
-                            <div key={item.name} className={`${cardWhite} rounded-2xl`}>
-                                <div className="mb-3 flex gap-0.5">{Array.from({ length: 5 }).map((_, i) => <Star key={i} className="size-4 fill-amber-400 text-amber-400" />)}</div>
-                                <Typography as="p" font="sub-text" className="mb-6 italic text-muted-foreground">&ldquo;{item.quote}&rdquo;</Typography>
-                                <div className="flex items-center gap-3">
-                                    <div className="flex size-10 items-center justify-center rounded-full bg-brand-byzantine/10 text-sm font-bold text-brand-byzantine">{item.avatar}</div>
-                                    <div>
-                                        <Typography as="p" font="small" className="text-brand-primary">{item.name}</Typography>
-                                        <Typography as="p" font="sub-text" className="text-brand-byzantine">{item.degree}</Typography>
-                                        <Typography as="p" font="sub-text" className="text-muted-foreground">{item.role}</Typography>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <StudentStoriesSection testimonials={testimonials} videoStories={videoStories} />
                 </div>
             </section>
 
@@ -784,18 +881,18 @@ export default function LandingPage() {
                     <Typography as="p" font="text" className="mx-auto mb-12 max-w-3xl text-muted-foreground">
                         FHM International has dedicated WelcomeCenter offices in India — so you get face-to-face guidance, document support and visa counselling from our trained team before you even leave the country.
                     </Typography>
-                    <div className="grid gap-8 text-left lg:grid-cols-2">
+                    <div className="grid items-stretch gap-8 text-left lg:grid-cols-2">
                         {indiaOffices.map((office) => (
-                            <div key={office.city} className={`${cardWhite} overflow-hidden rounded-2xl p-0`}>
-                                <div className="h-1 bg-gradient-to-r from-orange-400 to-green-500" />
-                                <div className="p-6">
+                            <div key={office.city} className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                                <div className="h-[3px] w-full shrink-0 bg-gradient-to-r from-orange-400 to-green-500" />
+                                <div className="flex flex-1 flex-col p-6">
                                     <div className="mb-4 flex items-start justify-between gap-4">
                                         <div>
                                             <Typography as="p" font="title" className={`${serifHeading} mb-1`}>IN</Typography>
                                             <Typography as="h3" font="title" className={`${serifHeading} text-brand-primary`}>{office.title}</Typography>
                                             <Typography as="p" font="sub-text" className="text-brand-byzantine">{office.region}</Typography>
                                         </div>
-                                        <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700"><MapPin className="size-3" />{office.city}</span>
+                                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700"><MapPin className="size-3" />{office.city}</span>
                                     </div>
                                     <div className="mb-6 space-y-3 rounded-xl bg-brand-input/80 p-4">
                                         <Typography as="p" font="sub-text" className="flex items-start gap-2 text-muted-foreground"><MapPin className="mt-0.5 size-4 shrink-0 text-red-500" />{office.address}</Typography>
@@ -803,7 +900,7 @@ export default function LandingPage() {
                                         <Typography as="p" font="sub-text" className="text-muted-foreground">✉ {office.email}</Typography>
                                         <Typography as="p" font="sub-text" className="flex items-center gap-2 text-muted-foreground"><Clock className="size-4 shrink-0" />{office.hours}</Typography>
                                     </div>
-                                    <Button className="w-full rounded-xl bg-green-500 font-semibold text-white hover:bg-green-600">💬 {office.whatsapp}</Button>
+                                    {/* <Button className="mt-auto w-full rounded-xl bg-green-500 font-semibold text-white hover:bg-green-600">💬 {office.whatsapp}</Button> */}
                                 </div>
                             </div>
                         ))}
@@ -839,10 +936,10 @@ export default function LandingPage() {
                                 Walk in, call us or WhatsApp — our Chandigarh and Surat counsellors are available 6 days a week to guide you towards your German degree.
                             </Typography>
                         </div>
-                        <div className="flex w-full shrink-0 flex-col gap-3 sm:w-auto">
+                        {/* <div className="flex w-full shrink-0 flex-col gap-3 sm:w-auto">
                             <Link href="#apply"><Button className={`w-full sm:w-56 ${gradBtn}`}>Apply Online Now →</Button></Link>
                             <Button className="w-full rounded-xl bg-green-500 font-semibold text-white hover:bg-green-600 sm:w-56">💬 WhatsApp Us Now</Button>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
             </section>
@@ -853,12 +950,15 @@ export default function LandingPage() {
                     <Typography as="p" className={`${labelCaps} mb-3`}>Frequently Asked Questions</Typography>
                     <Typography as="h2" font="sub-heading" className={`${serifHeading} mx-auto mb-12 max-w-md`}>Everything You Want to Know</Typography>
                     <div className="mx-auto max-w-3xl space-y-3 text-left">
-                        {faqItems.map((question) => (
-                            <details key={question} className={`${cardWhite} group rounded-xl`}>
-                                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-brand-primary [&::-webkit-details-marker]:hidden">
-                                    <Typography as="span" font="sub-text" className="font-semibold">{question}</Typography>
+                        {faqItems.map((item) => (
+                            <details key={item.question} className={`${cardWhite} group rounded-xl`}>
+                                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-1 py-1 font-semibold text-brand-primary [&::-webkit-details-marker]:hidden">
+                                    <Typography as="span" font="sub-text" className="font-semibold">{item.question}</Typography>
                                     <ChevronRight className="size-4 shrink-0 text-brand-byzantine transition-transform group-open:rotate-90" />
                                 </summary>
+                                <Typography as="p" font="sub-text" className="mt-3 border-t border-gray-100 pt-3 text-muted-foreground">
+                                    {item.answer}
+                                </Typography>
                             </details>
                         ))}
                     </div>
@@ -909,7 +1009,7 @@ export default function LandingPage() {
                                 ))}
                             </div>
                         </div>
-                        <form className="space-y-4 p-6">
+                        {/* <form className="space-y-4 p-6">
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div><label htmlFor="fname"><Typography as="span" font="sub-text" className="text-muted-foreground">First name *</Typography></label><input id="fname" className="mt-1 w-full border-b border-gray-200 bg-transparent py-2 text-sm outline-none focus:border-brand-byzantine" /></div>
                                 <div><label htmlFor="lname"><Typography as="span" font="sub-text" className="text-muted-foreground">Last name</Typography></label><input id="lname" className="mt-1 w-full border-b border-gray-200 bg-transparent py-2 text-sm outline-none focus:border-brand-byzantine" /></div>
@@ -938,24 +1038,92 @@ export default function LandingPage() {
                                 <Typography as="span" font="sub-text" className="text-muted-foreground">I agree to the terms and privacy policy *</Typography>
                             </label>
                             <Button type="submit" className={`w-full py-3 ${gradBtn}`}>Apply Now</Button>
-                        </form>
+                        </form> */}
+                        <div className="p-6">
+                            <Link href="/signup?role=student">
+                                <Button className={`w-full py-3 ${gradBtn}`}>Apply Now</Button>
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </section>
 
             {/* ── Footer ── */}
-            <footer className="border-t border-gray-100 bg-brand-primary py-12 text-white">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-                        <Image src="/logo.png" alt="FHM International" width={140} height={42} className="h-9 w-auto brightness-0 invert" />
-                        <Typography as="p" font="sub-text" className="text-center text-white/70">
-                            © 2024 FHM International. All Rights Reserved. Designed by admission system team.
-                        </Typography>
-                        <div className="flex gap-3">
-                            {[Share2, MessageSquare, X, Users].map((Icon, i) => (
-                                <Link key={i} href="#" className="flex size-9 items-center justify-center rounded-full border border-white/20 text-white/70 hover:border-white hover:text-white"><Icon className="size-4" /></Link>
-                            ))}
+            <footer className={`${gridSection} border-t border-gray-100`}>
+                <div className={`${sectionInner} py-12 lg:py-16`}>
+                    <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-12">
+                        <div className="sm:col-span-2 lg:col-span-1">
+                            <Link href="/" className="mb-4 inline-block">
+                                <Image src="/logo-dark.png" alt="FHM International" width={180} height={54} className="h-12 w-auto" />
+                            </Link>
+                            <Typography as="h3" font="title" className={`${serifHeading} mb-1`}>FHM International</Typography>
+                            <Typography as="p" className={`${labelCaps} mb-4 text-[10px]`}>Fachhochschule des Mittelstands</Typography>
+                            <Typography as="p" font="sub-text" className="mb-6 max-w-xs text-muted-foreground">
+                                Practice-oriented higher education for international students. Building global careers from the heart of Germany since 1999.
+                            </Typography>
+                            <div className="flex flex-wrap gap-3">
+                                {footerSocial.map((social) => (
+                                    <Link
+                                        key={social.label}
+                                        href={social.href}
+                                        aria-label={social.label}
+                                        className="flex size-10 items-center justify-center rounded-lg border border-gray-100 bg-white text-sm font-bold text-brand-byzantine shadow-sm transition-colors hover:border-brand-byzantine/30 hover:text-brand-blue"
+                                    >
+                                        {social.glyph}
+                                    </Link>
+                                ))}
+                            </div>
                         </div>
+
+                        <div>
+                            <Typography as="p" className={`${labelCaps} mb-5 text-[11px]`}>Programmes</Typography>
+                            <ul className="space-y-3">
+                                {footerProgrammes.map((link) => (
+                                    <li key={link.label}>
+                                        <Link href={link.href} className="text-sm text-muted-foreground transition-colors hover:text-brand-byzantine">
+                                            {link.label}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <Typography as="p" className={`${labelCaps} mb-5 text-[11px]`}>Information</Typography>
+                            <ul className="space-y-3">
+                                {footerInformation.map((link) => (
+                                    <li key={link.label}>
+                                        <Link href={link.href} className="text-sm text-muted-foreground transition-colors hover:text-brand-byzantine">
+                                            {link.label}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div>
+                            <Typography as="p" className={`${labelCaps} mb-5 text-[11px]`}>Contact</Typography>
+                            <ul className="space-y-4">
+                                {footerContact.map((item) => (
+                                    <li key={item.lines.join("-")} className="flex gap-3">
+                                        <item.icon className="mt-0.5 size-4 shrink-0 text-brand-byzantine" />
+                                        <div>
+                                            {item.lines.map((line) => (
+                                                <Typography key={line} as="p" font="sub-text" className="text-muted-foreground">
+                                                    {line}
+                                                </Typography>
+                                            ))}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div className="relative mt-12 border-t border-gray-100 pt-8">
+                        <Typography as="p" font="sub-text" className="text-center text-muted-foreground">
+                            © {new Date().getFullYear()} FHM International. All Rights Reserved.
+                        </Typography>
                     </div>
                 </div>
             </footer>
