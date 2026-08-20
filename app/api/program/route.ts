@@ -97,10 +97,10 @@ export async function GET(req: NextRequest) {
             matchingDegreeIds = (degrees ?? []).map((row) => row.id)
         }
 
-        const getBaseQuery = () => {
+        const getBaseQuery = (withCount: boolean) => {
             let query = supabase
                 .from("course")
-                .select(COURSE_SELECT, { count: "exact" })
+                .select(COURSE_SELECT, withCount ? { count: "exact" } : undefined)
                 .eq("is_deleted", false)
 
             if (filterDegreeIds) {
@@ -120,7 +120,12 @@ export async function GET(req: NextRequest) {
             return query
         }
 
-        const { count: totalCount, error: countError } = await getBaseQuery().limit(0)
+        const [{ count: totalCount, error: countError }, listResult] = await Promise.all([
+            getBaseQuery(true).limit(0),
+            getBaseQuery(false)
+                .order("name", { ascending: true })
+                .range(offset, offset + limit - 1),
+        ])
 
         if (countError) {
             console.error("course count error:", countError)
@@ -137,9 +142,7 @@ export async function GET(req: NextRequest) {
             })
         }
 
-        const { data, error } = await getBaseQuery()
-            .order("name", { ascending: true })
-            .range(offset, offset + limit - 1)
+        const { data, error } = listResult
 
         if (error) {
             console.error("course fetch error:", error)
