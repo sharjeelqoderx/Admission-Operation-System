@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useQueryClient } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
-import { PageLoader } from "@/components/shared/page-loader"
+import { PanelSkeleton } from "@/components/shared/page-skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -103,7 +103,7 @@ export function DegreeDocumentsPanel({
     )
 
     if (isLoading) {
-        return <PageLoader />
+        return <PanelSkeleton />
     }
 
     if (isError) {

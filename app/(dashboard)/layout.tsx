@@ -7,7 +7,7 @@ import { SidebarItem } from '@/components/shared/sidebar-item';
 import { SidebarGroup } from '@/components/shared/sidebar-group';
 import { Navbar } from '@/components/shared/navbar';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLoader } from '@/components/shared/page-loader';
+import { DashboardShellSkeleton } from '@/components/shared/page-skeleton';
 import { isUniversityRole } from '@/lib/auth/university-role';
 import { Role } from '@/types/enums/role';
 import {
@@ -219,7 +219,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Only block the shell on the initial auth load — not on background refetches.
   if (isLoading && !currentUser) {
-    return <PageLoader fullScreen />;
+    return <DashboardShellSkeleton />;
   }
 
   const role = (currentUser?.role as Role) ?? Role.STUDENT;

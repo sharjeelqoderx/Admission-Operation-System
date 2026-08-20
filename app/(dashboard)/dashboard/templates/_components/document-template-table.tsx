@@ -2,7 +2,7 @@
 
 import { memo } from "react"
 import { AlertCircle, FileText } from "lucide-react"
-import { PageLoader } from "@/components/shared/page-loader"
+import { TableSkeleton } from "@/components/shared/table-skeleton"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { DocumentTemplateRowActionsMenu } from "./document-template-row-actions-menu"
@@ -76,7 +76,7 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                 childClass="p-0!"
                 className="rounded-lg p-0"
             >
-                <PageLoader className="py-24" />
+                <TableSkeleton columns={5} rows={6} showFooter />
             </BluryCard>
         )
     }

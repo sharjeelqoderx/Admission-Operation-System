@@ -13,7 +13,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Typography } from "@/components/shared/Typography"
 import { StatusBadge } from "@/components/shared/StatusBadge"
-import { PageLoader } from "@/components/shared/page-loader"
+import { TableSkeleton } from "@/components/shared/table-skeleton"
 
 
 export type ApplicationRow = {
@@ -60,11 +60,32 @@ export const ApplicationTable = React.memo(function ApplicationTable({ applicati
 
                     <TableBody className="divide-y divide-white/10">
                         {isLoading ? (
-                            <TableRow>
-                                <TableCell colSpan={6} className="px-8 py-12 text-center">
-                                    <PageLoader className="min-h-[200px]" />
-                                </TableCell>
-                            </TableRow>
+                            <>
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        {Array.from({ length: 5 }).map((_, j) => (
+                                            <TableCell key={j} className="px-8 py-6">
+                                                <div className="space-y-2">
+                                                    <div 
+                                                        className="h-4 bg-gray-200/60 rounded animate-pulse" 
+                                                        style={{ 
+                                                            width: `${60 + Math.random() * 40}%` 
+                                                        }}
+                                                    />
+                                                    {j === 0 && (
+                                                        <div 
+                                                            className="h-3 bg-gray-200/40 rounded animate-pulse" 
+                                                            style={{ 
+                                                                width: `${40 + Math.random() * 30}%` 
+                                                            }}
+                                                        />
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))}
+                            </>
                         ) : applications.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="px-8 py-12 text-center">

@@ -2,7 +2,8 @@
 
 import { memo, useMemo } from "react"
 import { CheckCircle2, Circle, FileText } from "lucide-react"
-import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { Spinner } from "@/components/shared/page-loader"
+import { PanelSkeleton } from "@/components/shared/page-skeleton"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
 import {
@@ -106,7 +107,7 @@ const CreateOfferModalView = memo(function CreateOfferModalView({
 
                 <div className="flex-1 overflow-y-auto min-h-0 py-2">
                     {isLoading ? (
-                        <PageLoader className="py-16" />
+                        <PanelSkeleton className="py-4" rows={5} />
                     ) : isError ? (
                         <div className="space-y-3">
                             <ErrorView message={errorMessage} />

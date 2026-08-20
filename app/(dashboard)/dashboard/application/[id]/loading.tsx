@@ -1,5 +1,9 @@
-import { PageLoader } from "@/components/shared/page-loader"
+import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
 
 export default function Loading() {
-    return <PageLoader className="min-h-[60vh]" />
+    return (
+        <div className="min-h-[60vh]">
+            <DetailPageSkeleton />
+        </div>
+    )
 }

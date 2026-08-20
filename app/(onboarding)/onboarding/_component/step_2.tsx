@@ -9,7 +9,7 @@ import { degreeStep2Schema } from "@/types/schemas/auth"
 import type { z } from "zod"
 import { F } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
-import { PageLoader } from "@/components/shared/page-loader"
+import { FormPageSkeleton } from "@/components/shared/page-skeleton"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import {
     type AcademicFormItem,
@@ -282,7 +282,7 @@ export function Step2Academic({ onBack, onNext }: { onBack: () => void; onNext: 
     const { me } = useAuth()
     const { data: meData, isLoading } = me
 
-    if (isLoading) return <PageLoader />
+    if (isLoading) return <FormPageSkeleton />
 
     const academics: AcademicFormItem[] = meData?.academic?.length
         ? meData.academic.map(mapAcademicToFormItem)

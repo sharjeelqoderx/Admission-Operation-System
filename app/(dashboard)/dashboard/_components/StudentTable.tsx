@@ -12,7 +12,8 @@ import {
     SquareArrowOutUpRight,
     Trash2,
 } from "lucide-react"
-import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { Spinner } from "@/components/shared/page-loader"
+import { TableSkeleton } from "@/components/shared/table-skeleton"
 import { requiresApsRequirement } from "@/lib/utils/aps"
 import {
     Table,
@@ -146,7 +147,7 @@ export const StudentTable = React.memo(function StudentTable({
                 childClass="p-0!"
                 className="rounded-lg p-0"
             >
-                <PageLoader className="py-24" />
+                <TableSkeleton columns={COLUMN_COUNT} rows={5} showFooter={true} />
             </BluryCard>
         )
     }

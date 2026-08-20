@@ -3,7 +3,7 @@
 import { use, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { PageLoader } from "@/components/shared/page-loader"
+import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
 import { CourseDocumentsView } from "../../_component/course-documents-view"
 
 type PageProps = {
@@ -44,7 +44,7 @@ export default function StudentDocumentsPage({ params }: PageProps) {
     })
 
     if (isLoading) {
-        return <PageLoader />
+        return <DetailPageSkeleton />
     }
 
     return (

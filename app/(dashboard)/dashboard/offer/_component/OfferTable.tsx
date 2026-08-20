@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, AlertCircle, Copy, Check } from "lucide-react"
-import { PageLoader } from "@/components/shared/page-loader"
+import { TableSkeleton } from "@/components/shared/table-skeleton"
 import Link from "next/link"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -86,7 +86,7 @@ export const OfferTable = React.memo(function OfferTable({
                 childClass="p-0!"
                 className="rounded-lg p-0"
             >
-                <PageLoader className="py-24" />
+                <TableSkeleton columns={COLUMN_COUNT} rows={5} showFooter={true} />
             </BluryCard>
         )
     }

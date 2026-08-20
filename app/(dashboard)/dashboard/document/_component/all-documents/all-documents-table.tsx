@@ -19,7 +19,7 @@ import {
     ChevronLeft,
     ChevronRight,
 } from "lucide-react"
-import { PageLoader } from "@/components/shared/page-loader"
+import { TableSkeleton } from "@/components/shared/table-skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import type { AgentAllDocumentRow } from "@/types/schemas/document"
@@ -104,7 +104,7 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                 childClass="p-0!"
                 className="rounded-lg p-0"
             >
-                <PageLoader className="py-24" />
+                <TableSkeleton columns={6} rows={6} showFooter />
             </BluryCard>
         )
     }

@@ -13,7 +13,7 @@ import { useDebounce } from "@/hooks/use-debounce"
 import { useLevels } from "@/hooks/useLevels"
 import { getLevelPriority, getLevelBadgeStyle } from "@/lib/utils/levels"
 import { Button } from "@/components/ui/button"
-import { PageLoader } from "@/components/shared/page-loader"
+import { CardsGridSkeleton } from "@/components/shared/page-skeleton"
 import type { ProgramListResponse } from "@/types/schemas/program"
 import { Role } from "@/types/enums/role"
 
@@ -226,7 +226,7 @@ export function AgentStudentProgramPage() {
             </div>
 
             {isPageLoading ? (
-                <PageLoader />
+                <CardsGridSkeleton />
             ) : isError ? (
                 <div className="flex flex-col items-center justify-center py-32 text-center space-y-4">
                     <div className="size-16 rounded-2xl bg-red-50 flex items-center justify-center">
