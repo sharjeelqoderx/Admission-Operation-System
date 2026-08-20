@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { Input } from "@/components/ui/input"
 import { StudentTable } from "../../_components/StudentTable"
-import { PageLoader } from "@/components/shared/page-loader"
+import { ListPageSkeleton } from "@/components/shared/page-skeleton"
 import { BluryCard } from "@/components/shared/blury-card"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -255,7 +255,7 @@ export function AgentStudentPage() {
     })
 
     if (me.isLoading) {
-        return <PageLoader />
+        return <ListPageSkeleton />
     }
 
     return (

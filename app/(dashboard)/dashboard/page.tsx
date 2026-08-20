@@ -3,11 +3,11 @@ import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityOverviewForPage } from "@/lib/university-overview/server"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
-import { PageLoader } from "@/components/shared/page-loader"
+import { DashboardPageSkeleton } from "@/components/shared/page-skeleton"
 
 const ClientDashboard = dynamic(
     () => import("./_components/client-dashboard").then((mod) => mod.ClientDashboard),
-    { loading: () => <PageLoader /> }
+    { loading: () => <DashboardPageSkeleton /> }
 )
 
 const UniversityOverviewPageContent = dynamic(
@@ -15,7 +15,7 @@ const UniversityOverviewPageContent = dynamic(
         import("./_components/university-overview/page-content").then(
             (mod) => mod.UniversityOverviewPageContent
         ),
-    { loading: () => <PageLoader /> }
+    { loading: () => <DashboardPageSkeleton /> }
 )
 
 export default async function DashboardPage() {

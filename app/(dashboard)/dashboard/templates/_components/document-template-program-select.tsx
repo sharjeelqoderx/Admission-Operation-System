@@ -3,7 +3,7 @@
 import { memo, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
-import { PageLoader } from "@/components/shared/page-loader"
+import { PanelSkeleton } from "@/components/shared/page-skeleton"
 import { ErrorView } from "@/components/shared/error-view"
 import { Label } from "@/components/ui/label"
 import {
@@ -81,7 +81,7 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
             </Typography>
 
             {programOptionsQuery.isLoading ? (
-                <PageLoader className="py-6" />
+                <PanelSkeleton className="py-2" rows={2} />
             ) : programOptionsQuery.isError ? (
                 <ErrorView
                     message={

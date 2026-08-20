@@ -3,7 +3,7 @@ import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
 import { fetchUniversityStudentsForPage } from "@/lib/student/university-server"
 import { fetchStudentDashboardPageData } from "@/lib/student/server"
-import { PageLoader } from "@/components/shared/page-loader"
+import { ListPageSkeleton } from "@/components/shared/page-skeleton"
 import { PageContent } from "./_components/page-content"
 import { UniversityStudentListPageContent } from "./_components/university-student/page-content"
 import { isUniversityRole } from "@/lib/auth/university-role"
@@ -40,7 +40,7 @@ export default async function StudentPage({ searchParams }: StudentPageProps) {
         }
 
         return (
-            <Suspense fallback={<PageLoader />}>
+            <Suspense fallback={<ListPageSkeleton />}>
                 <UniversityStudentListPageContent initialOverview={initialOverview} />
             </Suspense>
         )

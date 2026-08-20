@@ -56,13 +56,13 @@ export function AgentDashboard() {
     const stats = useMemo(() => [
         {
             title: 'Total Students',
-            value: isLoading ? '—' : (data?.total_students ?? 0).toLocaleString(),
+            value: (data?.total_students ?? 0).toLocaleString(),
             icon: GraduationCap,
             color: 'text-black',
         },
         {
             title: 'Active Applications',
-            value: isLoading ? '—' : (data?.active_applications ?? 0).toLocaleString(),
+            value: (data?.active_applications ?? 0).toLocaleString(),
             icon: FileText,
             color: 'text-black',
         },
@@ -74,11 +74,11 @@ export function AgentDashboard() {
         },
         {
             title: 'Pending Actions',
-            value: isLoading ? '—' : (data?.pending_actions ?? 0).toLocaleString(),
+            value: (data?.pending_actions ?? 0).toLocaleString(),
             icon: Clock,
             color: 'text-black',
         },
-    ], [data, isLoading])
+    ], [data])
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
@@ -92,7 +92,24 @@ export function AgentDashboard() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
-                {stats.map((stat, index) => (
+                {isLoading
+                    ? Array.from({ length: 4 }).map((_, index) => (
+                          <BluryCard
+                              key={index}
+                              isCentered={false}
+                              blurAmount="backdrop-blur-lg"
+                              blendColorClass="bg-white/10"
+                          >
+                              <div className="space-y-6">
+                                  <div className="size-12 rounded-lg bg-gray-200/60 animate-pulse" />
+                                  <div className="space-y-2">
+                                      <div className="h-3 w-24 bg-gray-200/40 rounded animate-pulse" />
+                                      <div className="h-8 w-16 bg-gray-200/60 rounded animate-pulse" />
+                                  </div>
+                              </div>
+                          </BluryCard>
+                      ))
+                    : stats.map((stat, index) => (
                     <BluryCard
                         key={index}
                         isCentered={false}
@@ -110,7 +127,7 @@ export function AgentDashboard() {
                                 <Typography
                                     font='title'
                                     as={'p'}
-                                    className={cn('font-bold', isLoading && 'animate-pulse text-gray-400')}
+                                    className="font-bold"
                                 >
                                     {stat.value}
                                 </Typography>

@@ -5,7 +5,8 @@ import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
-import { PageLoader } from "@/components/shared/page-loader"
+import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
+import { TableSkeleton } from "@/components/shared/table-skeleton"
 import {
     Table,
     TableBody,
@@ -93,7 +94,7 @@ export function AgentStudentDetailPage({ studentId: id }: AgentStudentDetailPage
 
     const studentApplications = Array.isArray(applicationsData) ? applicationsData : []
 
-    if (isLoading) return <PageLoader />
+    if (isLoading) return <DetailPageSkeleton />
     if (isError || !student) return (
         <div className="py-20 text-center">
             <Typography as="p" font="sub-text" className="font-bold text-gray-500">Student not found.</Typography>
@@ -279,6 +280,9 @@ export function AgentStudentDetailPage({ studentId: id }: AgentStudentDetailPage
                     className='rounded-lg p-0'
                 >
                     <div className="overflow-x-auto">
+                        {appsLoading ? (
+                            <TableSkeleton columns={5} rows={3} showFooter={false} />
+                        ) : (
                         <Table className="w-full min-w-[900px]">
                             <TableHeader>
                                 <TableRow className="border-b border-white/20 bg-white/30 hover:bg-white/30">
@@ -291,13 +295,7 @@ export function AgentStudentDetailPage({ studentId: id }: AgentStudentDetailPage
 
                             </TableHeader>
                             <TableBody className="divide-y divide-white/10">
-                                {appsLoading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="px-8 py-10">
-                                            <PageLoader className="min-h-0 py-2" size="sm" />
-                                        </TableCell>
-                                    </TableRow>
-                                ) : studentApplications.length === 0 ? (
+                                {studentApplications.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="px-8 py-10 text-center">
                                             <Typography as="p" className="text-sm text-gray-500">No applications found for this student.</Typography>
@@ -339,6 +337,7 @@ export function AgentStudentDetailPage({ studentId: id }: AgentStudentDetailPage
                                 ))}
                             </TableBody>
                         </Table>
+                        )}
                     </div>
 
                     <div className="flex items-center justify-between px-8 py-5 border-t border-white/20 bg-white/5">

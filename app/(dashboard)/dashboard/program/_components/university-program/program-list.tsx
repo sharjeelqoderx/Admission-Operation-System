@@ -6,7 +6,7 @@ import { Clock, MapPin, ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
-import { PageLoader } from "@/components/shared/page-loader"
+import { CardsGridSkeleton } from "@/components/shared/page-skeleton"
 import {
     Dialog,
     DialogContent,
@@ -227,7 +227,7 @@ export const UniversityProgramList = memo<UniversityProgramListProps>(function U
     onDelete,
 }: UniversityProgramListProps) {
     if (isLoading) {
-        return <PageLoader className="py-12" />
+        return <CardsGridSkeleton className="py-12" />
     }
 
     if (programs.length === 0) {

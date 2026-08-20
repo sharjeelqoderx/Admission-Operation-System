@@ -11,7 +11,8 @@ import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
 import { FilePreview } from "@/components/shared/FilePreview"
 import { useAuth } from "@/hooks/useAuth"
-import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { Spinner } from "@/components/shared/page-loader"
+import { FormPageSkeleton, PanelSkeleton } from "@/components/shared/page-skeleton"
 import { useDegrees } from "@/hooks/useDegrees"
 import { useLevels } from "@/hooks/useLevels"
 import {
@@ -496,7 +497,7 @@ function SupportingDocumentsSection({
                 </div>
 
                 {isDocumentsLoading ? (
-                    <PageLoader className="py-14 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200" />
+                    <PanelSkeleton className="py-8 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200" rows={3} />
                 ) : requiredDocTypes.length > 0 || optionalDocTypes.length > 0 ? (
                     <div className="space-y-6">
                         {requiredDocTypes.length > 0 && (
@@ -809,7 +810,7 @@ export function Step4Application({ onBack }: { onBack: () => void }) {
     }, [applicationRequiredDocTypes, documents, mutation, pendingFiles, router, selectedCourseId])
 
     if (isLoading || loadingDegrees || (isFetching && !hasQualification)) {
-        return <PageLoader />
+        return <FormPageSkeleton />
     }
 
     return (

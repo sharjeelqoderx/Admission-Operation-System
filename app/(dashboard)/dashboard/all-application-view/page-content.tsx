@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select"
 import { BluryCard } from "@/components/shared/blury-card"
 import { DatePicker } from "@/components/shared/date-picker"
-import { PageLoader } from "@/components/shared/page-loader"
+import { ListPageSkeleton } from "@/components/shared/page-skeleton"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import { ApplicationsListTable } from "@/app/(dashboard)/dashboard/application/_components/applications-list-table"
 import { Role } from "@/types/enums/role"
@@ -90,7 +90,11 @@ const AllApplicationView = memo(function AllApplicationView({
                             as="p"
                             className="text-[28px] font-extrabold text-gray-900 leading-none"
                         >
-                            {isLoading ? "—" : stats.total}
+                            {isLoading ? (
+                                <span className="inline-block h-7 w-14 rounded bg-gray-200/60 animate-pulse align-middle" />
+                            ) : (
+                                stats.total
+                            )}
                         </Typography>
                     </div>
                 </div>
@@ -115,7 +119,11 @@ const AllApplicationView = memo(function AllApplicationView({
                             as="p"
                             className="text-[28px] font-extrabold text-gray-900 leading-none"
                         >
-                            {isLoading ? "—" : stats.pending}
+                            {isLoading ? (
+                                <span className="inline-block h-7 w-14 rounded bg-gray-200/60 animate-pulse align-middle" />
+                            ) : (
+                                stats.pending
+                            )}
                         </Typography>
                     </div>
                 </div>
@@ -140,7 +148,11 @@ const AllApplicationView = memo(function AllApplicationView({
                             as="p"
                             className="text-[28px] font-extrabold text-gray-900 leading-none"
                         >
-                            {isLoading ? "—" : stats.accepted}
+                            {isLoading ? (
+                                <span className="inline-block h-7 w-14 rounded bg-gray-200/60 animate-pulse align-middle" />
+                            ) : (
+                                stats.accepted
+                            )}
                         </Typography>
                     </div>
                 </div>
@@ -238,7 +250,7 @@ const AllApplicationViewContent = withAllApplicationViewLogic(AllApplicationView
 
 export function PageContent({ initialData }: PageContentProps) {
     return (
-        <Suspense fallback={<PageLoader className="min-h-[60vh]" />}>
+        <Suspense fallback={<ListPageSkeleton />}>
             <AllApplicationViewContent initialData={initialData} />
         </Suspense>
     )

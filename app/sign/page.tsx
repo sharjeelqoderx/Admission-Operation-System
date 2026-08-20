@@ -7,7 +7,8 @@ import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
-import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { Spinner } from "@/components/shared/page-loader"
+import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
 import { Download, Eye, Mail, GraduationCap, Calendar, ChevronLeft, Building2, Clock, MessageSquare, FileCheck, AlertCircle, CheckCircle2, X, CreditCard, ArrowRight, Check } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -682,7 +683,11 @@ function SignPageContent() {
     ])
 
     if (isDownloadingConditionalLetter) {
-        return <PageLoader />
+        return (
+            <div className="flex min-h-[40vh] items-center justify-center">
+                <Spinner size="lg" />
+            </div>
+        )
     }
 
     if (!offerId || !userId) {
@@ -697,7 +702,7 @@ function SignPageContent() {
     }
 
     if (isLoading) {
-        return <PageLoader />
+        return <DetailPageSkeleton />
     }
 
     if (isError || !offer) {
@@ -1015,7 +1020,7 @@ function SignPageContent() {
 
 export default function SignPage() {
     return (
-        <Suspense fallback={<PageLoader />}>
+        <Suspense fallback={<DetailPageSkeleton />}>
             <SignPageContent />
         </Suspense>
     )

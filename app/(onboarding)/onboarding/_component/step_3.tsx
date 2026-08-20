@@ -14,7 +14,7 @@ import {
 import type { z } from "zod"
 import { COUNTRIES, F, INDUSTRIES } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
-import { PageLoader } from "@/components/shared/page-loader"
+import { FormPageSkeleton } from "@/components/shared/page-skeleton"
 
 type Defaults = z.input<typeof onboardingExperienceStepSchema>
 
@@ -279,7 +279,7 @@ export function Step3Experience({ onBack, onNext }: { onBack: () => void; onNext
     const { me } = useAuth()
     const { data: meData, isLoading } = me
 
-    if (isLoading) return <PageLoader />
+    if (isLoading) return <FormPageSkeleton />
 
     const experiences: ExperienceFormItem[] = meData?.experience?.entries?.length
         ? meData.experience.entries.map(mapExperienceToFormItem)

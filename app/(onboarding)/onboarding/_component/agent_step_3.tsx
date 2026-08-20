@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { F } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
-import { PageLoader } from "@/components/shared/page-loader"
+import { FormPageSkeleton } from "@/components/shared/page-skeleton"
 
 const schema = z.object({
     other_contact_number: z.string().trim(),
@@ -84,7 +84,7 @@ export function AgentStep3({ onBack }: { onBack: () => void }) {
     const { data: meData, isLoading } = me
 
     if (isLoading) {
-        return <PageLoader />
+        return <FormPageSkeleton />
     }
 
     const agentProfile = meData?.profile as { other_contact_number?: string | null } | undefined

@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
-import { PageLoader } from "@/components/shared/page-loader"
+import { TableSkeleton } from "@/components/shared/table-skeleton"
 import { StudentPipelineBadge } from "@/components/shared/student-pipeline-badge"
 import { DocumentStudentSearch } from "@/app/(dashboard)/dashboard/document/_component/document-student-search"
 import { DocumentRejectionIndicator } from "@/app/(dashboard)/dashboard/document/_component/document-rejection-indicator"
@@ -130,7 +130,7 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
 
             <Card className="relative overflow-hidden border-none bg-white shadow-sm ring-1 ring-black/5">
                 {isFetching ? (
-                    <PageLoader className="py-24" />
+                    <TableSkeleton columns={6} rows={6} showFooter />
                 ) : (
                     <>
                 <div className="overflow-x-auto">

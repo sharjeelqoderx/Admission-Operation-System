@@ -17,13 +17,13 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, AlertCircle } from "lucide-react"
-import { PageLoader } from "@/components/shared/page-loader"
 import Link from "next/link"
 import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
 import { cn } from "@/lib/utils"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 import { Progress } from "@/components/ui/progress"
+import { TableSkeleton } from "@/components/shared/table-skeleton"
 import type {
     ApplicationListItem,
     ApplicationListPagination,
@@ -172,7 +172,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                 childClass="p-0!"
                 className="rounded-lg p-0"
             >
-                <PageLoader className="py-24" />
+                <TableSkeleton columns={columnCount} rows={6} showFooter={showPagination} />
             </BluryCard>
         )
     }

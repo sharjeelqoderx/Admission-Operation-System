@@ -9,11 +9,11 @@ import { fetchApplicationDashboardPageData } from "@/lib/application/server"
 import type { UniversityApplicationTab } from "@/types/schemas/university-application"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
-import { PageLoader } from "@/components/shared/page-loader"
+import { ListPageSkeleton } from "@/components/shared/page-skeleton"
 
 const PageContent = dynamic(
     () => import("./_components/page-content").then((mod) => mod.PageContent),
-    { loading: () => <PageLoader /> }
+    { loading: () => <ListPageSkeleton /> }
 )
 
 const UniversityApplicationListPageContent = dynamic(
@@ -21,7 +21,7 @@ const UniversityApplicationListPageContent = dynamic(
         import("./_components/university-application/page-content").then(
             (mod) => mod.UniversityApplicationListPageContent
         ),
-    { loading: () => <PageLoader /> }
+    { loading: () => <ListPageSkeleton /> }
 )
 
 type ApplicationPageProps = {

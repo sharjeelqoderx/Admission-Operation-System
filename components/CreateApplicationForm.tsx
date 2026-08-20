@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { FilePreview } from "@/components/shared/FilePreview";
 import ImageUploadCard from "@/components/shared/image-upload-card";
 import { Spinner } from "@/components/shared/page-loader";
-import { PageLoader } from "@/components/shared/page-loader";
+import { FormPageSkeleton } from "@/components/shared/page-skeleton";
 import { Role } from "@/types/enums/role";
 
 import {
@@ -731,7 +731,7 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
     }, [user?.role, courseIdParam, isCourseFromParamValid, isEditMode]);
 
     if (isEditMode && isEditApplicationLoading) {
-        return <PageLoader />;
+        return <FormPageSkeleton />;
     }
 
     if (isEditMode && (isEditApplicationError || !editApplication?.can_resubmit)) {

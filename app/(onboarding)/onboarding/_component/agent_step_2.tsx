@@ -10,7 +10,8 @@ import { ImageUploadCard } from "@/components/shared/image-upload-card"
 import { fileWithinSizeLimit, MAX_FILE_SIZE_ERROR_MESSAGE, MAX_FILE_SIZE_LABEL } from "@/lib/constants/file-upload"
 import { F } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
-import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { Spinner } from "@/components/shared/page-loader"
+import { FormPageSkeleton } from "@/components/shared/page-skeleton"
 
 const EXPERIENCE_OPTIONS = [
     { label: "1 – 3 years", value: "1-3" },
@@ -219,7 +220,7 @@ export function AgentStep2({ onBack, onNext }: { onBack: () => void; onNext: () 
     const { data: meData, isLoading } = me
 
     if (isLoading) {
-        return <PageLoader />
+        return <FormPageSkeleton />
     }
 
     const agentProfile = meData?.profile as { experience_years?: number | null } | undefined

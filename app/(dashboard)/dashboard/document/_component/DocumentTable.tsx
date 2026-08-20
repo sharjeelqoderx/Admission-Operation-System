@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { ChevronLeft, ChevronRight, AlertCircle, FileText } from "lucide-react"
-import { PageLoader } from "@/components/shared/page-loader"
+import { TableSkeleton } from "@/components/shared/table-skeleton"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { cn } from "@/lib/utils"
 import { DocumentRowActionsMenu } from "./document-row-actions-menu"
@@ -98,7 +98,7 @@ export const DocumentTable = React.memo(function DocumentTable({
                 childClass="p-0!"
                 className="rounded-lg p-0"
             >
-                <PageLoader className="py-24" />
+                <TableSkeleton columns={COLUMN_COUNT} rows={5} showFooter={true} />
             </BluryCard>
         )
     }

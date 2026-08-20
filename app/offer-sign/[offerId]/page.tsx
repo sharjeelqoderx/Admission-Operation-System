@@ -7,7 +7,8 @@ import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
-import { PageLoader } from "@/components/shared/page-loader"
+import { Spinner } from "@/components/shared/page-loader"
+import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
 import {
     Download,
     Eye,
@@ -690,11 +691,15 @@ export default function OfferSignPage() {
     ])
 
     if (isDownloadingConditionalLetter) {
-        return <PageLoader />
+        return (
+            <div className="flex min-h-[40vh] items-center justify-center">
+                <Spinner size="lg" />
+            </div>
+        )
     }
 
     if (!offerId || isLoading) {
-        return <PageLoader />
+        return <DetailPageSkeleton />
     }
 
     if (isError || !offer) {

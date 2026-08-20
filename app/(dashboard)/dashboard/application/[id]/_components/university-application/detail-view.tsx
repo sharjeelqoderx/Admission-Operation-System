@@ -15,7 +15,8 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { ErrorView } from "@/components/shared/error-view"
-import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { Spinner } from "@/components/shared/page-loader"
+import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { StudentProgressCard } from "@/app/(dashboard)/dashboard/student/[student-id]/_components/university-student/progress-card"
 import { MissingOfferTemplateAlert } from "@/app/(dashboard)/dashboard/all-application-view/_component/missing-offer-template-alert"
@@ -101,7 +102,7 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
     }, [handleCreateOffer, isCreatingOffer])
 
     if (isLoading) {
-        return <PageLoader />
+        return <DetailPageSkeleton />
     }
 
     if (isError || !detail) {

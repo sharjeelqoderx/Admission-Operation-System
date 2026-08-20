@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Input } from "@/components/ui/input"
-import { PageLoader } from "@/components/shared/page-loader"
+import { ListPageSkeleton } from "@/components/shared/page-skeleton"
 import { OfferTable } from "./_component/OfferTable"
 import { OfferStatusFilter } from "./_component/offer-status-filter"
 import { OfferProgramFilter } from "./_component/offer-program-filter"
@@ -104,7 +104,7 @@ type PageContentProps = {
 
 export function PageContent({ initialData }: PageContentProps) {
     return (
-        <Suspense fallback={<PageLoader />}>
+        <Suspense fallback={<ListPageSkeleton />}>
             <OfferPageContent initialData={initialData} />
         </Suspense>
     )
