@@ -121,7 +121,7 @@ export function withApplicationPageLogic(Component: ComponentType<ApplicationPag
 
                 timeoutRef.current = setTimeout(() => {
                     updateParams({ q: term.trim() })
-                }, 400)
+                }, 300) // Reduced from 400ms to 300ms for faster response
             },
             [updateParams]
         )

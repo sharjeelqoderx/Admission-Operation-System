@@ -37,55 +37,41 @@ export function StudentDashboard() {
     const meData = me.data
 
     const { data: offersData, isLoading: offersLoading } = useQuery<OfferListItem[]>({
-        queryKey: ["offers", "recent"],
+        queryKey: ["offers", "recent", RECENT_OFFERS],
         queryFn: async () => {
-            const res = await fetch("/api/offer")
+            const res = await fetch(`/api/offer?limit=${RECENT_OFFERS}&page=1`)
             if (!res.ok) throw new Error("Failed to fetch offers")
             const json = await res.json()
             return (json.data ?? []) as OfferListItem[]
         },
+        staleTime: 2 * 60 * 1000,
     })
 
     const { data: appsData, isLoading: appsLoading } = useQuery<ApplicationRow[]>({
-        queryKey: ["applications", "recent"],
+        queryKey: ["applications", "recent", RECENT_APPLICATIONS],
         queryFn: async () => {
             const res = await fetch(`/api/application?limit=${RECENT_APPLICATIONS}`)
             if (!res.ok) throw new Error("Failed to fetch recent applications")
             const json = await res.json()
             return (json.data ?? []) as ApplicationRow[]
         },
+        staleTime: 1 * 60 * 1000,
     })
 
     const { data: programsData, isLoading: programsLoading } = useQuery<CourseProgram[]>({
-        queryKey: ["programs", "recent"],
+        queryKey: ["programs", "recent", RECENT_PROGRAMS],
         queryFn: async () => {
             const res = await fetch(`/api/program?limit=${RECENT_PROGRAMS}`)
             if (!res.ok) throw new Error("Failed to fetch recent programs")
             const json = await res.json()
             return (json.data ?? []) as CourseProgram[]
         },
+        staleTime: 5 * 60 * 1000,
     })
 
-    const recentOffers = useMemo(
-        () =>
-            [...(offersData ?? [])]
-                .sort(
-                    (a, b) =>
-                        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                )
-                .slice(0, RECENT_OFFERS),
-        [offersData]
-    )
-
-    const recentApplications = useMemo(
-        () => (appsData ?? []).slice(0, RECENT_APPLICATIONS),
-        [appsData]
-    )
-
-    const recentPrograms = useMemo(
-        () => (programsData ?? []).slice(0, RECENT_PROGRAMS),
-        [programsData]
-    )
+    const recentOffers = useMemo(() => offersData ?? [], [offersData])
+    const recentApplications = useMemo(() => appsData ?? [], [appsData])
+    const recentPrograms = useMemo(() => programsData ?? [], [programsData])
 
     return (
         <div className="space-y-6 animate-in fade-in duration-700">

@@ -6,6 +6,20 @@ const nextConfig: NextConfig = {
         // Student create uploads CV + passport + avatar through proxy-matched /api/student
         proxyClientMaxBodySize: "65mb",
     },
+    // Performance optimizations
+    compress: true,
+    poweredByHeader: false,
+    reactStrictMode: true,
+    // Compiler optimizations
+    compiler: {
+        removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
+    },
+    // Image optimization (if using next/image)
+    images: {
+        formats: ['image/avif', 'image/webp'],
+        minimumCacheTTL: 60,
+    },
 };
 
 export default nextConfig;
+

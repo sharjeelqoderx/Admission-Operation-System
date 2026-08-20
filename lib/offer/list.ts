@@ -90,18 +90,38 @@ type RawOfferListItem = Omit<OfferListItem, "application"> & {
     }) | null
 }
 
-async function fetchRawOffers(client: DbClient): Promise<RawOfferListItem[]> {
-    const primaryResult = await client
+async function fetchRawOffers(
+    client: DbClient,
+    options?: { studentProfileId?: string }
+): Promise<RawOfferListItem[]> {
+    let primaryQuery = client
         .from("offer_letter")
         .select(OFFER_LIST_SELECT_WITH_TEMPLATE)
         .order("created_at", { ascending: false })
 
+    if (options?.studentProfileId) {
+        primaryQuery = primaryQuery.eq("application.profile_id", options.studentProfileId)
+    }
+
+    const primaryResult = await primaryQuery
+
     const offersResult =
         primaryResult.error && isMissingOfferTemplateColumnError(primaryResult.error.message)
-            ? await client
-                  .from("offer_letter")
-                  .select(OFFER_LIST_SELECT_LEGACY)
-                  .order("created_at", { ascending: false })
+            ? await (() => {
+                  let legacyQuery = client
+                      .from("offer_letter")
+                      .select(OFFER_LIST_SELECT_LEGACY)
+                      .order("created_at", { ascending: false })
+
+                  if (options?.studentProfileId) {
+                      legacyQuery = legacyQuery.eq(
+                          "application.profile_id",
+                          options.studentProfileId
+                      )
+                  }
+
+                  return legacyQuery
+              })()
             : primaryResult
 
     if (offersResult.error) {
@@ -180,7 +200,11 @@ export async function fetchOffersList(
     const readClient =
         options.role === Role.STUDENT ? userClient : createSupabaseServiceClient()
 
-    const mapped = mapOfferRows(await fetchRawOffers(readClient as DbClient))
+    const mapped = mapOfferRows(
+        await fetchRawOffers(readClient as DbClient, {
+            studentProfileId: options.role === Role.STUDENT ? options.userId : undefined,
+        })
+    )
     const universityScope = isUniversityRole(options.role)
         ? await resolveUniversityApplicationScope(userClient, options.userId, options.role)
         : { universityIds: null }

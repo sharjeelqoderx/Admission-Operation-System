@@ -110,7 +110,12 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json(
             { data: result.data, stats: result.stats, role: result.role },
-            { status: 200 }
+            { 
+                status: 200,
+                headers: {
+                    'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+                },
+            }
         )
     } catch (e) {
         console.error("GET /api/application error:", e)

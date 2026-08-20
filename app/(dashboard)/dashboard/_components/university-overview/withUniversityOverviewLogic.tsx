@@ -38,6 +38,7 @@ export function withUniversityOverviewLogic(
             queryKey: ["university-overview", "v3"],
             queryFn: async () => selectOverview(await fetchUniversityOverview()),
             initialData: selectOverview(initialOverview),
+            staleTime: 2 * 60 * 1000,
         })
 
         return <Component overview={overviewQuery.data} />

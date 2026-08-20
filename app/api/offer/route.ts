@@ -75,7 +75,12 @@ export async function GET(req: NextRequest) {
             role: profile.role,
         })
 
-        return NextResponse.json(result, { status: 200 })
+        return NextResponse.json(result, {
+            status: 200,
+            headers: {
+                "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+            },
+        })
     } catch (e) {
         console.error(
             "GET /api/offer error:",
