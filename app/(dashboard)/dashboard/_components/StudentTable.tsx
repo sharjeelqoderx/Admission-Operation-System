@@ -12,7 +12,6 @@ import {
     SquareArrowOutUpRight,
     Trash2,
 } from "lucide-react"
-import { Spinner } from "@/components/shared/page-loader"
 import { TableSkeleton } from "@/components/shared/table-skeleton"
 import { requiresApsRequirement } from "@/lib/utils/aps"
 import {
@@ -138,7 +137,7 @@ export const StudentTable = React.memo(function StudentTable({
         setStudentToDelete(null)
     }, [onDelete, studentToDelete])
 
-    if (isLoading) {
+    if (isLoading || isFetching) {
         return (
             <BluryCard
                 isCentered={false}
@@ -193,12 +192,7 @@ export const StudentTable = React.memo(function StudentTable({
                 childClass="p-0!"
                 className="rounded-lg p-0 min-w-0"
             >
-                <div
-                    className={cn(
-                        "overflow-x-auto rounded-t-xl transition-opacity duration-200",
-                        isFetching && "pointer-events-none opacity-50"
-                    )}
-                >
+                <div className="overflow-x-auto rounded-t-xl">
                     <Table className="w-full text-left border-collapse min-w-[1400px]">
                         <TableHeader className="sticky top-0 z-10">
                             <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
@@ -404,7 +398,7 @@ export const StudentTable = React.memo(function StudentTable({
                                                                 className="size-9 rounded-lg border border-gray-200 bg-white/80 text-orange-500 hover:bg-white hover:border-gray-300 hover:text-orange-600"
                                                             >
                                                                 {isDeleting ? (
-                                                                    <Spinner size="sm" />
+                                                                    <Flame className="size-4 animate-pulse opacity-40" />
                                                                 ) : (
                                                                     <Flame className="size-4" />
                                                                 )}
@@ -501,7 +495,6 @@ export const StudentTable = React.memo(function StudentTable({
                             </div>
 
                             <div className="flex items-center gap-2 shrink-0">
-                                {isFetching && <Spinner size="sm" />}
                                 <Button
                                     variant="outline"
                                     size="icon"
