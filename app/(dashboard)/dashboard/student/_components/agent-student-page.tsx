@@ -230,6 +230,7 @@ function StudentListSection() {
                 students={studentsQuery.data?.data || []}
                 pagination={studentsQuery.data?.pagination}
                 isLoading={studentsQuery.isLoading}
+                isFetching={studentsQuery.isFetching}
                 isError={studentsQuery.isError}
                 errorMessage={studentsQuery.error instanceof Error ? studentsQuery.error.message : "Failed to load students"}
                 onDelete={handleDelete}
