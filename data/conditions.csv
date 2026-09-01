@@ -1,0 +1,7 @@
+﻿"Condition Title","Condition Status","Description","Deadline","Required Document","Record ID","Created On","Updated On","Application"
+"English Proficiency Test","Submitted","Proof of English proficiency must be submitted.","06/01/2026","https://www.example.com","69b6cccd6ec46a7fe505c5f8","03/15/2026 8:14am","03/15/2026 8:14am",""
+"Final Enrollment Confirmation","Pending","Confirmation of enrollment is required before the start of classes.","06/13/2026","https://www.example.com","69b6cccd6ec46a7fe505c5fb","03/15/2026 8:14am","03/15/2026 8:14am",""
+"Medical Examination","Pending","A medical examination report must be provided.","05/20/2026","https://www.example.com","69b6cccd6ec46a7fe505c5f9","03/15/2026 8:14am","03/15/2026 8:14am",""
+"Payment of Application Fee","Approved","The application fee must be paid before the application can be processed.","04/15/2026","https://www.example.com","69b6cccd6ec46a7fe505c5f7","03/15/2026 8:14am","03/15/2026 8:14am",""
+"Submit Application Documents","Pending","All required documents must be submitted for application processing.","05/01/2026","https://www.example.com","69b6cccd6ec46a7fe505c5f6","03/15/2026 8:14am","03/15/2026 8:14am",""
+"Visa Application Submission","Pending","The visa application must be submitted to the embassy.","06/10/2026","https://www.example.com","69b6cccd6ec46a7fe505c5fa","03/15/2026 8:14am","03/15/2026 8:14am",""
