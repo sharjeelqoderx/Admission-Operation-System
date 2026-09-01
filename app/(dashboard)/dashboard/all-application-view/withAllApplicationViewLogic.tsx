@@ -138,7 +138,7 @@ export function withAllApplicationViewLogic(Component: ComponentType<AllApplicat
                         else params.delete("q")
                         params.delete("page")
                     })
-                }, 400)
+                }, 300) // Reduced from 400ms to 300ms for faster response
             },
             [replaceParams]
         )

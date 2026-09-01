@@ -8,7 +8,10 @@ import { Role } from "@/types/enums/role"
 export async function GET() {
     try {
         const supabase = await createSupabaseServerClient()
-        const { data: { user }, error } = await supabase.auth.getUser()
+        const {
+            data: { user },
+            error,
+        } = await supabase.auth.getUser()
 
         if (error || !user) return err("Unauthorized", 401)
 
@@ -23,40 +26,51 @@ export async function GET() {
 
         const role = profile.role
 
-        let extraData: any = {}
+        const roleProfilePromise =
+            role === Role.STUDENT
+                ? supabase.from("student").select("*").eq("profile_id", user.id).maybeSingle()
+                : role === Role.AGENT
+                  ? supabase.from("agent").select("*").eq("profile_id", user.id).maybeSingle()
+                  : isUniversityRole(role)
+                    ? supabase
+                          .from("university")
+                          .select("*")
+                          .eq("profile_id", user.id)
+                          .maybeSingle()
+                    : Promise.resolve({ data: null })
 
-        if (role === Role.STUDENT) {
-            const { data: student } = await supabase
-                .from("student")
-                .select("*")
-                .eq("profile_id", user.id)
-                .maybeSingle()
-            extraData = student ?? {}
-        } else if (role === Role.AGENT) {
-            const { data: agent } = await supabase
-                .from("agent")
-                .select("*")
-                .eq("profile_id", user.id)
-                .maybeSingle()
-            extraData = agent ?? {}
-        } else if (isUniversityRole(role)) {
-            const { data: university } = await supabase
-                .from("university")
-                .select("*")
-                .eq("profile_id", user.id)
-                .maybeSingle()
-            extraData = university ?? {}
-        }
-
-        const { data: academics } = await supabase
+        const academicsPromise = supabase
             .from("education")
             .select("*")
             .eq("profile_id", user.id)
 
-        const { data: experiences } = await supabase
+        const experiencesPromise = supabase
             .from("work_experience")
             .select("*")
             .eq("profile_id", user.id)
+
+        const agentDocsPromise =
+            role === Role.AGENT
+                ? supabase
+                      .from("document")
+                      .select(
+                          "document_type_id, created_at, document_type:document_type_id(code, name), document_files(file_url, type)"
+                      )
+                      .eq("profile_id", user.id)
+                      .order("created_at", { ascending: true })
+                : Promise.resolve({ data: null })
+
+        const [roleProfileResult, academicsResult, experiencesResult, agentDocsResult] =
+            await Promise.all([
+                roleProfilePromise,
+                academicsPromise,
+                experiencesPromise,
+                agentDocsPromise,
+            ])
+
+        const extraData = roleProfileResult.data ?? {}
+        const academics = academicsResult.data
+        const experiences = experiencesResult.data
 
         let agentKyc: {
             registrationCertificateUrl: string | null
@@ -65,18 +79,14 @@ export async function GET() {
         } | null = null
 
         if (role === Role.AGENT) {
-            const { data: agentDocuments } = await supabase
-                .from("document")
-                .select("document_type_id, created_at, document_type:document_type_id(code, name), document_files(file_url, type)")
-                .eq("profile_id", user.id)
-                .order("created_at", { ascending: true })
-
-            const docs = agentDocuments ?? []
+            const docs = agentDocsResult.data ?? []
 
             const latestUrlForCode = (code: string) => {
                 let url: string | null = null
                 for (const doc of docs) {
-                    const docType = doc.document_type as { code?: string | null; name?: string | null } | null
+                    const docType = doc.document_type as
+                        | { code?: string | null; name?: string | null }
+                        | null
                     if (docType?.code !== code) continue
                     for (const file of doc.document_files ?? []) {
                         url = file.file_url
@@ -91,7 +101,9 @@ export async function GET() {
             const legacyCnicBackUrls: string[] = []
 
             for (const doc of docs) {
-                const docType = doc.document_type as { code?: string | null; name?: string | null } | null
+                const docType = doc.document_type as
+                    | { code?: string | null; name?: string | null }
+                    | null
                 const isLegacyCnic =
                     !!doc.document_type_id &&
                     (docType?.code === "CNIC" || docType?.name === "CNIC")
@@ -109,17 +121,15 @@ export async function GET() {
 
             agentKyc = {
                 registrationCertificateUrl:
-                    latestUrlForCode("AGENT_REGISTRATION") ??
-                    legacyFrontUrls[0] ??
-                    null,
+                    latestUrlForCode("AGENT_REGISTRATION") ?? legacyFrontUrls[0] ?? null,
                 idCardFrontUrl:
                     latestUrlForCode("AGENT_ID_FRONT") ??
                     legacyCnicFrontUrls.at(-1) ??
                     (legacyFrontUrls.length > 1
                         ? legacyFrontUrls.at(-1)
                         : legacyBackUrls.length > 0
-                            ? legacyFrontUrls[0]
-                            : null) ??
+                          ? legacyFrontUrls[0]
+                          : null) ??
                     null,
                 idCardBackUrl:
                     latestUrlForCode("AGENT_ID_BACK") ??
@@ -129,7 +139,7 @@ export async function GET() {
             }
         }
 
-        return ok({
+        const payload = {
             id: user.id,
             email: profile.email ?? user.email ?? "",
             fullName: formatFullName(
@@ -154,35 +164,49 @@ export async function GET() {
                 guardianPhone: extraData.guardian_phone ?? "",
                 contact_person_first_name: extraData.contact_person_first_name ?? "",
                 contact_person_last_name: extraData.contact_person_last_name ?? "",
-                ...extraData
+                ...extraData,
             },
-            academic: academics && academics.length > 0 ? academics.map(academic => ({
-                qualification: academic.qualification ?? "",
-                grade_type: academic.grade_type ?? null,
-                gpa: academic.gpa != null ? String(academic.gpa) : "",
-                instituteName: academic.institution_name ?? "",
-                obtained_marks: academic.obtained_marks != null ? String(academic.obtained_marks) : "",
-                total_marks: academic.total_marks != null ? String(academic.total_marks) : "",
-                start_date: normalizeDateValue(academic.start_date),
-                end_date: normalizeDateValue(academic.end_date),
-                about: academic.honors ?? "",
-            })) : null,
-            experience: experiences && experiences.length > 0 ? {
-                hasExperience: "yes" as const,
-                entries: experiences.map(experience => ({
-                    jobTitle: experience.title ?? "",
-                    organization: experience.organization_name ?? "",
-                    industry: experience.industry_sector ?? "",
-                    country: experience.country ?? "",
-                    startDate: experience.start_date ?? "",
-                    endDate: experience.end_date ?? "",
-                    responsibilities: experience.key_responsibilities ?? "",
-                }))
-            } : null,
+            academic:
+                academics && academics.length > 0
+                    ? academics.map((academic) => ({
+                          qualification: academic.qualification ?? "",
+                          grade_type: academic.grade_type ?? null,
+                          gpa: academic.gpa != null ? String(academic.gpa) : "",
+                          instituteName: academic.institution_name ?? "",
+                          obtained_marks:
+                              academic.obtained_marks != null
+                                  ? String(academic.obtained_marks)
+                                  : "",
+                          total_marks:
+                              academic.total_marks != null ? String(academic.total_marks) : "",
+                          start_date: normalizeDateValue(academic.start_date),
+                          end_date: normalizeDateValue(academic.end_date),
+                          about: academic.honors ?? "",
+                      }))
+                    : null,
+            experience:
+                experiences && experiences.length > 0
+                    ? {
+                          hasExperience: "yes" as const,
+                          entries: experiences.map((experience) => ({
+                              jobTitle: experience.title ?? "",
+                              organization: experience.organization_name ?? "",
+                              industry: experience.industry_sector ?? "",
+                              country: experience.country ?? "",
+                              startDate: experience.start_date ?? "",
+                              endDate: experience.end_date ?? "",
+                              responsibilities: experience.key_responsibilities ?? "",
+                          })),
+                      }
+                    : null,
             agentKyc,
-        })
+        }
+
+        const response = ok(payload)
+        response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=120")
+        return response
     } catch (e) {
-        console.log('error -> ', e)
+        console.log("error -> ", e)
         return err("Unauthorized", 401)
     }
 }

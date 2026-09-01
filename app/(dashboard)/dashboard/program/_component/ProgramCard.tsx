@@ -4,7 +4,7 @@ import { memo, useCallback, useState } from "react"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
 import { MapPin, Clock, Globe, BookOpen, Layers, GraduationCap } from "lucide-react"
-import { PageLoader } from "@/components/shared/page-loader"
+import { CardsGridSkeleton } from "@/components/shared/page-skeleton"
 import Link from "next/link"
 import { BluryCard } from "@/components/shared/blury-card"
 import type { CourseProgram } from "@/types/schemas/program"
@@ -162,5 +162,5 @@ export function ProgramSkeleton() {
 }
 
 export function InfiniteLoader() {
-    return <PageLoader className="py-10" />
+    return <CardsGridSkeleton count={3} className="py-10" />
 }

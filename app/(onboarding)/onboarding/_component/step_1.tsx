@@ -19,7 +19,7 @@ import { F, DatePicker } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
 import { profileStep1Schema } from "@/types/schemas/auth"
 import { ImageUploadCard } from "@/components/shared/image-upload-card"
-import { PageLoader } from "@/components/shared/page-loader"
+import { FormPageSkeleton } from "@/components/shared/page-skeleton"
 import { CountrySelect } from "@/components/shared/country-select"
 import { StateSelect } from "@/components/shared/state-select"
 import { CitySelect } from "@/components/shared/city-select"
@@ -412,7 +412,7 @@ export function Step1Basic({ onNext }: { onNext: () => void }) {
     const { data: meData, isLoading } = me
 
     if (isLoading) {
-        return <PageLoader />
+        return <FormPageSkeleton />
     }
 
     const profileTitle = meData?.title ?? ""

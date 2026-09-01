@@ -4,7 +4,7 @@ import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
-import { PageLoader } from "@/components/shared/page-loader"
+import { PanelSkeleton } from "@/components/shared/page-skeleton"
 import { ErrorView } from "@/components/shared/error-view"
 import { useCourseDocumentBundles } from "@/hooks/useCourseDocumentBundles"
 import { useAuth } from "@/hooks/useAuth"
@@ -67,7 +67,7 @@ export function CourseDocumentsView({
     }, [data?.degree_bundles, qualificationSnapshot])
 
     if ((!profileId && userLoading) || isLoading || isStudentLoading) {
-        return <PageLoader />
+        return <PanelSkeleton />
     }
 
     if (isError) {

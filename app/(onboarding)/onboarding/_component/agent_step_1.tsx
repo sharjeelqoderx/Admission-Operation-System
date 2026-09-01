@@ -12,7 +12,8 @@ import { useAuth } from "@/hooks/useAuth"
 import { CountrySelect } from "@/components/shared/country-select"
 import { StateSelect } from "@/components/shared/state-select"
 import { CitySelect } from "@/components/shared/city-select"
-import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { Spinner } from "@/components/shared/page-loader"
+import { FormPageSkeleton } from "@/components/shared/page-skeleton"
 import { Typography } from "@/components/shared/Typography"
 import { AddressFieldsSchema } from "@/types/schemas/address"
 const namePart = z
@@ -429,7 +430,7 @@ export function AgentStep1({ onNext }: { onNext: () => void; onSkip: () => void 
     const { data: meData, isLoading } = me
 
     if (isLoading) {
-        return <PageLoader />
+        return <FormPageSkeleton />
     }
 
     const agentFirstName = meData?.firstName ?? ""

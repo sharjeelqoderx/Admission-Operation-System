@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
-import { PageLoader } from "@/components/shared/page-loader"
+import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ChevronLeft, ExternalLink, FileText } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -29,7 +29,7 @@ export default function DocumentDetailPage({ params }: PageProps) {
         }
     })
 
-    if (isLoading) return <PageLoader />
+    if (isLoading) return <DetailPageSkeleton />
     if (!document) return <div className="p-20 text-center text-gray-500 font-bold uppercase tracking-widest">Document not found.</div>
 
     return (

@@ -7,7 +7,8 @@ import Link from "next/link"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
 import { BluryCard } from "@/components/shared/blury-card"
-import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { Spinner } from "@/components/shared/page-loader"
+import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ApplicationStatusBadge } from "@/app/(dashboard)/dashboard/application/_components/application-status-badge"
 import { formatFullName } from "@/lib/utils/profile"
@@ -90,7 +91,7 @@ export default function AllApplicationViewDetailsPage() {
         onOfferCreated: handleOfferCreated,
     })
 
-    if (isLoading) return <PageLoader />
+    if (isLoading) return <DetailPageSkeleton />
 
     if (isError || !application) {
         return (

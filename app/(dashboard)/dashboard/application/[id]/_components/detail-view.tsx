@@ -7,7 +7,7 @@ import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
 import { BluryCard } from "@/components/shared/blury-card"
 import { ErrorView } from "@/components/shared/error-view"
-import { PageLoader } from "@/components/shared/page-loader"
+import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ApplicationStatusBadge } from "../../_components/application-status-badge"
 import { ApplicationReviewHistoryCard } from "../../_components/application-review-history-card"
@@ -37,7 +37,7 @@ const ApplicationDetailView = memo(function ApplicationDetailView({
     const router = useRouter()
 
     if (isLoading) {
-        return <PageLoader />
+        return <DetailPageSkeleton />
     }
 
     if (isError || !application) {

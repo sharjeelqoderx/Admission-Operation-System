@@ -26,7 +26,8 @@ import { CountrySelect } from "@/components/shared/country-select"
 import { StateSelect } from "@/components/shared/state-select"
 import { CitySelect } from "@/components/shared/city-select"
 import { Building, ChevronDown, School, FileUp, FileText, Plus, Upload, X, ClipboardList } from "lucide-react"
-import { PageLoader, Spinner } from "@/components/shared/page-loader"
+import { Spinner } from "@/components/shared/page-loader"
+import { PanelSkeleton } from "@/components/shared/page-skeleton"
 import { resolveGradeTypeOptional, type GradeType } from "@/types/schemas/academic"
 import { Role } from "@/types/enums/role"
 import {
@@ -762,7 +763,7 @@ function SupportingDocumentsSection({
                 </div>
 
                 {isRequiredDocsLoading || isDocumentsLoading ? (
-                    <PageLoader className="py-14 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200" />
+                    <PanelSkeleton className="py-8 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200" rows={3} />
                 ) : requiredDocTypes.length > 0 || optionalDocTypes.length > 0 ? (
                     <div className="space-y-6">
                         {requiredDocTypes.length > 0 && (

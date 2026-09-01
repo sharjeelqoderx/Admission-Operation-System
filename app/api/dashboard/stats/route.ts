@@ -59,7 +59,12 @@ export async function GET() {
                     pending_actions: pendingResult.count ?? 0,
                 },
             },
-            { status: 200 }
+            { 
+                status: 200,
+                headers: {
+                    'Cache-Control': 'private, max-age=120, stale-while-revalidate=240',
+                },
+            }
         )
     } catch (e) {
         console.error("GET /api/dashboard/stats error:", e)

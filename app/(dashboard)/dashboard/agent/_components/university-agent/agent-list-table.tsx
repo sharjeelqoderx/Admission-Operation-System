@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Eye, ChevronLeft, ChevronRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Typography } from "@/components/shared/Typography"
-import { PageLoader } from "@/components/shared/page-loader"
+import { TableSkeleton } from "@/components/shared/table-skeleton"
 import { AgentKycBadge } from "@/components/shared/agent-kyc-badge"
 import {
     Select,
@@ -137,6 +137,10 @@ export const UniversityAgentListTable = memo(function UniversityAgentListTable({
             </div>
 
             <Card className="overflow-hidden border-none bg-white shadow-sm ring-1 ring-black/5">
+                {isLoading ? (
+                    <TableSkeleton columns={5} rows={6} showFooter />
+                ) : (
+                <>
                 <div className="overflow-x-auto">
                     <Table className="min-w-[980px]">
                         <TableHeader>
@@ -161,13 +165,7 @@ export const UniversityAgentListTable = memo(function UniversityAgentListTable({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="px-6 py-12">
-                                        <PageLoader className="min-h-0" />
-                                    </TableCell>
-                                </TableRow>
-                            ) : agents.length === 0 ? (
+                            {agents.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={5} className="px-6 py-12 text-center">
                                         <Typography as="span" font="sub-text" className="text-gray-500">
@@ -238,6 +236,8 @@ export const UniversityAgentListTable = memo(function UniversityAgentListTable({
                         </button>
                     </div>
                 </div>
+                </>
+                )}
             </Card>
         </div>
     )

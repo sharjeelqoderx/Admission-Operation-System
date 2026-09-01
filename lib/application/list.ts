@@ -1,10 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import {
-    attachLevelsToCourses,
-    COURSE_SELECT,
-    type CourseRow,
-} from "@/lib/api/course-program"
-import {
     buildAgentApplicationOrFilter,
     resolveAgentStudentProfileIds,
 } from "@/lib/api/agent-applications"
@@ -24,6 +19,25 @@ import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 import { loadRejectionHistoryByApplicationIds } from "@/lib/application/review-meta"
 import { resolveUniversityApplicationScope } from "@/lib/auth/university-scope"
+
+/** Lean select for list views — avoids full program content + level joins. */
+const APPLICATION_LIST_COURSE_SELECT = `
+    id,
+    name,
+    deadline_date,
+    degree:degree_id (
+        id,
+        name,
+        fees,
+        intake_date,
+        requirements:degree_requirement (
+            requirement_type,
+            document_type:document_type_id (
+                id
+            )
+        )
+    )
+`
 
 const APPLICATION_LIST_SELECT = `
     id,
@@ -177,23 +191,18 @@ async function buildOffersByApplicationId(
     return offerByApplicationId
 }
 
-async function attachRejectionHistoryToApplications(
-    supabase: SupabaseClient<Database>,
-    applications: ApplicationListItem[]
-): Promise<ApplicationListItem[]> {
-    if (applications.length === 0) {
-        return applications
-    }
-
-    const rejectionHistoryByApplicationId = await loadRejectionHistoryByApplicationIds(
-        supabase,
-        applications.map((application) => application.id)
-    )
-
-    return applications.map((application) => ({
-        ...application,
-        rejection_history: rejectionHistoryByApplicationId.get(application.id) ?? [],
-    }))
+type ApplicationListCourseRow = {
+    id: string
+    name: string
+    deadline_date: string | null
+    degree:
+        | (Pick<Tables<"degree">, "id" | "name" | "fees" | "intake_date"> & {
+              requirements?: Array<{
+                  requirement_type?: "REQUIRED" | "OPTIONAL" | null
+                  document_type?: { id: string } | null
+              }> | null
+          })
+        | null
 }
 
 async function attachCoursesToApplications(
@@ -207,67 +216,38 @@ async function attachCoursesToApplications(
                 .filter((id): id is string => Boolean(id))
         ),
     ]
-    const studentCodeByProfile = await attachStudentCodes(supabase, profileIds)
     const applicationIds = applications.map((application) => application.id)
-    const offerByApplicationId = await buildOffersByApplicationId(supabase, applicationIds)
-    const uploadedByProfile = await buildUploadedDocumentsByProfile(supabase, profileIds)
-
     const courseIds = [
         ...new Set(applications.map((application) => application.course_id).filter(Boolean)),
     ]
 
-    if (courseIds.length === 0) {
-        return applications.map((application) => {
-            const vault = computeDocumentVault(
-                application.student?.id,
-                [],
-                uploadedByProfile
-            )
-            const offer = offerByApplicationId.get(application.id)
+    const [studentCodeByProfile, offerByApplicationId, uploadedByProfile, coursesResult] =
+        await Promise.all([
+            attachStudentCodes(supabase, profileIds),
+            buildOffersByApplicationId(supabase, applicationIds),
+            buildUploadedDocumentsByProfile(supabase, profileIds),
+            courseIds.length === 0
+                ? Promise.resolve({ data: [] as ApplicationListCourseRow[], error: null })
+                : supabase
+                      .from("course")
+                      .select(APPLICATION_LIST_COURSE_SELECT)
+                      .in("id", courseIds),
+        ])
 
-            return {
-                id: application.id,
-                application_no: application.application_no,
-                status: application.status,
-                created_at: application.created_at,
-                offer_letter: offer ?? null,
-                ...vault,
-                student: application.student
-                    ? {
-                          ...application.student,
-                          student_code:
-                              studentCodeByProfile.get(application.student.id) ?? null,
-                      }
-                    : null,
-                agent: application.agent,
-                course: null,
-                rejection_history: [],
-            }
-        })
+    if (coursesResult.error) {
+        throw coursesResult.error
     }
 
-    const { data: courses, error } = await supabase
-        .from("course")
-        .select(COURSE_SELECT)
-        .in("id", courseIds)
-
-    if (error) {
-        throw error
-    }
-
-    const coursesWithLevels = await attachLevelsToCourses(
-        supabase,
-        (courses ?? []) as unknown as CourseRow[]
+    const courseById = new Map(
+        ((coursesResult.data ?? []) as ApplicationListCourseRow[]).map((course) => [
+            course.id,
+            course,
+        ])
     )
-    const courseById = new Map(coursesWithLevels.map((course) => [course.id, course]))
 
     return applications.map((application) => {
         const course = courseById.get(application.course_id) ?? null
-        const degree = course?.degree as
-            | (Pick<Tables<"degree">, "id" | "name" | "fees" | "intake_date"> & {
-                  requirements?: Array<{ document_type?: { id: string } | null }> | null
-              })
-            | null
+        const degree = course?.degree ?? null
         const requiredTypeIds = getRequiredDocumentTypeIds(degree)
         const vault = computeDocumentVault(
             application.student?.id,
@@ -607,51 +587,45 @@ export async function fetchApplicationsList(
     let filteredCourseIds: string[] | null = null
     let filteredProfileIds: string[] | null = null
     let agentStudentProfileIds: string[] | null = null
-
-    if (role === Role.AGENT && !studentId && listScope !== "all") {
-        try {
-            agentStudentProfileIds = await resolveAgentStudentProfileIds(supabase, userId)
-        } catch (agentError) {
-            console.error("[fetchApplicationsList] agent students", agentError)
-            return emptyResult()
-        }
-    }
-
-    if (degreeId) {
-        try {
-            filteredCourseIds = await resolveCourseIdsForDegree(supabase, degreeId)
-        } catch (degreeError) {
-            console.error("[fetchApplicationsList] degree courses", degreeError)
-            return emptyResult()
-        }
-        if (filteredCourseIds.length === 0) {
-            return emptyResult()
-        }
-    }
-
-    if (searchTerm) {
-        try {
-            filteredProfileIds = await resolveMatchingStudentProfileIds(supabase, searchTerm, {
-                role,
-                userId,
-                studentId,
-                scope: listScope,
-            })
-        } catch (searchError) {
-            console.error("[fetchApplicationsList] search profiles", searchError)
-            return emptyResult()
-        }
-
-        if (filteredProfileIds.length === 0) {
-            return emptyResult()
-        }
-    }
-
     let universityScopeIds: string[] | null | undefined
 
-    if (isUniversityRole(role) && listScope !== "all") {
-        const universityScope = await resolveUniversityApplicationScope(supabase, userId, role)
-        universityScopeIds = universityScope.universityIds
+    try {
+        const [agentIdsResult, courseIdsResult, profileIdsResult, universityScopeResult] =
+            await Promise.all([
+                role === Role.AGENT && !studentId && listScope !== "all"
+                    ? resolveAgentStudentProfileIds(supabase, userId)
+                    : Promise.resolve(null),
+                degreeId
+                    ? resolveCourseIdsForDegree(supabase, degreeId)
+                    : Promise.resolve(null),
+                searchTerm
+                    ? resolveMatchingStudentProfileIds(supabase, searchTerm, {
+                          role,
+                          userId,
+                          studentId,
+                          scope: listScope,
+                      })
+                    : Promise.resolve(null),
+                isUniversityRole(role) && listScope !== "all"
+                    ? resolveUniversityApplicationScope(supabase, userId, role)
+                    : Promise.resolve(null),
+            ])
+
+        agentStudentProfileIds = agentIdsResult
+        filteredCourseIds = courseIdsResult
+        filteredProfileIds = profileIdsResult
+        universityScopeIds = universityScopeResult?.universityIds
+    } catch (resolveError) {
+        console.error("[fetchApplicationsList] resolve filters", resolveError)
+        return emptyResult()
+    }
+
+    if (degreeId && (!filteredCourseIds || filteredCourseIds.length === 0)) {
+        return emptyResult()
+    }
+
+    if (searchTerm && (!filteredProfileIds || filteredProfileIds.length === 0)) {
+        return emptyResult()
     }
 
     const filterContext: ApplicationFilterContext = {
@@ -667,13 +641,8 @@ export async function fetchApplicationsList(
         universityScopeIds,
     }
 
-    let stats: ApplicationListStats
-    try {
-        stats = await fetchApplicationStats(supabase, filterContext)
-    } catch (statsError) {
-        console.error("[fetchApplicationsList] stats", statsError)
-        stats = EMPTY_APPLICATION_STATS
-    }
+    // Dashboard recent lists (`limit` without `page`) do not use stats — skip 3 count queries.
+    const needsStats = pageOption != null || limitOption == null
 
     let query = applyApplicationFilters(
         supabase
@@ -687,15 +656,26 @@ export async function fetchApplicationsList(
     }
 
     if (usePagination) {
-        const safePage = Math.max(1, page)
-        const from = (safePage - 1) * pageSize
-        const to = from + pageSize - 1
+        const safePage = Math.max(1, page!)
+        const from = (safePage - 1) * pageSize!
+        const to = from + pageSize! - 1
         query = query.range(from, to)
     } else if (pageSize) {
         query = query.limit(pageSize)
     }
 
-    const { data: applications, error, count } = await query
+    const [statsResult, listResult] = await Promise.all([
+        needsStats
+            ? fetchApplicationStats(supabase, filterContext).catch((statsError) => {
+                  console.error("[fetchApplicationsList] stats", statsError)
+                  return EMPTY_APPLICATION_STATS
+              })
+            : Promise.resolve(EMPTY_APPLICATION_STATS),
+        query,
+    ])
+
+    const stats = statsResult
+    const { data: applications, error, count } = listResult
 
     if (error) {
         return { error: error.message }
@@ -703,11 +683,18 @@ export async function fetchApplicationsList(
 
     let result: ApplicationListItem[]
     try {
-        result = await attachCoursesToApplications(
-            supabase,
-            (applications ?? []) as unknown as ApplicationListRow[]
-        )
-        result = await attachRejectionHistoryToApplications(supabase, result)
+        const applicationRows = (applications ?? []) as unknown as ApplicationListRow[]
+        const applicationIds = applicationRows.map((application) => application.id)
+
+        const [enrichedApplications, rejectionHistoryByApplicationId] = await Promise.all([
+            attachCoursesToApplications(supabase, applicationRows),
+            loadRejectionHistoryByApplicationIds(supabase, applicationIds),
+        ])
+
+        result = enrichedApplications.map((application) => ({
+            ...application,
+            rejection_history: rejectionHistoryByApplicationId.get(application.id) ?? [],
+        }))
     } catch (attachError) {
         console.error("[fetchApplicationsList] attach courses", attachError)
         return { error: "Failed to load application courses" }

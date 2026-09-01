@@ -167,7 +167,7 @@ async function post<T>(url: string, body: unknown): Promise<T> {
 }
 
 async function get<T>(url: string): Promise<T> {
-    const res = await fetch(url, { cache: "no-store" })
+    const res = await fetch(url)
     const data: ApiResponse<T> = await res.json()
     if (!data.success) throw new Error(data.error ?? "Request failed")
     return data.data
@@ -227,10 +227,12 @@ export function useAuth() {
             }
         },
         enabled: clientReady && sessionActive,
-        staleTime: 0,
-        gcTime: 0,
-        refetchOnMount: "always",
-        refetchOnWindowFocus: sessionActive,
+        // Keep current user warm — logout/login already clearSessionQueryCache().
+        staleTime: 5 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
         retry: false,
     })
     const profile = useMutation({
@@ -251,6 +253,9 @@ export function useAuth() {
 
             if (!data.success) throw new Error(data.error ?? "Request failed")
             return data.data
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["me"] })
         },
     })
     const academic = useMutation({

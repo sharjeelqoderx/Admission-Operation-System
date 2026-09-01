@@ -99,7 +99,11 @@ const ApplicationDashboardView = memo(function ApplicationDashboardView({
                             as="p"
                             className="text-[28px] font-extrabold text-gray-900 leading-none"
                         >
-                            {isLoading || isFetching ? "—" : stats.total}
+                            {isLoading || isFetching ? (
+                                <span className="inline-block h-7 w-14 rounded bg-gray-200/60 animate-pulse align-middle" />
+                            ) : (
+                                stats.total
+                            )}
                         </Typography>
                     </div>
                 </div>
@@ -124,7 +128,11 @@ const ApplicationDashboardView = memo(function ApplicationDashboardView({
                             as="p"
                             className="text-[28px] font-extrabold text-gray-900 leading-none"
                         >
-                            {isLoading || isFetching ? "—" : stats.pending}
+                            {isLoading || isFetching ? (
+                                <span className="inline-block h-7 w-14 rounded bg-gray-200/60 animate-pulse align-middle" />
+                            ) : (
+                                stats.pending
+                            )}
                         </Typography>
                     </div>
                 </div>
@@ -149,7 +157,11 @@ const ApplicationDashboardView = memo(function ApplicationDashboardView({
                             as="p"
                             className="text-[28px] font-extrabold text-gray-900 leading-none"
                         >
-                            {isLoading || isFetching ? "—" : stats.accepted}
+                            {isLoading || isFetching ? (
+                                <span className="inline-block h-7 w-14 rounded bg-gray-200/60 animate-pulse align-middle" />
+                            ) : (
+                                stats.accepted
+                            )}
                         </Typography>
                     </div>
                 </div>
