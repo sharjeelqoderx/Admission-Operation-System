@@ -14,6 +14,7 @@ type UniversityProgramPageViewProps = {
     overview: UniversityProgramListResponse
     canManagePrograms: boolean
     searchValue: string
+    isLoading: boolean
     isFetching: boolean
     deletingId: string | null
     onSearchChange: (value: string) => void
@@ -25,6 +26,7 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
     overview,
     canManagePrograms,
     searchValue,
+    isLoading,
     isFetching,
     deletingId,
     onSearchChange,
@@ -67,7 +69,8 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
             <ProgramList
                 programs={overview.data}
                 pagination={overview.pagination}
-                isLoading={isFetching}
+                isLoading={isLoading}
+                isFetching={isFetching}
                 deletingId={deletingId}
                 canManagePrograms={canManagePrograms}
                 onPageChange={onPageChange}

@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { CardsGridSkeleton } from "@/components/shared/page-skeleton"
+import { cn } from "@/lib/utils"
 import {
     Dialog,
     DialogContent,
@@ -211,6 +212,7 @@ export type UniversityProgramListProps = {
     programs: UniversityProgramListItem[]
     pagination: UniversityProgramListResponse["pagination"]
     isLoading?: boolean
+    isFetching?: boolean
     deletingId: string | null
     canManagePrograms: boolean
     onPageChange: (page: number) => void
@@ -221,6 +223,7 @@ export const UniversityProgramList = memo<UniversityProgramListProps>(function U
     programs,
     pagination,
     isLoading = false,
+    isFetching = false,
     deletingId,
     canManagePrograms,
     onPageChange,
@@ -239,7 +242,12 @@ export const UniversityProgramList = memo<UniversityProgramListProps>(function U
     }
 
     return (
-        <div className="space-y-5">
+        <div
+            className={cn(
+                "space-y-5 transition-opacity",
+                isFetching && !isLoading && "opacity-60"
+            )}
+        >
             {programs.map((program) => (
                 <UniversityProgramListCard
                     key={program.id}

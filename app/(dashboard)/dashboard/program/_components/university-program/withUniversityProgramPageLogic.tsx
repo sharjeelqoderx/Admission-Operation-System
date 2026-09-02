@@ -1,8 +1,8 @@
 "use client"
 
 import type { ComponentType } from "react"
-import { useCallback, useMemo } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import type { UniversityProgramListResponse } from "@/types/schemas/university-program"
@@ -11,6 +11,7 @@ export type UniversityProgramPageLogicProps = {
     overview: UniversityProgramListResponse
     canManagePrograms: boolean
     searchValue: string
+    isLoading: boolean
     isFetching: boolean
     deletingId: string | null
     onSearchChange: (value: string) => void
@@ -49,11 +50,34 @@ export function withUniversityProgramPageLogic(
 
         const q = searchParams.get("q") ?? ""
         const page = searchParams.get("page") ?? "1"
+        const [searchInput, setSearchInput] = useState(q)
+        const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+        const initialQueryRef = useRef<{ q: string; page: string } | null>(null)
+
+        if (initialQueryRef.current === null) {
+            initialQueryRef.current = { q, page }
+        }
+
+        useEffect(() => {
+            setSearchInput(q)
+        }, [q])
+
+        useEffect(() => {
+            return () => {
+                if (searchTimeoutRef.current) {
+                    clearTimeout(searchTimeoutRef.current)
+                }
+            }
+        }, [])
+
+        const matchesInitialQuery =
+            q === initialQueryRef.current.q && page === initialQueryRef.current.page
 
         const programsQuery = useQuery({
             queryKey: ["university-programs", q, page],
             queryFn: () => fetchUniversityPrograms({ q, page }),
-            initialData: initialOverview,
+            initialData: matchesInitialQuery ? initialOverview : undefined,
+            placeholderData: keepPreviousData,
         })
 
         const deleteMutation = useMutation({
@@ -91,23 +115,42 @@ export function withUniversityProgramPageLogic(
             [pathname, router, searchParams]
         )
 
-        const overview = useMemo(
-            () =>
-                programsQuery.data ?? {
-                    data: [],
-                    pagination: initialOverview.pagination,
-                },
-            [initialOverview.pagination, programsQuery.data]
+        const handleSearchChange = useCallback(
+            (value: string) => {
+                setSearchInput(value)
+                if (searchTimeoutRef.current) {
+                    clearTimeout(searchTimeoutRef.current)
+                }
+                searchTimeoutRef.current = setTimeout(() => {
+                    updateParams({ q: value || null, page: "1" })
+                }, 400)
+            },
+            [updateParams]
         )
+
+        const currentPage = parseInt(page, 10) || 1
+
+        const overview = useMemo(() => {
+            const data = programsQuery.data ?? {
+                data: [],
+                pagination: initialOverview.pagination,
+            }
+
+            return {
+                ...data,
+                pagination: { ...data.pagination, page: currentPage },
+            }
+        }, [currentPage, initialOverview.pagination, programsQuery.data])
 
         return (
             <Component
                 overview={overview}
                 canManagePrograms={canManagePrograms}
-                searchValue={q}
+                searchValue={searchInput}
+                isLoading={programsQuery.isLoading && !programsQuery.data}
                 isFetching={programsQuery.isFetching}
                 deletingId={deleteMutation.isPending ? deleteMutation.variables : null}
-                onSearchChange={(value) => updateParams({ q: value || null, page: "1" })}
+                onSearchChange={handleSearchChange}
                 onPageChange={(nextPage) => updateParams({ page: String(nextPage) })}
                 onDelete={(id) => deleteMutation.mutate(id)}
             />
