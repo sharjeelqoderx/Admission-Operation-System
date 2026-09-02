@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { assertProgramAvailableForTemplate } from "@/lib/document-template/program-assignment"
+import { assertCourseAvailableForTemplate } from "@/lib/document-template/program-assignment"
 import { mapTemplateRow } from "@/lib/document-template/server"
 import { extractTemplateVariables } from "@/lib/document-template/variables"
 import { DocumentTemplateFormSchema } from "@/types/schemas/document-template"
+
+function resolveLinkedCourseId(input: {
+    course_id?: string | null
+    program_id?: string | null
+}) {
+    return input.course_id ?? input.program_id ?? null
+}
 
 export async function GET() {
     try {
@@ -22,7 +29,7 @@ export async function GET() {
             .from("document_template")
             .select(`
                 *,
-                program:program_id ( id, name, category, location )
+                course:course_id ( id, name, category, location )
             `)
             .eq("is_deleted", false)
             .order("updated_at", { ascending: false })
@@ -36,9 +43,9 @@ export async function GET() {
 
         return NextResponse.json({
             data: (data ?? []).map((row) => {
-                const { program, ...templateRow } = row
-                const programRelation = Array.isArray(program) ? program[0] : program
-                return mapTemplateRow(templateRow, programRelation ?? null)
+                const { course, ...templateRow } = row
+                const courseRelation = Array.isArray(course) ? course[0] : course
+                return mapTemplateRow(templateRow, courseRelation ?? null)
             }),
         })
     } catch {
@@ -62,9 +69,10 @@ export async function POST(req: NextRequest) {
         const json = await req.json()
         const validated = DocumentTemplateFormSchema.parse(json)
         const variables = extractTemplateVariables(validated.body_html)
+        const courseId = resolveLinkedCourseId(validated)
 
-        if (validated.program_id) {
-            await assertProgramAvailableForTemplate(supabase, validated.program_id)
+        if (courseId) {
+            await assertCourseAvailableForTemplate(supabase, courseId)
         }
 
         const { data, error } = await supabase
@@ -76,12 +84,12 @@ export async function POST(req: NextRequest) {
                 locale: validated.locale,
                 template_dates: validated.template_dates ?? {},
                 watermark: validated.watermark ?? undefined,
-                program_id: validated.program_id ?? null,
+                course_id: courseId,
                 created_by_profile_id: user.id,
             })
             .select(`
                 *,
-                program:program_id ( id, name, category, location )
+                course:course_id ( id, name, category, location )
             `)
             .single()
 
@@ -92,12 +100,12 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const { program, ...templateRow } = data
-        const programRelation = Array.isArray(program) ? program[0] : program
+        const { course, ...templateRow } = data
+        const courseRelation = Array.isArray(course) ? course[0] : course
 
         return NextResponse.json(
             {
-                data: mapTemplateRow(templateRow, programRelation ?? null),
+                data: mapTemplateRow(templateRow, courseRelation ?? null),
                 message: "Document template created successfully",
             },
             { status: 201 }

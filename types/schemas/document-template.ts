@@ -26,6 +26,7 @@ export const DocumentTemplateFormSchema = z.object({
     title: z.string().trim().min(1, "Title is required").max(200, "Title is too long"),
     body_html: z.string(),
     program_id: PostgresUuidSchema.nullable().optional(),
+    course_id: PostgresUuidSchema.nullable().optional(),
     locale: TemplateLocaleSchema.default("en"),
     template_dates: DocumentTemplateDatesSchema.optional(),
     watermark: DocumentTemplateWatermarkSchema.optional(),
@@ -60,7 +61,11 @@ export type DocumentTemplateListItem = {
     variables: string[]
     checklist_items: AdmissionRequirementId[]
     checklist_profile: string | null
+    course_id: string | null
+    course_label: string | null
+    /** @deprecated Use course_id */
     program_id: string | null
+    /** @deprecated Use course_label */
     program_label: string | null
     created_by_profile_id: string
     created_at: string

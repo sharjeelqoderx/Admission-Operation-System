@@ -5,12 +5,19 @@ import {
     mapTemplateRow,
     softDeleteDocumentTemplate,
 } from "@/lib/document-template/server"
-import { assertProgramAvailableForTemplate } from "@/lib/document-template/program-assignment"
+import { assertCourseAvailableForTemplate } from "@/lib/document-template/program-assignment"
 import { extractTemplateVariables } from "@/lib/document-template/variables"
 import { DocumentTemplateUpdateSchema } from "@/types/schemas/document-template"
 
 type RouteContext = {
     params: Promise<{ id: string }>
+}
+
+function resolveLinkedCourseId(input: {
+    course_id?: string | null
+    program_id?: string | null
+}) {
+    return input.course_id ?? input.program_id ?? null
 }
 
 export async function GET(_req: NextRequest, context: RouteContext) {
@@ -31,7 +38,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
             .from("document_template")
             .select(`
                 *,
-                program:program_id ( id, name, category, location )
+                course:course_id ( id, name, category, location )
             `)
             .eq("id", id)
             .eq("is_deleted", false)
@@ -48,10 +55,10 @@ export async function GET(_req: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: "Document template not found" }, { status: 404 })
         }
 
-        const { program, ...templateRow } = data
-        const programRelation = Array.isArray(program) ? program[0] : program
+        const { course, ...templateRow } = data
+        const courseRelation = Array.isArray(course) ? course[0] : course
 
-        return NextResponse.json({ data: mapTemplateRow(templateRow, programRelation ?? null) })
+        return NextResponse.json({ data: mapTemplateRow(templateRow, courseRelation ?? null) })
     } catch {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
@@ -112,7 +119,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             title?: string
             body_html?: string
             variables?: string[]
-            program_id?: string | null
+            course_id?: string | null
             locale?: string
             template_dates?: Record<string, string | null>
             watermark?: Record<string, unknown>
@@ -130,11 +137,16 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             updatePayload.variables = extractTemplateVariables(validated.body_html)
         }
 
-        if (validated.program_id !== undefined) {
-            if (validated.program_id) {
-                await assertProgramAvailableForTemplate(supabase, validated.program_id, id)
+        const linkedCourseId =
+            validated.course_id !== undefined || validated.program_id !== undefined
+                ? resolveLinkedCourseId(validated)
+                : undefined
+
+        if (linkedCourseId !== undefined) {
+            if (linkedCourseId) {
+                await assertCourseAvailableForTemplate(supabase, linkedCourseId, id)
             }
-            updatePayload.program_id = validated.program_id
+            updatePayload.course_id = linkedCourseId
         }
 
         if (validated.locale !== undefined) {
@@ -156,7 +168,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             .eq("is_deleted", false)
             .select(`
                 *,
-                program:program_id ( id, name, category, location )
+                course:course_id ( id, name, category, location )
             `)
             .maybeSingle()
 
@@ -174,11 +186,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             )
         }
 
-        const { program, ...templateRow } = data
-        const programRelation = Array.isArray(program) ? program[0] : program
+        const { course, ...templateRow } = data
+        const courseRelation = Array.isArray(course) ? course[0] : course
 
         return NextResponse.json({
-            data: mapTemplateRow(templateRow, programRelation ?? null),
+            data: mapTemplateRow(templateRow, courseRelation ?? null),
             message: "Document template updated successfully",
         })
     } catch (e: unknown) {

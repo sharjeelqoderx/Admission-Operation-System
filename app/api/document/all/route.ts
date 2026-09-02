@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server"
 import { resolveAgentStudentProfileIds } from "@/lib/api/agent-applications"
+import {
+    applyUniversityIdFilter,
+    resolveUniversityApplicationScope,
+} from "@/lib/auth/university-scope"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { formatFullName } from "@/lib/utils/profile"
 import type { AgentAllDocumentRow } from "@/types/schemas/document"
 import { isDocumentStaffRole } from "@/lib/document/agent-access"
-import { isUniversityRole } from "@/lib/auth/university-role"
 import {
     buildRejectionHistory,
     getLatestRejectionFeedback,
 } from "@/lib/document/rejection-history"
+import { fetchInChunks } from "@/lib/supabase/query-in-chunks"
 import { Role } from "@/types/enums/role"
 
 type DocumentReviewRow = {
@@ -19,11 +24,138 @@ type DocumentReviewRow = {
     updated_at?: string | null
 }
 
+type DocumentListRow = {
+    id: string
+    profile_id: string
+    created_at: string
+    document_type:
+        | { id: string; name: string }
+        | Array<{ id: string; name: string }>
+        | null
+    document_review: DocumentReviewRow[] | null
+    document_files: Array<{ id: string }> | null
+    uploaded_by:
+        | { first_name: string | null; last_name: string | null }
+        | Array<{ first_name: string | null; last_name: string | null }>
+        | null
+    profile:
+        | {
+              first_name: string | null
+              last_name: string | null
+              avatar_url: string | null
+              email: string | null
+          }
+        | Array<{
+              first_name: string | null
+              last_name: string | null
+              avatar_url: string | null
+              email: string | null
+          }>
+        | null
+}
+
+type StudentMetaRow = {
+    profile_id: string
+    student_code: string | null
+    country: string | null
+}
+
+type ApplicationCampusRow = {
+    profile_id: string
+    created_at: string
+    course: {
+        degree?: { location?: string | null; name?: string | null } | null
+    } | null
+}
+
+const DOCUMENT_SELECT = `
+    id,
+    profile_id,
+    created_at,
+    document_type:document_type_id(id, name),
+    document_review(id, status, feedback, created_at, updated_at),
+    document_files(id),
+    uploaded_by:uploaded_by_profile_id(first_name, last_name),
+    profile:profile_id(first_name, last_name, avatar_url, email)
+`
+
 function getLatestReview(reviews: DocumentReviewRow[] | null | undefined) {
     if (!reviews?.length) return null
     return [...reviews].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )[0]
+}
+
+async function fetchDocuments(
+    serviceSupabase: ReturnType<typeof createSupabaseServiceClient>,
+    scopedProfileIds: string[] | null
+): Promise<{ data: DocumentListRow[]; error: { message?: string } | null }> {
+    if (!scopedProfileIds) {
+        const result = await serviceSupabase
+            .from("document")
+            .select(DOCUMENT_SELECT)
+            .order("created_at", { ascending: false })
+
+        return {
+            data: (result.data ?? []) as DocumentListRow[],
+            error: result.error,
+        }
+    }
+
+    const chunked = await fetchInChunks<DocumentListRow>(scopedProfileIds, async (chunkIds) => {
+        const result = await serviceSupabase
+            .from("document")
+            .select(DOCUMENT_SELECT)
+            .in("profile_id", chunkIds)
+            .order("created_at", { ascending: false })
+
+        return {
+            data: (result.data ?? []) as DocumentListRow[],
+            error: result.error,
+        }
+    })
+
+    return chunked
+}
+
+async function resolveScopedProfileIds(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    userId: string,
+    role: string | null | undefined
+): Promise<{ profileIds: string[] | null; error: { message?: string } | null }> {
+    if (role === Role.AGENT) {
+        const profileIds = await resolveAgentStudentProfileIds(supabase, userId)
+        return { profileIds, error: null }
+    }
+
+    if (!isUniversityStaffRole(role)) {
+        return { profileIds: [], error: null }
+    }
+
+    const scope = await resolveUniversityApplicationScope(supabase, userId, role)
+
+    if (scope.universityIds === null) {
+        return { profileIds: null, error: null }
+    }
+
+    let applicationsQuery = supabase.from("application").select("profile_id")
+    applicationsQuery = applyUniversityIdFilter(applicationsQuery, "university_id", scope)
+
+    const { data: applications, error: applicationsError } = await applicationsQuery
+
+    if (applicationsError) {
+        return { profileIds: [], error: applicationsError }
+    }
+
+    const profileIds = [
+        ...new Set(
+            (applications ?? [])
+                .map((application) => application.profile_id)
+                .filter((profileId): profileId is string => Boolean(profileId))
+        ),
+    ]
+
+    return { profileIds, error: null }
 }
 
 export async function GET(req: NextRequest) {
@@ -51,62 +183,29 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        let scopedProfileIds: string[] | null = null
+        const { profileIds: scopedProfileIds, error: scopeError } = await resolveScopedProfileIds(
+            supabase,
+            user.id,
+            profile?.role
+        )
 
-        if (isUniversityRole(profile?.role)) {
-            const { data: applications, error: applicationsError } = await supabase
-                .from("application")
-                .select("profile_id")
-                .eq("university_id", user.id)
+        if (scopeError) {
+            console.error("GET /api/document/all applications error:", scopeError)
+            return NextResponse.json(
+                { error: "Failed to fetch documents", details: scopeError },
+                { status: 500 }
+            )
+        }
 
-            if (applicationsError) {
-                console.error("GET /api/document/all applications error:", applicationsError)
-                return NextResponse.json(
-                    { error: "Failed to fetch documents", details: applicationsError },
-                    { status: 500 }
-                )
-            }
-
-            scopedProfileIds = [
-                ...new Set(
-                    (applications ?? [])
-                        .map((application) => application.profile_id)
-                        .filter(Boolean)
-                ),
-            ]
-
-            if (scopedProfileIds.length === 0) {
-                return NextResponse.json({ data: [] }, { status: 200 })
-            }
-        } else if (profile?.role === Role.AGENT) {
-            scopedProfileIds = await resolveAgentStudentProfileIds(supabase, user.id)
-
-            if (scopedProfileIds.length === 0) {
-                return NextResponse.json({ data: [] }, { status: 200 })
-            }
+        if (scopedProfileIds && scopedProfileIds.length === 0) {
+            return NextResponse.json({ data: [] }, { status: 200 })
         }
 
         const serviceSupabase = createSupabaseServiceClient()
-
-        let documentsQuery = serviceSupabase
-            .from("document")
-            .select(`
-                id,
-                profile_id,
-                created_at,
-                document_type:document_type_id(id, name),
-                document_review(id, status, feedback, created_at, updated_at),
-                document_files(id),
-                uploaded_by:uploaded_by_profile_id(first_name, last_name),
-                profile:profile_id(first_name, last_name, avatar_url, email)
-            `)
-            .order("created_at", { ascending: false })
-
-        if (scopedProfileIds) {
-            documentsQuery = documentsQuery.in("profile_id", scopedProfileIds)
-        }
-
-        const { data: documents, error: docsError } = await documentsQuery
+        const { data: documents, error: docsError } = await fetchDocuments(
+            serviceSupabase,
+            scopedProfileIds
+        )
 
         if (docsError) {
             console.error("GET /api/document/all error:", docsError)
@@ -117,29 +216,43 @@ export async function GET(req: NextRequest) {
         }
 
         const profileIds = [
-            ...new Set((documents ?? []).map((document) => document.profile_id).filter(Boolean)),
+            ...new Set(documents.map((document) => document.profile_id).filter(Boolean)),
         ]
 
         const [studentsResult, applicationsResult] = await Promise.all([
             profileIds.length > 0
-                ? serviceSupabase
-                      .from("student")
-                      .select("profile_id, student_code, country")
-                      .in("profile_id", profileIds)
-                : Promise.resolve({ data: [], error: null }),
+                ? fetchInChunks<StudentMetaRow>(profileIds, async (chunkIds) => {
+                      const result = await serviceSupabase
+                          .from("student")
+                          .select("profile_id, student_code, country")
+                          .in("profile_id", chunkIds)
+
+                      return {
+                          data: (result.data ?? []) as StudentMetaRow[],
+                          error: result.error,
+                      }
+                  })
+                : Promise.resolve({ data: [] as StudentMetaRow[], error: null }),
             profileIds.length > 0
-                ? serviceSupabase
-                      .from("application")
-                      .select(`
-                        profile_id,
-                        created_at,
-                        course:course_id (
-                            degree:degree_id (location, name)
-                        )
-                    `)
-                      .in("profile_id", profileIds)
-                      .order("created_at", { ascending: false })
-                : Promise.resolve({ data: [], error: null }),
+                ? fetchInChunks<ApplicationCampusRow>(profileIds, async (chunkIds) => {
+                      const result = await serviceSupabase
+                          .from("application")
+                          .select(`
+                              profile_id,
+                              created_at,
+                              course:course_id (
+                                  degree:degree_id (location, name)
+                              )
+                          `)
+                          .in("profile_id", chunkIds)
+                          .order("created_at", { ascending: false })
+
+                      return {
+                          data: (result.data ?? []) as ApplicationCampusRow[],
+                          error: result.error,
+                      }
+                  })
+                : Promise.resolve({ data: [] as ApplicationCampusRow[], error: null }),
         ])
 
         if (studentsResult.error) {
@@ -155,7 +268,7 @@ export async function GET(req: NextRequest) {
         }
 
         const studentMeta = new Map(
-            (studentsResult.data ?? []).map((student) => [
+            studentsResult.data.map((student) => [
                 student.profile_id,
                 {
                     student_code: student.student_code,
@@ -165,50 +278,18 @@ export async function GET(req: NextRequest) {
         )
 
         const campusByProfile = new Map<string, string>()
-        for (const application of applicationsResult.data ?? []) {
+        for (const application of applicationsResult.data) {
             if (campusByProfile.has(application.profile_id)) continue
-            const degree = (
-                application.course as {
-                    degree?: { location?: string | null; name?: string } | null
-                } | null
-            )?.degree
-            const campus = degree?.location?.trim() || degree?.name?.trim() || null
+            const campus =
+                application.course?.degree?.location?.trim() ||
+                application.course?.degree?.name?.trim() ||
+                null
             if (campus) {
                 campusByProfile.set(application.profile_id, campus)
             }
         }
 
-        const rows: AgentAllDocumentRow[] = (documents ?? []).map((rawDoc) => {
-            const doc = rawDoc as {
-                id: string
-                profile_id: string
-                created_at: string
-                document_type:
-                    | { id: string; name: string }
-                    | Array<{ id: string; name: string }>
-                    | null
-                document_review: DocumentReviewRow[] | null
-                document_files: Array<{ id: string }> | null
-                uploaded_by:
-                    | { first_name: string | null; last_name: string | null }
-                    | Array<{ first_name: string | null; last_name: string | null }>
-                    | null
-                profile:
-                    | {
-                          first_name: string | null
-                          last_name: string | null
-                          avatar_url: string | null
-                          email: string | null
-                      }
-                    | Array<{
-                          first_name: string | null
-                          last_name: string | null
-                          avatar_url: string | null
-                          email: string | null
-                      }>
-                    | null
-            }
-
+        const rows: AgentAllDocumentRow[] = documents.map((doc) => {
             const documentType = Array.isArray(doc.document_type)
                 ? doc.document_type[0]
                 : doc.document_type

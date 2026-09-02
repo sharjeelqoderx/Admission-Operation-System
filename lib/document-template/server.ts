@@ -19,21 +19,21 @@ import { Role } from "@/types/enums/role"
 
 type DocumentTemplateRow = Database["public"]["Tables"]["document_template"]["Row"]
 
-type ProgramSummaryRow = Pick<
-    Database["public"]["Tables"]["program"]["Row"],
+type CourseSummaryRow = Pick<
+    Database["public"]["Tables"]["course"]["Row"],
     "id" | "name" | "category" | "location"
 >
 
-function formatProgramLabel(program: ProgramSummaryRow | null | undefined): string | null {
-    if (!program) return null
-    const name = program.name?.trim() || "Untitled program"
-    const details = [program.category, program.location].filter(Boolean).join(" • ")
+function formatCourseLabel(course: CourseSummaryRow | null | undefined): string | null {
+    if (!course) return null
+    const name = course.name?.trim() || "Untitled program"
+    const details = [course.category, course.location].filter(Boolean).join(" • ")
     return details ? `${name} (${details})` : name
 }
 
-function pickProgramRelation(
-    value: ProgramSummaryRow | ProgramSummaryRow[] | null | undefined
-): ProgramSummaryRow | null {
+function pickCourseRelation(
+    value: CourseSummaryRow | CourseSummaryRow[] | null | undefined
+): CourseSummaryRow | null {
     if (!value) return null
     return Array.isArray(value) ? value[0] ?? null : value
 }
@@ -109,7 +109,7 @@ export async function softDeleteDocumentTemplate(id: string) {
 
 function mapTemplateRow(
     row: DocumentTemplateRow,
-    program?: ProgramSummaryRow | null
+    course?: CourseSummaryRow | null
 ): DocumentTemplateListItem {
     const storedVariables = Array.isArray(row.variables)
         ? row.variables.filter((item): item is string => typeof item === "string")
@@ -135,8 +135,10 @@ function mapTemplateRow(
         checklist_items: checklistItems,
         checklist_profile:
             typeof row.checklist_profile === "string" ? row.checklist_profile : null,
-        program_id: row.program_id ?? null,
-        program_label: formatProgramLabel(program),
+        course_id: row.course_id ?? null,
+        course_label: formatCourseLabel(course),
+        program_id: row.course_id ?? null,
+        program_label: formatCourseLabel(course),
         created_by_profile_id: row.created_by_profile_id,
         created_at: row.created_at,
         updated_at: row.updated_at,
@@ -159,7 +161,7 @@ export async function fetchDocumentTemplatesForPage(): Promise<DocumentTemplateL
         .from("document_template")
         .select(`
             *,
-            program:program_id ( id, name, category, location )
+            course:course_id ( id, name, category, location )
         `)
         .eq("is_deleted", false)
         .order("updated_at", { ascending: false })
@@ -169,10 +171,10 @@ export async function fetchDocumentTemplatesForPage(): Promise<DocumentTemplateL
     }
 
     return (data ?? []).map((row) => {
-        const { program, ...templateRow } = row as DocumentTemplateRow & {
-            program?: ProgramSummaryRow | ProgramSummaryRow[] | null
+        const { course, ...templateRow } = row as DocumentTemplateRow & {
+            course?: CourseSummaryRow | CourseSummaryRow[] | null
         }
-        return mapTemplateRow(templateRow, pickProgramRelation(program))
+        return mapTemplateRow(templateRow, pickCourseRelation(course))
     })
 }
 
@@ -194,7 +196,7 @@ export async function fetchDocumentTemplateById(
         .from("document_template")
         .select(`
             *,
-            program:program_id ( id, name, category, location )
+            course:course_id ( id, name, category, location )
         `)
         .eq("id", id)
         .eq("is_deleted", false)
@@ -206,11 +208,11 @@ export async function fetchDocumentTemplateById(
 
     if (!data) return null
 
-    const { program, ...templateRow } = data as DocumentTemplateRow & {
-        program?: ProgramSummaryRow | ProgramSummaryRow[] | null
+    const { course, ...templateRow } = data as DocumentTemplateRow & {
+        course?: CourseSummaryRow | CourseSummaryRow[] | null
     }
 
-    return mapTemplateRow(templateRow, pickProgramRelation(program))
+    return mapTemplateRow(templateRow, pickCourseRelation(course))
 }
 
 export { mapTemplateRow }

@@ -124,6 +124,8 @@ export const OfferTemplateChecklistPreviewSchema = z.object({
 
 export const OfferChecklistPreviewResponseSchema = z.object({
     data: z.object({
+        course_id: PostgresUuidSchema.nullable(),
+        course_label: z.string().nullable(),
         program_id: PostgresUuidSchema.nullable(),
         program_label: z.string().nullable(),
         template: OfferTemplateChecklistPreviewSchema.nullable(),

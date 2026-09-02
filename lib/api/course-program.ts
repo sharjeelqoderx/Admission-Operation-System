@@ -1,5 +1,25 @@
 import type { createSupabaseServerClient } from "@/lib/supabase/server"
-import type { CourseProgram, CourseProgramContent } from "@/types/schemas/program"
+import type {
+    CourseProgram,
+    CourseProgramContent,
+    CourseDegree,
+    CourseRequirement,
+} from "@/types/schemas/program"
+import type { Tables } from "@/types/supabase"
+
+const COURSE_CONTENT_SELECT = `
+    category,
+    location,
+    program_length,
+    program_detail,
+    admission_requirements,
+    perspectives,
+    prospects_after_graduation,
+    competency_model,
+    professional_skills,
+    management_skills,
+    status
+` as const
 
 const COURSE_DEGREE_SELECT = `
     id,
@@ -16,6 +36,7 @@ const COURSE_DEGREE_SELECT = `
     level_id,
     requirements:degree_requirement (
         id,
+        document_type_id,
         requirement_type,
         created_at,
         updated_at,
@@ -29,22 +50,7 @@ const COURSE_DEGREE_SELECT = `
             may_expire
         )
     )
-`
-
-const COURSE_PROGRAM_SELECT = `
-    id,
-    category,
-    location,
-    program_length,
-    program_detail,
-    admission_requirements,
-    perspectives,
-    prospects_after_graduation,
-    competency_model,
-    professional_skills,
-    management_skills,
-    status
-`
+` as const
 
 export const COURSE_SELECT = `
     id,
@@ -54,42 +60,23 @@ export const COURSE_SELECT = `
     is_deleted,
     degree_id,
     deadline_date,
-    program_id,
+    ${COURSE_CONTENT_SELECT},
     degree:degree_id (
         ${COURSE_DEGREE_SELECT}
     )
 `
 
-export const COURSE_DETAIL_SELECT = `
-    id,
-    name,
-    created_at,
-    updated_at,
-    is_deleted,
-    degree_id,
-    deadline_date,
-    program_id,
-    degree:degree_id (
-        ${COURSE_DEGREE_SELECT}
-    ),
-    program:program_id (
-        ${COURSE_PROGRAM_SELECT}
-    )
-`
+export const COURSE_DETAIL_SELECT = COURSE_SELECT
 
-export type CourseRow = {
-    id: string
-    name: string
-    created_at: string
-    updated_at: string
-    is_deleted: boolean
-    degree_id: string | null
-    deadline_date: string | null
-    program_id: string | null
-    degree: {
-        level_id: string | null
-        [key: string]: unknown
-    } | null
+type CourseTableRow = Tables<"course">
+
+type CourseDegreeRelation = Tables<"degree"> & {
+    level?: Pick<Tables<"levels">, "id" | "name"> | null
+    requirements?: CourseRequirement[] | null
+}
+
+export type CourseRow = CourseTableRow & {
+    degree: CourseDegreeRelation | null
 }
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>
@@ -97,7 +84,7 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient
 export async function attachLevelsToCourses(
     supabase: SupabaseServerClient,
     courses: CourseRow[]
-) {
+): Promise<CourseRow[]> {
     const levelIds = [
         ...new Set(
             courses
@@ -142,24 +129,12 @@ function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
     return Array.isArray(value) ? value[0] ?? null : value
 }
 
-async function attachProgramDocumentRequirements(
-    supabase: SupabaseServerClient,
-    programId: string | null | undefined
-) {
-    if (!programId) {
-        return []
-    }
+function mapDegreeDocumentRequirements(
+    degree: CourseRow["degree"]
+): CourseProgram["document_requirements"] {
+    const requirements = degree?.requirements ?? []
 
-    const { data: requirements, error } = await supabase
-        .from("program_document_requirements")
-        .select("id, document_type_id, document_type:document_type_id ( name )")
-        .eq("program_id", programId)
-
-    if (error) {
-        throw error
-    }
-
-    return (requirements ?? []).map((row) => {
+    return requirements.map((row) => {
         const documentType = unwrapRelation(row.document_type)
 
         return {
@@ -168,6 +143,23 @@ async function attachProgramDocumentRequirements(
             name: documentType?.name ?? null,
         }
     })
+}
+
+function mapCourseContent(course: CourseTableRow): CourseProgramContent {
+    return {
+        id: course.id,
+        category: course.category,
+        location: course.location,
+        program_length: course.program_length,
+        program_detail: course.program_detail,
+        admission_requirements: course.admission_requirements,
+        perspectives: course.perspectives,
+        prospects_after_graduation: course.prospects_after_graduation,
+        competency_model: course.competency_model,
+        professional_skills: course.professional_skills,
+        management_skills: course.management_skills,
+        status: course.status,
+    }
 }
 
 export async function fetchCourseProgramById(
@@ -189,20 +181,13 @@ export async function fetchCourseProgramById(
         return null
     }
 
-    const rawCourse = data as unknown as CourseRow & {
-        program?: Record<string, unknown> | Record<string, unknown>[] | null
-    }
-
+    const rawCourse = data as unknown as CourseRow
     const [courseWithLevel] = await attachLevelsToCourses(supabase, [rawCourse])
-    const program = unwrapRelation(rawCourse.program)
-    const documentRequirements = await attachProgramDocumentRequirements(
-        supabase,
-        rawCourse.program_id
-    )
 
     return {
         ...courseWithLevel,
-        program: program as CourseProgramContent | null,
-        document_requirements: documentRequirements,
-    } as CourseProgram
+        degree: (courseWithLevel.degree ?? null) as CourseDegree | null,
+        program: mapCourseContent(courseWithLevel),
+        document_requirements: mapDegreeDocumentRequirements(courseWithLevel.degree),
+    }
 }

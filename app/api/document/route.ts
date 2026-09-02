@@ -9,6 +9,7 @@ import { formatFullName } from "@/lib/utils/profile"
 import { assertCanUploadStudentDocument } from "@/lib/document/agent-access"
 import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
 import { saveDocumentUpload } from "@/lib/supabase/save-document-upload"
+import { fetchInChunks } from "@/lib/supabase/query-in-chunks"
 import { Role } from "@/types/enums/role"
 
 export async function GET(req: NextRequest) {
@@ -174,20 +175,38 @@ export async function GET(req: NextRequest) {
                     return NextResponse.json({ data: [], role: staffRole }, { status: 200 })
                 }
 
-                studentsQuery = studentsQuery.in("profile_id", profileIds)
-            }
-
-            const { data: staffStudents, error: studentsError } = await studentsQuery
-
-            if (studentsError) {
-                console.error("students error:", studentsError)
-                return NextResponse.json(
-                    { error: "Failed to fetch students", details: studentsError },
-                    { status: 500 }
+                const { data: scopedStudents, error: scopedStudentsError } = await fetchInChunks(
+                    profileIds,
+                    async (chunkIds) =>
+                        supabase
+                            .from("student")
+                            .select(studentSelect)
+                            .in("profile_id", chunkIds)
+                            .order("created_at", { ascending: false })
                 )
-            }
 
-            students = (staffStudents ?? []) as unknown as typeof students
+                if (scopedStudentsError) {
+                    console.error("students error:", scopedStudentsError)
+                    return NextResponse.json(
+                        { error: "Failed to fetch students", details: scopedStudentsError },
+                        { status: 500 }
+                    )
+                }
+
+                students = (scopedStudents ?? []) as unknown as typeof students
+            } else {
+                const { data: staffStudents, error: studentsError } = await studentsQuery
+
+                if (studentsError) {
+                    console.error("students error:", studentsError)
+                    return NextResponse.json(
+                        { error: "Failed to fetch students", details: studentsError },
+                        { status: 500 }
+                    )
+                }
+
+                students = (staffStudents ?? []) as unknown as typeof students
+            }
         } else {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
@@ -198,13 +217,18 @@ export async function GET(req: NextRequest) {
 
         const profileIds = students.map((student) => student.profile_id)
 
-        const { data: documents, error: docsError } = await supabase
-            .from("document")
-            .select(
-                "id, profile_id, document_type_id, document_type:document_type_id(name), created_at, document_review(status, created_at), document_files(file_url, type)"
-            )
-            .in("profile_id", profileIds)
-            .order("created_at", { ascending: false })
+        const documentSelect =
+            "id, profile_id, document_type_id, document_type:document_type_id(name), created_at, document_review(status, created_at), document_files(file_url, type)"
+
+        const { data: documents, error: docsError } = await fetchInChunks(
+            profileIds,
+            async (chunkIds) =>
+                supabase
+                    .from("document")
+                    .select(documentSelect)
+                    .in("profile_id", chunkIds)
+                    .order("created_at", { ascending: false })
+        )
 
         if (docsError) {
             console.error("documents error:", docsError)

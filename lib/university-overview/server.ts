@@ -226,14 +226,19 @@ export async function fetchUniversityOverview(
     const courseIds = [...new Set(applicationRows.map((application) => application.course_id))]
 
     let programsCountQuery = supabase
-        .from("program")
+        .from("course")
         .select("id", { count: "exact", head: true })
+        .eq("is_deleted", false)
     let programsRecentQuery = supabase
-        .from("program")
+        .from("course")
         .select("id, name, category, status, created_at")
+        .eq("is_deleted", false)
         .order("created_at", { ascending: false })
         .limit(RECENT_LIMIT)
-    let programsStatusQuery = supabase.from("program").select("status")
+    let programsStatusQuery = supabase
+        .from("course")
+        .select("status")
+        .eq("is_deleted", false)
 
     if (universityScope) {
         programsCountQuery = applyUniversityIdFilter(
@@ -394,11 +399,11 @@ export async function fetchUniversityOverview(
         submission_date: formatSubmissionDate(item.application.created_at),
     }))
 
-    const recentPrograms = (programsRecentResult.data ?? []).map((program) => ({
-        id: program.id,
-        name: program.name ?? "Untitled Program",
-        category: program.category,
-        status: program.status,
+    const recentPrograms = (programsRecentResult.data ?? []).map((course) => ({
+        id: course.id,
+        name: course.name ?? "Untitled Program",
+        category: course.category,
+        status: course.status,
     }))
 
     const recentTemplates = (templatesRecentResult.data ?? []).map((template) => ({
@@ -489,7 +494,7 @@ export async function fetchUniversityOverview(
             OFFER_STATUS_ORDER
         ),
         programs_by_status: toOrderedChartPoints(
-            countByKey((programsStatusResult.data ?? []).map((program) => program.status)),
+            countByKey((programsStatusResult.data ?? []).map((course) => course.status)),
             PROGRAM_STATUS_ORDER
         ),
         documents_by_status: toOrderedChartPoints(

@@ -13,8 +13,8 @@ import { resolveTemplateChecklistItems } from "@/lib/document-template/resolve-c
 import { fetchOffersList } from "@/lib/offer/list";
 import { isMissingOfferTemplateColumnError } from "@/lib/offer/select-fields";
 import {
-    fetchDocumentTemplateForProgramId,
-    resolveApplicationProgramId,
+    fetchDocumentTemplateForCourseId,
+    resolveApplicationCourseId,
 } from "@/lib/document-template/program-assignment";
 import { withProfileDisplayName } from "@/lib/utils/profile";
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
@@ -139,7 +139,6 @@ export async function POST(req: NextRequest) {
                 course:course_id (
                     name,
                     deadline_date,
-                    program_id,
                     degree:degree_id ( name, fees, intake_date, intake_starts_on, duration )
                 ),
                 university:profile!university_id ( first_name, last_name )
@@ -152,12 +151,12 @@ export async function POST(req: NextRequest) {
         }
 
         const createWithoutTemplate = validated.create_without_template === true;
-        const programId = await resolveApplicationProgramId(supabase, validated.application_id);
+        const courseId = await resolveApplicationCourseId(supabase, validated.application_id);
 
-        if (!programId && !createWithoutTemplate) {
+        if (!courseId && !createWithoutTemplate) {
             return NextResponse.json(
                 {
-                    error: "This application's course is not linked to a program. Link the course to a program before creating an offer.",
+                    error: "This application's course is not linked to a program. Link the course before creating an offer.",
                 },
                 { status: 400 }
             );
@@ -165,8 +164,8 @@ export async function POST(req: NextRequest) {
 
         let documentTemplateId = validated.document_template_id ?? null;
 
-        if (!documentTemplateId && !createWithoutTemplate && programId) {
-            const linkedTemplate = await fetchDocumentTemplateForProgramId(supabase, programId);
+        if (!documentTemplateId && !createWithoutTemplate && courseId) {
+            const linkedTemplate = await fetchDocumentTemplateForCourseId(supabase, courseId);
 
             if (!linkedTemplate) {
                 return NextResponse.json(
@@ -294,7 +293,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Document template not found" }, { status: 404 });
         }
 
-        if (templateRow.program_id !== programId) {
+        if (templateRow.course_id !== courseId) {
             return NextResponse.json(
                 {
                     error: "The selected offer template does not belong to this application's program.",

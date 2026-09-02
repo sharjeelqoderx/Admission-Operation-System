@@ -3,9 +3,9 @@ import "server-only"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { evaluateAdmissionRequirements } from "@/lib/document-template/admission-requirements-checklist"
 import {
-    fetchDocumentTemplateForProgramId,
-    fetchProgramSummaryById,
-    resolveApplicationProgramId,
+    fetchCourseSummaryById,
+    fetchDocumentTemplateForCourseId,
+    resolveApplicationCourseId,
 } from "@/lib/document-template/program-assignment"
 import { fetchAdmissionRequirementsContext } from "@/lib/offer/admission-requirements-context"
 import type { OfferChecklistPreviewResponse } from "@/types/schemas/offer"
@@ -18,31 +18,35 @@ export async function buildOfferChecklistPreviewForApplication(
     applicationId: string,
     profileId: string
 ): Promise<OfferChecklistPreviewResponse["data"]> {
-    const [programId, requirementsContext] = await Promise.all([
-        resolveApplicationProgramId(supabase, applicationId),
+    const [courseId, requirementsContext] = await Promise.all([
+        resolveApplicationCourseId(supabase, applicationId),
         fetchAdmissionRequirementsContext(supabase, {
             applicationId,
             profileId,
         }),
     ])
 
-    if (!programId) {
+    if (!courseId) {
         return {
+            course_id: null,
+            course_label: null,
             program_id: null,
             program_label: null,
             template: null,
         }
     }
 
-    const [programSummary, template] = await Promise.all([
-        fetchProgramSummaryById(supabase, programId),
-        fetchDocumentTemplateForProgramId(supabase, programId),
+    const [courseSummary, template] = await Promise.all([
+        fetchCourseSummaryById(supabase, courseId),
+        fetchDocumentTemplateForCourseId(supabase, courseId),
     ])
 
     if (!template) {
         return {
-            program_id: programId,
-            program_label: programSummary?.label ?? null,
+            course_id: courseId,
+            course_label: courseSummary?.label ?? null,
+            program_id: courseId,
+            program_label: courseSummary?.label ?? null,
             template: null,
         }
     }
@@ -55,8 +59,10 @@ export async function buildOfferChecklistPreviewForApplication(
     const fulfilledCount = evaluations.filter((item) => item.fulfilled).length
 
     return {
-        program_id: programId,
-        program_label: programSummary?.label ?? null,
+        course_id: courseId,
+        course_label: courseSummary?.label ?? null,
+        program_id: courseId,
+        program_label: courseSummary?.label ?? null,
         template: {
             template_id: template.id,
             template_title: template.title,

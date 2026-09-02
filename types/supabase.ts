@@ -296,66 +296,6 @@ export type Database = {
           },
         ]
       }
-      campus_program_junction: {
-        Row: {
-          agent_commission: number | null
-          application_deadline: string | null
-          campus_id: string
-          created_at: string
-          currency: string
-          id: string
-          intake_date: string | null
-          program_id: string
-          study_type: string | null
-          total_seats: number | null
-          tuition_fee: number | null
-          updated_at: string
-        }
-        Insert: {
-          agent_commission?: number | null
-          application_deadline?: string | null
-          campus_id: string
-          created_at?: string
-          currency?: string
-          id?: string
-          intake_date?: string | null
-          program_id: string
-          study_type?: string | null
-          total_seats?: number | null
-          tuition_fee?: number | null
-          updated_at?: string
-        }
-        Update: {
-          agent_commission?: number | null
-          application_deadline?: string | null
-          campus_id?: string
-          created_at?: string
-          currency?: string
-          id?: string
-          intake_date?: string | null
-          program_id?: string
-          study_type?: string | null
-          total_seats?: number | null
-          tuition_fee?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "campus_program_junction_campus_id_fkey"
-            columns: ["campus_id"]
-            isOneToOne: false
-            referencedRelation: "campus"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "campus_program_junction_program_id_fkey"
-            columns: ["program_id"]
-            isOneToOne: false
-            referencedRelation: "program"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       conversation: {
         Row: {
           agent_id: string | null
@@ -423,33 +363,66 @@ export type Database = {
       }
       course: {
         Row: {
+          admission_requirements: string | null
+          category: string | null
+          competency_model: string | null
           created_at: string
           deadline_date: string | null
           degree_id: string | null
           id: string
           is_deleted: boolean
+          location: string | null
+          management_skills: string | null
           name: string
-          program_id: string | null
+          perspectives: string | null
+          professional_skills: string | null
+          profile_id: string | null
+          program_detail: string | null
+          program_length: string | null
+          prospects_after_graduation: string | null
+          status: Database["public"]["Enums"]["program_status_enum"]
           updated_at: string
         }
         Insert: {
+          admission_requirements?: string | null
+          category?: string | null
+          competency_model?: string | null
           created_at?: string
           deadline_date?: string | null
           degree_id?: string | null
           id?: string
           is_deleted?: boolean
+          location?: string | null
+          management_skills?: string | null
           name: string
-          program_id?: string | null
+          perspectives?: string | null
+          professional_skills?: string | null
+          profile_id?: string | null
+          program_detail?: string | null
+          program_length?: string | null
+          prospects_after_graduation?: string | null
+          status?: Database["public"]["Enums"]["program_status_enum"]
           updated_at?: string
         }
         Update: {
+          admission_requirements?: string | null
+          category?: string | null
+          competency_model?: string | null
           created_at?: string
           deadline_date?: string | null
           degree_id?: string | null
           id?: string
           is_deleted?: boolean
+          location?: string | null
+          management_skills?: string | null
           name?: string
-          program_id?: string | null
+          perspectives?: string | null
+          professional_skills?: string | null
+          profile_id?: string | null
+          program_detail?: string | null
+          program_length?: string | null
+          prospects_after_graduation?: string | null
+          status?: Database["public"]["Enums"]["program_status_enum"]
           updated_at?: string
         }
         Relationships: [
@@ -461,10 +434,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "course_program_id_fkey"
-            columns: ["program_id"]
+            foreignKeyName: "course_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "program"
+            referencedRelation: "profile"
             referencedColumns: ["id"]
           },
         ]
@@ -698,12 +671,12 @@ export type Database = {
           body_html: string
           checklist_items: Json
           checklist_profile: string | null
+          course_id: string | null
           created_at: string
           created_by_profile_id: string
           id: string
           is_deleted: boolean
           locale: string
-          program_id: string | null
           template_dates: Json
           title: string
           updated_at: string
@@ -714,12 +687,12 @@ export type Database = {
           body_html?: string
           checklist_items?: Json
           checklist_profile?: string | null
+          course_id?: string | null
           created_at?: string
           created_by_profile_id: string
           id?: string
           is_deleted?: boolean
           locale?: string
-          program_id?: string | null
           template_dates?: Json
           title: string
           updated_at?: string
@@ -730,12 +703,12 @@ export type Database = {
           body_html?: string
           checklist_items?: Json
           checklist_profile?: string | null
-          locale?: string
+          course_id?: string | null
           created_at?: string
           created_by_profile_id?: string
           id?: string
           is_deleted?: boolean
-          program_id?: string | null
+          locale?: string
           template_dates?: Json
           title?: string
           updated_at?: string
@@ -744,17 +717,17 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "document_template_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "course"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "document_template_created_by_profile_id_fkey"
             columns: ["created_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profile"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_template_program_id_fkey"
-            columns: ["program_id"]
-            isOneToOne: false
-            referencedRelation: "program"
             referencedColumns: ["id"]
           },
         ]
@@ -1217,110 +1190,6 @@ export type Database = {
         }
         Relationships: []
       }
-      program: {
-        Row: {
-          admission_requirements: string | null
-          category: string | null
-          competency_model: string | null
-          created_at: string
-          id: string
-          location: string | null
-          management_skills: string | null
-          name: string | null
-          perspectives: string | null
-          professional_skills: string | null
-          profile_id: string
-          program_detail: string | null
-          program_length: string | null
-          prospects_after_graduation: string | null
-          status: Database["public"]["Enums"]["program_status_enum"]
-          updated_at: string
-        }
-        Insert: {
-          admission_requirements?: string | null
-          category?: string | null
-          competency_model?: string | null
-          created_at?: string
-          id?: string
-          location?: string | null
-          management_skills?: string | null
-          name?: string | null
-          perspectives?: string | null
-          professional_skills?: string | null
-          profile_id: string
-          program_detail?: string | null
-          program_length?: string | null
-          prospects_after_graduation?: string | null
-          status?: Database["public"]["Enums"]["program_status_enum"]
-          updated_at?: string
-        }
-        Update: {
-          admission_requirements?: string | null
-          category?: string | null
-          competency_model?: string | null
-          created_at?: string
-          id?: string
-          location?: string | null
-          management_skills?: string | null
-          name?: string | null
-          perspectives?: string | null
-          professional_skills?: string | null
-          profile_id?: string
-          program_detail?: string | null
-          program_length?: string | null
-          prospects_after_graduation?: string | null
-          status?: Database["public"]["Enums"]["program_status_enum"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "program_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      program_document_requirements: {
-        Row: {
-          created_at: string
-          document_type_id: string
-          id: string
-          program_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          document_type_id: string
-          id?: string
-          program_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          document_type_id?: string
-          id?: string
-          program_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "program_document_requirements_document_type_id_fkey"
-            columns: ["document_type_id"]
-            isOneToOne: false
-            referencedRelation: "document_type"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "program_document_requirements_program_id_fkey"
-            columns: ["program_id"]
-            isOneToOne: false
-            referencedRelation: "program"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       student: {
         Row: {
           address: string | null
@@ -1519,11 +1388,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_university_application: {
+        Args: { target_university_id: string }
+        Returns: boolean
+      }
       current_profile_role: {
         Args: never
         Returns: Database["public"]["Enums"]["role_enum"]
       }
       is_university_role: { Args: never; Returns: boolean }
+      management_university_scope_ids: { Args: never; Returns: string[] }
       soft_delete_document_template: {
         Args: { template_id: string }
         Returns: undefined
@@ -1533,7 +1407,13 @@ export type Database = {
       app_status_enum: "APPROVED" | "REJECTED" | "NEEDS_REVISION" | "PENDING"
       campus_status_enum: "ACTIVE" | "INACTIVE"
       conv_status_enum: "OPEN" | "CLOSED"
-      doc_status_enum: "APPROVED" | "REJECTED" | "NEEDS_REVISION" | "VERIFIED" | "PENDING" | "ACTION_REQUIRED"
+      doc_status_enum:
+        | "APPROVED"
+        | "REJECTED"
+        | "NEEDS_REVISION"
+        | "VERIFIED"
+        | "PENDING"
+        | "ACTION_REQUIRED"
       document_requirement_type_enum: "REQUIRED" | "OPTIONAL"
       education_level_enum: "SCHOOL" | "COLLEGE" | "DIPLOMA" | "UNIVERSITY"
       gender_enum: "MALE" | "FEMALE"
@@ -1673,7 +1553,14 @@ export const Constants = {
       app_status_enum: ["APPROVED", "REJECTED", "NEEDS_REVISION", "PENDING"],
       campus_status_enum: ["ACTIVE", "INACTIVE"],
       conv_status_enum: ["OPEN", "CLOSED"],
-      doc_status_enum: ["APPROVED", "REJECTED", "NEEDS_REVISION", "VERIFIED", "PENDING", "ACTION_REQUIRED"],
+      doc_status_enum: [
+        "APPROVED",
+        "REJECTED",
+        "NEEDS_REVISION",
+        "VERIFIED",
+        "PENDING",
+        "ACTION_REQUIRED",
+      ],
       document_requirement_type_enum: ["REQUIRED", "OPTIONAL"],
       education_level_enum: ["SCHOOL", "COLLEGE", "DIPLOMA", "UNIVERSITY"],
       gender_enum: ["MALE", "FEMALE"],

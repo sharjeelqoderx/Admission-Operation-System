@@ -8,13 +8,13 @@ import type { Database } from "@/types/supabase"
 
 type AppSupabase = SupabaseClient<Database>
 
-function formatProgramLabel(program: {
-    name: string | null
+function formatCourseLabel(course: {
+    name: string
     category: string | null
     location: string | null
 }) {
-    const name = program.name?.trim() || "Untitled program"
-    const details = [program.category, program.location].filter(Boolean).join(" • ")
+    const name = course.name?.trim() || "Untitled program"
+    const details = [course.category, course.location].filter(Boolean).join(" • ")
     return details ? `${name} (${details})` : name
 }
 
@@ -22,41 +22,42 @@ export async function fetchDocumentTemplateProgramOptions(
     supabase: AppSupabase,
     excludeTemplateId?: string | null
 ): Promise<DocumentTemplateProgramOption[]> {
-    const [{ data: programs, error: programsError }, { data: templates, error: templatesError }] =
+    const [{ data: courses, error: coursesError }, { data: templates, error: templatesError }] =
         await Promise.all([
             supabase
-                .from("program")
+                .from("course")
                 .select("id, name, category, location, status")
+                .eq("is_deleted", false)
                 .eq("status", "ACTIVE")
                 .order("name", { ascending: true }),
             supabase
                 .from("document_template")
-                .select("id, program_id, title")
+                .select("id, course_id, title")
                 .eq("is_deleted", false)
-                .not("program_id", "is", null),
+                .not("course_id", "is", null),
         ])
 
-    if (programsError) {
-        throw new Error(programsError.message)
+    if (coursesError) {
+        throw new Error(coursesError.message)
     }
 
     if (templatesError) {
         throw new Error(templatesError.message)
     }
 
-    const assignedByProgramId = new Map<string, { template_id: string; template_title: string }>()
+    const assignedByCourseId = new Map<string, { template_id: string; template_title: string }>()
 
     for (const template of templates ?? []) {
-        if (!template.program_id) continue
-        assignedByProgramId.set(template.program_id, {
+        if (!template.course_id) continue
+        assignedByCourseId.set(template.course_id, {
             template_id: template.id,
             template_title: template.title,
         })
     }
 
-    return (programs ?? [])
-        .map((program) => {
-            const assignment = assignedByProgramId.get(program.id)
+    return (courses ?? [])
+        .map((course) => {
+            const assignment = assignedByCourseId.get(course.id)
             const isCurrentTemplate =
                 Boolean(excludeTemplateId) && assignment?.template_id === excludeTemplateId
 
@@ -65,8 +66,8 @@ export async function fetchDocumentTemplateProgramOptions(
             }
 
             return {
-                id: program.id,
-                label: formatProgramLabel(program),
+                id: course.id,
+                label: formatCourseLabel(course),
                 is_assigned: Boolean(assignment),
                 assigned_template_id: assignment?.template_id ?? null,
                 assigned_template_title: assignment?.template_title ?? null,
@@ -75,13 +76,13 @@ export async function fetchDocumentTemplateProgramOptions(
         .filter((option): option is DocumentTemplateProgramOption => option !== null)
 }
 
-export async function resolveApplicationProgramId(
+export async function resolveApplicationCourseId(
     supabase: AppSupabase,
     applicationId: string
 ): Promise<string | null> {
     const { data, error } = await supabase
         .from("application")
-        .select("course:course_id(program_id)")
+        .select("course_id")
         .eq("id", applicationId)
         .maybeSingle()
 
@@ -89,18 +90,20 @@ export async function resolveApplicationProgramId(
         throw new Error(error.message)
     }
 
-    const course = Array.isArray(data?.course) ? data.course[0] : data?.course
-    return course?.program_id ?? null
+    return data?.course_id ?? null
 }
 
-export async function fetchDocumentTemplateForProgramId(
+/** @deprecated Use resolveApplicationCourseId */
+export const resolveApplicationProgramId = resolveApplicationCourseId
+
+export async function fetchDocumentTemplateForCourseId(
     supabase: AppSupabase,
-    programId: string
+    courseId: string
 ): Promise<DocumentTemplateListItem | null> {
     const { data, error } = await supabase
         .from("document_template")
         .select("*")
-        .eq("program_id", programId)
+        .eq("course_id", courseId)
         .eq("is_deleted", false)
         .maybeSingle()
 
@@ -111,14 +114,18 @@ export async function fetchDocumentTemplateForProgramId(
     return data ? mapTemplateRow(data) : null
 }
 
-export async function fetchProgramSummaryById(
+/** @deprecated Use fetchDocumentTemplateForCourseId */
+export const fetchDocumentTemplateForProgramId = fetchDocumentTemplateForCourseId
+
+export async function fetchCourseSummaryById(
     supabase: AppSupabase,
-    programId: string
+    courseId: string
 ): Promise<{ id: string; label: string } | null> {
     const { data, error } = await supabase
-        .from("program")
+        .from("course")
         .select("id, name, category, location")
-        .eq("id", programId)
+        .eq("id", courseId)
+        .eq("is_deleted", false)
         .maybeSingle()
 
     if (error) {
@@ -129,19 +136,22 @@ export async function fetchProgramSummaryById(
 
     return {
         id: data.id,
-        label: formatProgramLabel(data),
+        label: formatCourseLabel(data),
     }
 }
 
-export async function assertProgramAvailableForTemplate(
+/** @deprecated Use fetchCourseSummaryById */
+export const fetchProgramSummaryById = fetchCourseSummaryById
+
+export async function assertCourseAvailableForTemplate(
     supabase: AppSupabase,
-    programId: string,
+    courseId: string,
     templateId?: string | null
 ) {
     const { data, error } = await supabase
         .from("document_template")
         .select("id, title")
-        .eq("program_id", programId)
+        .eq("course_id", courseId)
         .eq("is_deleted", false)
         .maybeSingle()
 
@@ -155,3 +165,6 @@ export async function assertProgramAvailableForTemplate(
         )
     }
 }
+
+/** @deprecated Use assertCourseAvailableForTemplate */
+export const assertProgramAvailableForTemplate = assertCourseAvailableForTemplate

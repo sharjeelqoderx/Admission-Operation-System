@@ -112,7 +112,7 @@ export function ProgramTable({ rows, isLoading, isError, onRetry }: Props) {
 
                             {/* Action Buttons Left */}
                             <div className="flex flex-wrap gap-3 pt-2">
-                                <Link href={`/dashboard/program/${program.program_id}`}>
+                                <Link href={`/dashboard/program/${program.id}`}>
                                     <Button className="bg-[#4285f4] hover:bg-[#3367d6] text-white h-9 px-6 text-[11px] font-bold rounded-lg shadow-sm transition-all hover:scale-[1.02]">
                                         View Details
                                     </Button>

@@ -39,6 +39,11 @@ function buildIntakeLabel(degree?: {
     return formatted === "N/A" ? null : `${formatted} Intake`
 }
 
+function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
+    if (value == null) return null
+    return Array.isArray(value) ? value[0] ?? null : value
+}
+
 function mapListItem(
     course: CourseRow & {
         degree: (CourseRow["degree"] & {
@@ -46,20 +51,15 @@ function mapListItem(
             agent_commission?: number | null
             intake_starts_on?: string | null
         }) | null
-        program_id?: string | null
-        program?: { category?: string | null } | { category?: string | null }[] | null
+        category?: string | null
     }
 ): UniversityProgramListItem {
     const degree = course.degree
-    const program = Array.isArray(course.program) ? course.program[0] : course.program
 
     return {
         id: course.id,
-        program_id: course.program_id ?? null,
         name: course.name,
-        category:
-            program?.category ??
-            (typeof degree?.name === "string" ? degree.name : null),
+        category: course.category ?? (typeof degree?.name === "string" ? degree.name : null),
         level_name: degree?.level?.name ?? null,
         intake_label: buildIntakeLabel(degree ?? undefined),
         deadline_label: formatDeadlineLabel(course.deadline_date),
@@ -93,8 +93,7 @@ export async function fetchUniversityProgramList(params: {
             updated_at,
             degree_id,
             deadline_date,
-            program_id,
-            program:program_id ( category ),
+            category,
             degree:degree_id (
                 id,
                 name,
@@ -167,7 +166,17 @@ export async function fetchUniversityProgramDetail(
             id,
             name,
             deadline_date,
-            program_id,
+            category,
+            location,
+            program_length,
+            program_detail,
+            admission_requirements,
+            perspectives,
+            prospects_after_graduation,
+            competency_model,
+            professional_skills,
+            management_skills,
+            status,
             degree:degree_id (
                 id,
                 name,
@@ -178,21 +187,12 @@ export async function fetchUniversityProgramDetail(
                 intake_date,
                 intake_starts_on,
                 agent_commission,
-                level_id
-            ),
-            program:program_id (
-                id,
-                category,
-                location,
-                program_length,
-                program_detail,
-                admission_requirements,
-                perspectives,
-                prospects_after_graduation,
-                competency_model,
-                professional_skills,
-                management_skills,
-                status
+                level_id,
+                requirements:degree_requirement (
+                    id,
+                    document_type_id,
+                    document_type:document_type_id ( name )
+                )
             )
         `
         )
@@ -205,49 +205,42 @@ export async function fetchUniversityProgramDetail(
     }
 
     const degree = Array.isArray(course.degree) ? course.degree[0] : course.degree
-    const program = Array.isArray(course.program) ? course.program[0] : course.program
-
-    let documentRequirements: UniversityProgramDetail["document_requirements"] = []
-    if (program?.id) {
-        const { data: requirements } = await supabase
-            .from("program_document_requirements")
-            .select("id, document_type_id, document_type:document_type_id ( name )")
-            .eq("program_id", program.id)
-
-        documentRequirements = (requirements ?? []).map((row) => {
-            const documentType = Array.isArray(row.document_type)
-                ? row.document_type[0]
-                : row.document_type
+    const documentRequirements = (degree?.requirements ?? []).map(
+        (row: {
+            id: string
+            document_type_id: string
+            document_type: { name: string | null } | { name: string | null }[] | null
+        }) => {
+            const documentType = unwrapRelation(row.document_type)
 
             return {
                 id: row.id,
                 document_type_id: row.document_type_id,
                 name: documentType?.name ?? null,
             }
-        })
-    }
+        }
+    )
 
     return {
         id: course.id,
-        program_id: course.program_id,
-        status: program?.status ?? "ACTIVE",
+        status: course.status ?? "ACTIVE",
         name: course.name,
-        category: program?.category ?? null,
+        category: course.category ?? null,
         tuition_fees: degree?.fees ?? null,
         agent_commission: degree?.agent_commission ?? null,
-        location: program?.location ?? degree?.location ?? null,
-        program_length: program?.program_length ?? degree?.duration ?? null,
+        location: course.location ?? degree?.location ?? null,
+        program_length: course.program_length ?? degree?.duration ?? null,
         study_type: (degree?.study_mode as "full_time" | "part_time" | null) ?? null,
         intake_date: degree?.intake_starts_on ?? null,
         application_deadline: course.deadline_date,
         level_id: degree?.level_id ?? null,
-        program_detail: program?.program_detail ?? null,
-        admission_requirements: program?.admission_requirements ?? null,
-        perspectives: program?.perspectives ?? null,
-        prospects_after_graduation: program?.prospects_after_graduation ?? null,
-        competency_model: program?.competency_model ?? null,
-        professional_skills: program?.professional_skills ?? null,
-        management_skills: program?.management_skills ?? null,
+        program_detail: course.program_detail ?? null,
+        admission_requirements: course.admission_requirements ?? null,
+        perspectives: course.perspectives ?? null,
+        prospects_after_graduation: course.prospects_after_graduation ?? null,
+        competency_model: course.competency_model ?? null,
+        professional_skills: course.professional_skills ?? null,
+        management_skills: course.management_skills ?? null,
         document_type_ids: documentRequirements.map((item) => item.document_type_id),
         document_requirements: documentRequirements,
     }
@@ -264,26 +257,42 @@ async function getProgramWriteClient(): Promise<ProgramWriteClient> {
     return createSupabaseServerClient()
 }
 
-async function syncProgramDocumentRequirements(
+async function syncDegreeDocumentRequirements(
     writeClient: ProgramWriteClient,
-    programId: string,
+    degreeId: string | null | undefined,
     documentTypeIds?: string[]
 ) {
-    if (!documentTypeIds) return
+    if (!documentTypeIds || !degreeId) return
 
-    await writeClient
-        .from("program_document_requirements")
-        .delete()
-        .eq("program_id", programId)
+    await writeClient.from("degree_requirement").delete().eq("degree_id", degreeId)
 
     if (documentTypeIds.length === 0) return
 
-    await writeClient.from("program_document_requirements").insert(
+    await writeClient.from("degree_requirement").insert(
         documentTypeIds.map((documentTypeId) => ({
-            program_id: programId,
+            degree_id: degreeId,
             document_type_id: documentTypeId,
+            requirement_type: "REQUIRED" as const,
         }))
     )
+}
+
+function buildCourseContentPayload(payload: UniversityProgramUpsert) {
+    return {
+        name: payload.name,
+        category: payload.category ?? null,
+        location: payload.location ?? null,
+        program_length: payload.program_length ?? null,
+        program_detail: payload.program_detail ?? null,
+        admission_requirements: payload.admission_requirements ?? null,
+        perspectives: payload.perspectives ?? null,
+        prospects_after_graduation: payload.prospects_after_graduation ?? null,
+        competency_model: payload.competency_model ?? null,
+        professional_skills: payload.professional_skills ?? null,
+        management_skills: payload.management_skills ?? null,
+        deadline_date: payload.application_deadline ?? null,
+        status: "ACTIVE" as const,
+    }
 }
 
 export async function createUniversityProgram(params: {
@@ -292,30 +301,6 @@ export async function createUniversityProgram(params: {
 }) {
     const writeClient = await getProgramWriteClient()
     const { payload, ownerProfileId } = params
-
-    const { data: program, error: programError } = await writeClient
-        .from("program")
-        .insert({
-            profile_id: ownerProfileId,
-            name: payload.name,
-            category: payload.category ?? null,
-            location: payload.location ?? null,
-            program_length: payload.program_length ?? null,
-            program_detail: payload.program_detail ?? null,
-            admission_requirements: payload.admission_requirements ?? null,
-            perspectives: payload.perspectives ?? null,
-            prospects_after_graduation: payload.prospects_after_graduation ?? null,
-            competency_model: payload.competency_model ?? null,
-            professional_skills: payload.professional_skills ?? null,
-            management_skills: payload.management_skills ?? null,
-            status: "ACTIVE",
-        })
-        .select("id")
-        .single()
-
-    if (programError || !program) {
-        throw new Error(programError?.message ?? "Failed to create program")
-    }
 
     const { data: degree, error: degreeError } = await writeClient
         .from("degree")
@@ -339,10 +324,9 @@ export async function createUniversityProgram(params: {
     const { data: course, error: courseError } = await writeClient
         .from("course")
         .insert({
-            name: payload.name,
+            ...buildCourseContentPayload(payload),
             degree_id: degree.id,
-            program_id: program.id,
-            deadline_date: payload.application_deadline ?? null,
+            profile_id: ownerProfileId,
         })
         .select("id")
         .single()
@@ -351,13 +335,9 @@ export async function createUniversityProgram(params: {
         throw new Error(courseError?.message ?? "Failed to create course")
     }
 
-    await syncProgramDocumentRequirements(
-        writeClient,
-        program.id,
-        payload.document_type_ids
-    )
+    await syncDegreeDocumentRequirements(writeClient, degree.id, payload.document_type_ids)
 
-    return { courseId: course.id, programId: program.id }
+    return { courseId: course.id }
 }
 
 export async function updateUniversityProgram(params: {
@@ -370,57 +350,6 @@ export async function updateUniversityProgram(params: {
 
     if (!existing) {
         throw new Error("Program not found")
-    }
-
-    let programId = existing.program_id
-
-    if (programId) {
-        const { error: programError } = await writeClient
-            .from("program")
-            .update({
-                name: params.payload.name,
-                category: params.payload.category ?? null,
-                location: params.payload.location ?? null,
-                program_length: params.payload.program_length ?? null,
-                program_detail: params.payload.program_detail ?? null,
-                admission_requirements: params.payload.admission_requirements ?? null,
-                perspectives: params.payload.perspectives ?? null,
-                prospects_after_graduation: params.payload.prospects_after_graduation ?? null,
-                competency_model: params.payload.competency_model ?? null,
-                professional_skills: params.payload.professional_skills ?? null,
-                management_skills: params.payload.management_skills ?? null,
-            })
-            .eq("id", programId)
-
-        if (programError) {
-            throw new Error(programError.message)
-        }
-    } else {
-        const { data: program, error: programError } = await writeClient
-            .from("program")
-            .insert({
-                profile_id: params.ownerProfileId,
-                name: params.payload.name,
-                category: params.payload.category ?? null,
-                location: params.payload.location ?? null,
-                program_length: params.payload.program_length ?? null,
-                program_detail: params.payload.program_detail ?? null,
-                admission_requirements: params.payload.admission_requirements ?? null,
-                perspectives: params.payload.perspectives ?? null,
-                prospects_after_graduation: params.payload.prospects_after_graduation ?? null,
-                competency_model: params.payload.competency_model ?? null,
-                professional_skills: params.payload.professional_skills ?? null,
-                management_skills: params.payload.management_skills ?? null,
-                status: "ACTIVE",
-            })
-            .select("id")
-            .single()
-
-        if (programError || !program) {
-            throw new Error(programError?.message ?? "Failed to create program profile")
-        }
-
-        programId = program.id
     }
 
     const { data: course } = await writeClient
@@ -452,9 +381,8 @@ export async function updateUniversityProgram(params: {
     const { error: courseError } = await writeClient
         .from("course")
         .update({
-            name: params.payload.name,
-            deadline_date: params.payload.application_deadline ?? null,
-            program_id: programId,
+            ...buildCourseContentPayload(params.payload),
+            profile_id: params.ownerProfileId,
         })
         .eq("id", params.courseId)
 
@@ -462,15 +390,13 @@ export async function updateUniversityProgram(params: {
         throw new Error(courseError.message)
     }
 
-    if (programId) {
-        await syncProgramDocumentRequirements(
-            writeClient,
-            programId,
-            params.payload.document_type_ids
-        )
-    }
+    await syncDegreeDocumentRequirements(
+        writeClient,
+        course?.degree_id,
+        params.payload.document_type_ids
+    )
 
-    return { courseId: params.courseId, programId }
+    return { courseId: params.courseId }
 }
 
 export async function softDeleteUniversityProgram(courseId: string) {

@@ -2,7 +2,6 @@ import { z } from "zod"
 
 export const universityProgramListItemSchema = z.object({
     id: z.string().uuid(),
-    program_id: z.string().uuid().nullable(),
     name: z.string(),
     category: z.string().nullable(),
     level_name: z.string().nullable(),
@@ -63,7 +62,6 @@ export const universityProgramUpsertSchema = z.object({
 
 export const universityProgramDetailSchema = universityProgramUpsertSchema.extend({
     id: z.string().uuid(),
-    program_id: z.string().uuid().nullable(),
     status: z.string(),
     document_requirements: z.array(
         z.object({

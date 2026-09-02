@@ -25,7 +25,7 @@ type DocumentTypeSummary = Pick<
 
 export type CourseRequirement = Pick<
     Tables<"degree_requirement">,
-    "id" | "requirement_type" | "created_at" | "updated_at"
+    "id" | "document_type_id" | "requirement_type" | "created_at" | "updated_at"
 > & {
     document_type: DocumentTypeSummary | null
 }
@@ -36,7 +36,7 @@ export type CourseDegree = Tables<"degree"> & {
 }
 
 export type CourseProgramContent = Pick<
-    Tables<"program">,
+    Tables<"course">,
     | "id"
     | "category"
     | "location"
