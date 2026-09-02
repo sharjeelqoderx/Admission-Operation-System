@@ -35,27 +35,23 @@ type UniversityStudentListTableProps = {
         totalPages: number
     }
     isLoading?: boolean
+    isFetching?: boolean
     searchValue: string
     statusValue: string
-    activeTab: string
     onSearchChange: (value: string) => void
     onStatusChange: (value: string) => void
-    onTabChange: (value: string) => void
     onPageChange: (page: number) => void
 }
-
-const tabs = ["All Students", "Program", "Applied", "Submission Date"] as const
 
 export const UniversityStudentListTable = memo(function UniversityStudentListTable({
     students,
     pagination,
     isLoading = false,
+    isFetching = false,
     searchValue,
     statusValue,
-    activeTab,
     onSearchChange,
     onStatusChange,
-    onTabChange,
     onPageChange,
 }: UniversityStudentListTableProps) {
     const totalCount = pagination?.total ?? students.length
@@ -95,37 +91,10 @@ export const UniversityStudentListTable = memo(function UniversityStudentListTab
                 </Select>
             </div>
 
-            <div className="flex flex-wrap items-center gap-6 border-b border-gray-200">
-                {tabs.map((tab) => {
-                    const isActive = activeTab === tab
-
-                    return (
-                        <button
-                            key={tab}
-                            type="button"
-                            onClick={() => onTabChange(tab)}
-                            className={cn(
-                                "pb-3 transition-colors",
-                                isActive
-                                    ? "border-b-2 border-brand-blue text-brand-blue"
-                                    : "border-b-2 border-transparent text-gray-500 hover:text-gray-700"
-                            )}
-                        >
-                            <Typography
-                                as="span"
-                                className={cn(
-                                    "text-sm whitespace-nowrap",
-                                    isActive ? "font-semibold" : "font-medium"
-                                )}
-                            >
-                                {tab}
-                            </Typography>
-                        </button>
-                    )
-                })}
-            </div>
-
-            <Card className="overflow-hidden border-none bg-white shadow-sm ring-1 ring-black/5">
+            <Card className={cn(
+                "overflow-hidden border-none bg-white shadow-sm ring-1 ring-black/5 transition-opacity",
+                isFetching && !isLoading && "opacity-60"
+            )}>
                 {isLoading ? (
                     <TableSkeleton columns={5} rows={6} showFooter />
                 ) : (

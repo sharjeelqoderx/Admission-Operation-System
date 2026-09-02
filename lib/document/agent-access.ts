@@ -4,6 +4,10 @@ import type { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createSupabaseServiceClient } from "@/lib/supabase/server"
 import { resolveAgentStudentProfileIds } from "@/lib/api/agent-applications"
 import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
+import {
+    applyUniversityIdFilter,
+    resolveUniversityApplicationScope,
+} from "@/lib/auth/university-scope"
 import { Role } from "@/types/enums/role"
 
 export { isDocumentStaffRole } from "@/lib/auth/university-role"
@@ -40,14 +44,19 @@ export async function assertDocumentStaffCanAccessStudentProfile(
     }
 
     if (isUniversityRole(role)) {
-        const { data: application } = await supabase
+        const scope = await resolveUniversityApplicationScope(supabase, userId, role)
+
+        let applicationQuery = supabase
             .from("application")
             .select("profile_id")
             .eq("profile_id", studentProfileId)
-            .eq("university_id", userId)
-            .maybeSingle()
+            .limit(1)
 
-        return Boolean(application)
+        applicationQuery = applyUniversityIdFilter(applicationQuery, "university_id", scope)
+
+        const { data: applications } = await applicationQuery
+
+        return Boolean(applications?.length)
     }
 
     return false

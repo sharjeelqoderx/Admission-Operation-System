@@ -7,7 +7,11 @@ import {
 import { DocumentFormSchema } from "@/types/schemas/document"
 import { formatFullName } from "@/lib/utils/profile"
 import { assertCanUploadStudentDocument } from "@/lib/document/agent-access"
-import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
+import {
+    applyUniversityIdFilter,
+    resolveUniversityApplicationScope,
+} from "@/lib/auth/university-scope"
 import { saveDocumentUpload } from "@/lib/supabase/save-document-upload"
 import { fetchInChunks } from "@/lib/supabase/query-in-chunks"
 import { Role } from "@/types/enums/role"
@@ -144,16 +148,36 @@ export async function GET(req: NextRequest) {
 
             students = (agentStudents ?? []) as unknown as typeof students
         } else if (isUniversityStaffRole(profile?.role)) {
-            let studentsQuery = supabase
-                .from("student")
-                .select(studentSelect)
-                .order("created_at", { ascending: false })
+            const scope = await resolveUniversityApplicationScope(
+                supabase,
+                user.id,
+                profile?.role
+            )
 
-            if (isUniversityRole(profile?.role)) {
-                const { data: applications, error: applicationsError } = await supabase
-                    .from("application")
-                    .select("profile_id")
-                    .eq("university_id", user.id)
+            if (scope.universityIds === null) {
+                const { data: staffStudents, error: studentsError } = await supabase
+                    .from("student")
+                    .select(studentSelect)
+                    .order("created_at", { ascending: false })
+
+                if (studentsError) {
+                    console.error("students error:", studentsError)
+                    return NextResponse.json(
+                        { error: "Failed to fetch students", details: studentsError },
+                        { status: 500 }
+                    )
+                }
+
+                students = (staffStudents ?? []) as unknown as typeof students
+            } else {
+                let applicationsQuery = supabase.from("application").select("profile_id")
+                applicationsQuery = applyUniversityIdFilter(
+                    applicationsQuery,
+                    "university_id",
+                    scope
+                )
+
+                const { data: applications, error: applicationsError } = await applicationsQuery
 
                 if (applicationsError) {
                     console.error("applications error:", applicationsError)
@@ -194,18 +218,6 @@ export async function GET(req: NextRequest) {
                 }
 
                 students = (scopedStudents ?? []) as unknown as typeof students
-            } else {
-                const { data: staffStudents, error: studentsError } = await studentsQuery
-
-                if (studentsError) {
-                    console.error("students error:", studentsError)
-                    return NextResponse.json(
-                        { error: "Failed to fetch students", details: studentsError },
-                        { status: 500 }
-                    )
-                }
-
-                students = (staffStudents ?? []) as unknown as typeof students
             }
         } else {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })

@@ -1,6 +1,7 @@
 import "server-only"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { fetchInChunks } from "@/lib/supabase/query-in-chunks"
 import { COURSE_SELECT, attachLevelsToCourses, type CourseRow } from "@/lib/api/course-program"
 import { formatFullName } from "@/lib/utils/profile"
 import { formatIntakeDate } from "@/lib/utils/program"
@@ -134,10 +135,9 @@ async function loadCoursesById(
         return new Map<string, CourseRow>()
     }
 
-    const { data, error } = await supabase
-        .from("course")
-        .select(COURSE_SELECT)
-        .in("id", courseIds)
+    const { data, error } = await fetchInChunks(courseIds, async (chunkIds) =>
+        supabase.from("course").select(COURSE_SELECT).in("id", chunkIds)
+    )
 
     if (error) {
         throw new Error(error.message)
@@ -155,10 +155,9 @@ async function loadAgentNames(
         return new Map<string, string>()
     }
 
-    const { data, error } = await supabase
-        .from("profile")
-        .select("id, first_name, last_name")
-        .in("id", profileIds)
+    const { data, error } = await fetchInChunks(profileIds, async (chunkIds) =>
+        supabase.from("profile").select("id, first_name, last_name").in("id", chunkIds)
+    )
 
     if (error) {
         throw new Error(error.message)
@@ -181,10 +180,12 @@ async function loadAgentOrganizations(
     }
 
     // Live DB may not have agency_name — use contact person (or default) instead.
-    const { data, error } = await supabase
-        .from("agent")
-        .select("profile_id, contact_person_first_name, contact_person_last_name")
-        .in("profile_id", agentProfileIds)
+    const { data, error } = await fetchInChunks(agentProfileIds, async (chunkIds) =>
+        supabase
+            .from("agent")
+            .select("profile_id, contact_person_first_name, contact_person_last_name")
+            .in("profile_id", chunkIds)
+    )
 
     if (error) {
         throw new Error(error.message)
@@ -292,35 +293,40 @@ export async function fetchUniversityStudentList(params: {
 
     const profileIds = studentRows.map((student) => student.profile_id)
 
-    const { data: applications, error: applicationsError } = await supabase
-        .from("application")
-        .select(
-            "id, profile_id, application_no, status, created_at, submitted_by_profile_id, course_id, university_id"
-        )
-        .in("profile_id", profileIds.length > 0 ? profileIds : ["00000000-0000-0000-0000-000000000000"])
-        .order("created_at", { ascending: false })
+    const { data: applications, error: applicationsError } = await fetchInChunks<ApplicationRow>(
+        profileIds,
+        async (chunkIds) =>
+            supabase
+                .from("application")
+                .select(
+                    "id, profile_id, application_no, status, created_at, submitted_by_profile_id, course_id, university_id"
+                )
+                .in("profile_id", chunkIds)
+                .order("created_at", { ascending: false })
+    )
 
     if (applicationsError) {
         throw new Error(applicationsError.message)
     }
 
-    const applicationRows = (applications ?? []) as ApplicationRow[]
+    const applicationRows = applications ?? []
     const applicationIds = applicationRows.map((application) => application.id)
 
-    const { data: offers, error: offersError } = await supabase
-        .from("offer_letter")
-        .select("application_id, status, created_at")
-        .in(
-            "application_id",
-            applicationIds.length > 0 ? applicationIds : ["00000000-0000-0000-0000-000000000000"]
-        )
+    const { data: offers, error: offersError } = await fetchInChunks<OfferRow>(
+        applicationIds,
+        async (chunkIds) =>
+            supabase
+                .from("offer_letter")
+                .select("application_id, status, created_at")
+                .in("application_id", chunkIds)
+    )
 
     if (offersError) {
         throw new Error(offersError.message)
     }
 
     const offerByApplicationId = new Map(
-        ((offers ?? []) as OfferRow[]).map((offer) => [offer.application_id, offer])
+        (offers ?? []).map((offer) => [offer.application_id, offer])
     )
 
     const courseIds = [
@@ -458,16 +464,15 @@ export async function fetchUniversityStudentDetail(params: {
     const applicationRows = (applications ?? []) as ApplicationRow[]
     const applicationIds = applicationRows.map((application) => application.id)
 
-    const { data: offers } = await supabase
-        .from("offer_letter")
-        .select("application_id, status, created_at")
-        .in(
-            "application_id",
-            applicationIds.length > 0 ? applicationIds : ["00000000-0000-0000-0000-000000000000"]
-        )
+    const { data: offers } = await fetchInChunks<OfferRow>(applicationIds, async (chunkIds) =>
+        supabase
+            .from("offer_letter")
+            .select("application_id, status, created_at")
+            .in("application_id", chunkIds)
+    )
 
     const offerByApplicationId = new Map(
-        ((offers ?? []) as OfferRow[]).map((offer) => [offer.application_id, offer])
+        (offers ?? []).map((offer) => [offer.application_id, offer])
     )
 
     const courseIds = [

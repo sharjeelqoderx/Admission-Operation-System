@@ -1,8 +1,8 @@
 "use client"
 
 import type { ComponentType } from "react"
-import { useCallback, useMemo, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import type { UniversityStudentListResponse } from "@/types/schemas/university-student"
 
@@ -10,11 +10,10 @@ export type UniversityStudentPageLogicProps = {
     overview: UniversityStudentListResponse
     searchValue: string
     statusValue: string
-    activeTab: string
+    isLoading: boolean
     isFetching: boolean
     onSearchChange: (value: string) => void
     onStatusChange: (value: string) => void
-    onTabChange: (value: string) => void
     onPageChange: (page: number) => void
 }
 
@@ -54,14 +53,28 @@ export function withUniversityStudentPageLogic(
         const q = searchParams.get("q") ?? ""
         const status = searchParams.get("status") ?? "all"
         const page = searchParams.get("page") ?? "1"
-        const [activeTab, setActiveTab] = useState("All Students")
+        const [searchInput, setSearchInput] = useState(q)
+        const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+        const initialQueryRef = useRef<{ q: string; status: string; page: string } | null>(null)
 
-        const matchesInitialQuery = page === String(initialOverview.pagination.page)
+        if (initialQueryRef.current === null) {
+            initialQueryRef.current = { q, status, page }
+        }
+
+        useEffect(() => {
+            setSearchInput(q)
+        }, [q])
+
+        const matchesInitialQuery =
+            q === initialQueryRef.current.q &&
+            status === initialQueryRef.current.status &&
+            page === initialQueryRef.current.page
 
         const studentsQuery = useQuery({
             queryKey: ["university-students", q, status, page],
             queryFn: () => fetchUniversityStudents({ q, status, page }),
             initialData: matchesInitialQuery ? initialOverview : undefined,
+            placeholderData: keepPreviousData,
         })
 
         const updateParams = useCallback(
@@ -77,6 +90,19 @@ export function withUniversityStudentPageLogic(
                 router.replace(`${pathname}?${params.toString()}`, { scroll: false })
             },
             [pathname, router, searchParams]
+        )
+
+        const handleSearchChange = useCallback(
+            (value: string) => {
+                setSearchInput(value)
+                if (searchTimeoutRef.current) {
+                    clearTimeout(searchTimeoutRef.current)
+                }
+                searchTimeoutRef.current = setTimeout(() => {
+                    updateParams({ q: value || null, page: "1" })
+                }, 400)
+            },
+            [updateParams]
         )
 
         const currentPage = parseInt(page, 10) || 1
@@ -97,13 +123,12 @@ export function withUniversityStudentPageLogic(
         return (
             <Component
                 overview={overview}
-                searchValue={q}
+                searchValue={searchInput}
                 statusValue={status}
-                activeTab={activeTab}
+                isLoading={studentsQuery.isLoading && !studentsQuery.data}
                 isFetching={studentsQuery.isFetching}
-                onSearchChange={(value) => updateParams({ q: value || null, page: "1" })}
+                onSearchChange={handleSearchChange}
                 onStatusChange={(value) => updateParams({ status: value, page: "1" })}
-                onTabChange={setActiveTab}
                 onPageChange={(nextPage) => updateParams({ page: String(nextPage) })}
             />
         )

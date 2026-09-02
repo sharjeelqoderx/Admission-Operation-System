@@ -11,11 +11,10 @@ type UniversityStudentPageViewProps = {
     overview: UniversityStudentListResponse
     searchValue: string
     statusValue: string
-    activeTab: string
+    isLoading: boolean
     isFetching: boolean
     onSearchChange: (value: string) => void
     onStatusChange: (value: string) => void
-    onTabChange: (value: string) => void
     onPageChange: (page: number) => void
 }
 
@@ -23,11 +22,10 @@ const UniversityStudentPageView = memo(function UniversityStudentPageView({
     overview,
     searchValue,
     statusValue,
-    activeTab,
+    isLoading,
     isFetching,
     onSearchChange,
     onStatusChange,
-    onTabChange,
     onPageChange,
 }: UniversityStudentPageViewProps) {
     return (
@@ -47,13 +45,12 @@ const UniversityStudentPageView = memo(function UniversityStudentPageView({
             <UniversityStudentListTable
                 students={overview.data}
                 pagination={overview.pagination}
-                isLoading={isFetching}
+                isLoading={isLoading}
+                isFetching={isFetching}
                 searchValue={searchValue}
                 statusValue={statusValue}
-                activeTab={activeTab}
                 onSearchChange={onSearchChange}
                 onStatusChange={onStatusChange}
-                onTabChange={onTabChange}
                 onPageChange={onPageChange}
             />
         </div>
