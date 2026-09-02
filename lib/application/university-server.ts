@@ -15,6 +15,7 @@ import {
 } from "@/lib/auth/university-scope"
 import { canApproveApplicationForSignature } from "@/lib/application/review-access"
 import { loadApplicationReviewMeta, loadRejectionHistoryByApplicationIds } from "@/lib/application/review-meta"
+import { fetchInChunks } from "@/lib/supabase/query-in-chunks"
 import type {
     UniversityApplicationDetail,
     UniversityApplicationDetailPageData,
@@ -219,10 +220,9 @@ async function loadCoursesById(
         return new Map<string, CourseRow>()
     }
 
-    const { data, error } = await supabase
-        .from("course")
-        .select(COURSE_SELECT)
-        .in("id", courseIds)
+    const { data, error } = await fetchInChunks(courseIds, async (chunkIds) =>
+        supabase.from("course").select(COURSE_SELECT).in("id", chunkIds)
+    )
 
     if (error) {
         console.error("[loadCoursesById]", error.message)
@@ -242,10 +242,12 @@ async function loadAgentOrganizations(
     }
 
     // Live DB may not have agency_name — use contact person (or default) instead.
-    const { data, error } = await supabase
-        .from("agent")
-        .select("profile_id, contact_person_first_name, contact_person_last_name")
-        .in("profile_id", agentProfileIds)
+    const { data, error } = await fetchInChunks(agentProfileIds, async (chunkIds) =>
+        supabase
+            .from("agent")
+            .select("profile_id, contact_person_first_name, contact_person_last_name")
+            .in("profile_id", chunkIds)
+    )
 
     if (error) {
         console.error("[loadAgentOrganizations]", error.message)
@@ -289,6 +291,74 @@ function mapListItem(params: {
         submission_date: formatSubmissionDate(params.application.created_at),
         rejection_history: params.rejectionHistory,
     }
+}
+
+async function loadOffersByApplicationIds(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    applicationIds: string[]
+) {
+    if (applicationIds.length === 0) {
+        return [] as OfferRow[]
+    }
+
+    const { data, error } = await fetchInChunks<OfferRow>(applicationIds, async (chunkIds) =>
+        supabase
+            .from("offer_letter")
+            .select("application_id, status, created_at, accepted_at")
+            .in("application_id", chunkIds)
+    )
+
+    if (error) {
+        console.error("[fetchUniversityApplicationList] offers", error.message)
+        return []
+    }
+
+    return data ?? []
+}
+
+async function loadProfilesByIds(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    profileIds: string[]
+) {
+    if (profileIds.length === 0) {
+        return [] as ProfileRow[]
+    }
+
+    const { data, error } = await fetchInChunks<ProfileRow>(profileIds, async (chunkIds) =>
+        supabase
+            .from("profile")
+            .select("id, first_name, last_name, email, avatar_url")
+            .in("id", chunkIds)
+    )
+
+    if (error) {
+        console.error("[fetchUniversityApplicationList] profiles", error.message)
+        return []
+    }
+
+    return data ?? []
+}
+
+async function loadStudentsByProfileIds(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    profileIds: string[]
+) {
+    if (profileIds.length === 0) {
+        return [] as { profile_id: string; student_code: string | null }[]
+    }
+
+    const { data, error } = await fetchInChunks<{ profile_id: string; student_code: string | null }>(
+        profileIds,
+        async (chunkIds) =>
+            supabase.from("student").select("profile_id, student_code").in("profile_id", chunkIds)
+    )
+
+    if (error) {
+        console.error("[fetchUniversityApplicationList] students", error.message)
+        return []
+    }
+
+    return data ?? []
 }
 
 export async function fetchUniversityApplicationList(params: {
@@ -346,58 +416,22 @@ export async function fetchUniversityApplicationList(params: {
     ]
     const allCourseIds = [...new Set(allApplicationRows.map((application) => application.course_id))]
 
-    const emptyId = "00000000-0000-0000-0000-000000000000"
-    const applicationIdsForQuery =
-        allApplicationIds.length > 0 ? allApplicationIds : [emptyId]
-    const profileIdsForQuery = allProfileIds.length > 0 ? allProfileIds : [emptyId]
-
-    const [offersResult, profilesResult, studentsResult, courseById, agentOrgByProfileId, rejectionHistoryByApplicationId] =
+    const [offers, profiles, students, courseById, agentOrgByProfileId, rejectionHistoryByApplicationId] =
         await Promise.all([
-            supabase
-                .from("offer_letter")
-                .select("application_id, status, created_at, accepted_at")
-                .in("application_id", applicationIdsForQuery),
-            supabase
-                .from("profile")
-                .select("id, first_name, last_name, email, avatar_url")
-                .in("id", profileIdsForQuery),
-            supabase
-                .from("student")
-                .select("profile_id, student_code")
-                .in("profile_id", profileIdsForQuery),
+            loadOffersByApplicationIds(supabase, allApplicationIds),
+            loadProfilesByIds(supabase, allProfileIds),
+            loadStudentsByProfileIds(supabase, allProfileIds),
             loadCoursesById(supabase, allCourseIds),
             loadAgentOrganizations(supabase, allAgentProfileIds),
             loadRejectionHistoryByApplicationIds(supabase, allApplicationIds),
         ])
 
-    if (offersResult.error) {
-        console.error("[fetchUniversityApplicationList] offers", offersResult.error.message)
-    }
+    const offerByApplicationId = new Map(offers.map((offer) => [offer.application_id, offer]))
 
-    if (profilesResult.error) {
-        console.error("[fetchUniversityApplicationList] profiles", profilesResult.error.message)
-    }
-
-    if (studentsResult.error) {
-        console.error("[fetchUniversityApplicationList] students", studentsResult.error.message)
-    }
-
-    const offers = offersResult.data
-    const profiles = profilesResult.data
-    const students = studentsResult.data
-
-    const offerByApplicationId = new Map(
-        ((offers ?? []) as OfferRow[]).map((offer) => [offer.application_id, offer])
-    )
-
-    const profileById = new Map(
-        ((profiles ?? []) as ProfileRow[]).map((profile) => [profile.id, profile])
-    )
+    const profileById = new Map(profiles.map((profile) => [profile.id, profile]))
 
     const studentCodeByProfileId = new Map(
-        ((students ?? []) as { profile_id: string; student_code: string | null }[]).map(
-            (student) => [student.profile_id, student.student_code]
-        )
+        students.map((student) => [student.profile_id, student.student_code])
     )
 
     // Create all list items for filtering/counting
