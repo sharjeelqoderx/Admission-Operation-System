@@ -2,13 +2,28 @@ import { createSupabaseMiddlewareClient } from "@/lib/supabase/middleware"
 import { NextRequest, NextResponse } from "next/server"
 
 export async function proxy(req: NextRequest) {
+    const path = req.nextUrl.pathname
+
+    const needsAuthCheck =
+        path === "/" ||
+        path.startsWith("/login") ||
+        path.startsWith("/signup") ||
+        path.startsWith("/onboarding") ||
+        path.startsWith("/profile") ||
+        path.startsWith("/api/student") ||
+        path.startsWith("/api/application") ||
+        path.startsWith("/api/profile") ||
+        path.startsWith("/api/me")
+
+    if (!needsAuthCheck) {
+        return NextResponse.next()
+    }
+
     const res = NextResponse.next()
     const supabase = await createSupabaseMiddlewareClient(req, res)
     const { data: { user } } = supabase
         ? await supabase.auth.getUser()
         : { data: { user: null } }
-
-    const path = req.nextUrl.pathname
 
     if (user) {
         res.cookies.set("aos_session", "1", {
@@ -35,7 +50,6 @@ export async function proxy(req: NextRequest) {
 
     // Not logged in (or Supabase env missing) → handle redirects or API 401s
     if (!user && (
-        path.startsWith("/dashboard") ||
         path.startsWith("/onboarding") ||
         path.startsWith("/profile") ||
         path.startsWith("/api/student") ||
@@ -57,15 +71,14 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
     matcher: [
-        "/", 
-        "/dashboard/:path*", 
-        "/onboarding/:path*", 
-        "/profile/:path*", 
-        "/login", 
+        "/",
+        "/login",
         "/signup",
+        "/onboarding/:path*",
+        "/profile/:path*",
         "/api/student/:path*",
         "/api/application/:path*",
         "/api/profile/:path*",
-        "/api/me"
+        "/api/me",
     ],
 }

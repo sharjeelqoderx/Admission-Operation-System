@@ -6,7 +6,7 @@ import { Sidebar } from '@/components/shared/sidebar';
 import { SidebarItem } from '@/components/shared/sidebar-item';
 import { SidebarGroup } from '@/components/shared/sidebar-group';
 import { Navbar } from '@/components/shared/navbar';
-import { useAuth } from '@/hooks/useAuth';
+import { useDashboardAuthGuard } from '@/hooks/useDashboardAuthGuard';
 import { DashboardShellSkeleton } from '@/components/shared/page-skeleton';
 import { isUniversityRole } from '@/lib/auth/university-role';
 import { Role } from '@/types/enums/role';
@@ -212,13 +212,11 @@ function isGroupActive(pathname: string, children?: any[], label?: string) {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-  const { me } = useAuth();
-  const { data: currentUser, isLoading } = me;
+  const { user: currentUser, isAuthLoading, shouldRedirectToLogin } = useDashboardAuthGuard();
 
   const handleCloseSidebar = () => setSidebarOpen(false);
 
-  // Only block the shell on the initial auth load — not on background refetches.
-  if (isLoading && !currentUser) {
+  if (isAuthLoading || shouldRedirectToLogin || !currentUser) {
     return <DashboardShellSkeleton />;
   }
 

@@ -16,6 +16,7 @@ import {
     resolveUniversityApplicationScope,
     type UniversityApplicationScope,
 } from "@/lib/auth/university-scope"
+import { fetchInChunks } from "@/lib/supabase/query-in-chunks"
 import { Role } from "@/types/enums/role"
 
 type ApplicationRow = {
@@ -34,7 +35,25 @@ type OfferRow = {
     created_at: string
 }
 
-const EMPTY_UUID = "00000000-0000-0000-0000-000000000000"
+type DocumentStatusRow = {
+    id: string
+    document_review: { status: string; created_at: string }[] | null
+}
+
+type DocumentRecentRow = {
+    id: string
+    profile_id: string
+    created_at: string
+    document_type: { name: string } | { name: string }[] | null
+    document_review: { status: string; created_at: string }[] | null
+}
+
+type ProfileNameRow = {
+    id: string
+    first_name: string | null
+    last_name: string | null
+}
+
 const RECENT_LIMIT = 5
 const TREND_MONTHS = 6
 
@@ -183,10 +202,9 @@ async function loadCoursesById(supabase: Awaited<ReturnType<typeof createSupabas
         return new Map<string, CourseRow>()
     }
 
-    const { data, error } = await supabase
-        .from("course")
-        .select(COURSE_SELECT)
-        .in("id", courseIds)
+    const { data, error } = await fetchInChunks(courseIds, async (chunkIds) =>
+        supabase.from("course").select(COURSE_SELECT).in("id", chunkIds)
+    )
 
     if (error) {
         throw new Error(error.message)
@@ -194,6 +212,120 @@ async function loadCoursesById(supabase: Awaited<ReturnType<typeof createSupabas
 
     const courses = await attachLevelsToCourses(supabase, (data ?? []) as unknown as CourseRow[])
     return new Map(courses.map((course) => [course.id, course]))
+}
+
+async function countDocumentsByProfileIds(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    profileIds: string[]
+) {
+    if (profileIds.length === 0) {
+        return 0
+    }
+
+    const { data, error } = await fetchInChunks<{ id: string }>(profileIds, async (chunkIds) =>
+        supabase.from("document").select("id").in("profile_id", chunkIds)
+    )
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data?.length ?? 0
+}
+
+async function loadDocumentsRecentByProfileIds(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    profileIds: string[]
+) {
+    if (profileIds.length === 0) {
+        return [] as DocumentRecentRow[]
+    }
+
+    const { data, error } = await fetchInChunks<DocumentRecentRow>(profileIds, async (chunkIds) =>
+        supabase
+            .from("document")
+            .select(`
+                id,
+                profile_id,
+                created_at,
+                document_type:document_type_id(name),
+                document_review(status, created_at)
+            `)
+            .in("profile_id", chunkIds)
+            .order("created_at", { ascending: false })
+            .limit(RECENT_LIMIT)
+    )
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return [...(data ?? [])]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, RECENT_LIMIT)
+}
+
+async function loadDocumentStatusesByProfileIds(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    profileIds: string[]
+) {
+    if (profileIds.length === 0) {
+        return [] as DocumentStatusRow[]
+    }
+
+    const { data, error } = await fetchInChunks<DocumentStatusRow>(profileIds, async (chunkIds) =>
+        supabase
+            .from("document")
+            .select("id, document_review(status, created_at)")
+            .in("profile_id", chunkIds)
+    )
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data ?? []
+}
+
+async function loadProfileNamesById(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    profileIds: string[]
+) {
+    if (profileIds.length === 0) {
+        return [] as ProfileNameRow[]
+    }
+
+    const { data, error } = await fetchInChunks<ProfileNameRow>(profileIds, async (chunkIds) =>
+        supabase.from("profile").select("id, first_name, last_name").in("id", chunkIds)
+    )
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data ?? []
+}
+
+async function loadOffersByApplicationIds(
+    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    applicationIds: string[]
+) {
+    if (applicationIds.length === 0) {
+        return [] as OfferRow[]
+    }
+
+    const { data, error } = await fetchInChunks<OfferRow>(applicationIds, async (chunkIds) =>
+        supabase
+            .from("offer_letter")
+            .select("id, application_id, status, created_at")
+            .in("application_id", chunkIds)
+    )
+
+    if (error) {
+        throw new Error(error.message)
+    }
+
+    return data ?? []
 }
 
 export async function fetchUniversityOverview(
@@ -259,23 +391,20 @@ export async function fetchUniversityOverview(
     }
 
     const [
-        offersResult,
+        offers,
         templatesCountResult,
         templatesRecentResult,
         programsCountResult,
         programsRecentResult,
         programsStatusResult,
-        documentsCountResult,
-        documentsRecentResult,
-        documentsStatusResult,
-        profilesResult,
+        documentsCount,
+        documentsRecent,
+        documentsStatus,
+        profiles,
         agentsResult,
         courseById,
     ] = await Promise.all([
-        supabase
-            .from("offer_letter")
-            .select("id, application_id, status, created_at")
-            .in("application_id", applicationIds.length > 0 ? applicationIds : [EMPTY_UUID]),
+        loadOffersByApplicationIds(supabase, applicationIds),
         supabase
             .from("document_template")
             .select("id", { count: "exact", head: true })
@@ -289,52 +418,19 @@ export async function fetchUniversityOverview(
         programsCountQuery,
         programsRecentQuery,
         programsStatusQuery,
-        profileIds.length > 0
-            ? supabase
-                  .from("document")
-                  .select("id", { count: "exact", head: true })
-                  .in("profile_id", profileIds)
-            : Promise.resolve({ count: 0, error: null }),
-        profileIds.length > 0
-            ? supabase
-                  .from("document")
-                  .select(`
-                    id,
-                    profile_id,
-                    created_at,
-                    document_type:document_type_id(name),
-                    document_review(status, created_at)
-                `)
-                  .in("profile_id", profileIds)
-                  .order("created_at", { ascending: false })
-                  .limit(RECENT_LIMIT)
-            : Promise.resolve({ data: [], error: null }),
-        profileIds.length > 0
-            ? supabase
-                  .from("document")
-                  .select("id, document_review(status, created_at)")
-                  .in("profile_id", profileIds)
-            : Promise.resolve({ data: [], error: null }),
-        profileIds.length > 0
-            ? supabase
-                  .from("profile")
-                  .select("id, first_name, last_name")
-                  .in("id", profileIds)
-            : Promise.resolve({ data: [], error: null }),
+        countDocumentsByProfileIds(supabase, profileIds),
+        loadDocumentsRecentByProfileIds(supabase, profileIds),
+        loadDocumentStatusesByProfileIds(supabase, profileIds),
+        loadProfileNamesById(supabase, profileIds),
         supabase.from("agent").select("id, profile:profile_id(role)"),
         loadCoursesById(supabase, courseIds),
     ])
 
-    if (offersResult.error) throw new Error(offersResult.error.message)
     if (templatesCountResult.error) throw new Error(templatesCountResult.error.message)
     if (templatesRecentResult.error) throw new Error(templatesRecentResult.error.message)
     if (programsCountResult.error) throw new Error(programsCountResult.error.message)
     if (programsRecentResult.error) throw new Error(programsRecentResult.error.message)
     if (programsStatusResult.error) throw new Error(programsStatusResult.error.message)
-    if (documentsCountResult.error) throw new Error(documentsCountResult.error.message)
-    if (documentsRecentResult.error) throw new Error(documentsRecentResult.error.message)
-    if (documentsStatusResult.error) throw new Error(documentsStatusResult.error.message)
-    if (profilesResult.error) throw new Error(profilesResult.error.message)
     if (agentsResult.error) throw new Error(agentsResult.error.message)
 
     const totalUniversityPartners = (agentsResult.data ?? []).filter((agent) => {
@@ -342,11 +438,11 @@ export async function fetchUniversityOverview(
         return profile?.role === Role.AGENT
     }).length
 
-    const offers = (offersResult.data ?? []) as OfferRow[]
-    const offerByApplicationId = new Map(offers.map((offer) => [offer.application_id, offer]))
+    const offersList = offers
+    const offerByApplicationId = new Map(offersList.map((offer) => [offer.application_id, offer]))
 
     const profileById = new Map(
-        (profilesResult.data ?? []).map((profile) => [
+        profiles.map((profile) => [
             profile.id,
             formatFullName(profile.first_name, profile.last_name),
         ])
@@ -412,7 +508,7 @@ export async function fetchUniversityOverview(
         updated_at: formatShortDate(template.updated_at) ?? template.updated_at,
     }))
 
-    const recentDocuments = (documentsRecentResult.data ?? []).map((document) => {
+    const recentDocuments = documentsRecent.map((document) => {
         const documentType = Array.isArray(document.document_type)
             ? document.document_type[0]
             : document.document_type
@@ -432,7 +528,7 @@ export async function fetchUniversityOverview(
         }
     })
 
-    const recentOffers = offers
+    const recentOffers = offersList
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, RECENT_LIMIT)
         .map((offer) => {
@@ -456,11 +552,11 @@ export async function fetchUniversityOverview(
         total_applications: applicationRows.length,
         templates: templatesCountResult.count ?? 0,
         programs: programsCountResult.count ?? 0,
-        total_documents: documentsCountResult.count ?? 0,
-        total_offers: offers.length,
+        total_documents: documentsCount,
+        total_offers: offersList.length,
     }
 
-    const documentStatuses = (documentsStatusResult.data ?? []).map((document) => {
+    const documentStatuses = documentsStatus.map((document) => {
         const reviews = document.document_review as { status: string; created_at: string }[] | null
         if (!reviews?.length) return "PENDING"
         const latestReview = [...reviews].sort(
@@ -490,7 +586,7 @@ export async function fetchUniversityOverview(
             (key) => key
         ),
         offers_by_status: toOrderedChartPoints(
-            countByKey(offers.map((offer) => offer.status)),
+            countByKey(offersList.map((offer) => offer.status)),
             OFFER_STATUS_ORDER
         ),
         programs_by_status: toOrderedChartPoints(
@@ -501,7 +597,7 @@ export async function fetchUniversityOverview(
             countByKey(documentStatuses),
             DOCUMENT_STATUS_ORDER
         ),
-        monthly_trend: buildMonthlyTrend(applicationRows, offers),
+        monthly_trend: buildMonthlyTrend(applicationRows, offersList),
     }
 
     return {

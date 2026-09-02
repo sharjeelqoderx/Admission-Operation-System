@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { usePathname } from "next/navigation"
 import { clearSessionQueryCache } from "@/lib/query/session-cache"
 import { setSessionActive, syncSessionActiveFromCookie } from "@/lib/auth/client-session"
 import { useClientReady } from "@/hooks/useClientReady"
@@ -176,7 +177,9 @@ async function get<T>(url: string): Promise<T> {
 export function useAuth() {
     const queryClient = useQueryClient()
     const clientReady = useClientReady()
+    const pathname = usePathname()
     const sessionActive = clientReady ? syncSessionActiveFromCookie() : false
+    const isDashboardRoute = pathname?.startsWith("/dashboard") ?? false
 
     const login = useMutation({
         mutationFn: (payload: LoginPayload) =>
@@ -220,13 +223,15 @@ export function useAuth() {
         queryKey: ["me"],
         queryFn: async () => {
             try {
-                return await get<AuthUserResponse>("/api/me")
+                const data = await get<AuthUserResponse>("/api/me")
+                setSessionActive(true)
+                return data
             } catch (error) {
                 setSessionActive(false)
                 throw error
             }
         },
-        enabled: clientReady && sessionActive,
+        enabled: clientReady && (sessionActive || isDashboardRoute),
         // Keep current user warm — logout/login already clearSessionQueryCache().
         staleTime: 5 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
@@ -299,5 +304,7 @@ export function useAuth() {
         academic,
         experience,
         agentProfile,
+        clientReady,
+        sessionActive,
     }
 }
