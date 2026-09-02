@@ -5,6 +5,7 @@ import {
     buildApplicationRejectionHistory,
     buildApplicationReviewHistory,
 } from "@/lib/application/review-history"
+import { fetchInChunks } from "@/lib/supabase/query-in-chunks"
 import {
     assertCanResubmitApplication,
     canRejectApplication,
@@ -36,11 +37,19 @@ export async function loadRejectionHistoryByApplicationIds(
         return result
     }
 
-    const { data: reviews } = await supabase
-        .from("application_review")
-        .select(APPLICATION_REVIEW_SELECT)
-        .in("application_id", applicationIds)
-        .order("created_at", { ascending: false })
+    const { data: reviews, error } = await fetchInChunks(
+        applicationIds,
+        async (chunkIds) =>
+            supabase
+                .from("application_review")
+                .select(APPLICATION_REVIEW_SELECT)
+                .in("application_id", chunkIds)
+                .order("created_at", { ascending: false })
+    )
+
+    if (error) {
+        return result
+    }
 
     const reviewsByApplicationId = new Map<string, NonNullable<typeof reviews>>()
 
