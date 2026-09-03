@@ -29,6 +29,7 @@ function mapDocumentRow(row: DocumentRow): StudentDocumentSnapshot {
 }
 
 type DegreeRequirementRow = {
+    is_deleted?: boolean | null
     document_type: { code: string | null } | { code: string | null }[] | null
 }
 
@@ -38,6 +39,8 @@ function degreeRequiresWorkExperience(
     if (!requirements?.length) return false
 
     return requirements.some((requirement) => {
+        if (requirement.is_deleted) return false
+
         const documentType = Array.isArray(requirement.document_type)
             ? requirement.document_type[0]
             : requirement.document_type
@@ -100,6 +103,7 @@ export async function fetchAdmissionRequirementsContext(
                     course:course_id (
                         degree:degree_id (
                             requirements:degree_requirement (
+                                is_deleted,
                                 document_type:document_type_id ( code )
                             )
                         )

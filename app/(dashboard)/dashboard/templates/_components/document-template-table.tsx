@@ -179,17 +179,42 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                     </TableCell>
 
                                     <TableCell className="max-w-[180px] px-4 py-5">
-                                        <span
-                                            className="block truncate"
-                                            title={template.program_label ?? undefined}
-                                        >
-                                            <Typography
-                                                as="span"
-                                                className="text-xs font-medium text-gray-600"
-                                            >
-                                                {template.program_label ?? "Not assigned"}
-                                            </Typography>
-                                        </span>
+                                        {(() => {
+                                            const courses =
+                                                template.courses?.length
+                                                    ? template.courses
+                                                    : template.program_label
+                                                      ? [
+                                                            {
+                                                                id: template.program_id ?? "legacy",
+                                                                label: template.program_label,
+                                                            },
+                                                        ]
+                                                      : []
+                                            const primary = courses[0]?.label ?? "Not assigned"
+                                            const extraCount = Math.max(courses.length - 1, 0)
+                                            const titleText = courses.map((c) => c.label).join(", ")
+
+                                            return (
+                                                <div className="space-y-1" title={titleText || undefined}>
+                                                    <Typography
+                                                        as="span"
+                                                        className="block truncate text-xs font-semibold text-gray-800"
+                                                    >
+                                                        {primary}
+                                                    </Typography>
+                                                    {extraCount > 0 ? (
+                                                        <Typography
+                                                            as="span"
+                                                            className="block text-[11px] font-light text-gray-500"
+                                                        >
+                                                            +{extraCount} more program
+                                                            {extraCount === 1 ? "" : "s"}
+                                                        </Typography>
+                                                    ) : null}
+                                                </div>
+                                            )
+                                        })()}
                                     </TableCell>
 
                                     <TableCell className="px-4 py-5">

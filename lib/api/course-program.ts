@@ -38,6 +38,7 @@ const COURSE_DEGREE_SELECT = `
         id,
         document_type_id,
         requirement_type,
+        is_deleted,
         created_at,
         updated_at,
         document_type:document_type_id (
@@ -132,7 +133,9 @@ function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
 function mapDegreeDocumentRequirements(
     degree: CourseRow["degree"]
 ): CourseProgram["document_requirements"] {
-    const requirements = degree?.requirements ?? []
+    const requirements = (degree?.requirements ?? []).filter(
+        (row) => !(row as { is_deleted?: boolean }).is_deleted
+    )
 
     return requirements.map((row) => {
         const documentType = unwrapRelation(row.document_type)

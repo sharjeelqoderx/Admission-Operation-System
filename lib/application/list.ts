@@ -32,6 +32,7 @@ const APPLICATION_LIST_COURSE_SELECT = `
         intake_date,
         requirements:degree_requirement (
             requirement_type,
+            is_deleted,
             document_type:document_type_id (
                 id
             )

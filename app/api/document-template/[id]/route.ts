@@ -2,22 +2,18 @@ import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import {
     canManageDocumentTemplate,
-    mapTemplateRow,
+    loadMappedDocumentTemplate,
     softDeleteDocumentTemplate,
 } from "@/lib/document-template/server"
-import { assertCourseAvailableForTemplate } from "@/lib/document-template/program-assignment"
+import {
+    resolveLinkedCourseIds,
+    syncDocumentTemplateCourses,
+} from "@/lib/document-template/program-assignment"
 import { extractTemplateVariables } from "@/lib/document-template/variables"
 import { DocumentTemplateUpdateSchema } from "@/types/schemas/document-template"
 
 type RouteContext = {
     params: Promise<{ id: string }>
-}
-
-function resolveLinkedCourseId(input: {
-    course_id?: string | null
-    program_id?: string | null
-}) {
-    return input.course_id ?? input.program_id ?? null
 }
 
 export async function GET(_req: NextRequest, context: RouteContext) {
@@ -34,31 +30,13 @@ export async function GET(_req: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const { data, error } = await supabase
-            .from("document_template")
-            .select(`
-                *,
-                course:course_id ( id, name, category, location )
-            `)
-            .eq("id", id)
-            .eq("is_deleted", false)
-            .maybeSingle()
+        const mapped = await loadMappedDocumentTemplate(supabase, id)
 
-        if (error) {
-            return NextResponse.json(
-                { error: "Failed to fetch document template", details: error.message },
-                { status: 500 }
-            )
-        }
-
-        if (!data) {
+        if (!mapped) {
             return NextResponse.json({ error: "Document template not found" }, { status: 404 })
         }
 
-        const { course, ...templateRow } = data
-        const courseRelation = Array.isArray(course) ? course[0] : course
-
-        return NextResponse.json({ data: mapTemplateRow(templateRow, courseRelation ?? null) })
+        return NextResponse.json({ data: mapped })
     } catch {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
@@ -137,16 +115,16 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             updatePayload.variables = extractTemplateVariables(validated.body_html)
         }
 
-        const linkedCourseId =
-            validated.course_id !== undefined || validated.program_id !== undefined
-                ? resolveLinkedCourseId(validated)
-                : undefined
+        const linkedCourseIds = resolveLinkedCourseIds(validated)
 
-        if (linkedCourseId !== undefined) {
-            if (linkedCourseId) {
-                await assertCourseAvailableForTemplate(supabase, linkedCourseId, id)
+        if (linkedCourseIds !== undefined) {
+            if (linkedCourseIds.length === 0) {
+                return NextResponse.json(
+                    { error: "Select at least one program for this offer template." },
+                    { status: 400 }
+                )
             }
-            updatePayload.course_id = linkedCourseId
+            updatePayload.course_id = linkedCourseIds[0] ?? null
         }
 
         if (validated.locale !== undefined) {
@@ -166,10 +144,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             .update(updatePayload)
             .eq("id", id)
             .eq("is_deleted", false)
-            .select(`
-                *,
-                course:course_id ( id, name, category, location )
-            `)
+            .select("id")
             .maybeSingle()
 
         if (error) {
@@ -186,18 +161,30 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             )
         }
 
-        const { course, ...templateRow } = data
-        const courseRelation = Array.isArray(course) ? course[0] : course
+        if (linkedCourseIds !== undefined) {
+            try {
+                await syncDocumentTemplateCourses(supabase, id, linkedCourseIds)
+            } catch (syncError) {
+                const message =
+                    syncError instanceof Error
+                        ? syncError.message
+                        : "Failed to assign programs to template"
+                return NextResponse.json({ error: message }, { status: 400 })
+            }
+        }
+
+        const mapped = await loadMappedDocumentTemplate(supabase, id)
 
         return NextResponse.json({
-            data: mapTemplateRow(templateRow, courseRelation ?? null),
+            data: mapped,
             message: "Document template updated successfully",
         })
     } catch (e: unknown) {
         if (e && typeof e === "object" && "name" in e && e.name === "ZodError") {
             return NextResponse.json({ error: "Validation failed", details: e }, { status: 400 })
         }
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+        const message = e instanceof Error ? e.message : "Internal Server Error"
+        return NextResponse.json({ error: message }, { status: 500 })
     }
 }
 
@@ -266,7 +253,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
                         (details.includes("row-level security policy") ||
                             details.includes("Could not find the function") ||
                             details.includes("does not exist"))
-                            ? "Run migration 053_document_template_update_with_check_true.sql in the Supabase SQL editor."
+                            ? "Run migration 005_document_template_course.sql in the Supabase SQL editor."
                             : undefined,
                 },
                 { status: 400 }

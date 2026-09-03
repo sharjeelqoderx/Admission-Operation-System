@@ -101,7 +101,7 @@ function DocumentTemplatePageView({
     locale,
     templateDates,
     watermark,
-    programId,
+    programIds,
     isSaving,
     isDeleting,
     deletingId,
@@ -113,7 +113,7 @@ function DocumentTemplatePageView({
     setLocale,
     setTemplateDates,
     setWatermark,
-    setProgramId,
+    setProgramIds,
     openEdit,
     openView,
     backToList,
@@ -128,13 +128,13 @@ function DocumentTemplatePageView({
     )
     const [templateToClone, setTemplateToClone] = useState<DocumentTemplateListItem | null>(null)
     const [cloneTitle, setCloneTitle] = useState("")
-    const [cloneProgramId, setCloneProgramId] = useState<string | null>(null)
+    const [cloneProgramIds, setCloneProgramIds] = useState<string[]>([])
     const [cloneError, setCloneError] = useState<string | null>(null)
 
     const handleOpenCloneDialog = useCallback((template: DocumentTemplateListItem) => {
         setCloneError(null)
         setCloneTitle(getDefaultCloneTitle(template.title))
-        setCloneProgramId(null)
+        setCloneProgramIds([])
         setTemplateToClone(template)
     }, [])
 
@@ -142,7 +142,7 @@ function DocumentTemplatePageView({
         if (cloningId) return
         setCloneError(null)
         setCloneTitle("")
-        setCloneProgramId(null)
+        setCloneProgramIds([])
         setTemplateToClone(null)
     }, [cloningId])
 
@@ -160,8 +160,8 @@ function DocumentTemplatePageView({
             return
         }
 
-        if (!cloneProgramId) {
-            setCloneError("Select a program for this offer template.")
+        if (cloneProgramIds.length === 0) {
+            setCloneError("Select at least one program for this offer template.")
             return
         }
 
@@ -175,21 +175,21 @@ function DocumentTemplatePageView({
                 locale: templateToClone.locale,
                 template_dates: templateToClone.template_dates,
                 watermark: templateToClone.watermark,
-                program_id: cloneProgramId,
+                course_ids: cloneProgramIds,
             })
             setTemplateToClone(null)
             setCloneTitle("")
-            setCloneProgramId(null)
+            setCloneProgramIds([])
         } catch {
             // Error toast is handled in cloneTemplate.
         }
-    }, [cloneProgramId, cloneTemplate, cloneTitle, templateToClone, templates])
+    }, [cloneProgramIds, cloneTemplate, cloneTitle, templateToClone, templates])
 
     const handleViewFromClone = useCallback(
         (template: DocumentTemplateListItem) => {
             setCloneError(null)
             setCloneTitle("")
-            setCloneProgramId(null)
+            setCloneProgramIds([])
             setTemplateToClone(null)
             openView(template)
         },
@@ -292,7 +292,7 @@ function DocumentTemplatePageView({
                     <CloneTemplateDialog
                         template={templateToClone}
                         cloneTitle={cloneTitle}
-                        cloneProgramId={cloneProgramId}
+                        cloneProgramIds={cloneProgramIds}
                         cloneError={cloneError}
                         open={templateToClone !== null}
                         isCloning={cloningId !== null}
@@ -303,9 +303,9 @@ function DocumentTemplatePageView({
                             setCloneError(null)
                             setCloneTitle(value)
                         }}
-                        onProgramChange={(value) => {
+                        onProgramIdsChange={(value) => {
                             setCloneError(null)
-                            setCloneProgramId(value)
+                            setCloneProgramIds(value)
                         }}
                         onView={handleViewFromClone}
                         onConfirm={handleConfirmClone}
@@ -324,7 +324,7 @@ function DocumentTemplatePageView({
                 locale={locale}
                 templateDates={templateDates}
                 watermark={watermark}
-                programId={programId}
+                programIds={programIds}
                 templateId={activeTemplate?.id ?? null}
                 isSaving={isSaving}
                 formError={formError}
@@ -333,7 +333,7 @@ function DocumentTemplatePageView({
                 onLocaleChange={setLocale}
                 onTemplateDatesChange={setTemplateDates}
                 onWatermarkChange={setWatermark}
-                onProgramChange={setProgramId}
+                onProgramIdsChange={setProgramIds}
                 onSave={saveTemplate}
                 onBack={backToList}
             />

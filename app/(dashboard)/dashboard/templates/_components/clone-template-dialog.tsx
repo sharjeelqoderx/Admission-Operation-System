@@ -21,13 +21,13 @@ import { DocumentTemplateProgramSelect } from "./document-template-program-selec
 type CloneTemplateDialogProps = {
     template: DocumentTemplateListItem | null
     cloneTitle: string
-    cloneProgramId: string | null
+    cloneProgramIds: string[]
     cloneError: string | null
     open: boolean
     isCloning: boolean
     onOpenChange: (open: boolean) => void
     onTitleChange: (value: string) => void
-    onProgramChange: (value: string | null) => void
+    onProgramIdsChange: (value: string[]) => void
     onView: (template: DocumentTemplateListItem) => void
     onConfirm: () => void
 }
@@ -69,13 +69,13 @@ export function validateCloneTemplateTitle(
 export const CloneTemplateDialog = memo(function CloneTemplateDialog({
     template,
     cloneTitle,
-    cloneProgramId,
+    cloneProgramIds,
     cloneError,
     open,
     isCloning,
     onOpenChange,
     onTitleChange,
-    onProgramChange,
+    onProgramIdsChange,
     onView,
     onConfirm,
 }: CloneTemplateDialogProps) {
@@ -93,13 +93,13 @@ export const CloneTemplateDialog = memo(function CloneTemplateDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md" showCloseButton={!isCloning}>
+            <DialogContent className="sm:max-w-lg" showCloseButton={!isCloning}>
                 <DialogHeader>
                     <DialogTitle>Clone template</DialogTitle>
                     <DialogDescription>
-                        Choose a new title and assign a program for the cloned template. The clone
-                        cannot keep the same name as the original. Use View to open the full template
-                        preview first.
+                        Choose a new title and assign one or more programs for the cloned template.
+                        The clone cannot keep the same name as the original. Use View to open the
+                        full template preview first.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -127,9 +127,9 @@ export const CloneTemplateDialog = memo(function CloneTemplateDialog({
                         </div>
 
                         <DocumentTemplateProgramSelect
-                            value={cloneProgramId}
+                            value={cloneProgramIds}
                             disabled={isCloning}
-                            onChange={onProgramChange}
+                            onChange={onProgramIdsChange}
                         />
 
                         <Button

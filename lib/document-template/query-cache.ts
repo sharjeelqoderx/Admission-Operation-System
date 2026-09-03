@@ -106,6 +106,15 @@ export function releaseProgramInOptionsCache(
     })
 }
 
+export function releaseProgramsInOptionsCache(
+    queryClient: QueryClient,
+    programs: Array<{ id: string; label: string | null }>
+) {
+    for (const program of programs) {
+        releaseProgramInOptionsCache(queryClient, program.id, program.label)
+    }
+}
+
 /**
  * Hide an assigned program from option lists.
  * Keeps it available for the owning template's edit select (`exclude_template_id`).
@@ -155,4 +164,56 @@ export function claimProgramInOptionsCache(
 
         return current.filter((option) => option.id !== programId)
     })
+}
+
+export function claimProgramsInOptionsCache(
+    queryClient: QueryClient,
+    programs: Array<{ id: string; label: string | null }>,
+    options?: {
+        keepForTemplateId?: string | null
+        templateTitle?: string | null
+    }
+) {
+    for (const program of programs) {
+        claimProgramInOptionsCache(queryClient, program.id, {
+            keepForTemplateId: options?.keepForTemplateId,
+            programLabel: program.label,
+            templateTitle: options?.templateTitle,
+        })
+    }
+}
+
+export function syncTemplateProgramsInOptionsCache(
+    queryClient: QueryClient,
+    previous: DocumentTemplateListItem | null | undefined,
+    next: DocumentTemplateListItem
+) {
+    const previousIds = new Set(previous?.course_ids?.length ? previous.course_ids : previous?.program_id ? [previous.program_id] : [])
+    const nextIds = new Set(next.course_ids ?? [])
+
+    const released = [...previousIds].filter((id) => !nextIds.has(id))
+    const claimed = [...nextIds].filter((id) => !previousIds.has(id))
+
+    releaseProgramsInOptionsCache(
+        queryClient,
+        released.map((id) => ({
+            id,
+            label:
+                previous?.courses?.find((course) => course.id === id)?.label ??
+                previous?.program_label ??
+                null,
+        }))
+    )
+
+    claimProgramsInOptionsCache(
+        queryClient,
+        claimed.map((id) => ({
+            id,
+            label: next.courses.find((course) => course.id === id)?.label ?? null,
+        })),
+        {
+            keepForTemplateId: next.id,
+            templateTitle: next.title,
+        }
+    )
 }

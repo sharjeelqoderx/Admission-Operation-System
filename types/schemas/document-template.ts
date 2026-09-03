@@ -25,8 +25,12 @@ export const DocumentTemplateWatermarkSchema = z.object({
 export const DocumentTemplateFormSchema = z.object({
     title: z.string().trim().min(1, "Title is required").max(200, "Title is too long"),
     body_html: z.string(),
-    program_id: PostgresUuidSchema.nullable().optional(),
+    course_ids: z.array(PostgresUuidSchema).optional(),
+    /** @deprecated Use course_ids */
+    program_ids: z.array(PostgresUuidSchema).optional(),
     course_id: PostgresUuidSchema.nullable().optional(),
+    /** @deprecated Use course_id / course_ids */
+    program_id: PostgresUuidSchema.nullable().optional(),
     locale: TemplateLocaleSchema.default("en"),
     template_dates: DocumentTemplateDatesSchema.optional(),
     watermark: DocumentTemplateWatermarkSchema.optional(),
@@ -51,6 +55,11 @@ export type DocumentTemplateProgramOptionsResponse = {
 
 export type TemplateLocale = z.infer<typeof TemplateLocaleSchema>
 
+export type DocumentTemplateCourseSummary = {
+    id: string
+    label: string
+}
+
 export type DocumentTemplateListItem = {
     id: string
     title: string
@@ -61,8 +70,12 @@ export type DocumentTemplateListItem = {
     variables: string[]
     checklist_items: AdmissionRequirementId[]
     checklist_profile: string | null
+    courses: DocumentTemplateCourseSummary[]
+    course_ids: string[]
     course_id: string | null
     course_label: string | null
+    /** @deprecated Use course_ids */
+    program_ids: string[]
     /** @deprecated Use course_id */
     program_id: string | null
     /** @deprecated Use course_label */

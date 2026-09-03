@@ -191,6 +191,7 @@ export async function fetchUniversityProgramDetail(
                 requirements:degree_requirement (
                     id,
                     document_type_id,
+                    is_deleted,
                     document_type:document_type_id ( name )
                 )
             )
@@ -205,10 +206,20 @@ export async function fetchUniversityProgramDetail(
     }
 
     const degree = Array.isArray(course.degree) ? course.degree[0] : course.degree
-    const documentRequirements = (degree?.requirements ?? []).map(
+    const documentRequirements = (degree?.requirements ?? [])
+        .filter(
+            (row: {
+                id: string
+                document_type_id: string
+                is_deleted?: boolean | null
+                document_type: { name: string | null } | { name: string | null }[] | null
+            }) => !row.is_deleted
+        )
+        .map(
         (row: {
             id: string
             document_type_id: string
+            is_deleted?: boolean | null
             document_type: { name: string | null } | { name: string | null }[] | null
         }) => {
             const documentType = unwrapRelation(row.document_type)
@@ -264,17 +275,71 @@ async function syncDegreeDocumentRequirements(
 ) {
     if (!documentTypeIds || !degreeId) return
 
-    await writeClient.from("degree_requirement").delete().eq("degree_id", degreeId)
+    const uniqueIds = [...new Set(documentTypeIds.filter(Boolean))]
+    const now = new Date().toISOString()
 
-    if (documentTypeIds.length === 0) return
+    const { data: existingRows, error: existingError } = await writeClient
+        .from("degree_requirement")
+        .select("id, document_type_id, is_deleted")
+        .eq("degree_id", degreeId)
 
-    await writeClient.from("degree_requirement").insert(
-        documentTypeIds.map((documentTypeId) => ({
+    if (existingError) {
+        throw new Error(existingError.message)
+    }
+
+    const existingByTypeId = new Map(
+        (existingRows ?? []).map((row) => [row.document_type_id, row])
+    )
+    const selected = new Set(uniqueIds)
+
+    const toSoftDelete = (existingRows ?? []).filter(
+        (row) => !selected.has(row.document_type_id) && !row.is_deleted
+    )
+
+    if (toSoftDelete.length > 0) {
+        const { error: softDeleteError } = await writeClient
+            .from("degree_requirement")
+            .update({ is_deleted: true, updated_at: now })
+            .in(
+                "id",
+                toSoftDelete.map((row) => row.id)
+            )
+
+        if (softDeleteError) {
+            throw new Error(softDeleteError.message)
+        }
+    }
+
+    for (const documentTypeId of uniqueIds) {
+        const existing = existingByTypeId.get(documentTypeId)
+
+        if (existing) {
+            const { error: updateError } = await writeClient
+                .from("degree_requirement")
+                .update({
+                    is_deleted: false,
+                    requirement_type: "REQUIRED",
+                    updated_at: now,
+                })
+                .eq("id", existing.id)
+
+            if (updateError) {
+                throw new Error(updateError.message)
+            }
+            continue
+        }
+
+        const { error: insertError } = await writeClient.from("degree_requirement").insert({
             degree_id: degreeId,
             document_type_id: documentTypeId,
-            requirement_type: "REQUIRED" as const,
-        }))
-    )
+            requirement_type: "REQUIRED",
+            is_deleted: false,
+        })
+
+        if (insertError) {
+            throw new Error(insertError.message)
+        }
+    }
 }
 
 function buildCourseContentPayload(payload: UniversityProgramUpsert) {

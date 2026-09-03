@@ -4,9 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { evaluateAdmissionRequirements } from "@/lib/document-template/admission-requirements-checklist"
 import {
     fetchCourseSummaryById,
-    fetchDocumentTemplateForCourseId,
     resolveApplicationCourseId,
 } from "@/lib/document-template/program-assignment"
+import { fetchDocumentTemplateForCourseId } from "@/lib/document-template/server"
 import { fetchAdmissionRequirementsContext } from "@/lib/offer/admission-requirements-context"
 import type { OfferChecklistPreviewResponse } from "@/types/schemas/offer"
 import type { Database } from "@/types/supabase"
