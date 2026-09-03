@@ -96,7 +96,11 @@ export const DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES = cn(
     "[&_.document-template-header-logo-placeholder]:inline-block [&_.document-template-header-logo-placeholder]:h-[52px]",
     "[&_.document-template-header-logo-placeholder]:w-[140px] [&_.document-template-header-logo-placeholder]:rounded-sm",
     "[&_.document-template-header-logo-placeholder]:border [&_.document-template-header-logo-placeholder]:border-dashed",
-    "[&_.document-template-header-logo-placeholder]:border-border/70 [&_.document-template-header-logo-placeholder]:bg-transparent"
+    "[&_.document-template-header-logo-placeholder]:border-border/70 [&_.document-template-header-logo-placeholder]:bg-transparent",
+    "[&_.document-template-footer_table]:w-full",
+    "[&_[data-footer-text]]:m-0 [&_[data-footer-text]]:text-[9px]",
+    "[&_[data-footer-text]]:leading-[1.4] [&_[data-footer-text]]:text-[#374151]",
+    "[&_[data-footer-text]]:font-[Arial,Helvetica,sans-serif]"
 )
 
 function escapeHtml(value: string): string {

@@ -18,10 +18,10 @@ import {
 } from "@/lib/document-template/watermark"
 import { DEFAULT_TEMPLATE_BODY_HTML } from "@/lib/document-template/a4-document"
 import {
-    claimProgramInOptionsCache,
     DOCUMENT_TEMPLATES_QUERY_KEY,
-    releaseProgramInOptionsCache,
+    releaseProgramsInOptionsCache,
     removeDocumentTemplateFromCache,
+    syncTemplateProgramsInOptionsCache,
     upsertDocumentTemplateInCache,
 } from "@/lib/document-template/query-cache"
 
@@ -41,7 +41,7 @@ export type DocumentTemplatePageLogicProps = {
     locale: TemplateLocale
     templateDates: DocumentTemplateDates
     watermark: DocumentTemplateWatermark
-    programId: string | null
+    programIds: string[]
     isSaving: boolean
     isDeleting: boolean
     deletingId: string | null
@@ -53,7 +53,7 @@ export type DocumentTemplatePageLogicProps = {
     setLocale: (value: TemplateLocale) => void
     setTemplateDates: (value: DocumentTemplateDates) => void
     setWatermark: (value: DocumentTemplateWatermark) => void
-    setProgramId: (value: string | null) => void
+    setProgramIds: (value: string[]) => void
     openEdit: (template: DocumentTemplateListItem) => void
     openView: (template: DocumentTemplateListItem) => void
     backToList: () => void
@@ -66,7 +66,7 @@ export type DocumentTemplatePageLogicProps = {
         locale: TemplateLocale
         template_dates: DocumentTemplateDates
         watermark: DocumentTemplateWatermark
-        program_id: string
+        course_ids: string[]
     }) => Promise<void>
     clearDeleteError: () => void
     refetchTemplates: () => void
@@ -83,6 +83,12 @@ function formatApiError(
         return `${base}: ${json.details}`
     }
     return base
+}
+
+function getTemplateCourseIds(template: DocumentTemplateListItem): string[] {
+    if (template.course_ids?.length) return template.course_ids
+    if (template.program_id) return [template.program_id]
+    return []
 }
 
 async function fetchDocumentTemplates(): Promise<DocumentTemplatesListResponse> {
@@ -118,7 +124,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         const [watermark, setWatermark] = useState<DocumentTemplateWatermark>({
             ...DEFAULT_DOCUMENT_TEMPLATE_WATERMARK,
         })
-        const [programId, setProgramId] = useState<string | null>(null)
+        const [programIds, setProgramIds] = useState<string[]>([])
         const [formError, setFormError] = useState<string | null>(null)
         const [deleteError, setDeleteError] = useState<string | null>(null)
         const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -150,7 +156,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                     locale?: TemplateLocale
                     template_dates?: DocumentTemplateDates
                     watermark?: DocumentTemplateWatermark
-                    program_id?: string | null
+                    course_ids?: string[]
                 }
             }) => {
                 const res = await fetch(`/api/document-template/${id}`, {
@@ -172,19 +178,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 const updated = response.data
 
                 upsertDocumentTemplateInCache(queryClient, updated)
-
-                if (previous?.program_id !== updated.program_id) {
-                    releaseProgramInOptionsCache(
-                        queryClient,
-                        previous?.program_id,
-                        previous?.program_label
-                    )
-                    claimProgramInOptionsCache(queryClient, updated.program_id, {
-                        keepForTemplateId: updated.id,
-                        programLabel: updated.program_label,
-                        templateTitle: updated.title,
-                    })
-                }
+                syncTemplateProgramsInOptionsCache(queryClient, previous, updated)
             },
         })
 
@@ -207,10 +201,12 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 )
                 const previous = cached?.data.find((row) => row.id === id)
                 removeDocumentTemplateFromCache(queryClient, id)
-                releaseProgramInOptionsCache(
+                releaseProgramsInOptionsCache(
                     queryClient,
-                    previous?.program_id,
-                    previous?.program_label
+                    (previous?.courses ?? []).map((course) => ({
+                        id: course.id,
+                        label: course.label,
+                    }))
                 )
             },
         })
@@ -222,7 +218,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 locale: TemplateLocale
                 template_dates: DocumentTemplateDates
                 watermark: DocumentTemplateWatermark
-                program_id: string
+                course_ids: string[]
             }) => {
                 const res = await fetch("/api/document-template", {
                     method: "POST",
@@ -237,11 +233,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             },
             onSuccess: (response) => {
                 upsertDocumentTemplateInCache(queryClient, response.data)
-                claimProgramInOptionsCache(queryClient, response.data.program_id, {
-                    keepForTemplateId: response.data.id,
-                    programLabel: response.data.program_label,
-                    templateTitle: response.data.title,
-                })
+                syncTemplateProgramsInOptionsCache(queryClient, null, response.data)
             },
         })
 
@@ -251,7 +243,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             setLocale(DEFAULT_TEMPLATE_LOCALE)
             setTemplateDates({ ...EMPTY_DOCUMENT_TEMPLATE_DATES })
             setWatermark({ ...DEFAULT_DOCUMENT_TEMPLATE_WATERMARK })
-            setProgramId(null)
+            setProgramIds([])
             setFormError(null)
             setActiveTemplate(null)
         }, [])
@@ -274,7 +266,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             setLocale(template.locale ?? DEFAULT_TEMPLATE_LOCALE)
             setTemplateDates(template.template_dates ?? { ...EMPTY_DOCUMENT_TEMPLATE_DATES })
             setWatermark(template.watermark ?? { ...DEFAULT_DOCUMENT_TEMPLATE_WATERMARK })
-            setProgramId(template.program_id ?? null)
+            setProgramIds(getTemplateCourseIds(template))
             setFormError(null)
             setMode("edit")
         }, [])
@@ -297,8 +289,8 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 return
             }
 
-            if (!programId) {
-                setFormError("Select a program for this offer template.")
+            if (programIds.length === 0) {
+                setFormError("Select at least one program for this offer template.")
                 return
             }
 
@@ -308,7 +300,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 locale,
                 template_dates: templateDates,
                 watermark,
-                program_id: programId,
+                course_ids: programIds,
             }
 
             const toastId = toast.loading("Updating template...")
@@ -326,7 +318,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 setFormError(message)
                 toast.error(message, { id: toastId })
             }
-        }, [activeTemplate, backToList, bodyHtml, locale, programId, templateDates, title, updateMutation, watermark])
+        }, [activeTemplate, backToList, bodyHtml, locale, programIds, templateDates, title, updateMutation, watermark])
 
         const deleteTemplateById = useCallback(
             async (id: string) => {
@@ -364,7 +356,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                 locale: TemplateLocale
                 template_dates: DocumentTemplateDates
                 watermark: DocumentTemplateWatermark
-                program_id: string
+                course_ids: string[]
             }) => {
                 setCloningId(payload.sourceId)
                 const toastId = toast.loading("Cloning template...")
@@ -376,7 +368,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
                         locale: payload.locale,
                         template_dates: payload.template_dates,
                         watermark: payload.watermark,
-                        program_id: payload.program_id,
+                        course_ids: payload.course_ids,
                     })
                     toast.success("Document template cloned successfully.", { id: toastId })
                 } catch (error) {
@@ -414,7 +406,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             locale,
             templateDates,
             watermark,
-            programId,
+            programIds,
             isSaving: updateMutation.isPending,
             isDeleting: deleteMutation.isPending,
             deletingId,
@@ -426,7 +418,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
             setLocale,
             setTemplateDates,
             setWatermark,
-            setProgramId,
+            setProgramIds,
             openEdit,
             openView,
             backToList,

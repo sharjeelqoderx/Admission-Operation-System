@@ -705,7 +705,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <Typography as="span" font="small" className="mr-1 text-muted-foreground uppercase">
+                        <Typography as="span" font="small" className="mr-1 text-muted-foreground uppercase tracking-wider">
                             Header &amp; footer
                         </Typography>
                         {hasHeader ? (
@@ -757,100 +757,189 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                     </div>
 
                     {hasHeader ? (
-                        <div className="space-y-3 rounded-md border border-border/70 bg-background/80 p-3">
-                            <Typography as="span" font="small" className="font-semibold uppercase">
-                                Document header
-                            </Typography>
-                            <div
-                                className={cn(
-                                    "rounded-md border border-border/60 bg-white px-4 py-3",
-                                    DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
-                                )}
-                                dangerouslySetInnerHTML={{ __html: buildHeaderHtml(headerFields) }}
-                            />
-                            <div className="flex flex-wrap items-center gap-3">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="xs"
-                                    className="gap-1.5"
-                                    onClick={() => openAssetsModal("header-logo")}
+                        <div className="space-y-4 rounded-xl border border-brand-secondary/20 bg-white/70 p-4 shadow-sm sm:p-5">
+                            <div className="space-y-1 border-b border-brand-secondary/15 pb-3">
+                                <Typography
+                                    as="span"
+                                    font="small"
+                                    className="font-semibold tracking-wider text-brand-blue-text uppercase"
                                 >
-                                    <ImageUp className="size-3.5" />
-                                    {headerFields.logoUrl
-                                        ? locale === "de"
-                                            ? "Logo ändern"
-                                            : "Change logo"
-                                        : locale === "de"
-                                          ? "Logo hinzufügen"
-                                          : "Attach logo"}
-                                </Button>
-                                {headerFields.logoUrl ? (
+                                    1. Document header
+                                </Typography>
+                                <Typography as="p" font="small" className="text-muted-foreground">
+                                    Appears at the top of every page — logo on the left, contact text on
+                                    the right.
+                                </Typography>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Typography
+                                    as="span"
+                                    font="small"
+                                    className="font-medium text-gray-700"
+                                >
+                                    Preview
+                                </Typography>
+                                <div
+                                    className={cn(
+                                        "rounded-lg border border-border/60 bg-white px-5 py-4 shadow-inner",
+                                        DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
+                                    )}
+                                    dangerouslySetInnerHTML={{
+                                        __html: buildHeaderHtml(headerFields),
+                                    }}
+                                />
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-start">
+                                <div className="flex flex-wrap items-center gap-2">
                                     <Button
                                         type="button"
-                                        variant="ghost"
+                                        variant="outline"
                                         size="xs"
-                                        onClick={() =>
+                                        className="gap-1.5"
+                                        onClick={() => openAssetsModal("header-logo")}
+                                    >
+                                        <ImageUp className="size-3.5" />
+                                        {headerFields.logoUrl
+                                            ? locale === "de"
+                                                ? "Logo ändern"
+                                                : "Change logo"
+                                            : locale === "de"
+                                              ? "Logo hinzufügen"
+                                              : "Attach logo"}
+                                    </Button>
+                                    {headerFields.logoUrl ? (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="xs"
+                                            onClick={() =>
+                                                updateHeaderFields({
+                                                    ...headerFields,
+                                                    logoUrl: "",
+                                                })
+                                            }
+                                        >
+                                            {locale === "de" ? "Logo entfernen" : "Remove logo"}
+                                        </Button>
+                                    ) : null}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Typography
+                                        as="label"
+                                        font="small"
+                                        className="text-muted-foreground"
+                                    >
+                                        {locale === "de"
+                                            ? "Kontaktzeile (rechts)"
+                                            : "Contact text (right side)"}
+                                    </Typography>
+                                    <Textarea
+                                        value={headerFields.contactText}
+                                        rows={2}
+                                        className="bg-white"
+                                        onChange={(event) =>
                                             updateHeaderFields({
                                                 ...headerFields,
-                                                logoUrl: "",
+                                                contactText: event.target.value,
                                             })
                                         }
-                                    >
-                                        {locale === "de" ? "Logo entfernen" : "Remove logo"}
-                                    </Button>
-                                ) : null}
-                            </div>
-                            <div className="space-y-1.5">
-                                <Typography as="label" font="small" className="text-muted-foreground">
-                                    {locale === "de"
-                                        ? "Kontaktzeile (rechts, auf Logo-Höhe zentriert)"
-                                        : "Contact text (right, vertically centered with logo)"}
-                                </Typography>
-                                <Textarea
-                                    value={headerFields.contactText}
-                                    rows={2}
-                                    onChange={(event) =>
-                                        updateHeaderFields({
-                                            ...headerFields,
-                                            contactText: event.target.value,
-                                        })
-                                    }
-                                />
+                                    />
+                                </div>
                             </div>
                         </div>
                     ) : null}
 
                     {hasFooter ? (
-                        <div className="space-y-3 rounded-md border border-border/70 bg-background/80 p-3">
-                            <Typography as="span" font="small" className="font-semibold uppercase">
-                                Document footer (4 columns)
-                            </Typography>
-                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                                {(
-                                    [
-                                        ["column1", "Column 1"],
-                                        ["column2", "Column 2"],
-                                        ["column3", "Column 3"],
-                                        ["column4", "Column 4"],
-                                    ] as const
-                                ).map(([key, label]) => (
-                                    <div key={key} className="space-y-1.5">
-                                        <Typography as="label" font="small" className="text-muted-foreground">
-                                            {label}
-                                        </Typography>
-                                        <Textarea
-                                            value={footerFields[key]}
-                                            rows={4}
-                                            onChange={(event) =>
-                                                updateFooterFields({
-                                                    ...footerFields,
-                                                    [key]: event.target.value,
-                                                })
-                                            }
-                                        />
-                                    </div>
-                                ))}
+                        <div className="space-y-4 rounded-xl border border-brand-secondary/20 bg-white/70 p-4 shadow-sm sm:p-5">
+                            <div className="space-y-1 border-b border-brand-secondary/15 pb-3">
+                                <Typography
+                                    as="span"
+                                    font="small"
+                                    className="font-semibold tracking-wider text-brand-blue-text uppercase"
+                                >
+                                    {hasHeader ? "2. " : "1. "}Document footer
+                                </Typography>
+                                <Typography as="p" font="small" className="text-muted-foreground">
+                                    Appears at the bottom of every page — four fixed columns for
+                                    address, contact, management, and legal info.
+                                </Typography>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Typography
+                                    as="span"
+                                    font="small"
+                                    className="font-medium text-gray-700"
+                                >
+                                    Preview
+                                </Typography>
+                                <div
+                                    className={cn(
+                                        "rounded-lg border border-border/60 bg-white px-5 py-4 shadow-inner",
+                                        DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
+                                    )}
+                                    dangerouslySetInnerHTML={{
+                                        __html: buildFooterHtml(footerFields),
+                                    }}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Typography
+                                    as="span"
+                                    font="small"
+                                    className="font-medium text-gray-700"
+                                >
+                                    Edit columns
+                                </Typography>
+                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                    {(
+                                        [
+                                            [
+                                                "column1",
+                                                locale === "de" ? "Adresse" : "Address",
+                                            ],
+                                            [
+                                                "column2",
+                                                locale === "de" ? "Kontakt" : "Contact",
+                                            ],
+                                            [
+                                                "column3",
+                                                locale === "de"
+                                                    ? "Geschäftsführung"
+                                                    : "Management",
+                                            ],
+                                            [
+                                                "column4",
+                                                locale === "de" ? "Register" : "Legal",
+                                            ],
+                                        ] as const
+                                    ).map(([key, label]) => (
+                                        <div key={key} className="space-y-1.5">
+                                            <Typography
+                                                as="label"
+                                                font="small"
+                                                className="text-muted-foreground"
+                                            >
+                                                {label}
+                                            </Typography>
+                                            <Textarea
+                                                value={footerFields[key]}
+                                                rows={5}
+                                                className="min-h-[120px] bg-white text-[12px] leading-relaxed"
+                                                onChange={(event) =>
+                                                    updateFooterFields({
+                                                        ...footerFields,
+                                                        [key]: event.target.value,
+                                                    })
+                                                }
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     ) : null}

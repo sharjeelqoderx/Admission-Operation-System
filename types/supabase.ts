@@ -501,6 +501,7 @@ export type Database = {
           degree_id: string
           document_type_id: string
           id: string
+          is_deleted: boolean
           requirement_type: Database["public"]["Enums"]["document_requirement_type_enum"]
           updated_at: string
         }
@@ -509,6 +510,7 @@ export type Database = {
           degree_id: string
           document_type_id: string
           id?: string
+          is_deleted?: boolean
           requirement_type?: Database["public"]["Enums"]["document_requirement_type_enum"]
           updated_at?: string
         }
@@ -517,6 +519,7 @@ export type Database = {
           degree_id?: string
           document_type_id?: string
           id?: string
+          is_deleted?: boolean
           requirement_type?: Database["public"]["Enums"]["document_requirement_type_enum"]
           updated_at?: string
         }
@@ -728,6 +731,39 @@ export type Database = {
             columns: ["created_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_template_course: {
+        Row: {
+          course_id: string
+          created_at: string
+          document_template_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          document_template_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          document_template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_template_course_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: true
+            referencedRelation: "course"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_template_course_document_template_id_fkey"
+            columns: ["document_template_id"]
+            isOneToOne: false
+            referencedRelation: "document_template"
             referencedColumns: ["id"]
           },
         ]

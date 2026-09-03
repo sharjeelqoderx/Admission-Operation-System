@@ -105,6 +105,13 @@ const sidebarRoutes = [
   },
 
   {
+    label: 'Degree Requirements',
+    href: '/dashboard/degree-requirements',
+    icon: FileStack,
+    allowFor: [Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN],
+  },
+
+  {
     label: 'All Documents',
     icon: Folder,
     allowFor: [Role.AGENT, Role.STUDENT, Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN],
@@ -192,7 +199,7 @@ function filterByRole(routes: any[], role: Role) {
  */
 function isRouteActive(pathname: string, href?: string) {
   if (!href) return false;
-  if (href === '/dashboard/templates' || href === '/dashboard/agent' || href === '/dashboard/application' || href === '/dashboard/program') {
+  if (href === '/dashboard/templates' || href === '/dashboard/agent' || href === '/dashboard/application' || href === '/dashboard/program' || href === '/dashboard/degree-requirements') {
     return pathname === href || pathname.startsWith(`${href}/`);
   }
   return pathname === href;

@@ -9,6 +9,7 @@ export type CourseDocumentTypeSummary = {
 
 export type CourseRequirementLike = {
     requirement_type?: DocumentRequirementType | null
+    is_deleted?: boolean | null
     document_type?: { id?: string; name?: string } | null
 }
 
@@ -17,12 +18,17 @@ export type SplitCourseDocumentTypes = {
     optional: CourseDocumentTypeSummary[]
 }
 
+function isActiveRequirement(requirement: CourseRequirementLike) {
+    return requirement.is_deleted !== true
+}
+
 function isRequiredRequirement(requirement: CourseRequirementLike) {
     return (requirement.requirement_type ?? "REQUIRED") === "REQUIRED"
 }
 
 export function getMandatoryDocumentTypeIds(requirements: CourseRequirementLike[]): string[] {
     return requirements
+        .filter(isActiveRequirement)
         .filter(isRequiredRequirement)
         .map((requirement) => requirement.document_type?.id)
         .filter((id): id is string => Boolean(id))
@@ -30,6 +36,7 @@ export function getMandatoryDocumentTypeIds(requirements: CourseRequirementLike[
 
 export function getCourseDocumentTypeIds(requirements: CourseRequirementLike[]): string[] {
     return requirements
+        .filter(isActiveRequirement)
         .map((requirement) => requirement.document_type?.id)
         .filter((id): id is string => Boolean(id))
 }
@@ -41,6 +48,7 @@ export function splitDocumentTypesByRequirement(
     const optional: CourseDocumentTypeSummary[] = []
 
     for (const requirement of requirements) {
+        if (!isActiveRequirement(requirement)) continue
         const docType = requirement.document_type
         if (!docType?.id) continue
 
@@ -67,6 +75,7 @@ export function mergeCourseDocumentRequirements(
 
     for (const requirements of requirementsList) {
         for (const requirement of requirements) {
+            if (!isActiveRequirement(requirement)) continue
             const docType = requirement.document_type
             if (!docType?.id) continue
 

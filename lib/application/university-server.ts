@@ -327,7 +327,7 @@ async function loadProfilesByIds(
     const { data, error } = await fetchInChunks<ProfileRow>(profileIds, async (chunkIds) =>
         supabase
             .from("profile")
-            .select("id, first_name, last_name, email, avatar_url")
+            .select("id, first_name, last_name, email, avatar_url, date_of_birth")
             .in("id", chunkIds)
     )
 
