@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { assertCourseAvailableForTemplate } from "@/lib/document-template/program-assignment"
-import { mapTemplateRow } from "@/lib/document-template/server"
+import {
+    resolveLinkedCourseIds,
+    syncDocumentTemplateCourses,
+} from "@/lib/document-template/program-assignment"
+import { loadMappedDocumentTemplate } from "@/lib/document-template/server"
 import { extractTemplateVariables } from "@/lib/document-template/variables"
 import { DocumentTemplateFormSchema } from "@/types/schemas/document-template"
-
-function resolveLinkedCourseId(input: {
-    course_id?: string | null
-    program_id?: string | null
-}) {
-    return input.course_id ?? input.program_id ?? null
-}
+import { fetchDocumentTemplatesForPage } from "@/lib/document-template/server"
 
 export async function GET() {
     try {
@@ -25,31 +22,11 @@ export async function GET() {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
 
-        const { data, error } = await supabase
-            .from("document_template")
-            .select(`
-                *,
-                course:course_id ( id, name, category, location )
-            `)
-            .eq("is_deleted", false)
-            .order("updated_at", { ascending: false })
-
-        if (error) {
-            return NextResponse.json(
-                { error: "Failed to fetch document templates", details: error.message },
-                { status: 500 }
-            )
-        }
-
-        return NextResponse.json({
-            data: (data ?? []).map((row) => {
-                const { course, ...templateRow } = row
-                const courseRelation = Array.isArray(course) ? course[0] : course
-                return mapTemplateRow(templateRow, courseRelation ?? null)
-            }),
-        })
-    } catch {
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+        const data = await fetchDocumentTemplatesForPage()
+        return NextResponse.json({ data })
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Internal Server Error"
+        return NextResponse.json({ error: message }, { status: 500 })
     }
 }
 
@@ -69,10 +46,13 @@ export async function POST(req: NextRequest) {
         const json = await req.json()
         const validated = DocumentTemplateFormSchema.parse(json)
         const variables = extractTemplateVariables(validated.body_html)
-        const courseId = resolveLinkedCourseId(validated)
+        const courseIds = resolveLinkedCourseIds(validated) ?? []
 
-        if (courseId) {
-            await assertCourseAvailableForTemplate(supabase, courseId)
+        if (courseIds.length === 0) {
+            return NextResponse.json(
+                { error: "Select at least one program for this offer template." },
+                { status: 400 }
+            )
         }
 
         const { data, error } = await supabase
@@ -84,13 +64,10 @@ export async function POST(req: NextRequest) {
                 locale: validated.locale,
                 template_dates: validated.template_dates ?? {},
                 watermark: validated.watermark ?? undefined,
-                course_id: courseId,
+                course_id: courseIds[0] ?? null,
                 created_by_profile_id: user.id,
             })
-            .select(`
-                *,
-                course:course_id ( id, name, category, location )
-            `)
+            .select("*")
             .single()
 
         if (error || !data) {
@@ -100,12 +77,22 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        const { course, ...templateRow } = data
-        const courseRelation = Array.isArray(course) ? course[0] : course
+        try {
+            await syncDocumentTemplateCourses(supabase, data.id, courseIds)
+        } catch (syncError) {
+            await supabase.from("document_template").delete().eq("id", data.id)
+            const message =
+                syncError instanceof Error
+                    ? syncError.message
+                    : "Failed to assign programs to template"
+            return NextResponse.json({ error: message }, { status: 400 })
+        }
+
+        const mapped = await loadMappedDocumentTemplate(supabase, data.id)
 
         return NextResponse.json(
             {
-                data: mapTemplateRow(templateRow, courseRelation ?? null),
+                data: mapped,
                 message: "Document template created successfully",
             },
             { status: 201 }
@@ -114,6 +101,7 @@ export async function POST(req: NextRequest) {
         if (e && typeof e === "object" && "name" in e && e.name === "ZodError") {
             return NextResponse.json({ error: "Validation failed", details: e }, { status: 400 })
         }
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+        const message = e instanceof Error ? e.message : "Internal Server Error"
+        return NextResponse.json({ error: message }, { status: 500 })
     }
 }

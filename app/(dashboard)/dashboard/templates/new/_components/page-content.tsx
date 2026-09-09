@@ -15,7 +15,7 @@ import {
     type DocumentTemplateWatermark,
 } from "@/lib/document-template/watermark"
 import {
-    claimProgramInOptionsCache,
+    syncTemplateProgramsInOptionsCache,
     upsertDocumentTemplateInCache,
 } from "@/lib/document-template/query-cache"
 import type {
@@ -36,7 +36,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
     const [watermark, setWatermark] = useState<DocumentTemplateWatermark>({
         ...DEFAULT_DOCUMENT_TEMPLATE_WATERMARK,
     })
-    const [programId, setProgramId] = useState<string | null>(null)
+    const [programIds, setProgramIds] = useState<string[]>([])
     const [formError, setFormError] = useState<string | null>(null)
 
     const createMutation = useMutation({
@@ -46,7 +46,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
             locale: TemplateLocale
             template_dates: DocumentTemplateDates
             watermark: DocumentTemplateWatermark
-            program_id: string
+            course_ids: string[]
         }) => {
             const res = await fetch("/api/document-template", {
                 method: "POST",
@@ -61,11 +61,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
         },
         onSuccess: (response) => {
             upsertDocumentTemplateInCache(queryClient, response.data)
-            claimProgramInOptionsCache(queryClient, response.data.program_id, {
-                keepForTemplateId: response.data.id,
-                programLabel: response.data.program_label,
-                templateTitle: response.data.title,
-            })
+            syncTemplateProgramsInOptionsCache(queryClient, null, response.data)
         },
     })
 
@@ -77,8 +73,8 @@ export const CreatePageContent = memo(function CreatePageContent() {
             return
         }
 
-        if (!programId) {
-            setFormError("Select a program for this offer template.")
+        if (programIds.length === 0) {
+            setFormError("Select at least one program for this offer template.")
             return
         }
 
@@ -91,7 +87,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
                 locale,
                 template_dates: templateDates,
                 watermark,
-                program_id: programId,
+                course_ids: programIds,
             })
             toast.success("Document template created successfully.", { id: toastId })
             router.push("/dashboard/templates")
@@ -101,7 +97,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
             setFormError(message)
             toast.error(message, { id: toastId })
         }
-    }, [bodyHtml, createMutation, locale, programId, router, templateDates, title, watermark])
+    }, [bodyHtml, createMutation, locale, programIds, router, templateDates, title, watermark])
 
     return (
         <DocumentTemplateFormView
@@ -112,7 +108,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
             locale={locale}
             templateDates={templateDates}
             watermark={watermark}
-            programId={programId}
+            programIds={programIds}
             isSaving={createMutation.isPending}
             formError={formError}
             onTitleChange={setTitle}
@@ -120,7 +116,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
             onLocaleChange={setLocale}
             onTemplateDatesChange={setTemplateDates}
             onWatermarkChange={setWatermark}
-            onProgramChange={setProgramId}
+            onProgramIdsChange={setProgramIds}
             onSave={handleSave}
             saveLabel="Create Template"
         />

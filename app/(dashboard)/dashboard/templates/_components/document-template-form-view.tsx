@@ -31,7 +31,7 @@ type Props = {
     locale: TemplateLocale
     templateDates: DocumentTemplateDates
     watermark: DocumentTemplateWatermark
-    programId: string | null
+    programIds: string[]
     templateId?: string | null
     isSaving: boolean
     formError: string | null
@@ -40,7 +40,7 @@ type Props = {
     onLocaleChange: (locale: TemplateLocale) => void
     onTemplateDatesChange: (value: DocumentTemplateDates) => void
     onWatermarkChange: (value: DocumentTemplateWatermark) => void
-    onProgramChange: (programId: string | null) => void
+    onProgramIdsChange: (programIds: string[]) => void
     onSave: () => void
     saveLabel?: string
 }
@@ -54,7 +54,7 @@ export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
     locale,
     templateDates,
     watermark,
-    programId,
+    programIds,
     templateId = null,
     isSaving,
     formError,
@@ -63,7 +63,7 @@ export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
     onLocaleChange,
     onTemplateDatesChange,
     onWatermarkChange,
-    onProgramChange,
+    onProgramIdsChange,
     onSave,
     saveLabel = "Save Template",
 }: Props) {
@@ -145,10 +145,10 @@ export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
                 </div>
 
                 <DocumentTemplateProgramSelect
-                    value={programId}
+                    value={programIds}
                     excludeTemplateId={templateId}
                     disabled={isSaving}
-                    onChange={onProgramChange}
+                    onChange={onProgramIdsChange}
                 />
 
                 {formError ? <ErrorView message={formError} /> : null}

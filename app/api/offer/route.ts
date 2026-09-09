@@ -4,7 +4,11 @@ import {
     tryCreateSupabaseServiceClient,
 } from "@/lib/supabase/server";
 import { CreateOfferSchema, OfferListQuerySchema } from "@/types/schemas/offer";
-import { mapTemplateRow } from "@/lib/document-template/server";
+import {
+    loadMappedDocumentTemplate,
+    mapTemplateRow,
+    fetchDocumentTemplateForCourseId,
+} from "@/lib/document-template/server";
 import { renderTemplateHtml } from "@/lib/document-template/variables";
 import { buildOfferTemplateVariables } from "@/lib/offer/build-offer-variables";
 import { fetchAdmissionRequirementsContext } from "@/lib/offer/admission-requirements-context";
@@ -13,8 +17,8 @@ import { resolveTemplateChecklistItems } from "@/lib/document-template/resolve-c
 import { fetchOffersList } from "@/lib/offer/list";
 import { isMissingOfferTemplateColumnError } from "@/lib/offer/select-fields";
 import {
-    fetchDocumentTemplateForCourseId,
     resolveApplicationCourseId,
+    templateIncludesCourseId,
 } from "@/lib/document-template/program-assignment";
 import { withProfileDisplayName } from "@/lib/utils/profile";
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
@@ -293,16 +297,27 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Document template not found" }, { status: 404 });
         }
 
-        if (templateRow.course_id !== courseId) {
-            return NextResponse.json(
-                {
-                    error: "The selected offer template does not belong to this application's program.",
-                },
-                { status: 400 }
-            );
+        if (courseId) {
+            const belongsToCourse = await templateIncludesCourseId(
+                supabase,
+                documentTemplateId,
+                courseId,
+                templateRow.course_id
+            )
+
+            if (!belongsToCourse) {
+                return NextResponse.json(
+                    {
+                        error: "The selected offer template does not belong to this application's program.",
+                    },
+                    { status: 400 }
+                );
+            }
         }
 
-        const template = mapTemplateRow(templateRow);
+        const template =
+            (await loadMappedDocumentTemplate(supabase, documentTemplateId)) ??
+            mapTemplateRow(templateRow);
 
         type StudentProfileRelation = {
             first_name?: string | null
