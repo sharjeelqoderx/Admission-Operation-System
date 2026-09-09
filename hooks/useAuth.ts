@@ -3,6 +3,7 @@ import { usePathname } from "next/navigation"
 import { clearSessionQueryCache } from "@/lib/query/session-cache"
 import { setSessionActive, syncSessionActiveFromCookie } from "@/lib/auth/client-session"
 import { useClientReady } from "@/hooks/useClientReady"
+import { isAuthPath, isProtectedPath } from "@/lib/routes"
 import { z } from "zod"
 import { Enums, Tables, TablesUpdate } from "@/types/supabase"
 import { loginSchema, otpSchema, signupSchema } from "@/types/schemas/auth"
@@ -179,7 +180,10 @@ export function useAuth() {
     const clientReady = useClientReady()
     const pathname = usePathname()
     const sessionActive = clientReady ? syncSessionActiveFromCookie() : false
-    const isDashboardRoute = pathname?.startsWith("/dashboard") ?? false
+    const isProtectedRoute = isProtectedPath(pathname)
+    const isAuthRoute = isAuthPath(pathname)
+    // Resolve session on protected routes, or on auth pages when a session cookie hint exists.
+    const shouldResolveSession = isProtectedRoute || (isAuthRoute && sessionActive)
 
     const login = useMutation({
         mutationFn: (payload: LoginPayload) =>
@@ -231,10 +235,10 @@ export function useAuth() {
                 throw error
             }
         },
-        enabled: clientReady && (sessionActive || isDashboardRoute),
-        // Keep current user warm — logout/login already clearSessionQueryCache().
-        staleTime: 5 * 60 * 1000,
-        gcTime: 10 * 60 * 1000,
+        enabled: clientReady && shouldResolveSession,
+        // Check once per session — login/logout/verifyOtp clear the cache when auth changes.
+        staleTime: Infinity,
+        gcTime: Infinity,
         refetchOnMount: false,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,

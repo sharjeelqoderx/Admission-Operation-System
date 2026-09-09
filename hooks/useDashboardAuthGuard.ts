@@ -1,23 +1,20 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 
+/**
+ * Dashboard shell auth state. Route redirects for expired/missing sessions
+ * are handled by AuthProvider; this hook only exposes loading/user for layout UI.
+ */
 export function useDashboardAuthGuard() {
-    const router = useRouter()
     const { me, clientReady } = useAuth()
-    const { data: user, isLoading, isError, isFetched } = me
+    const user = me.isError ? undefined : me.data
 
-    const isAuthLoading = !clientReady || (isLoading && !user)
+    const isAuthLoading =
+        !clientReady || ((me.isPending || me.isFetching) && !user && !me.isError)
 
-    const shouldRedirectToLogin = clientReady && isFetched && (isError || !user)
-
-    useEffect(() => {
-        if (shouldRedirectToLogin) {
-            router.replace("/login")
-        }
-    }, [router, shouldRedirectToLogin])
+    const shouldRedirectToLogin =
+        clientReady && me.isFetched && (me.isError || !user)
 
     return {
         user,

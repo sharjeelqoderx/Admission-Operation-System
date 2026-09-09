@@ -1040,7 +1040,7 @@ export default function LandingPage() {
                             <Button type="submit" className={`w-full py-3 ${gradBtn}`}>Apply Now</Button>
                         </form> */}
                         <div className="p-6">
-                            <Link href="/signup?role=student">
+                            <Link href="/login?role=student">
                                 <Button className={`w-full py-3 ${gradBtn}`}>Apply Now</Button>
                             </Link>
                         </div>

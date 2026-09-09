@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono, Public_Sans } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import Providers from "./providers";
+import { AuthProvider } from "./AuthProvider";
+import { PageLoader } from "@/components/shared/page-loader";
 
 const publicSans = Public_Sans({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -28,7 +31,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", publicSans.variable)}
     >
       <body cz-shortcut-listen="true" className="app-bg">
-        <Providers>{children}</Providers>
+        <Providers>
+          <Suspense fallback={<PageLoader fullScreen />}>
+            <AuthProvider>{children}</AuthProvider>
+          </Suspense>
+        </Providers>
       </body>
     </html>
   );
