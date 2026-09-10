@@ -1,9 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { usePathname } from "next/navigation"
 import { clearSessionQueryCache } from "@/lib/query/session-cache"
 import { setSessionActive, syncSessionActiveFromCookie } from "@/lib/auth/client-session"
 import { useClientReady } from "@/hooks/useClientReady"
-import { isAuthPath, isProtectedPath } from "@/lib/routes"
 import { z } from "zod"
 import { Enums, Tables, TablesUpdate } from "@/types/supabase"
 import { loginSchema, otpSchema, signupSchema } from "@/types/schemas/auth"
@@ -178,12 +176,10 @@ async function get<T>(url: string): Promise<T> {
 export function useAuth() {
     const queryClient = useQueryClient()
     const clientReady = useClientReady()
-    const pathname = usePathname()
     const sessionActive = clientReady ? syncSessionActiveFromCookie() : false
-    const isProtectedRoute = isProtectedPath(pathname)
-    const isAuthRoute = isAuthPath(pathname)
-    // Resolve session on protected routes, or on auth pages when a session cookie hint exists.
-    const shouldResolveSession = isProtectedRoute || (isAuthRoute && sessionActive)
+    // Only resolve /api/me when the client session hint is present.
+    // Protected routes without a session are redirected by AuthProvider (no refetch loop after logout).
+    const shouldResolveSession = sessionActive
 
     const login = useMutation({
         mutationFn: (payload: LoginPayload) =>
@@ -203,12 +199,23 @@ export function useAuth() {
     })
     const logout = useMutation({
         mutationFn: () => post<{ message: string }>("/api/auth/logout", {}),
-        onMutate: () => {
+        onMutate: async () => {
             setSessionActive(false)
-            queryClient.cancelQueries({ queryKey: ["me"] })
+            await queryClient.cancelQueries({ queryKey: ["me"] })
+            queryClient.removeQueries({ queryKey: ["me"] })
         },
         onSuccess: () => {
+            setSessionActive(false)
             clearSessionQueryCache(queryClient)
+            queryClient.removeQueries({ queryKey: ["me"] })
+        },
+        onError: () => {
+            // Keep UI logged out even if the API call fails partway.
+            setSessionActive(false)
+            queryClient.removeQueries({ queryKey: ["me"] })
+        },
+        onSettled: () => {
+            setSessionActive(false)
         },
     })
     const sendOtp = useMutation({

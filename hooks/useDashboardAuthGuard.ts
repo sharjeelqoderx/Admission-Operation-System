@@ -7,14 +7,15 @@ import { useAuth } from "@/hooks/useAuth"
  * are handled by AuthProvider; this hook only exposes loading/user for layout UI.
  */
 export function useDashboardAuthGuard() {
-    const { me, clientReady } = useAuth()
-    const user = me.isError ? undefined : me.data
+    const { me, clientReady, sessionActive } = useAuth()
+    const user = !sessionActive || me.isError ? undefined : me.data
 
     const isAuthLoading =
-        !clientReady || ((me.isPending || me.isFetching) && !user && !me.isError)
+        !clientReady ||
+        (sessionActive && (me.isPending || me.isFetching) && !user && !me.isError)
 
     const shouldRedirectToLogin =
-        clientReady && me.isFetched && (me.isError || !user)
+        clientReady && (!sessionActive || (me.isFetched && (me.isError || !user)))
 
     return {
         user,

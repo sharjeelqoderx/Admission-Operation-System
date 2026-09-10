@@ -85,10 +85,10 @@ export function Navbar({
     const handleLogout = async () => {
         try {
             await logout.mutateAsync();
-            router.push('/login');
-            router.refresh();
+            router.replace('/login');
         } catch (e) {
             console.error('Logout failed');
+            router.replace('/login');
         }
     };
 
