@@ -313,7 +313,10 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
 
                 <div className="space-y-6">
                     <StudentProgressCard
-                        progress={detail.progress}
+                        progress={{
+                            program_name: detail.progress.course_name,
+                            steps: detail.progress.steps,
+                        }}
                         className={applicationDetailCardClassName}
                     />
                 </div>

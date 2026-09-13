@@ -145,6 +145,7 @@ function StudentListSection() {
             return json // Return { data, pagination }
         },
         retry: false,
+        staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
     })
 
     const deleteStudent = useMutation({
@@ -253,6 +254,7 @@ export function AgentStudentPage() {
             const json = await res.json()
             return json.data as { total_students: number; active_applications: number; pending_actions: number }
         },
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     })
 
     if (me.isLoading) {

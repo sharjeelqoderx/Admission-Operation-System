@@ -76,9 +76,9 @@ export function withUniversityProgramPageLogic(
         const programsQuery = useQuery({
             queryKey: ["university-programs", q, page],
             queryFn: () => fetchUniversityPrograms({ q, page }),
-            initialData: matchesInitialQuery ? initialOverview : undefined,
+            initialData: initialOverview,
             placeholderData: keepPreviousData,
-            staleTime: 5 * 60 * 1000, // Cache for 5 minutes for smoother navigation
+            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
         })
 
         const deleteMutation = useMutation({

@@ -50,7 +50,7 @@ export async function fetchUniversityApplications(params: {
     if (params.page) url.searchParams.set("page", params.page)
     url.searchParams.set("limit", "10")
 
-    const res = await fetch(url.toString(), { cache: "no-store" })
+    const res = await fetch(url.toString())
     const json = await res.json()
     if (!res.ok) {
         throw new Error(json?.error ?? "Failed to fetch applications")
@@ -136,9 +136,9 @@ export function withUniversityApplicationPageLogic(
                     tab: filters.tab,
                     page: filters.page,
                 }),
-            initialData: matchesInitialQuery ? initialOverview : undefined,
+            initialData: initialOverview,
             placeholderData: keepPreviousData,
-            staleTime: 60_000,
+            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
             gcTime: 300_000,
             refetchOnWindowFocus: false,
         })

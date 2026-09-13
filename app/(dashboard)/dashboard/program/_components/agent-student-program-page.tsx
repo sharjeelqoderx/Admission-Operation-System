@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useAuth } from "@/hooks/useAuth"
 import { Typography } from "@/components/shared/Typography"
 import { Input } from "@/components/ui/input"
@@ -43,6 +43,7 @@ export function AgentStudentProgramPage() {
             return res.json()
         },
         enabled: !!user?.id && user?.role === Role.STUDENT,
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     })
 
     const { data: levels = [], isLoading: levelsLoading } = useLevels()
@@ -89,6 +90,8 @@ export function AgentStudentProgramPage() {
             return undefined
         },
         initialPageParam: 0,
+        placeholderData: keepPreviousData, // Show previous cached data while fetching
+        staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
     })
 
     useEffect(() => {
@@ -157,7 +160,8 @@ export function AgentStudentProgramPage() {
     const allPrograms = allProgramsResult.programs;
     const highestLevelName = allProgramsResult.highestLevelName;
 
-    const isPageLoading = levelsLoading || isLoading || (isFetching && !isFetchingNextPage)
+    // With placeholderData, isLoading is false when there's cached data even if isFetching is true
+    const isPageLoading = levelsLoading || isLoading
 
     return (
         <div className="space-y-8">

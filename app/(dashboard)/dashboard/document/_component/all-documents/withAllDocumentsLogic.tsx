@@ -139,6 +139,7 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
         const documentsQuery = useQuery({
             queryKey: ["documents", "all", filters.q, filters.status],
             queryFn: () => fetchAllDocuments(filters),
+            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
         })
 
         const rows = useMemo(

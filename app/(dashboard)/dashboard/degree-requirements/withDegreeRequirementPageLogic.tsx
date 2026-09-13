@@ -95,7 +95,7 @@ export function withDegreeRequirementPageLogic<P extends DegreeRequirementPageLo
         const listQuery = useQuery({
             queryKey: [...DEGREE_REQUIREMENTS_QUERY_KEY, includeDeleted ? "all" : "active"],
             queryFn: () => fetchRequirements(includeDeleted),
-            initialData: includeDeleted ? undefined : { data: initialRequirements },
+            initialData: { data: initialRequirements },
             staleTime: Infinity,
             refetchOnWindowFocus: false,
         })

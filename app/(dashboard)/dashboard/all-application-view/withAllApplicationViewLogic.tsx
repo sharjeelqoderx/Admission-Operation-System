@@ -155,9 +155,9 @@ export function withAllApplicationViewLogic(Component: ComponentType<AllApplicat
                     page,
                     limit,
                 }),
-            initialData: matchesInitialQuery ? initialData.applications : undefined,
+            initialData: initialData.applications,
             placeholderData: keepPreviousData,
-            staleTime: 5 * 60 * 1000, // Cache for 5 minutes for smoother navigation
+            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
             retry: false,
         })
 

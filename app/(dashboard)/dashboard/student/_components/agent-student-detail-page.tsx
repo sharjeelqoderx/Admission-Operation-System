@@ -65,6 +65,8 @@ export function AgentStudentDetailPage({ studentId: id }: AgentStudentDetailPage
             return json.data
         },
         enabled: !!id,
+        placeholderData: (previousData) => previousData,
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     })
 
     const { data: degrees = [] } = useDegrees()
@@ -90,6 +92,7 @@ export function AgentStudentDetailPage({ studentId: id }: AgentStudentDetailPage
             }[]
         },
         enabled: !!id,
+        staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
     })
 
     const studentApplications = Array.isArray(applicationsData) ? applicationsData : []

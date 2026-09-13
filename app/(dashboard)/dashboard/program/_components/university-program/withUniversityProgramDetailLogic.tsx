@@ -34,6 +34,7 @@ export function withUniversityProgramDetailLogic(
             queryKey: ["university-program-detail", courseId],
             queryFn: () => fetchUniversityProgramDetail(courseId),
             initialData: initialDetail,
+            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
         })
 
         return <Component detail={detailQuery.data} canEditProgram={canEditProgram} />

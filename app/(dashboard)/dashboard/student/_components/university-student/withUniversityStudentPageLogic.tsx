@@ -73,9 +73,9 @@ export function withUniversityStudentPageLogic(
         const studentsQuery = useQuery({
             queryKey: ["university-students", q, status, page],
             queryFn: () => fetchUniversityStudents({ q, status, page }),
-            initialData: matchesInitialQuery ? initialOverview : undefined,
+            initialData: initialOverview,
             placeholderData: keepPreviousData,
-            staleTime: 5 * 60 * 1000, // Cache for 5 minutes for smoother navigation
+            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
         })
 
         const updateParams = useCallback(

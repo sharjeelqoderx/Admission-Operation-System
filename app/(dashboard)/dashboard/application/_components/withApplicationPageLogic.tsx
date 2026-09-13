@@ -144,8 +144,9 @@ export function withApplicationPageLogic(Component: ComponentType<ApplicationPag
                 filters.date_to,
             ],
             queryFn: () => fetchApplicationsFromApi(filters),
-            initialData: matchesInitialQuery ? initialData.applications : undefined,
+            initialData: initialData.applications,
             retry: false,
+            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
         })
 
         const role = response?.role ?? initialData.applications.role

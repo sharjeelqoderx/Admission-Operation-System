@@ -1,5 +1,9 @@
-import { PanelSkeleton } from "@/components/shared/page-skeleton"
+import { ListPageSkeleton } from "@/components/shared/page-skeleton"
 
 export default function DegreeRequirementsLoading() {
-    return <PanelSkeleton rows={8} />
+    return (
+        <div className="min-h-[60vh]">
+            <ListPageSkeleton />
+        </div>
+    )
 }
