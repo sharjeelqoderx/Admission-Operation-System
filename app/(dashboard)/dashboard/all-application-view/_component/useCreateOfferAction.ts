@@ -10,6 +10,7 @@ type MissingTemplateAlertState = {
     title: string
     description: string
     allowCreateWithoutTemplate: boolean
+    applicationId: string | null
 }
 
 async function fetchOfferChecklistPreview(
@@ -68,10 +69,15 @@ function buildMissingTemplateAlert(params: {
     }
 }
 
-type UseCreateOfferActionOptions = {
+type CreateOfferTarget = {
     applicationId: string
     studentName?: string | null
-    onOfferCreated?: (offerId: string) => void
+}
+
+type UseCreateOfferActionOptions = {
+    applicationId?: string
+    studentName?: string | null
+    onOfferCreated?: (offerId: string, applicationId: string) => void
     invalidateQueryKeys?: string[][]
 }
 
@@ -80,103 +86,153 @@ export function useCreateOfferAction({
     studentName,
     onOfferCreated,
     invalidateQueryKeys = [],
-}: UseCreateOfferActionOptions) {
+}: UseCreateOfferActionOptions = {}) {
     const queryClient = useQueryClient()
+    const [pendingApplicationId, setPendingApplicationId] = useState<string | null>(null)
     const [missingTemplateAlert, setMissingTemplateAlert] = useState<MissingTemplateAlertState>({
         open: false,
         title: "",
         description: "",
         allowCreateWithoutTemplate: false,
+        applicationId: null,
     })
 
-    const invalidateOfferQueries = useCallback(() => {
-        queryClient.invalidateQueries({ queryKey: ["offers"] })
-        queryClient.invalidateQueries({ queryKey: ["applications"] })
-        queryClient.invalidateQueries({
-            queryKey: ["offer-checklist-preview", applicationId],
-        })
+    const invalidateOfferQueries = useCallback(
+        (targetApplicationId: string) => {
+            queryClient.invalidateQueries({ queryKey: ["offers"] })
+            queryClient.invalidateQueries({ queryKey: ["applications"] })
+            queryClient.invalidateQueries({ queryKey: ["university-applications"] })
+            queryClient.invalidateQueries({
+                queryKey: ["offer-checklist-preview", targetApplicationId],
+            })
 
-        for (const queryKey of invalidateQueryKeys) {
-            queryClient.invalidateQueries({ queryKey })
-        }
-    }, [applicationId, invalidateQueryKeys, queryClient])
+            for (const queryKey of invalidateQueryKeys) {
+                queryClient.invalidateQueries({ queryKey })
+            }
+        },
+        [invalidateQueryKeys, queryClient]
+    )
 
     const handleOfferCreated = useCallback(
-        (offerId: string) => {
+        (offerId: string, targetApplicationId: string) => {
             toast.success("Offer created successfully")
-            invalidateOfferQueries()
-            onOfferCreated?.(offerId)
+            invalidateOfferQueries(targetApplicationId)
+            onOfferCreated?.(offerId, targetApplicationId)
         },
         [invalidateOfferQueries, onOfferCreated]
     )
 
     const createOfferMutation = useMutation({
-        mutationFn: async () => {
-            const preview = await fetchOfferChecklistPreview(applicationId)
+        mutationFn: async (target: CreateOfferTarget) => {
+            const preview = await fetchOfferChecklistPreview(target.applicationId)
 
             if (!preview.data.template) {
                 return {
                     status: "missing_template" as const,
+                    applicationId: target.applicationId,
+                    studentName: target.studentName,
                     programLabel: preview.data.program_label,
                     hasProgram: preview.data.program_id !== null,
                 }
             }
 
-            const offer = await createOfferRequest(applicationId)
+            const offer = await createOfferRequest(target.applicationId)
             return {
                 status: "created" as const,
                 offerId: offer.id,
+                applicationId: target.applicationId,
             }
+        },
+        onMutate: (target) => {
+            setPendingApplicationId(target.applicationId)
         },
         onSuccess: (result) => {
             if (result.status === "missing_template") {
                 const alertContent = buildMissingTemplateAlert({
-                    studentName,
+                    studentName: result.studentName,
                     programLabel: result.programLabel,
                     hasProgram: result.hasProgram,
                 })
                 setMissingTemplateAlert({
                     open: true,
+                    applicationId: result.applicationId,
                     ...alertContent,
                 })
                 return
             }
 
-            handleOfferCreated(result.offerId)
+            handleOfferCreated(result.offerId, result.applicationId)
         },
         onError: (error: Error) => {
             toast.error(error.message)
+        },
+        onSettled: () => {
+            setPendingApplicationId(null)
         },
     })
 
     const createOfferWithoutTemplateMutation = useMutation({
-        mutationFn: () => createOfferRequest(applicationId, { createWithoutTemplate: true }),
-        onSuccess: (offer) => {
+        mutationFn: (targetApplicationId: string) =>
+            createOfferRequest(targetApplicationId, { createWithoutTemplate: true }),
+        onMutate: (targetApplicationId) => {
+            setPendingApplicationId(targetApplicationId)
+        },
+        onSuccess: (offer, targetApplicationId) => {
             setMissingTemplateAlert((current) => ({
                 ...current,
                 open: false,
+                applicationId: null,
             }))
-            handleOfferCreated(offer.id)
+            handleOfferCreated(offer.id, targetApplicationId)
         },
         onError: (error: Error) => {
             toast.error(error.message)
         },
+        onSettled: () => {
+            setPendingApplicationId(null)
+        },
     })
 
-    const handleCreateOffer = useCallback(() => {
-        createOfferMutation.mutate()
-    }, [createOfferMutation])
+    const resolveTarget = useCallback(
+        (override?: Partial<CreateOfferTarget>): CreateOfferTarget | null => {
+            const nextApplicationId = override?.applicationId ?? applicationId
+            if (!nextApplicationId) return null
+
+            return {
+                applicationId: nextApplicationId,
+                studentName: override?.studentName ?? studentName,
+            }
+        },
+        [applicationId, studentName]
+    )
+
+    const handleCreateOffer = useCallback(
+        (override?: Partial<CreateOfferTarget>) => {
+            const target = resolveTarget(override)
+            if (!target) return
+            createOfferMutation.mutate(target)
+        },
+        [createOfferMutation, resolveTarget]
+    )
 
     const closeMissingTemplateAlert = useCallback(() => {
         setMissingTemplateAlert((current) => ({
             ...current,
             open: false,
+            applicationId: null,
         }))
     }, [])
 
     const handleCreateOfferWithoutTemplate = useCallback(() => {
-        createOfferWithoutTemplateMutation.mutate()
-    }, [createOfferWithoutTemplateMutation])
+        const targetApplicationId =
+            missingTemplateAlert.applicationId ?? applicationId ?? null
+        if (!targetApplicationId) return
+        createOfferWithoutTemplateMutation.mutate(targetApplicationId)
+    }, [
+        applicationId,
+        createOfferWithoutTemplateMutation,
+        missingTemplateAlert.applicationId,
+    ])
 
     return {
         handleCreateOffer,
@@ -184,6 +240,7 @@ export function useCreateOfferAction({
         isCreatingOffer:
             createOfferMutation.isPending || createOfferWithoutTemplateMutation.isPending,
         isCreatingOfferWithoutTemplate: createOfferWithoutTemplateMutation.isPending,
+        pendingApplicationId,
         missingTemplateAlert,
         closeMissingTemplateAlert,
     }

@@ -1,10 +1,11 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useCallback, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/shared/sidebar';
 import { SidebarItem } from '@/components/shared/sidebar-item';
 import { SidebarGroup } from '@/components/shared/sidebar-group';
+import { SidebarCollapseProvider } from '@/components/shared/sidebar-collapse-context';
 import { Navbar } from '@/components/shared/navbar';
 import { useDashboardAuthGuard } from '@/hooks/useDashboardAuthGuard';
 import { DashboardShellSkeleton } from '@/components/shared/page-skeleton';
@@ -14,7 +15,6 @@ import {
   LayoutGrid,
   Users2,
   FileText,
-  Settings,
   BookOpen,
   MessageSquare,
   BarChart3,
@@ -244,10 +244,14 @@ function isRouteOrGroupActive(pathname: string, route: any) {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
   const { user: currentUser, isAuthLoading, shouldRedirectToLogin } = useDashboardAuthGuard();
 
   const handleCloseSidebar = () => setSidebarOpen(false);
+  const toggleSidebarCollapsed = useCallback(() => {
+    setSidebarCollapsed((current) => !current);
+  }, []);
 
   if (isAuthLoading || shouldRedirectToLogin || !currentUser) {
     return <DashboardShellSkeleton />;
@@ -257,6 +261,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const routes = filterByRole(sidebarRoutes, role);
 
   return (
+    <SidebarCollapseProvider
+      collapsed={sidebarCollapsed}
+      toggleCollapsed={toggleSidebarCollapsed}
+    >
     <div className="flex h-screen overflow-hidden bg-transparent app-bg">
       {sidebarOpen && (
         <div
@@ -279,6 +287,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 icon={Icon ? <Icon className="w-5 h-5" /> : null}
                 label={route.label}
                 defaultOpen={groupActive}
+                menuItems={route.children.map((child: any) => {
+                  const ChildIcon = child.icon;
+                  return {
+                    href: child.href,
+                    label: child.label,
+                    icon: ChildIcon ? <ChildIcon className="w-4 h-4" /> : undefined,
+                    isActive: isRouteActive(pathname, child.href),
+                  };
+                })}
               >
                 {route.children.map((child: any) => {
                   const ChildIcon = child.icon;
@@ -355,5 +372,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </main>
       </div>
     </div>
+    </SidebarCollapseProvider>
   );
 }

@@ -30,6 +30,7 @@ const APPLICATION_LIST_COURSE_SELECT = `
         name,
         fees,
         intake_date,
+        intake_starts_on,
         requirements:degree_requirement (
             requirement_type,
             is_deleted,
@@ -192,18 +193,28 @@ async function buildOffersByApplicationId(
     return offerByApplicationId
 }
 
+type ApplicationListCourseDegree = Pick<
+    Tables<"degree">,
+    "id" | "name" | "fees" | "intake_date" | "intake_starts_on"
+> & {
+    requirements?: Array<{
+        requirement_type?: "REQUIRED" | "OPTIONAL" | null
+        document_type?: { id: string } | null
+    }> | null
+}
+
 type ApplicationListCourseRow = {
     id: string
     name: string
     deadline_date: string | null
-    degree:
-        | (Pick<Tables<"degree">, "id" | "name" | "fees" | "intake_date"> & {
-              requirements?: Array<{
-                  requirement_type?: "REQUIRED" | "OPTIONAL" | null
-                  document_type?: { id: string } | null
-              }> | null
-          })
-        | null
+    degree: ApplicationListCourseDegree | ApplicationListCourseDegree[] | null
+}
+
+function unwrapDegree(
+    degree: ApplicationListCourseRow["degree"]
+): ApplicationListCourseDegree | null {
+    if (!degree) return null
+    return Array.isArray(degree) ? degree[0] ?? null : degree
 }
 
 async function attachCoursesToApplications(
@@ -248,7 +259,7 @@ async function attachCoursesToApplications(
 
     return applications.map((application) => {
         const course = courseById.get(application.course_id) ?? null
-        const degree = course?.degree ?? null
+        const degree = unwrapDegree(course?.degree ?? null)
         const requiredTypeIds = getRequiredDocumentTypeIds(degree)
         const vault = computeDocumentVault(
             application.student?.id,
@@ -283,6 +294,7 @@ async function attachCoursesToApplications(
                                 name: degree.name,
                                 fees: degree.fees,
                                 intake_date: degree.intake_date,
+                                intake_starts_on: degree.intake_starts_on,
                             }
                           : null,
                   }

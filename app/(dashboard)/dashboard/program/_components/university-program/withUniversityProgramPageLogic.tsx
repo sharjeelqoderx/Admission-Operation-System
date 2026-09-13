@@ -11,17 +11,24 @@ export type UniversityProgramPageLogicProps = {
     overview: UniversityProgramListResponse
     canManagePrograms: boolean
     searchValue: string
+    levelId: string
     isLoading: boolean
     isFetching: boolean
     deletingId: string | null
     onSearchChange: (value: string) => void
+    onLevelChange: (value: string) => void
     onPageChange: (page: number) => void
     onDelete: (id: string) => void
 }
 
-async function fetchUniversityPrograms(params: { q?: string; page?: string }) {
+async function fetchUniversityPrograms(params: {
+    q?: string
+    level_id?: string
+    page?: string
+}) {
     const url = new URL("/api/university/programs", window.location.origin)
     if (params.q) url.searchParams.set("q", params.q)
+    if (params.level_id) url.searchParams.set("level_id", params.level_id)
     if (params.page) url.searchParams.set("page", params.page)
     url.searchParams.set("limit", "10")
 
@@ -49,13 +56,14 @@ export function withUniversityProgramPageLogic(
         const searchParams = useSearchParams()
 
         const q = searchParams.get("q") ?? ""
+        const levelId = searchParams.get("level_id") ?? "all"
         const page = searchParams.get("page") ?? "1"
         const [searchInput, setSearchInput] = useState(q)
         const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-        const initialQueryRef = useRef<{ q: string; page: string } | null>(null)
+        const initialQueryRef = useRef<{ q: string; level_id: string; page: string } | null>(null)
 
         if (initialQueryRef.current === null) {
-            initialQueryRef.current = { q, page }
+            initialQueryRef.current = { q, level_id: levelId, page }
         }
 
         useEffect(() => {
@@ -71,14 +79,21 @@ export function withUniversityProgramPageLogic(
         }, [])
 
         const matchesInitialQuery =
-            q === initialQueryRef.current.q && page === initialQueryRef.current.page
+            q === initialQueryRef.current.q &&
+            levelId === initialQueryRef.current.level_id &&
+            page === initialQueryRef.current.page
 
         const programsQuery = useQuery({
-            queryKey: ["university-programs", q, page],
-            queryFn: () => fetchUniversityPrograms({ q, page }),
-            initialData: initialOverview,
+            queryKey: ["university-programs", q, levelId, page],
+            queryFn: () =>
+                fetchUniversityPrograms({
+                    q,
+                    level_id: levelId === "all" ? undefined : levelId,
+                    page,
+                }),
+            initialData: matchesInitialQuery ? initialOverview : undefined,
             placeholderData: keepPreviousData,
-            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
+            staleTime: Infinity,
         })
 
         const deleteMutation = useMutation({
@@ -129,6 +144,16 @@ export function withUniversityProgramPageLogic(
             [updateParams]
         )
 
+        const handleLevelChange = useCallback(
+            (value: string) => {
+                updateParams({
+                    level_id: value === "all" ? null : value,
+                    page: "1",
+                })
+            },
+            [updateParams]
+        )
+
         const currentPage = parseInt(page, 10) || 1
 
         const overview = useMemo(() => {
@@ -148,10 +173,12 @@ export function withUniversityProgramPageLogic(
                 overview={overview}
                 canManagePrograms={canManagePrograms}
                 searchValue={searchInput}
+                levelId={levelId}
                 isLoading={programsQuery.isLoading && !programsQuery.data}
                 isFetching={programsQuery.isFetching}
                 deletingId={deleteMutation.isPending ? deleteMutation.variables : null}
                 onSearchChange={handleSearchChange}
+                onLevelChange={handleLevelChange}
                 onPageChange={(nextPage) => updateParams({ page: String(nextPage) })}
                 onDelete={(id) => deleteMutation.mutate(id)}
             />

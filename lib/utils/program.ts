@@ -50,6 +50,27 @@ export function formatIntakeDate(value?: string | null): string {
     })
 }
 
+/** Prefer calendar intake date; fall back to summer/winter season. */
+export function resolveIntakeLabel(degree?: {
+    intake_starts_on?: string | null
+    intake_date?: string | null
+} | null): string | null {
+    if (!degree) return null
+
+    if (degree.intake_starts_on) {
+        const date = new Date(degree.intake_starts_on)
+        if (!Number.isNaN(date.getTime())) {
+            return date.toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+            })
+        }
+    }
+
+    const formatted = formatIntakeDate(degree.intake_date ?? null)
+    return formatted === "N/A" ? null : formatted
+}
+
 export function formatStudyMode(value?: string | null): string {
     if (!value) return "Full Time"
     return value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())

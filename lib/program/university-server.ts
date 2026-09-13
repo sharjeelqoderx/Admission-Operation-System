@@ -75,6 +75,7 @@ function mapListItem(
 
 export async function fetchUniversityProgramList(params: {
     q?: string
+    level_id?: string
     page?: number
     limit?: number
 }): Promise<UniversityProgramListResponse> {
@@ -82,6 +83,7 @@ export async function fetchUniversityProgramList(params: {
     const page = params.page ?? 1
     const limit = params.limit ?? 10
     const searchTerm = params.q?.trim().toLowerCase() ?? ""
+    const levelId = params.level_id?.trim() || undefined
 
     const { data, error, count } = await supabase
         .from("course")
@@ -118,7 +120,12 @@ export async function fetchUniversityProgramList(params: {
         throw new Error(error.message)
     }
 
-    const courses = await attachLevelsToCourses(supabase, (data ?? []) as unknown as CourseRow[])
+    let courses = await attachLevelsToCourses(supabase, (data ?? []) as unknown as CourseRow[])
+
+    if (levelId) {
+        courses = courses.filter((course) => course.degree?.level_id === levelId)
+    }
+
     let items = courses.map((course) => mapListItem(course as Parameters<typeof mapListItem>[0]))
 
     if (searchTerm) {
@@ -138,7 +145,8 @@ export async function fetchUniversityProgramList(params: {
         })
     }
 
-    const total = searchTerm ? items.length : count ?? items.length
+    const hasFilters = Boolean(searchTerm || levelId)
+    const total = hasFilters ? items.length : count ?? items.length
     const totalPages = Math.max(Math.ceil(total / limit), 1)
     const start = (page - 1) * limit
     const paginatedItems = items.slice(start, start + limit)
@@ -512,7 +520,12 @@ async function resolveOwnerProfileId(userId: string, role: string, payload: Univ
     return universityProfile.id
 }
 
-export async function fetchUniversityProgramsForPage(params?: { q?: string; page?: number; limit?: number }) {
+export async function fetchUniversityProgramsForPage(params?: {
+    q?: string
+    level_id?: string
+    page?: number
+    limit?: number
+}) {
     const supabase = await createSupabaseServerClient()
     const {
         data: { user },

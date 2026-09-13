@@ -86,16 +86,26 @@ export async function attachLevelsToCourses(
     supabase: SupabaseServerClient,
     courses: CourseRow[]
 ): Promise<CourseRow[]> {
+    const normalizedCourses = courses.map((course) => {
+        const degree = unwrapRelation(
+            course.degree as CourseDegreeRelation | CourseDegreeRelation[] | null
+        )
+        return {
+            ...course,
+            degree,
+        }
+    })
+
     const levelIds = [
         ...new Set(
-            courses
+            normalizedCourses
                 .map((course) => course.degree?.level_id)
                 .filter((id): id is string => Boolean(id))
         ),
     ]
 
     if (levelIds.length === 0) {
-        return courses.map((course) => ({
+        return normalizedCourses.map((course) => ({
             ...course,
             degree: course.degree ? { ...course.degree, level: null } : null,
         }))
@@ -112,7 +122,7 @@ export async function attachLevelsToCourses(
 
     const levelById = new Map((levels ?? []).map((level) => [level.id, level]))
 
-    return courses.map((course) => ({
+    return normalizedCourses.map((course) => ({
         ...course,
         degree: course.degree
             ? {

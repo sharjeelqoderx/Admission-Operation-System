@@ -8,6 +8,7 @@ import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-r
 type ProgramPageProps = {
     searchParams: Promise<{
         q?: string
+        level_id?: string
         page?: string
     }>
 }
@@ -23,6 +24,7 @@ export default async function ProgramPage({ searchParams }: ProgramPageProps) {
         const params = await searchParams
         const initialOverview = await fetchUniversityProgramsForPage({
             q: params.q,
+            level_id: params.level_id,
             page: params.page ? Number(params.page) : 1,
             limit: 10,
         })

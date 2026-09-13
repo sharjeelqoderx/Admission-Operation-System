@@ -177,7 +177,7 @@ export type ApplicationListAgent = Pick<
 
 export type ApplicationListDegree = Pick<
   Tables<"degree">,
-  "id" | "name" | "fees" | "intake_date"
+  "id" | "name" | "fees" | "intake_date" | "intake_starts_on"
 >;
 
 export type ApplicationListCourse = Pick<

@@ -274,7 +274,7 @@ export default function AllApplicationViewDetailsPage() {
                                     </Link>
                                     <Button
                                         className="w-full h-10 rounded-xl gap-2 font-bold text-xs bg-brand-secondary hover:bg-brand-secondary/90"
-                                        onClick={handleCreateOffer}
+                                        onClick={() => handleCreateOffer()}
                                         disabled={isOfferCreationDisabled || isCreatingOffer}
                                     >
                                         {isCreatingOffer ? (
@@ -293,7 +293,7 @@ export default function AllApplicationViewDetailsPage() {
                             ) : (
                                 <Button
                                     className="w-full h-10 rounded-xl gap-2 font-bold text-xs bg-brand-secondary hover:bg-brand-secondary/90"
-                                    onClick={handleCreateOffer}
+                                    onClick={() => handleCreateOffer()}
                                     disabled={isOfferCreationDisabled || isCreatingOffer}
                                 >
                                     {isCreatingOffer ? (

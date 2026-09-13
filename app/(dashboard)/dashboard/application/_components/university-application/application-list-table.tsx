@@ -1,31 +1,35 @@
 "use client"
 
-import { memo } from "react"
+import { memo, useCallback } from "react"
 import Image from "next/image"
-import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
+import { BluryCard } from "@/components/shared/blury-card"
 import { TableSkeleton } from "@/components/shared/table-skeleton"
 import { StudentPipelineBadge } from "@/components/shared/student-pipeline-badge"
 import { DocumentStudentSearch } from "@/app/(dashboard)/dashboard/document/_component/document-student-search"
 import { DocumentRejectionIndicator } from "@/app/(dashboard)/dashboard/document/_component/document-rejection-indicator"
+import { Spinner } from "@/components/shared/page-loader"
 import {
     Table,
     TableBody,
     TableCell,
+    TableFooter,
     TableHead,
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import { cn } from "@/lib/utils"
 import type {
     UniversityApplicationListItem,
     UniversityApplicationTab,
 } from "@/types/schemas/university-application"
 import type { DocumentRejectionHistoryEntry } from "@/types/schemas/document"
 
-const COLUMN_COUNT = 6
+/** Rejection + Student + Program + Intake + Partner + Status + Submitted + Approval */
+const COLUMN_COUNT = 8
 
 function toRejectionIndicatorHistory(
     history: UniversityApplicationListItem["rejection_history"]
@@ -60,9 +64,16 @@ type UniversityApplicationListTableProps = {
     onTabChange: (value: UniversityApplicationTab) => void
     onTabHover: (value: UniversityApplicationTab) => void
     onPageChange: (page: number) => void
+    reviewingApplicationId?: string | null
+    onApprove?: (application: UniversityApplicationListItem) => void
+    onRejectRequest?: (application: UniversityApplicationListItem) => void
 }
 
-const tabs: { key: UniversityApplicationTab; label: string; countKey: keyof UniversityApplicationListTableProps["tabCounts"] }[] = [
+const tabs: {
+    key: UniversityApplicationTab
+    label: string
+    countKey: keyof UniversityApplicationListTableProps["tabCounts"]
+}[] = [
     { key: "all", label: "All Applications", countKey: "all" },
     { key: "pending-review", label: "Pending Review", countKey: "pending_review" },
     { key: "awaiting-signature", label: "Awaiting Signature", countKey: "awaiting_signature" },
@@ -81,9 +92,22 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
     onTabChange,
     onTabHover,
     onPageChange,
+    reviewingApplicationId = null,
+    onApprove,
+    onRejectRequest,
 }: UniversityApplicationListTableProps) {
+    const router = useRouter()
     const showingCount = applications.length
     const totalCount = pagination?.total ?? showingCount
+    const page = pagination?.page ?? 1
+    const totalPages = Math.max(1, pagination?.totalPages ?? 1)
+
+    const openApplication = useCallback(
+        (applicationId: string) => {
+            router.push(`/dashboard/application/${applicationId}`)
+        },
+        [router]
+    )
 
     return (
         <div className="space-y-5">
@@ -109,7 +133,16 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                     : "relative -mb-px cursor-pointer border-b-2 border-transparent px-4 pb-3 pt-2 text-sm font-medium text-gray-500 transition-colors hover:text-brand-blue-text/80"
                             }
                         >
-                            <span>{tab.label}</span>
+                            <Typography
+                                as="span"
+                                className={
+                                    isActive
+                                        ? "text-sm font-semibold text-brand-blue-text"
+                                        : "text-sm font-medium text-gray-500"
+                                }
+                            >
+                                {tab.label}
+                            </Typography>
                             {tab.key !== "recently-completed" ? (
                                 <Typography
                                     as="span"
@@ -128,169 +161,307 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                 })}
             </div>
 
-            <Card className="relative overflow-hidden border-none bg-white shadow-sm ring-1 ring-black/5">
+            <BluryCard
+                isCentered={false}
+                blurAmount="backdrop-blur-lg"
+                blendColorClass="bg-white/10"
+                childClass="p-0!"
+                className="rounded-lg p-0"
+            >
                 {isFetching ? (
-                    <TableSkeleton columns={6} rows={6} showFooter />
+                    <TableSkeleton columns={COLUMN_COUNT} rows={6} showFooter />
                 ) : (
-                    <>
-                <div className="overflow-x-auto">
-                    <Table className="min-w-[1100px]">
-                        <TableHeader>
-                            <TableRow className="border-b border-gray-100 hover:bg-transparent">
-                                <TableHead className="w-12 px-3" aria-hidden />
-                                {[
-                                    "Student Name",
-                                    "Program",
-                                    "Status",
-                                    "Submission Date",
-                                    "Action",
-                                ].map((heading) => (
-                                    <TableHead
-                                        key={heading}
-                                        className={
-                                            heading === "Program"
-                                                ? "px-6 py-5 max-w-[240px]"
-                                                : "px-6 py-5"
-                                        }
-                                    >
-                                        <Typography
-                                            as="span"
-                                            font="small"
-                                            className="uppercase tracking-[0.12em] text-gray-500"
-                                        >
-                                            {heading}
-                                        </Typography>
+                    <div className="relative overflow-x-auto rounded-xl">
+                        <Table className="w-full min-w-[1080px] text-left border-collapse">
+                            <TableHeader className="sticky top-0 z-10">
+                                <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
+                                    <TableHead className="w-12 px-3" aria-hidden />
+                                    <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                        Student
                                     </TableHead>
-                                ))}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {applications.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={COLUMN_COUNT} className="px-6 py-12 text-center">
-                                        <Typography as="span" font="sub-text" className="text-gray-500">
-                                            No applications found.
-                                        </Typography>
-                                    </TableCell>
+                                    <TableHead className="max-w-[220px] px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                        Program
+                                    </TableHead>
+                                    <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                        Intake
+                                    </TableHead>
+                                    <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                        University Partner
+                                    </TableHead>
+                                    <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                        Status
+                                    </TableHead>
+                                    <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                        Submitted
+                                    </TableHead>
+                                    <TableHead className="min-w-[168px] px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                        Approval
+                                    </TableHead>
                                 </TableRow>
-                            ) : (
-                                applications.map((application) => {
-                                    const avatarSrc =
-                                        application.avatar_url ??
-                                        `https://ui-avatars.com/api/?name=${encodeURIComponent(application.student_name)}&background=random`
-                                    const rejectionHistory = toRejectionIndicatorHistory(
-                                        application.rejection_history
-                                    )
-                                    const showRejectionIndicator = rejectionHistory.length > 0
+                            </TableHeader>
+                            <TableBody className="bg-white/45">
+                                {applications.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell
+                                            colSpan={COLUMN_COUNT}
+                                            className="px-8 py-16 text-center"
+                                        >
+                                            <Typography
+                                                as="p"
+                                                className="text-sm text-gray-500 font-medium"
+                                            >
+                                                No applications found.
+                                            </Typography>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    applications.map((application, index) => {
+                                        const avatarSrc =
+                                            application.avatar_url ??
+                                            `https://ui-avatars.com/api/?name=${encodeURIComponent(application.student_name)}&background=random`
+                                        const rejectionHistory = toRejectionIndicatorHistory(
+                                            application.rejection_history
+                                        )
+                                        const showRejectionIndicator = rejectionHistory.length > 0
+                                        const isReviewing =
+                                            reviewingApplicationId === application.id
+                                        const canApprove = Boolean(
+                                            application.can_approve_for_signature
+                                        )
+                                        const canReject = Boolean(application.can_reject)
+                                        const canShowApproval = canApprove || canReject
+                                        const rowBg =
+                                            index % 2 === 0 ? "bg-white/70" : "bg-white/45"
 
-                                    return (
-                                        <TableRow key={application.id} className="border-b border-gray-50">
-                                            <TableCell className="px-3 py-5 whitespace-nowrap">
-                                                {showRejectionIndicator ? (
-                                                    <DocumentRejectionIndicator
-                                                        history={rejectionHistory}
-                                                        placement="bottom-right"
-                                                    />
-                                                ) : null}
-                                            </TableCell>
-                                            <TableCell className="px-6 py-5">
-                                                <div className="flex items-center gap-3">
-                                                    <Image
-                                                        src={avatarSrc}
-                                                        alt={application.student_name}
-                                                        width={40}
-                                                        height={40}
-                                                        className="size-10 rounded-xl border-2 border-white/50 object-cover"
-                                                        unoptimized
-                                                    />
-                                                    <div>
-                                                        <Typography
-                                                            as="p"
-                                                            font="text"
-                                                            className="font-semibold text-gray-900"
-                                                        >
-                                                            {application.student_name}
-                                                        </Typography>
-                                                        <Typography
-                                                            as="p"
-                                                            className="text-xs font-normal text-muted-foreground"
-                                                        >
-                                                            ID: {application.student_code ?? "N/A"}
-                                                        </Typography>
+                                        return (
+                                            <TableRow
+                                                key={application.id}
+                                                role="link"
+                                                tabIndex={0}
+                                                onClick={() => openApplication(application.id)}
+                                                onKeyDown={(event) => {
+                                                    if (event.key !== "Enter" && event.key !== " ") {
+                                                        return
+                                                    }
+                                                    event.preventDefault()
+                                                    openApplication(application.id)
+                                                }}
+                                                className={cn(
+                                                    "border-b border-brand-secondary/40 transition-colors cursor-pointer",
+                                                    rowBg,
+                                                    "hover:bg-brand-secondary/5",
+                                                    isReviewing && "opacity-70"
+                                                )}
+                                            >
+                                                <TableCell className="px-3 py-3 whitespace-nowrap">
+                                                    {showRejectionIndicator ? (
+                                                        <DocumentRejectionIndicator
+                                                            history={rejectionHistory}
+                                                            placement="bottom-right"
+                                                        />
+                                                    ) : null}
+                                                </TableCell>
+                                                <TableCell className="px-3 py-3 whitespace-nowrap">
+                                                    <div className="flex items-center gap-2">
+                                                        <Image
+                                                            src={avatarSrc}
+                                                            alt={application.student_name}
+                                                            width={40}
+                                                            height={40}
+                                                            className="size-10 rounded-xl border-2 border-white/50 object-cover"
+                                                            unoptimized
+                                                        />
+                                                        <div className="flex flex-col">
+                                                            <Typography
+                                                                as="span"
+                                                                className="text-sm font-bold text-gray-900"
+                                                            >
+                                                                {application.student_name}
+                                                            </Typography>
+                                                            <Typography
+                                                                as="span"
+                                                                className="text-xs font-normal text-muted-foreground"
+                                                            >
+                                                                ID:{" "}
+                                                                {application.student_code ?? "N/A"}
+                                                            </Typography>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="max-w-[240px] px-6 py-5">
-                                                <div className="min-w-0 max-w-[240px]">
+                                                </TableCell>
+                                                <TableCell className="max-w-[220px] px-3 py-3">
                                                     <Typography
-                                                        as="p"
-                                                        font="text"
-                                                        className="font-semibold text-brand-primary line-clamp-2"
+                                                        as="span"
+                                                        className="block truncate text-sm font-bold text-gray-700"
                                                         title={application.course_name ?? undefined}
                                                     >
                                                         {application.course_name ?? "—"}
                                                     </Typography>
+                                                </TableCell>
+                                                <TableCell className="px-3 py-3 whitespace-nowrap">
                                                     <Typography
-                                                        as="p"
-                                                        className="text-xs font-normal text-muted-foreground mt-1"
+                                                        as="span"
+                                                        className="text-sm font-medium text-gray-700"
                                                     >
-                                                        {application.intake_label}
+                                                        {application.intake_label ?? "—"}
                                                     </Typography>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="px-6 py-5">
-                                                <StudentPipelineBadge status={application.pipeline_status} />
-                                            </TableCell>
-                                            <TableCell className="px-6 py-5">
-                                                <Typography as="span" font="sub-text" className="text-gray-600">
-                                                    {application.submission_date ?? "—"}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
-                                                <Button
-                                                    variant="outline"
-                                                    className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
-                                                    asChild
+                                                </TableCell>
+                                                <TableCell className="px-3 py-3 whitespace-nowrap">
+                                                    <Typography
+                                                        as="span"
+                                                        className="text-sm font-light text-gray-600"
+                                                    >
+                                                        {application.agent_name || "—"}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell className="px-3 py-3 whitespace-nowrap">
+                                                    <StudentPipelineBadge
+                                                        status={application.pipeline_status}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="px-3 py-3 whitespace-nowrap">
+                                                    <Typography
+                                                        as="span"
+                                                        className="text-sm font-medium text-gray-600"
+                                                    >
+                                                        {application.submission_date ?? "—"}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell
+                                                    className="min-w-[168px] px-3 py-3 whitespace-nowrap"
+                                                    onClick={(event) => event.stopPropagation()}
+                                                    onKeyDown={(event) => event.stopPropagation()}
                                                 >
-                                                    <Link href={`/dashboard/application/${application.id}`}>
-                                                        View
-                                                    </Link>
+                                                    {canShowApproval ? (
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            {canReject ? (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    className="h-9 rounded-lg border-red-200 px-3 text-[12px] font-bold text-red-600 hover:bg-red-50"
+                                                                    disabled={isReviewing}
+                                                                    onClick={() =>
+                                                                        onRejectRequest?.(
+                                                                            application
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Reject
+                                                                </Button>
+                                                            ) : null}
+                                                            {canApprove ? (
+                                                                <Button
+                                                                    type="button"
+                                                                    className="h-9 gap-1.5 rounded-lg bg-brand-byzantine px-3 text-[12px] font-bold hover:bg-brand-byzantine/90"
+                                                                    disabled={isReviewing}
+                                                                    onClick={() =>
+                                                                        onApprove?.(application)
+                                                                    }
+                                                                >
+                                                                    {isReviewing ? (
+                                                                        <>
+                                                                            <Spinner size="sm" />
+                                                                            Working...
+                                                                        </>
+                                                                    ) : (
+                                                                        "Approve"
+                                                                    )}
+                                                                </Button>
+                                                            ) : null}
+                                                        </div>
+                                                    ) : (
+                                                        <Typography
+                                                            as="span"
+                                                            className="text-sm text-muted-foreground"
+                                                        >
+                                                            —
+                                                        </Typography>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })
+                                )}
+                            </TableBody>
+                            <TableFooter className="border-t-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
+                                <TableRow className="hover:bg-brand-secondary/10 border-0">
+                                    <TableCell colSpan={COLUMN_COUNT} className="px-4 py-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div className="flex flex-wrap items-center gap-x-1 text-[12px] font-light text-gray-500">
+                                                <Typography
+                                                    as="span"
+                                                    className="text-[12px] font-light text-gray-500"
+                                                >
+                                                    Showing
+                                                </Typography>
+                                                <Typography
+                                                    as="span"
+                                                    className="text-[12px] font-bold text-brand-blue-text"
+                                                >
+                                                    {showingCount}
+                                                </Typography>
+                                                <Typography
+                                                    as="span"
+                                                    className="text-[12px] font-light text-gray-500"
+                                                >
+                                                    of
+                                                </Typography>
+                                                <Typography
+                                                    as="span"
+                                                    className="text-[12px] font-bold text-brand-blue-text"
+                                                >
+                                                    {totalCount.toLocaleString()}
+                                                </Typography>
+                                                <Typography
+                                                    as="span"
+                                                    className="text-[12px] font-light text-gray-500"
+                                                >
+                                                    total
+                                                </Typography>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={() =>
+                                                        pagination &&
+                                                        onPageChange(Math.max(1, page - 1))
+                                                    }
+                                                    disabled={!pagination || page <= 1}
+                                                >
+                                                    <ChevronLeft size={16} />
                                                 </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    )
-                                })
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
-                    <Typography as="span" font="sub-text" className="text-gray-500">
-                        Showing {showingCount} of {totalCount.toLocaleString()} entries
-                    </Typography>
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            disabled={!pagination || pagination.page <= 1}
-                            onClick={() => pagination && onPageChange(pagination.page - 1)}
-                            className="flex size-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 disabled:opacity-40"
-                        >
-                            <ChevronLeft className="size-4" />
-                        </button>
-                        <button
-                            type="button"
-                            disabled={!pagination || pagination.page >= pagination.totalPages}
-                            onClick={() => pagination && onPageChange(pagination.page + 1)}
-                            className="flex size-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 disabled:opacity-40"
-                        >
-                            <ChevronRight className="size-4" />
-                        </button>
+                                                <Typography
+                                                    as="span"
+                                                    className="min-w-[72px] text-center text-[12px] font-medium text-gray-600"
+                                                >
+                                                    {`${page} / ${totalPages}`}
+                                                </Typography>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={() =>
+                                                        pagination &&
+                                                        onPageChange(
+                                                            Math.min(totalPages, page + 1)
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        !pagination || page >= totalPages
+                                                    }
+                                                >
+                                                    <ChevronRight size={16} />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            </TableFooter>
+                        </Table>
                     </div>
-                </div>
-                    </>
                 )}
-            </Card>
+            </BluryCard>
         </div>
     )
 })

@@ -2,14 +2,13 @@
 
 import React, { useCallback, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Typography } from "@/components/shared/Typography"
 import {
     ChevronLeft,
     ChevronRight,
     AlertCircle,
     Search,
-    Flame,
-    SquareArrowOutUpRight,
     Trash2,
 } from "lucide-react"
 import { TableSkeleton } from "@/components/shared/table-skeleton"
@@ -34,12 +33,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 export type StudentRow = {
@@ -76,7 +69,7 @@ type Props = {
     isError: boolean
     errorMessage?: string
     deletingId: string | null
-    /** When true, show flame icon dropdown with View + Delete. Otherwise View button only. */
+    /** When true, show delete icon (admin). View is always via row click. */
     showActionsMenu?: boolean
     pagination?: {
         total: number
@@ -121,6 +114,7 @@ export const StudentTable = React.memo(function StudentTable({
     onRetry,
     onPageChange,
 }: Props) {
+    const router = useRouter()
     const [studentToDelete, setStudentToDelete] = useState<{
         id: string
         name: string
@@ -196,34 +190,34 @@ export const StudentTable = React.memo(function StudentTable({
                     <Table className="w-full text-left border-collapse min-w-[1400px]">
                         <TableHeader className="sticky top-0 z-10">
                             <TableRow className="border-b-2 border-brand-secondary/20 bg-brand-secondary/10 hover:bg-brand-secondary/10">
-                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                     Student
                                 </TableHead>
-                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                     Email
                                 </TableHead>
-                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                     Phone
                                 </TableHead>
-                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                     Nationality
                                 </TableHead>
-                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                     Highest Qualification
                                 </TableHead>
-                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                     APS Requirement
                                 </TableHead>
-                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                     DOB
                                 </TableHead>
-                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                     Documents
                                 </TableHead>
-                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                     Created
                                 </TableHead>
-                                <TableHead className="px-6 py-4 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                     Action
                                 </TableHead>
                             </TableRow>
@@ -262,14 +256,26 @@ export const StudentTable = React.memo(function StudentTable({
                                     return (
                                         <TableRow
                                             key={student.id}
+                                            role="link"
+                                            tabIndex={0}
+                                            onClick={() => {
+                                                if (!student.profile_id || isDeleting) return
+                                                router.push(`/dashboard/student/${student.profile_id}`)
+                                            }}
+                                            onKeyDown={(event) => {
+                                                if (event.key !== "Enter" && event.key !== " ") return
+                                                event.preventDefault()
+                                                if (!student.profile_id || isDeleting) return
+                                                router.push(`/dashboard/student/${student.profile_id}`)
+                                            }}
                                             className={cn(
-                                                "border-b border-brand-secondary/15 transition-colors",
+                                                "border-b border-brand-secondary/40 transition-colors cursor-pointer",
                                                 index % 2 === 0 ? "bg-white/70" : "bg-white/45",
                                                 "hover:bg-brand-secondary/5",
-                                                isDeleting && "opacity-50"
+                                                isDeleting && "opacity-50 pointer-events-none"
                                             )}
                                         >
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <TableCell className="px-3 py-3 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
                                                     <Avatar className="size-10 rounded-xl border-2 border-white/50">
                                                         <AvatarImage
@@ -301,31 +307,31 @@ export const StudentTable = React.memo(function StudentTable({
                                                 </div>
                                             </TableCell>
 
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <TableCell className="px-3 py-3 whitespace-nowrap">
                                                 <Typography as="span" className="text-sm font-medium text-gray-700">
                                                     {student.profile?.email ?? "—"}
                                                 </Typography>
                                             </TableCell>
 
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <TableCell className="px-3 py-3 whitespace-nowrap">
                                                 <Typography as="span" className="text-sm font-medium text-gray-700">
                                                     {student.profile?.phone ?? "—"}
                                                 </Typography>
                                             </TableCell>
 
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <TableCell className="px-3 py-3 whitespace-nowrap">
                                                 <Typography as="span" className="text-sm font-medium text-gray-600">
                                                     {student.nationality ?? "—"}
                                                 </Typography>
                                             </TableCell>
 
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <TableCell className="px-3 py-3 whitespace-nowrap">
                                                 <Typography as="span" className="text-sm font-medium text-gray-700">
                                                     {student.highest_qualification ?? "—"}
                                                 </Typography>
                                             </TableCell>
 
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <TableCell className="px-3 py-3 whitespace-nowrap">
                                                 <Typography
                                                     as="span"
                                                     className={cn(
@@ -337,14 +343,18 @@ export const StudentTable = React.memo(function StudentTable({
                                                 </Typography>
                                             </TableCell>
 
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <TableCell className="px-3 py-3 whitespace-nowrap">
                                                 <Typography as="span" className="text-sm font-medium text-gray-600">
                                                     {formatDateOfBirth(student.profile?.date_of_birth)}
                                                 </Typography>
                                             </TableCell>
 
-                                            <TableCell className="px-6 py-5 whitespace-nowrap min-w-[140px]">
-                                                <div className="flex flex-col gap-1.5">
+                                            <TableCell className="px-3 py-3 whitespace-nowrap min-w-[140px]">
+                                                <div
+                                                    className="flex flex-col gap-1.5"
+                                                    onClick={(event) => event.stopPropagation()}
+                                                    onKeyDown={(event) => event.stopPropagation()}
+                                                >
                                                     {student.profile_id ? (
                                                         <Link
                                                             href={`/dashboard/document/student/${student.profile_id}?from=students`}
@@ -379,76 +389,35 @@ export const StudentTable = React.memo(function StudentTable({
                                                 </div>
                                             </TableCell>
 
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <TableCell className="px-3 py-3 whitespace-nowrap">
                                                 <Typography as="span" className="text-sm font-medium text-gray-600">
                                                     {formatCreatedDate(student.created_at)}
                                                 </Typography>
                                             </TableCell>
 
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <TableCell className="px-3 py-3 whitespace-nowrap">
                                                 {showActionsMenu ? (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                disabled={isDeleting}
-                                                                aria-label={`Actions for ${studentName}`}
-                                                                className="size-9 rounded-lg border border-gray-200 bg-white/80 text-orange-500 hover:bg-white hover:border-gray-300 hover:text-orange-600"
-                                                            >
-                                                                {isDeleting ? (
-                                                                    <Flame className="size-4 animate-pulse opacity-40" />
-                                                                ) : (
-                                                                    <Flame className="size-4" />
-                                                                )}
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="w-44">
-                                                            <DropdownMenuItem asChild className="cursor-pointer">
-                                                                <Link
-                                                                    href={`/dashboard/student/${student.profile_id}`}
-                                                                    className="flex w-full items-center"
-                                                                >
-                                                                    <Typography
-                                                                        as="span"
-                                                                        className="text-sm font-semibold text-gray-800"
-                                                                    >
-                                                                        View
-                                                                    </Typography>
-                                                                    <SquareArrowOutUpRight className="size-4 shrink-0 text-gray-600 ml-auto" />
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                                disabled={isDeleting}
-                                                                className="cursor-pointer text-red-600 focus:text-red-700"
-                                                                onClick={() =>
-                                                                    setStudentToDelete({
-                                                                        id: student.id,
-                                                                        name: studentName,
-                                                                    })
-                                                                }
-                                                            >
-                                                                <Typography
-                                                                    as="span"
-                                                                    className="text-sm font-semibold"
-                                                                >
-                                                                    Delete
-                                                                </Typography>
-                                                                <Trash2 className="size-4 shrink-0 ml-auto" />
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                ) : (
                                                     <Button
-                                                        variant="outline"
-                                                        className="h-9 px-6 bg-white/20 border-white/40 text-gray-700 hover:bg-white/40 rounded-lg font-bold text-[12px] transition-all shadow-sm"
-                                                        asChild
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        disabled={isDeleting}
+                                                        aria-label={`Delete ${studentName}`}
+                                                        className="size-9 rounded-lg border border-gray-200 bg-white/80 text-red-600 hover:bg-red-50 hover:border-red-200 hover:text-red-700"
+                                                        onClick={(event) => {
+                                                            event.stopPropagation()
+                                                            setStudentToDelete({
+                                                                id: student.id,
+                                                                name: studentName,
+                                                            })
+                                                        }}
                                                     >
-                                                        <Link href={`/dashboard/student/${student.profile_id}`}>
-                                                            View
-                                                        </Link>
+                                                        <Trash2 className="size-4" />
                                                     </Button>
+                                                ) : (
+                                                    <Typography as="span" className="text-sm text-gray-400">
+                                                        —
+                                                    </Typography>
                                                 )}
                                             </TableCell>
                                         </TableRow>
@@ -460,7 +429,7 @@ export const StudentTable = React.memo(function StudentTable({
                 </div>
 
                 <div className="border-t-2 border-brand-secondary/20 bg-brand-secondary/10 rounded-b-xl">
-                    <div className="px-8 py-5">
+                    <div className="px-4 py-3">
                         <div className="flex items-center justify-between gap-4">
                             <div className="flex items-center text-[12px] font-light text-gray-500 space-x-1">
                                 {pagination ? (

@@ -2,12 +2,14 @@
 
 import type { ComponentType } from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
     applyUrlSearchParamUpdates,
     readUrlSearchParam,
 } from "@/lib/navigation/replace-url-search-params"
+import { useCreateOfferAction } from "@/app/(dashboard)/dashboard/all-application-view/_component/useCreateOfferAction"
 import type {
+    UniversityApplicationListItem,
     UniversityApplicationListResponse,
     UniversityApplicationTab,
 } from "@/types/schemas/university-application"
@@ -23,10 +25,28 @@ export type UniversityApplicationPageLogicProps = {
     searchValue: string
     activeTab: UniversityApplicationTab
     isFetching: boolean
+    reviewingApplicationId: string | null
+    rejectDialogOpen: boolean
+    rejectTarget: UniversityApplicationListItem | null
+    isRejectSubmitting: boolean
+    rejectErrorMessage?: string
+    missingTemplateAlert: {
+        open: boolean
+        title: string
+        description: string
+        allowCreateWithoutTemplate: boolean
+    }
+    isCreatingOfferWithoutTemplate: boolean
     onSearchChange: (value: string) => void
     onTabChange: (value: UniversityApplicationTab) => void
     onTabHover: (value: UniversityApplicationTab) => void
     onPageChange: (page: number) => void
+    onApprove: (application: UniversityApplicationListItem) => void
+    onRejectRequest: (application: UniversityApplicationListItem) => void
+    onRejectDialogOpenChange: (open: boolean) => void
+    onRejectSubmit: (reason: string) => void
+    onCreateOfferWithoutTemplate: () => void
+    onMissingTemplateAlertOpenChange: (open: boolean) => void
 }
 
 const UNIVERSITY_APPLICATION_TABS: UniversityApplicationTab[] = [
@@ -58,6 +78,17 @@ export async function fetchUniversityApplications(params: {
     return json.data as UniversityApplicationListResponse
 }
 
+async function rejectApplication(applicationId: string, feedback: string) {
+    const res = await fetch(`/api/application/${applicationId}/review`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "REJECTED", feedback }),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json?.error ?? "Failed to reject application")
+    return json.data
+}
+
 function readUniversityFiltersFromUrl() {
     return {
         q: readUrlSearchParam("q"),
@@ -81,6 +112,22 @@ export function withUniversityApplicationPageLogic(
 
         const [filters, setFilters] = useState(initialQuery)
         const [searchInput, setSearchInput] = useState(initialQuery.q)
+        const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+        const [rejectTarget, setRejectTarget] = useState<UniversityApplicationListItem | null>(
+            null
+        )
+
+        const {
+            handleCreateOffer,
+            handleCreateOfferWithoutTemplate,
+            isCreatingOffer,
+            isCreatingOfferWithoutTemplate,
+            pendingApplicationId,
+            missingTemplateAlert,
+            closeMissingTemplateAlert,
+        } = useCreateOfferAction({
+            invalidateQueryKeys: [["university-applications"]],
+        })
 
         const updateFilters = useCallback((updates: Partial<typeof initialQuery>) => {
             setFilters((current) => {
@@ -136,22 +183,50 @@ export function withUniversityApplicationPageLogic(
                     tab: filters.tab,
                     page: filters.page,
                 }),
-            initialData: initialOverview,
+            initialData: matchesInitialQuery ? initialOverview : undefined,
             placeholderData: keepPreviousData,
-            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
+            staleTime: 60_000,
             gcTime: 300_000,
             refetchOnWindowFocus: false,
         })
 
-        const overview = useMemo(
-            () =>
-                applicationsQuery.data ?? {
-                    tab_counts: initialOverview.tab_counts,
-                    data: [],
-                    pagination: initialOverview.pagination,
+        const rejectMutation = useMutation({
+            mutationFn: ({
+                applicationId,
+                reason,
+            }: {
+                applicationId: string
+                reason: string
+            }) => rejectApplication(applicationId, reason),
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ["university-applications"] })
+                queryClient.invalidateQueries({ queryKey: ["applications"] })
+                setRejectDialogOpen(false)
+                setRejectTarget(null)
+            },
+        })
+
+        const overview = useMemo(() => {
+            const data = applicationsQuery.data ?? {
+                tab_counts: initialOverview.tab_counts,
+                data: [],
+                pagination: initialOverview.pagination,
+            }
+            const currentPage = parseInt(filters.page, 10) || 1
+
+            return {
+                ...data,
+                pagination: {
+                    ...data.pagination,
+                    page: currentPage,
                 },
-            [applicationsQuery.data, initialOverview.pagination, initialOverview.tab_counts]
-        )
+            }
+        }, [
+            applicationsQuery.data,
+            filters.page,
+            initialOverview.pagination,
+            initialOverview.tab_counts,
+        ])
 
         const handleTabChange = useCallback(
             (value: UniversityApplicationTab) => {
@@ -191,16 +266,72 @@ export function withUniversityApplicationPageLogic(
             }
         }, [])
 
+        const handleApprove = useCallback(
+            (application: UniversityApplicationListItem) => {
+                if (!application.can_approve_for_signature) return
+                handleCreateOffer({
+                    applicationId: application.id,
+                    studentName: application.student_name,
+                })
+            },
+            [handleCreateOffer]
+        )
+
+        const handleRejectRequest = useCallback((application: UniversityApplicationListItem) => {
+            if (!application.can_reject) return
+            setRejectTarget(application)
+            setRejectDialogOpen(true)
+        }, [])
+
+        const handleRejectDialogOpenChange = useCallback((open: boolean) => {
+            setRejectDialogOpen(open)
+            if (!open) {
+                setRejectTarget(null)
+            }
+        }, [])
+
+        const handleRejectSubmit = useCallback(
+            (reason: string) => {
+                if (!rejectTarget) return
+                rejectMutation.mutate({ applicationId: rejectTarget.id, reason })
+            },
+            [rejectMutation, rejectTarget]
+        )
+
+        const reviewingApplicationId =
+            (isCreatingOffer ? pendingApplicationId : null) ??
+            (rejectMutation.isPending ? rejectTarget?.id ?? null : null)
+
+        const rejectErrorMessage =
+            rejectMutation.error instanceof Error && rejectDialogOpen
+                ? rejectMutation.error.message
+                : undefined
+
         return (
             <Component
                 overview={overview}
                 searchValue={searchInput}
                 activeTab={filters.tab}
                 isFetching={applicationsQuery.isFetching}
+                reviewingApplicationId={reviewingApplicationId}
+                rejectDialogOpen={rejectDialogOpen}
+                rejectTarget={rejectTarget}
+                isRejectSubmitting={rejectMutation.isPending}
+                rejectErrorMessage={rejectErrorMessage}
+                missingTemplateAlert={missingTemplateAlert}
+                isCreatingOfferWithoutTemplate={isCreatingOfferWithoutTemplate}
                 onSearchChange={handleSearchChange}
                 onTabChange={handleTabChange}
                 onTabHover={handleTabHover}
                 onPageChange={(nextPage) => updateFilters({ page: String(nextPage) })}
+                onApprove={handleApprove}
+                onRejectRequest={handleRejectRequest}
+                onRejectDialogOpenChange={handleRejectDialogOpenChange}
+                onRejectSubmit={handleRejectSubmit}
+                onCreateOfferWithoutTemplate={handleCreateOfferWithoutTemplate}
+                onMissingTemplateAlertOpenChange={(open) => {
+                    if (!open) closeMissingTemplateAlert()
+                }}
             />
         )
     }

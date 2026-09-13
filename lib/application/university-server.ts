@@ -3,7 +3,7 @@ import "server-only"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { COURSE_SELECT, attachLevelsToCourses, type CourseRow } from "@/lib/api/course-program"
 import { formatFullName } from "@/lib/utils/profile"
-import { formatIntakeDate } from "@/lib/utils/program"
+import { resolveIntakeLabel } from "@/lib/utils/program"
 import { formatLocation } from "@/lib/utils/location"
 import { resolveStudentPipelineStatus } from "@/lib/student/pipeline-status"
 import { resolveQualificationLabel } from "@/lib/education/resolve-qualification"
@@ -13,7 +13,7 @@ import {
     resolveUniversityApplicationScope,
     type UniversityApplicationScope,
 } from "@/lib/auth/university-scope"
-import { canApproveApplicationForSignature } from "@/lib/application/review-access"
+import { canApproveApplicationForSignature, canRejectApplication } from "@/lib/application/review-access"
 import { loadApplicationReviewMeta, loadRejectionHistoryByApplicationIds } from "@/lib/application/review-meta"
 import { fetchInChunks } from "@/lib/supabase/query-in-chunks"
 import type {
@@ -121,11 +121,13 @@ function formatSubmissionDate(value?: string | null) {
 }
 
 function buildIntakeLabel(course?: CourseRow | null) {
-    const intake = course?.degree?.intake_date
-    if (!intake) return null
+    const degree = course?.degree
+        ? Array.isArray(course.degree)
+            ? course.degree[0] ?? null
+            : course.degree
+        : null
 
-    const formatted = formatIntakeDate(String(intake))
-    return `${formatted} Intake`
+    return resolveIntakeLabel(degree)
 }
 
 function getProgramName(course?: CourseRow | null): string | null {
@@ -273,7 +275,10 @@ function mapListItem(params: {
     agentLabel: string
     offer: OfferRow | undefined
     rejectionHistory: ApplicationReviewHistoryEntry[]
+    viewerRole: string | null | undefined
 }): UniversityApplicationListItem {
+    const hasOffer = Boolean(params.offer)
+
     return {
         id: params.application.id,
         student_name: params.studentName,
@@ -285,10 +290,20 @@ function mapListItem(params: {
         pipeline_status: resolveStudentPipelineStatus({
             applicationStatus: params.application.status,
             offerStatus: params.offer?.status,
-            hasOffer: Boolean(params.offer),
+            hasOffer,
         }),
         submission_date: formatSubmissionDate(params.application.created_at),
         rejection_history: params.rejectionHistory,
+        can_approve_for_signature: canApproveApplicationForSignature({
+            role: params.viewerRole,
+            applicationStatus: params.application.status,
+            hasOffer,
+        }),
+        can_reject: canRejectApplication({
+            role: params.viewerRole,
+            applicationStatus: params.application.status,
+            hasOffer,
+        }),
     }
 }
 
@@ -366,6 +381,7 @@ export async function fetchUniversityApplicationList(params: {
     tab?: UniversityApplicationTab
     page?: number
     limit?: number
+    viewerRole?: string | null
 }): Promise<UniversityApplicationListResponse> {
     const supabase = await createSupabaseServerClient()
     const page = params.page ?? 1
@@ -457,6 +473,7 @@ export async function fetchUniversityApplicationList(params: {
             agentLabel,
             offer,
             rejectionHistory: rejectionHistoryByApplicationId.get(application.id) ?? [],
+            viewerRole: params.viewerRole,
         })
     })
 
@@ -846,6 +863,7 @@ export async function fetchUniversityApplicationsForPage(params?: {
             tab: params?.tab,
             page: params?.page,
             limit: params?.limit,
+            viewerRole: profile?.role ?? null,
         })
     } catch (error) {
         console.error("[fetchUniversityApplicationsForPage]", error)

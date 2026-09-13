@@ -28,6 +28,8 @@ export const universityApplicationListItemSchema = z.object({
     pipeline_status: studentPipelineStatusSchema,
     submission_date: z.string().nullable(),
     rejection_history: z.array(applicationReviewHistoryEntrySchema),
+    can_approve_for_signature: z.boolean(),
+    can_reject: z.boolean(),
 })
 
 export const universityApplicationTabCountsSchema = z.object({

@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
             tab,
             page: Number.isFinite(page) ? page : 1,
             limit: Number.isFinite(limit) ? limit : 10,
+            viewerRole: profile?.role ?? null,
         })
 
         return ok(data)

@@ -40,11 +40,13 @@ export async function GET(req: NextRequest) {
 
         const { searchParams } = new URL(req.url)
         const q = searchParams.get("q") ?? undefined
+        const level_id = searchParams.get("level_id") ?? undefined
         const page = Number(searchParams.get("page") ?? "1")
         const limit = Number(searchParams.get("limit") ?? "10")
 
         const data = await fetchUniversityProgramList({
             q,
+            level_id,
             page: Number.isFinite(page) ? page : 1,
             limit: Number.isFinite(limit) ? limit : 10,
         })
