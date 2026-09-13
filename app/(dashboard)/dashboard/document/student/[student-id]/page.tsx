@@ -41,9 +41,15 @@ export default function StudentDocumentsPage({ params }: PageProps) {
             return json.data as { name?: string | null }
         },
         enabled: Boolean(studentId),
+        // Cache for 5 minutes to avoid refetch on back navigation
+        staleTime: 5 * 60 * 1000,
+        // Use placeholderData to show cached data while refetching
+        placeholderData: (previousData) => previousData,
     })
 
-    if (isLoading) {
+    // Pass isLoading prop to CourseDocumentsView to prevent double skeleton
+    // The view will show its own skeleton only when externalLoading is false
+    if (isLoading && !student) {
         return <DetailPageSkeleton />
     }
 
@@ -54,6 +60,7 @@ export default function StudentDocumentsPage({ params }: PageProps) {
             showBack
             backHref={backHref}
             backLabel={backLabel}
+            isLoading={isLoading}
         />
     )
 }

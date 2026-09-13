@@ -22,6 +22,7 @@ type Props = {
     showBack?: boolean
     backHref?: string
     backLabel?: string
+    isLoading?: boolean
 }
 
 export function CourseDocumentsView({
@@ -30,6 +31,7 @@ export function CourseDocumentsView({
     showBack = false,
     backHref = "/dashboard/document",
     backLabel = "Back to documents",
+    isLoading: externalLoading = false,
 }: Props = {}) {
     const { me } = useAuth()
     const { data: user, isLoading: userLoading } = me
@@ -43,6 +45,8 @@ export function CourseDocumentsView({
         error,
     } = useCourseDocumentBundles(resolvedProfileId)
 
+    // Skip student fetch if studentName is provided (loaded by parent)
+    const shouldFetchStudent = !studentName && Boolean(resolvedProfileId)
     const { data: studentResponse, isLoading: isStudentLoading } = useQuery({
         queryKey: ["student", resolvedProfileId],
         queryFn: async () => {
@@ -50,7 +54,9 @@ export function CourseDocumentsView({
             if (!res.ok) throw new Error("Failed to fetch student profile")
             return res.json()
         },
-        enabled: Boolean(resolvedProfileId),
+        enabled: shouldFetchStudent,
+        // Cache for 5 minutes to avoid refetch on back navigation
+        staleTime: 5 * 60 * 1000,
     })
 
     const qualificationSnapshot = useMemo(
@@ -66,7 +72,8 @@ export function CourseDocumentsView({
         return filterDegreeBundlesByQualification(bundles, qualificationSnapshot)
     }, [data?.degree_bundles, qualificationSnapshot])
 
-    if ((!profileId && userLoading) || isLoading || isStudentLoading) {
+    // Show skeleton while loading course bundles or student data (if not provided via props)
+    if (externalLoading || (!profileId && userLoading) || isLoading || (isStudentLoading && !studentName)) {
         return <PanelSkeleton />
     }
 

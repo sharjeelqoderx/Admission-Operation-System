@@ -185,6 +185,20 @@ function filterByRole(routes: any[], role: Role) {
 
         if (children.length === 0) return null;
 
+        // If only one child item remains after filtering, return it as a direct link
+        // instead of a group with dropdown
+        if (children.length === 1) {
+          return {
+            ...route,
+            href: children[0].href,
+            icon: children[0].icon,
+            label: children[0].label,
+            allowFor: children[0].allowFor,
+            // Mark as directLink to skip group rendering
+            directLink: true
+          };
+        }
+
         return { ...route, children };
       }
 
@@ -216,6 +230,18 @@ function isGroupActive(pathname: string, children?: any[], label?: string) {
   return children.some(c => isRouteActive(pathname, c.href));
 }
 
+/**
+ * ✅ Check if route is active (handles both direct links and groups)
+ */
+function isRouteOrGroupActive(pathname: string, route: any) {
+  // If directLink, check the href
+  if (route.directLink) {
+    return isRouteActive(pathname, route.href);
+  }
+  // Otherwise check the group
+  return isGroupActive(pathname, route.children, route.label);
+}
+
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
@@ -244,7 +270,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           const Icon = route.icon;
 
           // 🔹 GROUP
-          if (route.children?.length) {
+          if (route.children?.length && !route.directLink) {
             const groupActive = isGroupActive(pathname, route.children, route.label);
 
             return (
@@ -273,10 +299,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             );
           }
 
-          // 🔹 SINGLE ITEM
+          // 🔹 SINGLE ITEM (including directLink)
+          const isActive = route.directLink ? isRouteOrGroupActive(pathname, route) : isRouteActive(pathname, route.href);
           return (
             <SidebarItem
-              key={route.href}
+              key={route.href || route.label}
               href={route.href}
               icon={<Icon className="w-5 h-5" />}
               label={
@@ -292,7 +319,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                           : 'Profile'
                   : route.label
               }
-              isActive={isRouteActive(pathname, route.href)}
+              isActive={isActive}
             />
           );
         })}

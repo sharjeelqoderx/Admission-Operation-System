@@ -1,11 +1,17 @@
 "use client"
 
 import { memo } from "react"
-import { AlertCircle, FileStack, RotateCcw } from "lucide-react"
+import { AlertCircle, FileStack, MoreVertical, RotateCcw } from "lucide-react"
 import { TableSkeleton } from "@/components/shared/table-skeleton"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
     Table,
     TableBody,
@@ -222,37 +228,44 @@ export const DegreeRequirementTable = memo(function DegreeRequirementTable({
                                     </TableCell>
 
                                     <TableCell className="px-6 py-5 whitespace-nowrap">
-                                        <div className="flex items-center justify-center gap-2">
-                                            {item.is_deleted ? (
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    className="h-9 rounded-lg border-white/40 bg-white/20 px-4 text-[12px] font-bold"
-                                                    onClick={() => onRestore(item)}
-                                                >
-                                                    Restore
-                                                </Button>
-                                            ) : (
-                                                <>
+                                        <div className="flex items-center justify-center">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
                                                     <Button
                                                         type="button"
-                                                        variant="outline"
-                                                        className="h-9 rounded-lg border-white/40 bg-white/20 px-4 text-[12px] font-bold"
-                                                        onClick={() => onEdit(item)}
+                                                        variant="ghost"
+                                                        className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                                                     >
-                                                        Edit
+                                                        <MoreVertical className="h-4 w-4" />
                                                     </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        className="h-9 rounded-lg border-red-200 bg-white/20 px-4 text-[12px] font-bold text-red-600 hover:bg-red-50"
-                                                        disabled={removingId === item.id}
-                                                        onClick={() => onRemove(item)}
-                                                    >
-                                                        Remove
-                                                    </Button>
-                                                </>
-                                            )}
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    {item.is_deleted ? (
+                                                        <DropdownMenuItem
+                                                            onSelect={() => onRestore(item)}
+                                                            className="cursor-pointer"
+                                                        >
+                                                            Restore
+                                                        </DropdownMenuItem>
+                                                    ) : (
+                                                        <>
+                                                            <DropdownMenuItem
+                                                                onSelect={() => onEdit(item)}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                Edit
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onSelect={() => onRemove(item)}
+                                                                className="cursor-pointer text-red-600 focus:text-red-600"
+                                                                disabled={removingId === item.id}
+                                                            >
+                                                                Remove
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </TableCell>
                                 </TableRow>

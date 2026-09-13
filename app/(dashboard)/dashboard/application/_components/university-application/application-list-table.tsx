@@ -225,17 +225,16 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                                     <Typography
                                                         as="p"
                                                         font="text"
-                                                        className="truncate font-semibold text-brand-primary"
-                                                        title={application.program_name ?? undefined}
+                                                        className="font-semibold text-brand-primary line-clamp-2"
+                                                        title={application.course_name ?? undefined}
                                                     >
-                                                        {application.program_name ?? "—"}
+                                                        {application.course_name ?? "—"}
                                                     </Typography>
                                                     <Typography
                                                         as="p"
-                                                        className="truncate text-xs font-normal text-muted-foreground"
-                                                        title={application.intake_label ?? undefined}
+                                                        className="text-xs font-normal text-muted-foreground mt-1"
                                                     >
-                                                        {application.intake_label ?? "—"}
+                                                        {application.intake_label}
                                                     </Typography>
                                                 </div>
                                             </TableCell>

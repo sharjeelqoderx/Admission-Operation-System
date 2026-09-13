@@ -22,7 +22,7 @@ export const universityApplicationListItemSchema = z.object({
     student_name: z.string(),
     student_code: z.string().nullable(),
     avatar_url: z.string().nullable(),
-    program_name: z.string().nullable(),
+    course_name: z.string().nullable(),
     intake_label: z.string().nullable(),
     agent_name: z.string(),
     pipeline_status: studentPipelineStatusSchema,
@@ -86,7 +86,7 @@ export const universityApplicationDetailSchema = z.object({
     documents_verified_count: z.number(),
     documents_total_count: z.number(),
     progress: z.object({
-        program_name: z.string().nullable(),
+        course_name: z.string().nullable(),
         steps: z.array(universityApplicationProgressStepSchema),
     }),
     submission_source: z

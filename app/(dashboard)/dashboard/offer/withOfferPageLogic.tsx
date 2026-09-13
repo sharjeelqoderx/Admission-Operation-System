@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
     applyUrlSearchParamUpdates,
     readUrlSearchParam,
@@ -160,6 +160,8 @@ export function withOfferPageLogic(Component: ComponentType<OfferPageLogicProps>
                     limit,
                 }),
             initialData: matchesInitialQuery ? initialData.offers : undefined,
+            placeholderData: keepPreviousData,
+            staleTime: 5 * 60 * 1000, // Cache for 5 minutes for smoother navigation
             retry: false,
         })
 

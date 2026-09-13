@@ -29,7 +29,7 @@ export function AgentDashboard() {
             const json = await res.json()
             return json.data as DashboardStats
         },
-        staleTime: 2 * 60 * 1000,
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes for smoother navigation
     })
 
     const {
@@ -45,7 +45,7 @@ export function AgentDashboard() {
             const json = await res.json()
             return json.data as ApplicationRow[]
         },
-        staleTime: 1 * 60 * 1000,
+        staleTime: 3 * 60 * 1000, // Cache for 3 minutes for smoother navigation
     })
 
     const recentApplications = useMemo(

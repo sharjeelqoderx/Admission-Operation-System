@@ -75,6 +75,7 @@ export function withUniversityStudentPageLogic(
             queryFn: () => fetchUniversityStudents({ q, status, page }),
             initialData: matchesInitialQuery ? initialOverview : undefined,
             placeholderData: keepPreviousData,
+            staleTime: 5 * 60 * 1000, // Cache for 5 minutes for smoother navigation
         })
 
         const updateParams = useCallback(

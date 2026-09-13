@@ -130,8 +130,7 @@ function buildIntakeLabel(course?: CourseRow | null) {
 
 function getProgramName(course?: CourseRow | null): string | null {
     if (!course) return null
-    const degreeName = course.degree?.name
-    return typeof degreeName === "string" ? degreeName : typeof course.name === "string" ? course.name : null
+    return typeof course.name === "string" ? course.name : null
 }
 
 function formatGpaLabel(education?: EducationRow | null) {
@@ -280,7 +279,7 @@ function mapListItem(params: {
         student_name: params.studentName,
         student_code: params.studentCode,
         avatar_url: params.avatarUrl,
-        program_name: getProgramName(params.course),
+        course_name: getProgramName(params.course),
         intake_label: buildIntakeLabel(params.course),
         agent_name: params.agentLabel,
         pipeline_status: resolveStudentPipelineStatus({
@@ -790,7 +789,7 @@ export async function fetchUniversityApplicationDetail(params: {
         documents_verified_count: verifiedCount,
         documents_total_count: totalDocuments,
         progress: {
-            program_name: getProgramName(course),
+            course_name: getProgramName(course),
             steps: progressSteps,
         },
         submission_source: isDirect

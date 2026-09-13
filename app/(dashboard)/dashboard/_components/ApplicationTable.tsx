@@ -130,6 +130,11 @@ export const ApplicationTable = React.memo(function ApplicationTable({ applicati
                                             <Typography font="sub-text" as="span" className="font-bold text-blue-text">
                                                 {app.course?.name ?? "—"}
                                             </Typography>
+                                            {app.course?.degree?.name && (
+                                                <Typography font="sub-text" as="span" className="block text-[10px] text-gray-500">
+                                                    {app.course.degree.name}
+                                                </Typography>
+                                            )}
                                         </TableCell>
 
                                         {/* University Partner Name */}

@@ -78,6 +78,7 @@ export function withUniversityProgramPageLogic(
             queryFn: () => fetchUniversityPrograms({ q, page }),
             initialData: matchesInitialQuery ? initialOverview : undefined,
             placeholderData: keepPreviousData,
+            staleTime: 5 * 60 * 1000, // Cache for 5 minutes for smoother navigation
         })
 
         const deleteMutation = useMutation({
