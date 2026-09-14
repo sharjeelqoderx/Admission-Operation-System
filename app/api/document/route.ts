@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth/university-scope"
 import { saveDocumentUpload } from "@/lib/supabase/save-document-upload"
 import { fetchInChunks } from "@/lib/supabase/query-in-chunks"
+import { paginateDocumentRows, parseDocumentPageLimit } from "@/lib/document/paginate"
 import { Role } from "@/types/enums/role"
 
 export async function GET(req: NextRequest) {
@@ -22,6 +23,7 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url)
         const search = searchParams.get("search")?.toLowerCase()
         const status = searchParams.get("status")
+        const { page, limit } = parseDocumentPageLimit(searchParams)
 
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         if (authError || !user) {
@@ -77,19 +79,23 @@ export async function GET(req: NextRequest) {
                   )[0]
                 : null
 
+            const studentRows = [
+                {
+                    student_id: user.id,
+                    student_name: formatFullName(studentProfile?.first_name, studentProfile?.last_name, "—"),
+                    student_code: studentRow?.student_code ?? null,
+                    avatar_url: studentProfile?.avatar_url ?? null,
+                    document_count: docs.length,
+                    last_uploaded_at: lastDoc?.created_at ?? null,
+                    last_doc_status: lastDoc?.document_review?.[0]?.status ?? null,
+                },
+            ]
+            const paged = paginateDocumentRows(studentRows, page, limit)
+
             return NextResponse.json(
                 {
-                    data: [
-                        {
-                            student_id: user.id,
-                            student_name: formatFullName(studentProfile?.first_name, studentProfile?.last_name, "—"),
-                            student_code: studentRow?.student_code ?? null,
-                            avatar_url: studentProfile?.avatar_url ?? null,
-                            document_count: docs.length,
-                            last_uploaded_at: lastDoc?.created_at ?? null,
-                            last_doc_status: lastDoc?.document_review?.[0]?.status ?? null,
-                        },
-                    ],
+                    data: paged.data,
+                    pagination: paged.pagination,
                     role: Role.STUDENT,
                 },
                 { status: 200 }
@@ -196,7 +202,14 @@ export async function GET(req: NextRequest) {
                 ]
 
                 if (profileIds.length === 0) {
-                    return NextResponse.json({ data: [], role: staffRole }, { status: 200 })
+                    return NextResponse.json(
+                        {
+                            data: [],
+                            pagination: { total: 0, page: 1, limit, totalPages: 0 },
+                            role: staffRole,
+                        },
+                        { status: 200 }
+                    )
                 }
 
                 const { data: scopedStudents, error: scopedStudentsError } = await fetchInChunks(
@@ -224,7 +237,14 @@ export async function GET(req: NextRequest) {
         }
 
         if (!students.length) {
-            return NextResponse.json({ data: [], role: staffRole }, { status: 200 })
+            return NextResponse.json(
+                {
+                    data: [],
+                    pagination: { total: 0, page: 1, limit, totalPages: 0 },
+                    role: staffRole,
+                },
+                { status: 200 }
+            )
         }
 
         const profileIds = students.map((student) => student.profile_id)
@@ -306,7 +326,12 @@ export async function GET(req: NextRequest) {
                 return bTime - aTime
             })
 
-        return NextResponse.json({ data: result, role: staffRole }, { status: 200 })
+        const paged = paginateDocumentRows(result, page, limit)
+
+        return NextResponse.json(
+            { data: paged.data, pagination: paged.pagination, role: staffRole },
+            { status: 200 }
+        )
     } catch {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }

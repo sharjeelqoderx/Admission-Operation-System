@@ -14,10 +14,11 @@ import type { AllDocumentsPageLogicProps } from "./withAllDocumentsLogic"
 
 export const AllDocumentsPageContent = memo(function AllDocumentsPageContent({
     rows,
+    pagination,
+    page,
     isLoading,
     isFetching,
     isError,
-    q,
     searchInput,
     status,
     hasActiveFilters,
@@ -30,6 +31,7 @@ export const AllDocumentsPageContent = memo(function AllDocumentsPageContent({
     handleSearch,
     updateParams,
     handleResetFilters,
+    handlePageChange,
     onApprove,
     onRejectRequest,
     onRejectDialogOpenChange,
@@ -69,13 +71,14 @@ export const AllDocumentsPageContent = memo(function AllDocumentsPageContent({
 
             <AllDocumentsTable
                 rows={rows}
+                pagination={pagination}
+                page={page}
                 isLoading={isLoading}
                 isFetching={isFetching}
                 isError={isError}
-                statusFilter={status}
-                searchFilter={q}
                 reviewingDocumentId={reviewingDocumentId}
                 onRetry={onRetry}
+                onPageChange={handlePageChange}
                 onApprove={onApprove}
                 onReject={onRejectRequest}
             />

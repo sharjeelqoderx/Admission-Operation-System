@@ -129,6 +129,28 @@ export type AgentAllDocumentRow = {
     file_count: number
 }
 
+export type DocumentListPagination = {
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+}
+
 export type AgentAllDocumentsResponse = {
     data: AgentAllDocumentRow[]
+    pagination: DocumentListPagination
+}
+
+export type DocumentStudentsListResponse = {
+    data: Array<{
+        student_id: string
+        student_name: string
+        student_code: string | null
+        avatar_url: string | null
+        document_count: number
+        last_uploaded_at: string | null
+        last_doc_status: string | null
+    }>
+    pagination: DocumentListPagination
+    role: string
 }

@@ -2,15 +2,28 @@
 
 import type { ComponentType } from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+    keepPreviousData,
+    useMutation,
+    useQuery,
+    useQueryClient,
+} from "@tanstack/react-query"
 import {
     applyUrlSearchParamUpdates,
     readUrlSearchParam,
 } from "@/lib/navigation/replace-url-search-params"
-import type { AgentAllDocumentRow, AgentAllDocumentsResponse } from "@/types/schemas/document"
+import type {
+    AgentAllDocumentRow,
+    AgentAllDocumentsResponse,
+    DocumentListPagination,
+} from "@/types/schemas/document"
+
+const PAGE_LIMIT = 10
 
 export type AllDocumentsPageLogicProps = {
     rows: AgentAllDocumentRow[]
+    pagination: DocumentListPagination
+    page: number
     isLoading: boolean
     isFetching: boolean
     isError: boolean
@@ -27,6 +40,7 @@ export type AllDocumentsPageLogicProps = {
     handleSearch: (term: string) => void
     updateParams: (updates: Record<string, string>) => void
     handleResetFilters: () => void
+    handlePageChange: (page: number) => void
     onApprove: (documentId: string) => void
     onRejectRequest: (documentId: string) => void
     onRejectDialogOpenChange: (open: boolean) => void
@@ -38,7 +52,11 @@ type DocumentAllFilters = {
     status: string
 }
 
-async function fetchAllDocuments(filters: DocumentAllFilters) {
+async function fetchAllDocuments(
+    filters: DocumentAllFilters,
+    page: number,
+    limit: number
+): Promise<AgentAllDocumentsResponse> {
     const url = new URL("/api/document/all", window.location.origin)
     if (filters.q) {
         url.searchParams.set("search", filters.q)
@@ -46,6 +64,8 @@ async function fetchAllDocuments(filters: DocumentAllFilters) {
     if (filters.status !== "all") {
         url.searchParams.set("status", filters.status)
     }
+    url.searchParams.set("page", String(page))
+    url.searchParams.set("limit", String(limit))
 
     const res = await fetch(url.toString())
     const json = await res.json()
@@ -80,6 +100,13 @@ async function reviewDocument(
     }
 }
 
+const EMPTY_PAGINATION: DocumentListPagination = {
+    total: 0,
+    page: 1,
+    limit: PAGE_LIMIT,
+    totalPages: 0,
+}
+
 export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageLogicProps>) {
     return function AllDocumentsPageContainer() {
         const queryClient = useQueryClient()
@@ -87,11 +114,13 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
         const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
         const [rejectTargetId, setRejectTargetId] = useState<string | null>(null)
         const [reviewingDocumentId, setReviewingDocumentId] = useState<string | null>(null)
+        const [page, setPage] = useState(1)
         const initialFilters = readAllDocumentsFiltersFromUrl()
         const [filters, setFilters] = useState<DocumentAllFilters>(initialFilters)
         const [searchInput, setSearchInput] = useState(initialFilters.q)
 
         const updateParams = useCallback((updates: Record<string, string>) => {
+            setPage(1)
             setFilters((current) => {
                 const next = { ...current, ...updates } as DocumentAllFilters
                 applyUrlSearchParamUpdates({
@@ -122,6 +151,7 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
                 const next = readAllDocumentsFiltersFromUrl()
                 setFilters(next)
                 setSearchInput(next.q)
+                setPage(1)
             }
 
             window.addEventListener("popstate", syncFiltersFromUrl)
@@ -137,15 +167,47 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
         }, [])
 
         const documentsQuery = useQuery({
-            queryKey: ["documents", "all", filters.q, filters.status],
-            queryFn: () => fetchAllDocuments(filters),
-            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
+            queryKey: ["documents", "all", filters.q, filters.status, page, PAGE_LIMIT],
+            queryFn: () => fetchAllDocuments(filters, page, PAGE_LIMIT),
+            placeholderData: keepPreviousData,
+            staleTime: 60_000,
         })
+
+        const prefetchPage = useCallback(
+            (targetPage: number) => {
+                void queryClient.prefetchQuery({
+                    queryKey: [
+                        "documents",
+                        "all",
+                        filters.q,
+                        filters.status,
+                        targetPage,
+                        PAGE_LIMIT,
+                    ],
+                    queryFn: () => fetchAllDocuments(filters, targetPage, PAGE_LIMIT),
+                    staleTime: 60_000,
+                })
+            },
+            [filters, queryClient]
+        )
+
+        // Keep the next page warm: page 1 → prefetch 2, page 2 → prefetch 3, etc.
+        useEffect(() => {
+            const totalPages = documentsQuery.data?.pagination?.totalPages ?? 0
+            const nextPage = page + 1
+            if (!documentsQuery.data || nextPage > totalPages) return
+            prefetchPage(nextPage)
+        }, [documentsQuery.data, page, prefetchPage])
 
         const rows = useMemo(
             () => (Array.isArray(documentsQuery.data?.data) ? documentsQuery.data.data : []),
             [documentsQuery.data?.data]
         )
+
+        const pagination = documentsQuery.data?.pagination ?? {
+            ...EMPTY_PAGINATION,
+            page,
+        }
 
         const rejectTarget = useMemo(
             () => rows.find((row) => row.document_id === rejectTargetId) ?? null,
@@ -166,8 +228,8 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
                 setReviewingDocumentId(documentId)
             },
             onSuccess: (data) => {
-                queryClient.setQueryData<AgentAllDocumentsResponse>(
-                    ["documents", "all", filters.q, filters.status],
+                queryClient.setQueriesData<AgentAllDocumentsResponse>(
+                    { queryKey: ["documents", "all", filters.q, filters.status] },
                     (current) => {
                         if (!current) return current
                         return {
@@ -250,13 +312,28 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
                 clearTimeout(timeoutRef.current)
             }
             setSearchInput("")
+            setPage(1)
             setFilters({ q: "", status: "all" })
             applyUrlSearchParamUpdates({ q: null, status: null })
         }, [])
 
+        const handlePageChange = useCallback(
+            (nextPage: number) => {
+                const totalPages = pagination.totalPages
+                const safePage = Math.min(Math.max(1, nextPage), Math.max(1, totalPages))
+                setPage(safePage)
+                if (safePage + 1 <= totalPages) {
+                    prefetchPage(safePage + 1)
+                }
+            },
+            [pagination.totalPages, prefetchPage]
+        )
+
         return (
             <Component
                 rows={rows}
+                pagination={pagination}
+                page={page}
                 isLoading={documentsQuery.isLoading && !documentsQuery.data}
                 isFetching={documentsQuery.isFetching}
                 isError={documentsQuery.isError}
@@ -275,6 +352,7 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
                 handleSearch={handleSearch}
                 updateParams={updateParams}
                 handleResetFilters={handleResetFilters}
+                handlePageChange={handlePageChange}
                 onApprove={handleApprove}
                 onRejectRequest={handleRejectRequest}
                 onRejectDialogOpenChange={handleRejectDialogOpenChange}

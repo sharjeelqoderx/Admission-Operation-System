@@ -211,7 +211,7 @@ export function withAllApplicationViewLogic(Component: ComponentType<AllApplicat
         }
 
         const stats = applicationsQuery.data?.stats ??
-            initialData.applications.stats ?? {
+            initialData?.applications.stats ?? {
                 total: 0,
                 pending: 0,
                 accepted: 0,
@@ -219,7 +219,7 @@ export function withAllApplicationViewLogic(Component: ComponentType<AllApplicat
 
         return (
             <Component
-                role={applicationsQuery.data?.role ?? initialData.applications.role}
+                role={applicationsQuery.data?.role ?? initialData?.applications.role}
                 applications={applicationsQuery.data?.data ?? []}
                 pagination={pagination}
                 stats={stats}
