@@ -1,7 +1,10 @@
 -- ============================================================
 -- 001_initial_schema.sql
--- Consolidated platform schema + seeds (squashed migrations)
--- Excludes one-time reset migrations (084-086)
+-- Single squashed migration: schema, RLS policies, indexes,
+-- functions, and idempotent platform user seeds.
+-- Bulk CSV reference data is applied separately (already on
+-- the linked database) and is not replayed here to avoid
+-- deleting operational rows.
 -- ============================================================
 
 
@@ -5164,3 +5167,563 @@ DROP POLICY IF EXISTS "program_university_write" ON program;
 DROP TABLE IF EXISTS program;
 
 -- <<< END 083_drop_program_tables.sql
+
+-- >>> BEGIN 002_seed_platform_data.sql
+
+-- ============================================================
+-- 002_seed_platform_data.sql
+-- Single platform seed migration (auth users + staff rows).
+-- Constant reference data (course, degree, document_type, etc.)
+-- is seeded in 001_initial_schema.sql.
+-- Safe to re-run after operational data reset.
+-- ============================================================
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA extensions;
+
+-- ─── Development auth users ──────────────────────────────────
+DO $$
+DECLARE
+    seed_user RECORD;
+BEGIN
+    FOR seed_user IN
+        SELECT *
+        FROM (VALUES
+            (
+                '00000000-0000-0000-0000-000000000001'::UUID,
+                'developer@gmail.com',
+                'Shar@123',
+                'SUPER_ADMIN'::role_enum,
+                'System',
+                'Developer',
+                '+4930000001'
+            ),
+            (
+                '00000000-0000-0000-0000-000000000002'::UUID,
+                'admin@gmail.com',
+                'Shar@123',
+                'ADMIN'::role_enum,
+                'FHM',
+                'Admin',
+                '+4930000002'
+            ),
+            (
+                '00000000-0000-0000-0000-000000000003'::UUID,
+                'agent@gmail.com',
+                'Shar@123',
+                'AGENT'::role_enum,
+                'Admissions',
+                'Agent',
+                '+4930000003'
+            ),
+            (
+                '00000000-0000-0000-0000-000000000004'::UUID,
+                'management@gmail.com',
+                'Shar@123',
+                'MANAGEMENT'::role_enum,
+                'FHM',
+                'Management',
+                '+4930000004'
+            ),
+            (
+                '00000000-0000-0000-0000-000000000005'::UUID,
+                'student@gmail.com',
+                'Shar@123',
+                'STUDENT'::role_enum,
+                'Direct',
+                'Student',
+                '+4930000005'
+            ),
+            (
+                '00000000-0000-0000-0000-000000000006'::UUID,
+                'student+agent@gmail.com',
+                'Shar@123',
+                'STUDENT'::role_enum,
+                'Agent',
+                'Student',
+                '+4930000006'
+            )
+        ) AS users(id, email, plain_password, user_role, first_name, last_name, phone)
+    LOOP
+        IF EXISTS (
+            SELECT 1
+            FROM auth.users
+            WHERE email = seed_user.email
+              AND id <> seed_user.id
+        ) THEN
+            CONTINUE;
+        END IF;
+
+        INSERT INTO auth.users (
+            id,
+            instance_id,
+            aud,
+            role,
+            email,
+            encrypted_password,
+            email_confirmed_at,
+            created_at,
+            updated_at,
+            raw_app_meta_data,
+            raw_user_meta_data,
+            is_super_admin,
+            confirmation_token,
+            recovery_token,
+            email_change_token_new,
+            email_change,
+            email_change_token_current,
+            phone_change,
+            phone_change_token,
+            reauthentication_token
+        )
+        VALUES (
+            seed_user.id,
+            '00000000-0000-0000-0000-000000000000',
+            'authenticated',
+            'authenticated',
+            seed_user.email,
+            extensions.crypt(seed_user.plain_password, extensions.gen_salt('bf')),
+            NOW(),
+            NOW(),
+            NOW(),
+            jsonb_build_object(
+                'provider', 'email',
+                'providers', jsonb_build_array('email'),
+                'role', seed_user.user_role::TEXT
+            ),
+            jsonb_build_object(
+                'role', seed_user.user_role::TEXT,
+                'first_name', seed_user.first_name,
+                'last_name', seed_user.last_name,
+                'phone', seed_user.phone
+            ),
+            FALSE,
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            ''
+        )
+        ON CONFLICT (id) DO UPDATE
+        SET
+            email = EXCLUDED.email,
+            encrypted_password = EXCLUDED.encrypted_password,
+            email_confirmed_at = COALESCE(auth.users.email_confirmed_at, NOW()),
+            raw_app_meta_data = EXCLUDED.raw_app_meta_data,
+            raw_user_meta_data = EXCLUDED.raw_user_meta_data,
+            confirmation_token = '',
+            recovery_token = '',
+            email_change_token_new = '',
+            email_change = '',
+            email_change_token_current = '',
+            phone_change = '',
+            phone_change_token = '',
+            reauthentication_token = '',
+            updated_at = NOW();
+
+        INSERT INTO profile (
+            id,
+            first_name,
+            last_name,
+            email,
+            phone,
+            role,
+            updated_at
+        )
+        VALUES (
+            seed_user.id,
+            seed_user.first_name,
+            seed_user.last_name,
+            seed_user.email,
+            seed_user.phone,
+            seed_user.user_role,
+            NOW()
+        )
+        ON CONFLICT (id) DO UPDATE
+        SET
+            first_name = EXCLUDED.first_name,
+            last_name = EXCLUDED.last_name,
+            email = EXCLUDED.email,
+            phone = EXCLUDED.phone,
+            role = EXCLUDED.role,
+            updated_at = NOW();
+
+        IF EXISTS (
+            SELECT 1
+            FROM auth.identities
+            WHERE user_id = seed_user.id
+              AND provider = 'email'
+        ) THEN
+            UPDATE auth.identities
+            SET
+                provider_id = seed_user.id::TEXT,
+                identity_data = jsonb_build_object(
+                    'sub', seed_user.id::TEXT,
+                    'email', seed_user.email,
+                    'email_verified', TRUE
+                ),
+                updated_at = NOW()
+            WHERE user_id = seed_user.id
+              AND provider = 'email';
+        ELSE
+            INSERT INTO auth.identities (
+                id,
+                user_id,
+                provider_id,
+                identity_data,
+                provider,
+                last_sign_in_at,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                seed_user.id,
+                seed_user.id,
+                seed_user.id::TEXT,
+                jsonb_build_object(
+                    'sub', seed_user.id::TEXT,
+                    'email', seed_user.email,
+                    'email_verified', TRUE
+                ),
+                'email',
+                NOW(),
+                NOW(),
+                NOW()
+            );
+        END IF;
+    END LOOP;
+END $$;
+
+-- ─── Staff organization rows ─────────────────────────────────
+INSERT INTO university (
+    id,
+    profile_id,
+    website,
+    country,
+    city,
+    address,
+    description,
+    updated_at
+)
+VALUES
+    (
+        '00000000-0000-0000-0000-000000000002',
+        '00000000-0000-0000-0000-000000000002',
+        'https://www.fhm.de',
+        'Germany',
+        'Bielefeld',
+        'Ravensberger Str. 10G, 33602 Bielefeld',
+        'Fachhochschule des Mittelstands (FHM)',
+        NOW()
+    ),
+    (
+        '00000000-0000-0000-0000-000000000004',
+        '00000000-0000-0000-0000-000000000004',
+        'https://www.fhm.de',
+        'Germany',
+        'Bielefeld',
+        'Ravensberger Str. 10G, 33602 Bielefeld',
+        'FHM Management Office',
+        NOW()
+    )
+ON CONFLICT (profile_id) DO UPDATE
+SET
+    website = EXCLUDED.website,
+    country = EXCLUDED.country,
+    city = EXCLUDED.city,
+    address = EXCLUDED.address,
+    description = EXCLUDED.description,
+    updated_at = NOW();
+
+INSERT INTO campus (
+    profile_id,
+    name,
+    established_year,
+    location,
+    campus_type,
+    status
+)
+SELECT
+    '00000000-0000-0000-0000-000000000002'::UUID,
+    'FHM Bielefeld',
+    1999,
+    'Bielefeld, Germany',
+    'MAIN',
+    'ACTIVE'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM campus
+    WHERE profile_id = '00000000-0000-0000-0000-000000000002'
+);
+
+INSERT INTO agent (
+    id,
+    profile_id,
+    contact_person_first_name,
+    contact_person_last_name,
+    nationality,
+    country,
+    city,
+    address,
+    experience_years,
+    website,
+    updated_at
+)
+VALUES (
+    '00000000-0000-0000-0000-000000000003',
+    '00000000-0000-0000-0000-000000000003',
+    'Admissions',
+    'Agent',
+    'German',
+    'Germany',
+    'Bielefeld',
+    'Ravensberger Str. 10G, 33602 Bielefeld',
+    5,
+    'https://www.fhm.de',
+    NOW()
+)
+ON CONFLICT (profile_id) DO UPDATE
+SET
+    contact_person_first_name = EXCLUDED.contact_person_first_name,
+    contact_person_last_name = EXCLUDED.contact_person_last_name,
+    nationality = EXCLUDED.nationality,
+    country = EXCLUDED.country,
+    city = EXCLUDED.city,
+    address = EXCLUDED.address,
+    experience_years = EXCLUDED.experience_years,
+    website = EXCLUDED.website,
+    updated_at = NOW();
+
+INSERT INTO student (
+    id,
+    profile_id,
+    country,
+    city,
+    nationality,
+    updated_at
+)
+VALUES
+    (
+        '00000000-0000-0000-0000-000000000005',
+        '00000000-0000-0000-0000-000000000005',
+        'Germany',
+        'Berlin',
+        'German',
+        NOW()
+    ),
+    (
+        '00000000-0000-0000-0000-000000000006',
+        '00000000-0000-0000-0000-000000000006',
+        'Germany',
+        'Berlin',
+        'German',
+        NOW()
+    )
+ON CONFLICT (profile_id) DO UPDATE
+SET
+    country = EXCLUDED.country,
+    city = EXCLUDED.city,
+    nationality = EXCLUDED.nationality,
+    updated_at = NOW();
+
+UPDATE student AS s
+SET
+    created_by_agent_id = a.id,
+    updated_at = NOW()
+FROM agent AS a
+WHERE s.profile_id = '00000000-0000-0000-0000-000000000006'
+  AND a.profile_id = '00000000-0000-0000-0000-000000000003'
+  AND s.created_by_agent_id IS DISTINCT FROM a.id;
+
+-- <<< END 002_seed_platform_data.sql
+
+-- >>> BEGIN 004_document_type_university_id.sql
+
+-- Backfill university_id on platform document types (admin university profile from seed 002)
+UPDATE public.document_type
+SET university_id = '00000000-0000-0000-0000-000000000002'::uuid
+WHERE university_id IS NULL;
+
+-- <<< END 004_document_type_university_id.sql
+
+-- >>> BEGIN 005_document_template_course.sql
+
+-- Many-to-many: one offer template can link to multiple courses/programs.
+-- Each course may still belong to only one active template.
+
+CREATE TABLE IF NOT EXISTS public.document_template_course (
+    document_template_id UUID NOT NULL REFERENCES public.document_template(id) ON DELETE CASCADE,
+    course_id UUID NOT NULL REFERENCES public.course(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (document_template_id, course_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS document_template_course_course_id_unique_idx
+    ON public.document_template_course(course_id);
+
+CREATE INDEX IF NOT EXISTS document_template_course_template_id_idx
+    ON public.document_template_course(document_template_id);
+
+COMMENT ON TABLE public.document_template_course IS
+    'Links offer document templates to one or more courses. Each course may appear once.';
+
+-- Backfill from legacy single course_id column
+INSERT INTO public.document_template_course (document_template_id, course_id)
+SELECT dt.id, dt.course_id
+FROM public.document_template AS dt
+WHERE dt.course_id IS NOT NULL
+  AND dt.is_deleted = false
+ON CONFLICT DO NOTHING;
+
+-- Uniqueness now lives on the junction table
+DROP INDEX IF EXISTS public.document_template_course_id_unique_idx;
+
+ALTER TABLE public.document_template_course ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "document_template_course_select_auth" ON public.document_template_course;
+CREATE POLICY "document_template_course_select_auth"
+    ON public.document_template_course
+    FOR SELECT
+    TO authenticated
+    USING (true);
+
+DROP POLICY IF EXISTS "document_template_course_insert_auth" ON public.document_template_course;
+CREATE POLICY "document_template_course_insert_auth"
+    ON public.document_template_course
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "document_template_course_update_auth" ON public.document_template_course;
+CREATE POLICY "document_template_course_update_auth"
+    ON public.document_template_course
+    FOR UPDATE
+    TO authenticated
+    USING (true)
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "document_template_course_delete_auth" ON public.document_template_course;
+CREATE POLICY "document_template_course_delete_auth"
+    ON public.document_template_course
+    FOR DELETE
+    TO authenticated
+    USING (true);
+
+DROP POLICY IF EXISTS "document_template_course_service" ON public.document_template_course;
+CREATE POLICY "document_template_course_service"
+    ON public.document_template_course
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
+
+-- Soft-delete should free course assignments
+CREATE OR REPLACE FUNCTION public.soft_delete_document_template(template_id UUID)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    caller_role public.role_enum;
+BEGIN
+    SELECT p.role INTO caller_role
+    FROM public.profile AS p
+    WHERE p.id = auth.uid();
+
+    IF caller_role IS NULL OR caller_role NOT IN (
+        'SUPER_ADMIN'::public.role_enum,
+        'ADMIN'::public.role_enum,
+        'MANAGEMENT'::public.role_enum,
+        'AGENT'::public.role_enum
+    ) THEN
+        RAISE EXCEPTION 'Forbidden';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM public.document_template AS dt
+        WHERE dt.id = template_id
+          AND dt.is_deleted = false
+    ) THEN
+        RAISE EXCEPTION 'Document template not found';
+    END IF;
+
+    DELETE FROM public.document_template_course
+    WHERE document_template_id = template_id;
+
+    UPDATE public.document_template
+    SET
+        is_deleted = true,
+        course_id = NULL,
+        updated_at = now()
+    WHERE id = template_id
+      AND is_deleted = false;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.soft_delete_document_template(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.soft_delete_document_template(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.soft_delete_document_template(UUID) TO service_role;
+
+-- <<< END 005_document_template_course.sql
+
+-- >>> BEGIN 006_degree_requirement_soft_delete.sql
+
+-- Soft-delete support for degree_requirement (no hard deletes from app).
+
+ALTER TABLE public.degree_requirement
+    ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.degree_requirement.is_deleted IS
+    'Soft-delete flag. Active document requirements must have is_deleted = false.';
+
+-- Replace hard unique with active-only unique so soft-deleted rows can be restored/recreated.
+ALTER TABLE public.degree_requirement
+    DROP CONSTRAINT IF EXISTS uq_degree_document_type;
+
+CREATE UNIQUE INDEX IF NOT EXISTS degree_requirement_active_unique_idx
+    ON public.degree_requirement (degree_id, document_type_id)
+    WHERE is_deleted = false;
+
+CREATE INDEX IF NOT EXISTS degree_requirement_is_deleted_idx
+    ON public.degree_requirement (is_deleted);
+
+-- Staff write policies (ADMIN / MANAGEMENT / SUPER_ADMIN / AGENT for consistency with staff tables)
+DROP POLICY IF EXISTS "degree_requirement_insert_staff" ON public.degree_requirement;
+CREATE POLICY "degree_requirement_insert_staff"
+    ON public.degree_requirement
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        public.current_profile_role() IN (
+            'SUPER_ADMIN'::public.role_enum,
+            'ADMIN'::public.role_enum,
+            'MANAGEMENT'::public.role_enum
+        )
+    );
+
+DROP POLICY IF EXISTS "degree_requirement_update_staff" ON public.degree_requirement;
+CREATE POLICY "degree_requirement_update_staff"
+    ON public.degree_requirement
+    FOR UPDATE
+    TO authenticated
+    USING (
+        public.current_profile_role() IN (
+            'SUPER_ADMIN'::public.role_enum,
+            'ADMIN'::public.role_enum,
+            'MANAGEMENT'::public.role_enum
+        )
+    )
+    WITH CHECK (
+        public.current_profile_role() IN (
+            'SUPER_ADMIN'::public.role_enum,
+            'ADMIN'::public.role_enum,
+            'MANAGEMENT'::public.role_enum
+        )
+    );
+
+-- <<< END 006_degree_requirement_soft_delete.sql
+

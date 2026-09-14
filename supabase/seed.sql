@@ -1,7 +1,8 @@
 -- ============================================================
--- 003_seed_platform_reference_data.sql
+-- Local reset seed only (supabase db reset).
+-- Not a migration — never replay this against production.
+-- Contains DELETEs of reference tables before re-insert.
 -- Generated from /data CSV exports + globaldocument.csv
--- Run: node data/index.js
 -- ============================================================
 
 BEGIN;
