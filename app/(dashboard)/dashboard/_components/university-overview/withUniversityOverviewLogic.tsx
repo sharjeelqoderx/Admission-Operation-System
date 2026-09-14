@@ -2,6 +2,7 @@
 
 import type { ComponentType } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { DashboardPageSkeleton } from "@/components/shared/page-skeleton"
 import type { UniversityOverview } from "@/types/schemas/university-overview"
 import { normalizeUniversityOverview } from "@/types/schemas/university-overview"
 
@@ -32,14 +33,18 @@ export function withUniversityOverviewLogic(
     return function UniversityOverviewContainer({
         initialOverview,
     }: {
-        initialOverview: UniversityOverview
+        initialOverview?: UniversityOverview
     }) {
         const overviewQuery = useQuery({
             queryKey: ["university-overview", "v3"],
             queryFn: async () => selectOverview(await fetchUniversityOverview()),
-            initialData: selectOverview(initialOverview),
-            staleTime: 5 * 60 * 1000, // Cache for 5 minutes for smoother navigation
+            initialData: initialOverview ? selectOverview(initialOverview) : undefined,
+            staleTime: 5 * 60 * 1000,
         })
+
+        if (!overviewQuery.data) {
+            return <DashboardPageSkeleton />
+        }
 
         return <Component overview={overviewQuery.data} />
     }

@@ -25,7 +25,7 @@ import {
 import type { ApplicationDashboardPageData } from "@/types/schemas/application"
 
 type PageContentProps = {
-    initialData: ApplicationDashboardPageData
+    initialData?: ApplicationDashboardPageData
 }
 
 const ApplicationDashboardView = memo(function ApplicationDashboardView({

@@ -1,21 +1,30 @@
-import { redirect } from "next/navigation"
-import { getDashboardRole } from "@/lib/dashboard/server"
-import { isUniversityStaffRole } from "@/lib/auth/university-role"
-import { fetchDegreeRequirements } from "@/lib/degree-requirement/server"
-import { PageContent } from "./_components/page-content"
+"use client"
 
-export default async function DegreeRequirementsPage() {
-    const role = await getDashboardRole()
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/useAuth"
+import { isUniversityStaffRole } from "@/lib/auth/university-role"
+import { PageContent } from "./_components/page-content"
+import { ListPageSkeleton } from "@/components/shared/page-skeleton"
+
+export default function DegreeRequirementsPage() {
+    const { me } = useAuth()
+    const router = useRouter()
+    const role = me.data?.role
+
+    useEffect(() => {
+        if (role && !isUniversityStaffRole(role)) {
+            router.replace("/dashboard")
+        }
+    }, [role, router])
 
     if (!role) {
-        redirect("/login")
+        return <ListPageSkeleton />
     }
 
     if (!isUniversityStaffRole(role)) {
-        redirect("/dashboard")
+        return <ListPageSkeleton />
     }
 
-    const initialRequirements = await fetchDegreeRequirements({ includeDeleted: false })
-
-    return <PageContent initialRequirements={initialRequirements} />
+    return <PageContent />
 }

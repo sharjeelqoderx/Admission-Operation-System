@@ -29,6 +29,8 @@ export const queryClientConfig = {
             staleTime: DEFAULT_STALE_TIME,
             gcTime: DEFAULT_GC_TIME,
             refetchOnWindowFocus: false,
+            refetchOnMount: false,
+            refetchOnReconnect: false,
             retry: 1,
         },
         mutations: {

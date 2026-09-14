@@ -1,21 +1,20 @@
-import { redirect } from "next/navigation"
-import { getDashboardRole } from "@/lib/dashboard/server"
-import { fetchDocumentTemplatesForPage } from "@/lib/document-template/server"
+"use client"
+
+import { useAuth } from "@/hooks/useAuth"
 import { isUniversityRole } from "@/lib/auth/university-role"
 import { PageContent } from "./_components/page-content"
+import { ListPageSkeleton } from "@/components/shared/page-skeleton"
 
-export default async function DocumentTemplatesPage() {
-    const role = await getDashboardRole()
+export default function DocumentTemplatesPage() {
+    const { me } = useAuth()
+    const role = me.data?.role
 
     if (!role) {
-        redirect("/login")
+        return <ListPageSkeleton />
     }
-
-    const initialTemplates = await fetchDocumentTemplatesForPage()
 
     return (
         <PageContent
-            initialTemplates={initialTemplates}
             canCreateTemplate={!isUniversityRole(role)}
             canDeleteTemplate={!isUniversityRole(role)}
         />

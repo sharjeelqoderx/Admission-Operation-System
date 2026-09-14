@@ -92,8 +92,8 @@ const UniversityApplicationPageContent = withUniversityApplicationPageLogic(
 )
 
 type PageContentProps = {
-    initialOverview: UniversityApplicationListResponse
-    initialQuery: UniversityApplicationInitialQuery
+    initialOverview?: UniversityApplicationListResponse
+    initialQuery?: UniversityApplicationInitialQuery
 }
 
 export function UniversityApplicationListPageContent({

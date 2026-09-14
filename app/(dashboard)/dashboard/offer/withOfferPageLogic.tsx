@@ -81,18 +81,15 @@ export function withOfferPageLogic(Component: ComponentType<OfferPageLogicProps>
     return function OfferPageContainer({
         initialData,
     }: {
-        initialData: OfferDashboardPageData
+        initialData?: OfferDashboardPageData
     }) {
         const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+        const urlFilters = readOfferFiltersFromUrl()
 
-        const [filters, setFilters] = useState<OfferFilters>({
-            q: initialData.query.q,
-            status: initialData.query.status,
-            course_id: initialData.query.course_id,
-            page: initialData.query.page,
-            limit: initialData.query.limit,
-        })
-        const [searchInput, setSearchInput] = useState(initialData.query.q)
+        const [filters, setFilters] = useState<OfferFilters>(
+            initialData?.query ?? urlFilters
+        )
+        const [searchInput, setSearchInput] = useState(initialData?.query.q ?? urlFilters.q)
 
         const updateParams = useCallback((updates: Record<string, string>) => {
             setFilters((current) => {
@@ -142,12 +139,14 @@ export function withOfferPageLogic(Component: ComponentType<OfferPageLogicProps>
         const page = parseInt(filters.page, 10) || 1
         const limit = parseInt(filters.limit, 10) || 10
 
-        const matchesInitialQuery =
-            filters.q === initialData.query.q &&
-            filters.status === initialData.query.status &&
-            filters.course_id === initialData.query.course_id &&
-            filters.page === initialData.query.page &&
-            filters.limit === initialData.query.limit
+        const matchesInitialQuery = Boolean(
+            initialData &&
+                filters.q === initialData.query.q &&
+                filters.status === initialData.query.status &&
+                filters.course_id === initialData.query.course_id &&
+                filters.page === initialData.query.page &&
+                filters.limit === initialData.query.limit
+        )
 
         const offersQuery = useQuery({
             queryKey: ["offers", filters.q, filters.status, filters.course_id, page, limit],
@@ -159,7 +158,7 @@ export function withOfferPageLogic(Component: ComponentType<OfferPageLogicProps>
                     page,
                     limit,
                 }),
-            initialData: matchesInitialQuery ? initialData.offers : undefined,
+            initialData: matchesInitialQuery ? initialData?.offers : undefined,
             placeholderData: keepPreviousData,
             staleTime: 5 * 60 * 1000, // Cache for 5 minutes for smoother navigation
             retry: false,

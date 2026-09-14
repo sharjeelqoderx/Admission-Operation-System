@@ -47,7 +47,7 @@ export function withUniversityProgramPageLogic(
         initialOverview,
         canManagePrograms,
     }: {
-        initialOverview: UniversityProgramListResponse
+        initialOverview?: UniversityProgramListResponse
         canManagePrograms: boolean
     }) {
         const queryClient = useQueryClient()
@@ -91,7 +91,7 @@ export function withUniversityProgramPageLogic(
                     level_id: levelId === "all" ? undefined : levelId,
                     page,
                 }),
-            initialData: matchesInitialQuery ? initialOverview : undefined,
+            initialData: matchesInitialQuery && initialOverview ? initialOverview : undefined,
             placeholderData: keepPreviousData,
             staleTime: Infinity,
         })
@@ -112,7 +112,6 @@ export function withUniversityProgramPageLogic(
             onSuccess: () => {
                 toast.success("Program deleted successfully")
                 queryClient.invalidateQueries({ queryKey: ["university-programs"] })
-                router.refresh()
             },
             onError: (error: Error) => {
                 toast.error(error.message)
@@ -159,14 +158,24 @@ export function withUniversityProgramPageLogic(
         const overview = useMemo(() => {
             const data = programsQuery.data ?? {
                 data: [],
-                pagination: initialOverview.pagination,
+                pagination: initialOverview?.pagination ?? {
+                    total: 0,
+                    page: 1,
+                    limit: 10,
+                    totalPages: 0,
+                },
             }
 
             return {
                 ...data,
-                pagination: { ...data.pagination, page: currentPage },
+                pagination: {
+                    total: data.pagination?.total ?? 0,
+                    page: currentPage,
+                    limit: data.pagination?.limit ?? 10,
+                    totalPages: data.pagination?.totalPages ?? 0,
+                },
             }
-        }, [currentPage, initialOverview.pagination, programsQuery.data])
+        }, [currentPage, initialOverview?.pagination, programsQuery.data])
 
         return (
             <Component

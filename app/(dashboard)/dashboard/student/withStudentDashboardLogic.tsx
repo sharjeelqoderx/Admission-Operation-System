@@ -9,7 +9,7 @@ import type { StudentListItem, StudentsListResult } from "@/lib/student/list"
 import type { StudentDashboardStats } from "@/lib/student/list"
 
 export type StudentDashboardViewProps = {
-    initialData: StudentDashboardPageData
+    initialData?: StudentDashboardPageData
     stats: StudentDashboardStats
     statsLoading: boolean
     students: StudentListItem[]
@@ -34,7 +34,7 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
     return function WrappedComponent({
         initialData,
         ...props
-    }: Pick<T, "initialData"> & Omit<T, keyof StudentDashboardViewProps | "initialData">) {
+    }: Partial<Pick<T, "initialData">> & Omit<T, keyof StudentDashboardViewProps | "initialData">) {
         const queryClient = useQueryClient()
         const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -62,10 +62,12 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
 
         const pageStr = String(page)
 
-        const matchesInitialQuery =
-            q === initialData.query.q &&
-            status === initialData.query.status &&
-            pageStr === initialData.query.page
+        const matchesInitialQuery = Boolean(
+            initialData &&
+                q === initialData.query.q &&
+                status === initialData.query.status &&
+                pageStr === initialData.query.page
+        )
 
         const updateParams = useCallback(
             (updates: Record<string, string>) => {
@@ -120,8 +122,8 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
                 const json = await res.json()
                 return json.data as StudentDashboardStats
             },
-            initialData: initialData.stats,
-            staleTime: 5 * 60 * 1000, // Cache for 5 minutes for smoother navigation
+            initialData: initialData?.stats,
+            staleTime: 5 * 60 * 1000,
         })
 
         const studentsQuery = useQuery({
@@ -140,9 +142,9 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
                 }
                 return res.json() as Promise<StudentsListResult>
             },
-            initialData: matchesInitialQuery ? initialData.students : undefined,
+            initialData: matchesInitialQuery ? initialData?.students : undefined,
             placeholderData: keepPreviousData,
-            staleTime: 5 * 60 * 1000, // Cache for 5 minutes for smoother navigation
+            staleTime: 5 * 60 * 1000,
             retry: false,
         })
 
@@ -183,7 +185,11 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
 
         const logicProps: StudentDashboardViewProps = {
             initialData,
-            stats: statsQuery.data ?? initialData.stats,
+            stats: statsQuery.data ?? {
+                total_students: 0,
+                active_applications: 0,
+                pending_actions: 0,
+            },
             statsLoading: statsQuery.isLoading && !statsQuery.data,
             students: studentsQuery.data?.data ?? [],
             pagination,

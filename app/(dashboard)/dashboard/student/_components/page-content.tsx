@@ -17,7 +17,7 @@ import {
 import type { StudentDashboardPageData } from "@/lib/student/server"
 
 type PageContentProps = {
-    initialData: StudentDashboardPageData
+    initialData?: StudentDashboardPageData
 }
 
 const StatsDashboard = memo(function StatsDashboard({

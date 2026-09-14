@@ -44,7 +44,7 @@ export function withUniversityStudentPageLogic(
     return function UniversityStudentPageContainer({
         initialOverview,
     }: {
-        initialOverview: UniversityStudentListResponse
+        initialOverview?: UniversityStudentListResponse
     }) {
         const router = useRouter()
         const pathname = usePathname()
@@ -73,9 +73,9 @@ export function withUniversityStudentPageLogic(
         const studentsQuery = useQuery({
             queryKey: ["university-students", q, status, page],
             queryFn: () => fetchUniversityStudents({ q, status, page }),
-            initialData: initialOverview,
+            initialData: matchesInitialQuery && initialOverview ? initialOverview : undefined,
             placeholderData: keepPreviousData,
-            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
+            staleTime: Infinity,
         })
 
         const updateParams = useCallback(
@@ -110,16 +110,30 @@ export function withUniversityStudentPageLogic(
 
         const overview = useMemo(() => {
             const data = studentsQuery.data ?? {
-                stats: initialOverview.stats,
+                stats: initialOverview?.stats ?? {
+                    total_students: 0,
+                    applied: 0,
+                    enrolled: 0,
+                },
                 data: [],
-                pagination: initialOverview.pagination,
+                pagination: initialOverview?.pagination ?? {
+                    total: 0,
+                    page: 1,
+                    limit: 10,
+                    totalPages: 0,
+                },
             }
 
             return {
                 ...data,
-                pagination: { ...data.pagination, page: currentPage },
+                pagination: {
+                    total: data.pagination?.total ?? 0,
+                    page: currentPage,
+                    limit: data.pagination?.limit ?? 10,
+                    totalPages: data.pagination?.totalPages ?? 0,
+                },
             }
-        }, [currentPage, initialOverview.pagination, initialOverview.stats, studentsQuery.data])
+        }, [currentPage, initialOverview?.pagination, initialOverview?.stats, studentsQuery.data])
 
         return (
             <Component

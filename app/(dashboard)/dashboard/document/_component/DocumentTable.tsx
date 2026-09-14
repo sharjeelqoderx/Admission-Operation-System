@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
+import React from "react"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,7 @@ import { ChevronLeft, ChevronRight, AlertCircle, FileText } from "lucide-react"
 import { TableSkeleton } from "@/components/shared/table-skeleton"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { cn } from "@/lib/utils"
+import type { DocumentListPagination } from "@/types/schemas/document"
 import { DocumentRowActionsMenu } from "./document-row-actions-menu"
 
 export type DocumentStudentRow = {
@@ -32,25 +33,17 @@ export type DocumentStudentRow = {
 
 type Props = {
     rows: DocumentStudentRow[]
+    pagination: DocumentListPagination
+    page: number
     isLoading: boolean
     isFetching?: boolean
     isError: boolean
-    statusFilter?: string
-    searchFilter?: string
     onRetry: () => void
+    onPageChange: (page: number) => void
     getViewHref?: (studentId: string) => string
 }
 
 const COLUMN_COUNT = 5
-const PAGE_SIZE = 10
-
-function sortStudentsByLatestUpload(rows: DocumentStudentRow[]) {
-    return [...rows].sort((a, b) => {
-        const aTime = a.last_uploaded_at ? new Date(a.last_uploaded_at).getTime() : 0
-        const bTime = b.last_uploaded_at ? new Date(b.last_uploaded_at).getTime() : 0
-        return bTime - aTime
-    })
-}
 
 function formatUploadDate(value: string | null) {
     if (!value) return "—"
@@ -63,33 +56,20 @@ function formatUploadDate(value: string | null) {
 
 export const DocumentTable = React.memo(function DocumentTable({
     rows,
+    pagination,
+    page,
     isLoading,
-    isFetching = false,
     isError,
-    statusFilter = "all",
-    searchFilter = "",
     onRetry,
+    onPageChange,
     getViewHref,
 }: Props) {
-    const [currentPage, setCurrentPage] = useState(1)
+    const totalEntries = pagination.total
+    const totalPages = pagination.totalPages
+    const startIndex = totalEntries === 0 ? 0 : (page - 1) * pagination.limit
+    const endIndex = Math.min(startIndex + rows.length, totalEntries)
 
-    useEffect(() => {
-        setCurrentPage(1)
-    }, [statusFilter, searchFilter])
-
-    const sortedRows = useMemo(() => sortStudentsByLatestUpload(rows), [rows])
-
-    const totalEntries = sortedRows.length
-    const totalPages = Math.max(1, Math.ceil(totalEntries / PAGE_SIZE))
-    const startIndex = (currentPage - 1) * PAGE_SIZE
-    const endIndex = Math.min(startIndex + PAGE_SIZE, totalEntries)
-
-    const currentRows = useMemo(
-        () => sortedRows.slice(startIndex, endIndex),
-        [sortedRows, startIndex, endIndex]
-    )
-
-    if (isLoading || isFetching) {
+    if (isLoading) {
         return (
             <BluryCard
                 isCentered={false}
@@ -166,7 +146,7 @@ export const DocumentTable = React.memo(function DocumentTable({
                     </TableHeader>
 
                     <TableBody className="bg-white/45">
-                        {sortedRows.length === 0 ? (
+                        {rows.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={COLUMN_COUNT} className="px-8 py-16 text-center">
                                     <div className="flex flex-col items-center gap-2">
@@ -181,7 +161,7 @@ export const DocumentTable = React.memo(function DocumentTable({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            currentRows.map((row, index) => {
+                            rows.map((row, index) => {
                                 const initials = row.student_name
                                     .split(" ")
                                     .map((n) => n[0])
@@ -284,16 +264,16 @@ export const DocumentTable = React.memo(function DocumentTable({
                                         <Button
                                             variant="outline"
                                             size="icon"
-                                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                            disabled={currentPage <= 1}
+                                            onClick={() => onPageChange(page - 1)}
+                                            disabled={page <= 1}
                                         >
                                             <ChevronLeft size={16} />
                                         </Button>
                                         <Button
                                             variant="outline"
                                             size="icon"
-                                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                            disabled={currentPage >= totalPages || totalEntries === 0}
+                                            onClick={() => onPageChange(page + 1)}
+                                            disabled={page >= totalPages || totalEntries === 0}
                                         >
                                             <ChevronRight size={16} />
                                         </Button>

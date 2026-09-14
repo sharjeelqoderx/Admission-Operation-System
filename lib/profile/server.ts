@@ -44,33 +44,44 @@ export type ProfilePageData = {
     phone: string
     avatarUrl: string
     role: RoleEnum
-    profile: Record<string, string | undefined | null> & {
+
+    profile: Record<string, string | number | null | undefined> & {
         dateOfBirth?: string
         gender?: string
         country?: string
         state?: string
         city?: string
         nationality?: string
+
         guardianEmail?: string
         guardianPhone?: string
         guardian_email?: string
         guardian_phone?: string
+
         student_code?: string
+
         contact_person_first_name?: string
         contact_person_last_name?: string
+
         address?: string
         zip_code?: string
         street_1?: string
         street_2?: string
         street_3?: string
         post_code?: string
+
         website?: string
-        experience_years?: string
+
+        experience_years?: number | null
+
         description?: string
         other_contact_number?: string
     }
+
     academic?: ProfilePageAcademic[] | null
+
     experience?: ProfilePageExperience | null
+
     agentKyc?: {
         registrationCertificateUrl: string | null
         idCardFrontUrl: string | null

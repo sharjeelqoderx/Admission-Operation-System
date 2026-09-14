@@ -14,6 +14,7 @@ import {
     getLatestRejectionFeedback,
 } from "@/lib/document/rejection-history"
 import { fetchInChunks } from "@/lib/supabase/query-in-chunks"
+import { paginateDocumentRows, parseDocumentPageLimit } from "@/lib/document/paginate"
 import { Role } from "@/types/enums/role"
 
 type DocumentReviewRow = {
@@ -164,6 +165,7 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url)
         const statusFilter = searchParams.get("status")
         const search = searchParams.get("search")?.toLowerCase()
+        const { page, limit } = parseDocumentPageLimit(searchParams)
         const {
             data: { user },
             error: authError,
@@ -198,7 +200,13 @@ export async function GET(req: NextRequest) {
         }
 
         if (scopedProfileIds && scopedProfileIds.length === 0) {
-            return NextResponse.json({ data: [] }, { status: 200 })
+            return NextResponse.json(
+                {
+                    data: [],
+                    pagination: { total: 0, page: 1, limit, totalPages: 0 },
+                },
+                { status: 200 }
+            )
         }
 
         const serviceSupabase = createSupabaseServiceClient()
@@ -344,7 +352,12 @@ export async function GET(req: NextRequest) {
             })
         }
 
-        return NextResponse.json({ data: filteredRows }, { status: 200 })
+        const paged = paginateDocumentRows(filteredRows, page, limit)
+
+        return NextResponse.json(
+            { data: paged.data, pagination: paged.pagination },
+            { status: 200 }
+        )
     } catch (error) {
         console.error("GET /api/document/all error:", error)
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })

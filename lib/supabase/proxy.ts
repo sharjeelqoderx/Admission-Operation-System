@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextRequest, NextResponse } from "next/server"
 
-export async function createSupabaseMiddlewareClient(req: NextRequest, res: NextResponse) {
+export async function createSupabaseProxyClient(req: NextRequest, res: NextResponse) {
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY
 

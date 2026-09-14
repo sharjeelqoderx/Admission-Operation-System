@@ -30,7 +30,7 @@ import {
 import type { DocumentTemplateListItem } from "@/types/schemas/document-template"
 
 type PageContentProps = {
-    initialTemplates: DocumentTemplateListItem[]
+    initialTemplates?: DocumentTemplateListItem[]
     canCreateTemplate: boolean
     canDeleteTemplate: boolean
 }

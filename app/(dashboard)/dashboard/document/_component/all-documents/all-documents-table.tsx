@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
+import React from "react"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Typography } from "@/components/shared/Typography"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -22,31 +22,25 @@ import {
 import { TableSkeleton } from "@/components/shared/table-skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import type { AgentAllDocumentRow } from "@/types/schemas/document"
+import type { AgentAllDocumentRow, DocumentListPagination } from "@/types/schemas/document"
 import { DocumentRowActionsMenu } from "../document-row-actions-menu"
 import { DocumentRejectionIndicator } from "../document-rejection-indicator"
 
 type Props = {
     rows: AgentAllDocumentRow[]
+    pagination: DocumentListPagination
+    page: number
     isLoading: boolean
     isFetching?: boolean
     isError: boolean
-    statusFilter?: string
-    searchFilter?: string
     reviewingDocumentId: string | null
     onRetry: () => void
+    onPageChange: (page: number) => void
     onApprove: (documentId: string) => void
     onReject: (documentId: string) => void
 }
 
 const COLUMN_COUNT = 6
-const PAGE_SIZE = 10
-
-function sortDocumentsByLatestUpload(rows: AgentAllDocumentRow[]) {
-    return [...rows].sort(
-        (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
-    )
-}
 
 function formatUploadDate(value: string) {
     return new Date(value).toLocaleDateString("en-US", {
@@ -67,35 +61,22 @@ function getStudentInitials(name: string) {
 
 export const AllDocumentsTable = React.memo(function AllDocumentsTable({
     rows,
+    pagination,
+    page,
     isLoading,
-    isFetching = false,
     isError,
-    statusFilter = "all",
-    searchFilter = "",
     reviewingDocumentId,
     onRetry,
+    onPageChange,
     onApprove,
     onReject,
 }: Props) {
-    const [currentPage, setCurrentPage] = useState(1)
+    const totalEntries = pagination.total
+    const totalPages = pagination.totalPages
+    const startIndex = totalEntries === 0 ? 0 : (page - 1) * pagination.limit
+    const endIndex = Math.min(startIndex + rows.length, totalEntries)
 
-    useEffect(() => {
-        setCurrentPage(1)
-    }, [statusFilter, searchFilter])
-
-    const sortedRows = useMemo(() => sortDocumentsByLatestUpload(rows), [rows])
-
-    const totalEntries = sortedRows.length
-    const totalPages = Math.max(1, Math.ceil(totalEntries / PAGE_SIZE))
-    const startIndex = (currentPage - 1) * PAGE_SIZE
-    const endIndex = Math.min(startIndex + PAGE_SIZE, totalEntries)
-
-    const currentRows = useMemo(
-        () => sortedRows.slice(startIndex, endIndex),
-        [sortedRows, startIndex, endIndex]
-    )
-
-    if (isLoading || isFetching) {
+    if (isLoading) {
         return (
             <BluryCard
                 isCentered={false}
@@ -175,7 +156,7 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                     </TableHeader>
 
                     <TableBody className="bg-white/45">
-                        {sortedRows.length === 0 ? (
+                        {rows.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={COLUMN_COUNT} className="px-8 py-16 text-center">
                                     <Typography as="p" className="text-sm font-medium text-gray-500">
@@ -184,7 +165,7 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            currentRows.map((row, index) => {
+                            rows.map((row, index) => {
                                 const isReviewing = reviewingDocumentId === row.document_id
                                 const isRejected =
                                     row.status === "REJECTED" &&
@@ -242,46 +223,46 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                                         </TableCell>
 
                                         <TableCell className="px-6 py-5">
-                                                <div className="space-y-1">
+                                            <div className="space-y-1">
+                                                <Typography
+                                                    as="span"
+                                                    className="text-sm font-bold text-gray-900"
+                                                >
+                                                    {row.document_name}
+                                                </Typography>
+                                                {row.uploaded_by_name && (
                                                     <Typography
                                                         as="span"
-                                                        className="text-sm font-bold text-gray-900"
+                                                        className="text-[11px] text-gray-500 font-light block"
                                                     >
-                                                        {row.document_name}
+                                                        Uploaded by {row.uploaded_by_name}
                                                     </Typography>
-                                                    {row.uploaded_by_name && (
-                                                        <Typography
-                                                            as="span"
-                                                            className="text-[11px] text-gray-500 font-light block"
-                                                        >
-                                                            Uploaded by {row.uploaded_by_name}
-                                                        </Typography>
-                                                    )}
-                                                </div>
-                                            </TableCell>
+                                                )}
+                                            </div>
+                                        </TableCell>
 
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
-                                                <StatusBadge status={row.status} />
-                                            </TableCell>
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <StatusBadge status={row.status} />
+                                        </TableCell>
 
-                                            <TableCell className="px-6 py-5 whitespace-nowrap">
-                                                <Typography as="span" className="text-sm font-medium text-gray-600">
-                                                    {formatUploadDate(row.uploaded_at)}
-                                                </Typography>
-                                            </TableCell>
+                                        <TableCell className="px-6 py-5 whitespace-nowrap">
+                                            <Typography as="span" className="text-sm font-medium text-gray-600">
+                                                {formatUploadDate(row.uploaded_at)}
+                                            </Typography>
+                                        </TableCell>
 
-                                            <TableCell className="px-6 py-5 whitespace-nowrap overflow-visible">
-                                                <DocumentRowActionsMenu
-                                                    mode="review"
-                                                    viewHref={`/dashboard/document/student/${row.student_id}/${row.document_id}`}
-                                                    canReview={canReview}
-                                                    isReviewing={isReviewing}
-                                                    onAccept={() => onApprove(row.document_id)}
-                                                    onDecline={() => onReject(row.document_id)}
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-                                    )
+                                        <TableCell className="px-6 py-5 whitespace-nowrap overflow-visible">
+                                            <DocumentRowActionsMenu
+                                                mode="review"
+                                                viewHref={`/dashboard/document/student/${row.student_id}/${row.document_id}`}
+                                                canReview={canReview}
+                                                isReviewing={isReviewing}
+                                                onAccept={() => onApprove(row.document_id)}
+                                                onDecline={() => onReject(row.document_id)}
+                                            />
+                                        </TableCell>
+                                    </TableRow>
+                                )
                             })
                         )}
                     </TableBody>
@@ -309,18 +290,16 @@ export const AllDocumentsTable = React.memo(function AllDocumentsTable({
                                         <Button
                                             variant="outline"
                                             size="icon"
-                                            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                                            disabled={currentPage <= 1}
+                                            onClick={() => onPageChange(page - 1)}
+                                            disabled={page <= 1}
                                         >
                                             <ChevronLeft size={16} />
                                         </Button>
                                         <Button
                                             variant="outline"
                                             size="icon"
-                                            onClick={() =>
-                                                setCurrentPage((page) => Math.min(totalPages, page + 1))
-                                            }
-                                            disabled={currentPage >= totalPages || totalEntries === 0}
+                                            onClick={() => onPageChange(page + 1)}
+                                            disabled={page >= totalPages || totalEntries === 0}
                                         >
                                             <ChevronRight size={16} />
                                         </Button>

@@ -91,7 +91,7 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
 const UniversityProgramPageContent = withUniversityProgramPageLogic(UniversityProgramPageView)
 
 type PageContentProps = {
-    initialOverview: UniversityProgramListResponse
+    initialOverview?: UniversityProgramListResponse
     canManagePrograms: boolean
 }
 

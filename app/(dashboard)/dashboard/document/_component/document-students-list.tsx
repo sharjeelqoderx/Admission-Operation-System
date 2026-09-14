@@ -17,10 +17,11 @@ export const DocumentStudentsListView = memo(function DocumentStudentsListView({
     title = "All Documents",
     description = "Select a student to view programs and upload required documents to their profile.",
     rows,
+    pagination,
+    page,
     isLoading,
     isFetching,
     isError,
-    q,
     searchInput,
     status,
     hasActiveFilters,
@@ -28,6 +29,7 @@ export const DocumentStudentsListView = memo(function DocumentStudentsListView({
     handleSearch,
     updateParams,
     handleResetFilters,
+    handlePageChange,
     getViewHref,
 }: DocumentStudentsListLogicProps) {
     return (
@@ -64,12 +66,13 @@ export const DocumentStudentsListView = memo(function DocumentStudentsListView({
 
             <DocumentTable
                 rows={rows}
+                pagination={pagination}
+                page={page}
                 isLoading={isLoading}
                 isFetching={isFetching}
                 isError={isError}
-                statusFilter={status}
-                searchFilter={q}
                 onRetry={onRetry}
+                onPageChange={handlePageChange}
                 getViewHref={getViewHref}
             />
         </div>
