@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
     experimental: {
         // Student create uploads CV + passport + avatar through proxy-matched /api/student
         proxyClientMaxBodySize: "65mb",
+        staleTimes: {
+            dynamic: 30,
+            static: 180,
+        },
     },
     // Performance optimizations
     compress: true,

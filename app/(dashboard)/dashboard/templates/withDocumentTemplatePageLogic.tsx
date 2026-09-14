@@ -108,7 +108,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         canCreateTemplate,
         canDeleteTemplate,
     }: {
-        initialTemplates: DocumentTemplateListItem[]
+        initialTemplates?: DocumentTemplateListItem[]
         canCreateTemplate: boolean
         canDeleteTemplate: boolean
     }) {
@@ -133,7 +133,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplatePageLogi
         const templatesQuery = useQuery({
             queryKey: DOCUMENT_TEMPLATES_QUERY_KEY,
             queryFn: fetchDocumentTemplates,
-            initialData: { data: initialTemplates },
+            initialData: initialTemplates !== undefined ? { data: initialTemplates } : undefined,
             staleTime: Infinity,
             refetchOnWindowFocus: false,
             refetchOnMount: false,

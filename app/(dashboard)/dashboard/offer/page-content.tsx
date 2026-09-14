@@ -99,7 +99,7 @@ const OfferPageView = memo(function OfferPageView({
 const OfferPageContent = withOfferPageLogic(OfferPageView)
 
 type PageContentProps = {
-    initialData: OfferDashboardPageData
+    initialData?: OfferDashboardPageData
 }
 
 export function PageContent({ initialData }: PageContentProps) {

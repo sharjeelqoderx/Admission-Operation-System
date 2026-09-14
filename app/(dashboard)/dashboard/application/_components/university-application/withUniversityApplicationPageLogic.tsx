@@ -49,14 +49,6 @@ export type UniversityApplicationPageLogicProps = {
     onMissingTemplateAlertOpenChange: (open: boolean) => void
 }
 
-const UNIVERSITY_APPLICATION_TABS: UniversityApplicationTab[] = [
-    "all",
-    "pending-review",
-    "awaiting-signature",
-    "recently-completed",
-    "rejected",
-]
-
 export async function fetchUniversityApplications(params: {
     q?: string
     tab?: string
@@ -104,14 +96,15 @@ export function withUniversityApplicationPageLogic(
         initialOverview,
         initialQuery,
     }: {
-        initialOverview: UniversityApplicationListResponse
-        initialQuery: UniversityApplicationInitialQuery
+        initialOverview?: UniversityApplicationListResponse
+        initialQuery?: UniversityApplicationInitialQuery
     }) {
         const queryClient = useQueryClient()
         const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+        const urlQuery = readUniversityFiltersFromUrl()
 
-        const [filters, setFilters] = useState(initialQuery)
-        const [searchInput, setSearchInput] = useState(initialQuery.q)
+        const [filters, setFilters] = useState(initialQuery ?? urlQuery)
+        const [searchInput, setSearchInput] = useState((initialQuery ?? urlQuery).q)
         const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
         const [rejectTarget, setRejectTarget] = useState<UniversityApplicationListItem | null>(
             null
@@ -129,7 +122,7 @@ export function withUniversityApplicationPageLogic(
             invalidateQueryKeys: [["university-applications"]],
         })
 
-        const updateFilters = useCallback((updates: Partial<typeof initialQuery>) => {
+        const updateFilters = useCallback((updates: Partial<UniversityApplicationInitialQuery>) => {
             setFilters((current) => {
                 const next = { ...current, ...updates }
                 applyUrlSearchParamUpdates({
@@ -164,16 +157,13 @@ export function withUniversityApplicationPageLogic(
             [filters.q, queryClient]
         )
 
-        useEffect(() => {
-            UNIVERSITY_APPLICATION_TABS.forEach((tab) => {
-                prefetchTab(tab)
-            })
-        }, [prefetchTab])
-
-        const matchesInitialQuery =
-            filters.q === initialQuery.q &&
-            filters.page === initialQuery.page &&
-            filters.tab === initialQuery.tab
+        const matchesInitialQuery = Boolean(
+            initialOverview &&
+                initialQuery &&
+                filters.q === initialQuery.q &&
+                filters.page === initialQuery.page &&
+                filters.tab === initialQuery.tab
+        )
 
         const applicationsQuery = useQuery({
             queryKey: ["university-applications", filters.q, filters.tab, filters.page],
@@ -208,24 +198,37 @@ export function withUniversityApplicationPageLogic(
 
         const overview = useMemo(() => {
             const data = applicationsQuery.data ?? {
-                tab_counts: initialOverview.tab_counts,
+                tab_counts: initialOverview?.tab_counts ?? {
+                    all: 0,
+                    pending_review: 0,
+                    awaiting_signature: 0,
+                    recently_completed: 0,
+                    rejected: 0,
+                },
                 data: [],
-                pagination: initialOverview.pagination,
+                pagination: initialOverview?.pagination ?? {
+                    total: 0,
+                    page: 1,
+                    limit: 10,
+                    totalPages: 0,
+                },
             }
             const currentPage = parseInt(filters.page, 10) || 1
 
             return {
                 ...data,
                 pagination: {
-                    ...data.pagination,
+                    total: data.pagination?.total ?? 0,
                     page: currentPage,
+                    limit: data.pagination?.limit ?? 10,
+                    totalPages: data.pagination?.totalPages ?? 0,
                 },
             }
         }, [
             applicationsQuery.data,
             filters.page,
-            initialOverview.pagination,
-            initialOverview.tab_counts,
+            initialOverview?.pagination,
+            initialOverview?.tab_counts,
         ])
 
         const handleTabChange = useCallback(

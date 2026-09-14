@@ -66,18 +66,15 @@ export function withApplicationPageLogic(Component: ComponentType<ApplicationPag
     return function ApplicationPageContainer({
         initialData,
     }: {
-        initialData: ApplicationDashboardPageData
+        initialData?: ApplicationDashboardPageData
     }) {
         const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+        const urlFilters = readApplicationFiltersFromUrl()
 
-        const [filters, setFilters] = useState<ApplicationFilters>({
-            q: initialData.query.q,
-            status: initialData.query.status,
-            degree_id: initialData.query.degree_id,
-            date_from: initialData.query.date_from,
-            date_to: initialData.query.date_to,
-        })
-        const [searchInput, setSearchInput] = useState(initialData.query.q)
+        const [filters, setFilters] = useState<ApplicationFilters>(
+            initialData?.query ?? urlFilters
+        )
+        const [searchInput, setSearchInput] = useState(initialData?.query.q ?? urlFilters.q)
 
         const updateParams = useCallback((updates: Record<string, string>) => {
             setFilters((current) => {
@@ -104,12 +101,14 @@ export function withApplicationPageLogic(Component: ComponentType<ApplicationPag
             return () => window.removeEventListener("popstate", syncFiltersFromUrl)
         }, [])
 
-        const matchesInitialQuery =
-            filters.q === initialData.query.q &&
-            filters.status === initialData.query.status &&
-            filters.degree_id === initialData.query.degree_id &&
-            filters.date_from === initialData.query.date_from &&
-            filters.date_to === initialData.query.date_to
+        const matchesInitialQuery = Boolean(
+            initialData &&
+                filters.q === initialData.query.q &&
+                filters.status === initialData.query.status &&
+                filters.degree_id === initialData.query.degree_id &&
+                filters.date_from === initialData.query.date_from &&
+                filters.date_to === initialData.query.date_to
+        )
 
         const handleSearch = useCallback(
             (term: string) => {
@@ -144,12 +143,13 @@ export function withApplicationPageLogic(Component: ComponentType<ApplicationPag
                 filters.date_to,
             ],
             queryFn: () => fetchApplicationsFromApi(filters),
-            initialData: initialData.applications,
+            initialData: matchesInitialQuery ? initialData?.applications : undefined,
+            placeholderData: (previous) => previous,
             retry: false,
-            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
+            staleTime: Infinity,
         })
 
-        const role = response?.role ?? initialData.applications.role
+        const role = response?.role
         const canCreateApplication = role === Role.AGENT || role === Role.STUDENT
         const showStudentSearch = role !== Role.STUDENT
 

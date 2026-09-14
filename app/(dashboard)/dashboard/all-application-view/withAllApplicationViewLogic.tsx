@@ -62,7 +62,7 @@ export function withAllApplicationViewLogic(Component: ComponentType<AllApplicat
     return function AllApplicationViewContainer({
         initialData,
     }: {
-        initialData: ApplicationDashboardPageData
+        initialData?: ApplicationDashboardPageData
     }) {
         const searchParams = useSearchParams()
         const router = useRouter()
@@ -90,14 +90,16 @@ export function withAllApplicationViewLogic(Component: ComponentType<AllApplicat
             setPage(syncedPage)
         }, [searchParams])
 
-        const matchesInitialQuery =
-            q === initialData.query.q &&
-            status === initialData.query.status &&
-            degreeId === initialData.query.degree_id &&
-            dateFrom === initialData.query.date_from &&
-            dateTo === initialData.query.date_to &&
-            String(page) === initialData.query.page &&
-            String(limit) === initialData.query.limit
+        const matchesInitialQuery = Boolean(
+            initialData &&
+                q === initialData.query.q &&
+                status === initialData.query.status &&
+                degreeId === initialData.query.degree_id &&
+                dateFrom === initialData.query.date_from &&
+                dateTo === initialData.query.date_to &&
+                String(page) === initialData.query.page &&
+                String(limit) === initialData.query.limit
+        )
 
         const replaceParams = useCallback(
             (mutator: (params: URLSearchParams) => void) => {
@@ -155,9 +157,9 @@ export function withAllApplicationViewLogic(Component: ComponentType<AllApplicat
                     page,
                     limit,
                 }),
-            initialData: initialData.applications,
+            initialData: matchesInitialQuery ? initialData?.applications : undefined,
             placeholderData: keepPreviousData,
-            staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
+            staleTime: Infinity,
             retry: false,
         })
 

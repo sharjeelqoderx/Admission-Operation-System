@@ -1,78 +1,37 @@
-import dynamic from "next/dynamic"
-import { redirect } from "next/navigation"
-import { getDashboardRole } from "@/lib/dashboard/server"
-import {
-    EMPTY_UNIVERSITY_APPLICATION_LIST,
-    fetchUniversityApplicationsForPage,
-} from "@/lib/application/university-server"
-import { fetchApplicationDashboardPageData } from "@/lib/application/server"
-import type { UniversityApplicationTab } from "@/types/schemas/university-application"
+"use client"
+
+import { useAuth } from "@/hooks/useAuth"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 import { ListPageSkeleton } from "@/components/shared/page-skeleton"
+import { PageContent } from "./_components/page-content"
+import { UniversityApplicationListPageContent } from "./_components/university-application/page-content"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
-const PageContent = dynamic(
-    () => import("./_components/page-content").then((mod) => mod.PageContent),
-    { loading: () => <ListPageSkeleton /> }
-)
+export default function ApplicationPage() {
+    const { me } = useAuth()
+    const router = useRouter()
+    const role = me.data?.role
 
-const UniversityApplicationListPageContent = dynamic(
-    () =>
-        import("./_components/university-application/page-content").then(
-            (mod) => mod.UniversityApplicationListPageContent
-        ),
-    { loading: () => <ListPageSkeleton /> }
-)
-
-type ApplicationPageProps = {
-    searchParams: Promise<{
-        q?: string
-        tab?: string
-        page?: string
-        status?: string
-        degree_id?: string
-        date_from?: string
-        date_to?: string
-    }>
-}
-
-export default async function ApplicationPage({ searchParams }: ApplicationPageProps) {
-    const role = await getDashboardRole()
+    useEffect(() => {
+        if (!role) return
+        if (!isUniversityStaffRole(role) && role !== Role.AGENT && role !== Role.STUDENT) {
+            router.replace("/dashboard")
+        }
+    }, [role, router])
 
     if (!role) {
-        redirect("/login")
+        return <ListPageSkeleton />
     }
 
-    const params = await searchParams
-
     if (isUniversityStaffRole(role)) {
-        const tab = (params.tab ?? "all") as UniversityApplicationTab
-
-        const initialOverview =
-            (await fetchUniversityApplicationsForPage({
-                q: params.q,
-                tab,
-                page: params.page ? Number(params.page) : 1,
-                limit: 10,
-            })) ?? EMPTY_UNIVERSITY_APPLICATION_LIST
-
-        return (
-            <UniversityApplicationListPageContent
-                initialOverview={initialOverview}
-                initialQuery={{
-                    q: params.q ?? "",
-                    tab,
-                    page: params.page ?? "1",
-                }}
-            />
-        )
+        return <UniversityApplicationListPageContent />
     }
 
     if (role === Role.AGENT || role === Role.STUDENT) {
-        const initialData = await fetchApplicationDashboardPageData(params)
-
-        return <PageContent initialData={initialData} />
+        return <PageContent />
     }
 
-    redirect("/dashboard")
+    return <ListPageSkeleton />
 }

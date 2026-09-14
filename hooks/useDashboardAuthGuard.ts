@@ -12,7 +12,7 @@ export function useDashboardAuthGuard() {
 
     const isAuthLoading =
         !clientReady ||
-        (sessionActive && (me.isPending || me.isFetching) && !user && !me.isError)
+        (sessionActive && me.isPending && !user && !me.isError)
 
     const shouldRedirectToLogin =
         clientReady && (!sessionActive || (me.isFetched && (me.isError || !user)))

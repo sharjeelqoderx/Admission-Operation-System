@@ -32,7 +32,6 @@ export function LoginForm() {
                 clearSessionQueryCache(queryClient)
                 await login.mutateAsync({ email: value.email, password: value.password })
                 router.push("/dashboard")
-                router.refresh()
             } catch (e: any) {
                 setApiError(e.message)
             }

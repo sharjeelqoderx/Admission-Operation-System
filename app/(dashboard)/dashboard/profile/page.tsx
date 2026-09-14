@@ -1,13 +1,16 @@
-import { redirect } from "next/navigation"
-import { fetchProfilePageData } from "@/lib/profile/server"
+"use client"
+
+import { useAuth } from "@/hooks/useAuth"
 import { PageContent } from "./_components/page-content"
+import { DashboardPageSkeleton } from "@/components/shared/page-skeleton"
+import type { ProfilePageData } from "@/lib/profile/server"
 
-export default async function ProfilePage() {
-    const initialData = await fetchProfilePageData()
+export default function ProfilePage() {
+    const { me } = useAuth()
 
-    if (!initialData) {
-        redirect("/login")
+    if (!me.data) {
+        return <DashboardPageSkeleton />
     }
 
-    return <PageContent initialData={initialData} />
+    return <PageContent initialData={me.data as ProfilePageData} />
 }

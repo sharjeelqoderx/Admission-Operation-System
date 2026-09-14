@@ -1,43 +1,22 @@
-import { redirect } from "next/navigation"
-import { getDashboardRole } from "@/lib/dashboard/server"
-import { fetchUniversityProgramsForPage } from "@/lib/program/university-server"
+"use client"
+
+import { useAuth } from "@/hooks/useAuth"
+import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
 import { AgentStudentProgramPage } from "./_components/agent-student-program-page"
 import { UniversityProgramListPageContent } from "./_components/university-program/page-content"
-import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
+import { ListPageSkeleton } from "@/components/shared/page-skeleton"
 
-type ProgramPageProps = {
-    searchParams: Promise<{
-        q?: string
-        level_id?: string
-        page?: string
-    }>
-}
-
-export default async function ProgramPage({ searchParams }: ProgramPageProps) {
-    const role = await getDashboardRole()
+export default function ProgramPage() {
+    const { me } = useAuth()
+    const role = me.data?.role
 
     if (!role) {
-        redirect("/login")
+        return <ListPageSkeleton />
     }
 
     if (isUniversityStaffRole(role)) {
-        const params = await searchParams
-        const initialOverview = await fetchUniversityProgramsForPage({
-            q: params.q,
-            level_id: params.level_id,
-            page: params.page ? Number(params.page) : 1,
-            limit: 10,
-        })
-
-        if (!initialOverview) {
-            redirect("/login")
-        }
-
         return (
-            <UniversityProgramListPageContent
-                initialOverview={initialOverview}
-                canManagePrograms={!isUniversityRole(role)}
-            />
+            <UniversityProgramListPageContent canManagePrograms={!isUniversityRole(role)} />
         )
     }
 

@@ -342,7 +342,7 @@ DegreeRequirementPageContent.displayName = "DegreeRequirementPageContent"
 export function PageContent({
     initialRequirements,
 }: {
-    initialRequirements: DegreeRequirementListItem[]
+    initialRequirements?: DegreeRequirementListItem[]
 }) {
     return <DegreeRequirementPageContent initialRequirements={initialRequirements} />
 }

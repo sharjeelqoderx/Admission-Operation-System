@@ -60,7 +60,7 @@ const UniversityStudentPageView = memo(function UniversityStudentPageView({
 const UniversityStudentPageContent = withUniversityStudentPageLogic(UniversityStudentPageView)
 
 type PageContentProps = {
-    initialOverview: UniversityStudentListResponse
+    initialOverview?: UniversityStudentListResponse
 }
 
 export function UniversityStudentListPageContent({ initialOverview }: PageContentProps) {
