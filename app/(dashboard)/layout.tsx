@@ -104,12 +104,12 @@ const sidebarRoutes = [
     allowFor: [Role.ADMIN, Role.MANAGEMENT, Role.AGENT, Role.STUDENT, Role.SUPER_ADMIN],
   },
 
-  {
-    label: 'Degree Requirements',
-    href: '/dashboard/degree-requirements',
-    icon: FileStack,
-    allowFor: [Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN],
-  },
+  // {
+  //   label: 'Degree Requirements',
+  //   href: '/dashboard/degree-requirements',
+  //   icon: FileStack,
+  //   allowFor: [Role.ADMIN, Role.MANAGEMENT, Role.SUPER_ADMIN],
+  // },
 
   {
     label: 'All Documents',
@@ -213,7 +213,7 @@ function filterByRole(routes: any[], role: Role) {
  */
 function isRouteActive(pathname: string, href?: string) {
   if (!href) return false;
-  if (href === '/dashboard/templates' || href === '/dashboard/agent' || href === '/dashboard/application' || href === '/dashboard/program' || href === '/dashboard/degree-requirements') {
+  if (href === '/dashboard/templates' || href === '/dashboard/agent' || href === '/dashboard/application' || href === '/dashboard/program') {
     return pathname === href || pathname.startsWith(`${href}/`);
   }
   return pathname === href;

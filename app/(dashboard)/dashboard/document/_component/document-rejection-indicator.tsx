@@ -55,6 +55,9 @@ export const DocumentRejectionIndicator = memo(function DocumentRejectionIndicat
                         <PopoverTrigger asChild>
                             <button
                                 type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                }}
                                 className="flex items-center justify-center shrink-0 text-red-600 hover:text-red-700 transition-colors"
                                 aria-label="View rejection history"
                             >
@@ -71,6 +74,9 @@ export const DocumentRejectionIndicator = memo(function DocumentRejectionIndicat
                 <PopoverContent
                     side="bottom"
                     align={align}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                    }}
                     className="w-[300px] overflow-hidden p-0 gap-0 shadow-lg ring-1 ring-red-100/70"
                 >
                     <div className="border-b border-red-100 bg-red-50/80 px-4 py-3">

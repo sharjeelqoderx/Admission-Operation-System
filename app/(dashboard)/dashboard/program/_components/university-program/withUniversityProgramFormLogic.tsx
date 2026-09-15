@@ -28,6 +28,7 @@ const emptyValues: UniversityProgramUpsert = {
     professional_skills: "",
     management_skills: "",
     document_type_ids: [],
+    document_requirements: [],
 }
 
 async function fetchDocumentTypes() {
@@ -42,10 +43,12 @@ export type UniversityProgramFormLogicProps = {
     values: UniversityProgramUpsert
     documentTypes: { id: string; name: string }[]
     selectedDocumentTypeIds: string[]
+    documentRequirements: Array<{ document_type_id: string; requirement_type: "REQUIRED" | "OPTIONAL" }>
     isSubmitting: boolean
     errorMessage: string | null
     onChange: <K extends keyof UniversityProgramUpsert>(key: K, value: UniversityProgramUpsert[K]) => void
     onToggleDocumentType: (documentTypeId: string) => void
+    onSetRequirementType: (documentTypeId: string, requirementType: "REQUIRED" | "OPTIONAL") => void
     onSubmit: () => void
 }
 
@@ -80,6 +83,11 @@ export function withUniversityProgramFormLogic(Component: ComponentType<Universi
                       professional_skills: initialDetail.professional_skills ?? "",
                       management_skills: initialDetail.management_skills ?? "",
                       document_type_ids: initialDetail.document_type_ids ?? [],
+                      document_requirements:
+                          initialDetail.document_requirements?.map((req) => ({
+                              document_type_id: req.document_type_id,
+                              requirement_type: req.requirement_type,
+                          })) ?? [],
                   }
                 : emptyValues
         )
@@ -137,13 +145,46 @@ export function withUniversityProgramFormLogic(Component: ComponentType<Universi
         const onToggleDocumentType = useCallback((documentTypeId: string) => {
             setValues((current) => {
                 const existing = current.document_type_ids ?? []
-                const next = existing.includes(documentTypeId)
-                    ? existing.filter((id) => id !== documentTypeId)
-                    : [...existing, documentTypeId]
+                const existingReqs = current.document_requirements ?? []
 
-                return { ...current, document_type_ids: next }
+                if (existing.includes(documentTypeId)) {
+                    // Remove document
+                    return {
+                        ...current,
+                        document_type_ids: existing.filter((id) => id !== documentTypeId),
+                        document_requirements: existingReqs.filter(
+                            (req) => req.document_type_id !== documentTypeId
+                        ),
+                    }
+                } else {
+                    // Add document as REQUIRED (will be shown with purple bg and tick)
+                    return {
+                        ...current,
+                        document_type_ids: [...existing, documentTypeId],
+                        document_requirements: [
+                            ...existingReqs,
+                            { document_type_id: documentTypeId, requirement_type: "REQUIRED" as const },
+                        ],
+                    }
+                }
             })
         }, [])
+
+        const onSetRequirementType = useCallback(
+            (documentTypeId: string, requirementType: "REQUIRED" | "OPTIONAL") => {
+                setValues((current) => {
+                    const existingReqs = current.document_requirements ?? []
+                    const updatedReqs = existingReqs.map((req) =>
+                        req.document_type_id === documentTypeId
+                            ? { ...req, requirement_type: requirementType }
+                            : req
+                    )
+
+                    return { ...current, document_requirements: updatedReqs }
+                })
+            },
+            []
+        )
 
         const selectedDocumentTypeIds = useMemo(
             () => values.document_type_ids ?? [],
@@ -167,10 +208,12 @@ export function withUniversityProgramFormLogic(Component: ComponentType<Universi
                 values={values}
                 documentTypes={documentTypesQuery.data ?? []}
                 selectedDocumentTypeIds={selectedDocumentTypeIds}
+                documentRequirements={values.document_requirements ?? []}
                 isSubmitting={saveMutation.isPending}
                 errorMessage={errorMessage}
                 onChange={onChange}
                 onToggleDocumentType={onToggleDocumentType}
+                onSetRequirementType={onSetRequirementType}
                 onSubmit={onSubmit}
             />
         )

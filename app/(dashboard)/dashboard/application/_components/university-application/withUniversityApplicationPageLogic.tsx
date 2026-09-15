@@ -30,6 +30,10 @@ export type UniversityApplicationPageLogicProps = {
     rejectTarget: UniversityApplicationListItem | null
     isRejectSubmitting: boolean
     rejectErrorMessage?: string
+    deferDialogOpen: boolean
+    deferTarget: UniversityApplicationListItem | null
+    isDeferSubmitting: boolean
+    deferErrorMessage?: string
     missingTemplateAlert: {
         open: boolean
         title: string
@@ -43,8 +47,11 @@ export type UniversityApplicationPageLogicProps = {
     onPageChange: (page: number) => void
     onApprove: (application: UniversityApplicationListItem) => void
     onRejectRequest: (application: UniversityApplicationListItem) => void
+    onDeferRequest: (application: UniversityApplicationListItem) => void
     onRejectDialogOpenChange: (open: boolean) => void
     onRejectSubmit: (reason: string) => void
+    onDeferDialogOpenChange: (open: boolean) => void
+    onDeferSubmit: (reason: string, newIntakeDate: string) => void
     onCreateOfferWithoutTemplate: () => void
     onMissingTemplateAlertOpenChange: (open: boolean) => void
 }
@@ -81,6 +88,17 @@ async function rejectApplication(applicationId: string, feedback: string) {
     return json.data
 }
 
+async function deferApplication(applicationId: string, reason: string, newIntakeDate: string) {
+    const res = await fetch(`/api/university/applications/${applicationId}/defer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason, new_intake_date: newIntakeDate }),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json?.error ?? "Failed to defer application")
+    return json.data
+}
+
 function readUniversityFiltersFromUrl() {
     return {
         q: readUrlSearchParam("q"),
@@ -109,6 +127,8 @@ export function withUniversityApplicationPageLogic(
         const [rejectTarget, setRejectTarget] = useState<UniversityApplicationListItem | null>(
             null
         )
+        const [deferDialogOpen, setDeferDialogOpen] = useState(false)
+        const [deferTarget, setDeferTarget] = useState<UniversityApplicationListItem | null>(null)
 
         const {
             handleCreateOffer,
@@ -196,6 +216,24 @@ export function withUniversityApplicationPageLogic(
             },
         })
 
+        const deferMutation = useMutation({
+            mutationFn: ({
+                applicationId,
+                reason,
+                newIntakeDate,
+            }: {
+                applicationId: string
+                reason: string
+                newIntakeDate: string
+            }) => deferApplication(applicationId, reason, newIntakeDate),
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ["university-applications"] })
+                queryClient.invalidateQueries({ queryKey: ["applications"] })
+                setDeferDialogOpen(false)
+                setDeferTarget(null)
+            },
+        })
+
         const overview = useMemo(() => {
             const data = applicationsQuery.data ?? {
                 tab_counts: initialOverview?.tab_counts ?? {
@@ -204,6 +242,7 @@ export function withUniversityApplicationPageLogic(
                     awaiting_signature: 0,
                     recently_completed: 0,
                     rejected: 0,
+                    defer_intake: 0,
                 },
                 data: [],
                 pagination: initialOverview?.pagination ?? {
@@ -286,6 +325,12 @@ export function withUniversityApplicationPageLogic(
             setRejectDialogOpen(true)
         }, [])
 
+        const handleDeferRequest = useCallback((application: UniversityApplicationListItem) => {
+            if (!application.can_reject) return
+            setDeferTarget(application)
+            setDeferDialogOpen(true)
+        }, [])
+
         const handleRejectDialogOpenChange = useCallback((open: boolean) => {
             setRejectDialogOpen(open)
             if (!open) {
@@ -301,13 +346,36 @@ export function withUniversityApplicationPageLogic(
             [rejectMutation, rejectTarget]
         )
 
+        const handleDeferDialogOpenChange = useCallback((open: boolean) => {
+            setDeferDialogOpen(open)
+            if (!open) setDeferTarget(null)
+        }, [])
+
+        const handleDeferSubmit = useCallback(
+            (reason: string, newIntakeDate: string) => {
+                if (!deferTarget) return
+                deferMutation.mutate({
+                    applicationId: deferTarget.id,
+                    reason,
+                    newIntakeDate,
+                })
+            },
+            [deferMutation, deferTarget]
+        )
+
         const reviewingApplicationId =
             (isCreatingOffer ? pendingApplicationId : null) ??
-            (rejectMutation.isPending ? rejectTarget?.id ?? null : null)
+            (rejectMutation.isPending ? rejectTarget?.id ?? null : null) ??
+            (deferMutation.isPending ? deferTarget?.id ?? null : null)
 
         const rejectErrorMessage =
             rejectMutation.error instanceof Error && rejectDialogOpen
                 ? rejectMutation.error.message
+                : undefined
+
+        const deferErrorMessage =
+            deferMutation.error instanceof Error && deferDialogOpen
+                ? deferMutation.error.message
                 : undefined
 
         return (
@@ -321,6 +389,10 @@ export function withUniversityApplicationPageLogic(
                 rejectTarget={rejectTarget}
                 isRejectSubmitting={rejectMutation.isPending}
                 rejectErrorMessage={rejectErrorMessage}
+                deferDialogOpen={deferDialogOpen}
+                deferTarget={deferTarget}
+                isDeferSubmitting={deferMutation.isPending}
+                deferErrorMessage={deferErrorMessage}
                 missingTemplateAlert={missingTemplateAlert}
                 isCreatingOfferWithoutTemplate={isCreatingOfferWithoutTemplate}
                 onSearchChange={handleSearchChange}
@@ -329,8 +401,11 @@ export function withUniversityApplicationPageLogic(
                 onPageChange={(nextPage) => updateFilters({ page: String(nextPage) })}
                 onApprove={handleApprove}
                 onRejectRequest={handleRejectRequest}
+                onDeferRequest={handleDeferRequest}
                 onRejectDialogOpenChange={handleRejectDialogOpenChange}
                 onRejectSubmit={handleRejectSubmit}
+                onDeferDialogOpenChange={handleDeferDialogOpenChange}
+                onDeferSubmit={handleDeferSubmit}
                 onCreateOfferWithoutTemplate={handleCreateOfferWithoutTemplate}
                 onMissingTemplateAlertOpenChange={(open) => {
                     if (!open) closeMissingTemplateAlert()

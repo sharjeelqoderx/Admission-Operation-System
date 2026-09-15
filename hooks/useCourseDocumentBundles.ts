@@ -3,7 +3,7 @@ import type { CourseDocumentsResponse, SaveDegreeDocumentsInput } from "@/types/
 
 export const COURSE_DOCUMENT_BUNDLES_QUERY_KEY = ["course-document-bundles"] as const
 
-async function fetchCourseDocumentBundles(profileId?: string): Promise<CourseDocumentsResponse> {
+export async function fetchCourseDocumentBundles(profileId?: string): Promise<CourseDocumentsResponse> {
     const params = new URLSearchParams()
     if (profileId) params.set("profile_id", profileId)
 

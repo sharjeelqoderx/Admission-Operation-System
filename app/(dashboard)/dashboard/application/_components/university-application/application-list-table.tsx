@@ -3,7 +3,14 @@
 import { memo, useCallback } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import {
+    CalendarClock,
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
+    EllipsisVertical,
+    XCircle,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
@@ -22,6 +29,12 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import type {
     UniversityApplicationListItem,
     UniversityApplicationTab,
@@ -50,6 +63,7 @@ type UniversityApplicationListTableProps = {
         awaiting_signature: number
         recently_completed: number
         rejected: number
+        defer_intake: number
     }
     pagination?: {
         total: number
@@ -67,6 +81,7 @@ type UniversityApplicationListTableProps = {
     reviewingApplicationId?: string | null
     onApprove?: (application: UniversityApplicationListItem) => void
     onRejectRequest?: (application: UniversityApplicationListItem) => void
+    onDeferRequest?: (application: UniversityApplicationListItem) => void
 }
 
 const tabs: {
@@ -79,6 +94,7 @@ const tabs: {
     { key: "awaiting-signature", label: "Awaiting Signature", countKey: "awaiting_signature" },
     { key: "recently-completed", label: "Recently Completed", countKey: "recently_completed" },
     { key: "rejected", label: "Rejected", countKey: "rejected" },
+    { key: "defer-intake", label: "Defer Intake", countKey: "defer_intake" },
 ]
 
 export const UniversityApplicationListTable = memo(function UniversityApplicationListTable({
@@ -95,6 +111,7 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
     reviewingApplicationId = null,
     onApprove,
     onRejectRequest,
+    onDeferRequest,
 }: UniversityApplicationListTableProps) {
     const router = useRouter()
     const showingCount = applications.length
@@ -261,8 +278,8 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                                         />
                                                     ) : null}
                                                 </TableCell>
-                                                <TableCell className="px-3 py-3 whitespace-nowrap">
-                                                    <div className="flex items-center gap-2">
+                                                <TableCell className="w-[220px] max-w-[220px] px-3 py-3">
+                                                    <div className="flex min-w-0 items-center gap-2">
                                                         <Image
                                                             src={avatarSrc}
                                                             alt={application.student_name}
@@ -271,10 +288,11 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                                             className="size-10 rounded-xl border-2 border-white/50 object-cover"
                                                             unoptimized
                                                         />
-                                                        <div className="flex flex-col">
+                                                        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                                                             <Typography
                                                                 as="span"
-                                                                className="text-sm font-bold text-gray-900"
+                                                                className="block truncate text-sm font-bold text-gray-900"
+                                                                title={application.student_name}
                                                             >
                                                                 {application.student_name}
                                                             </Typography>
@@ -331,51 +349,61 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                                     onClick={(event) => event.stopPropagation()}
                                                     onKeyDown={(event) => event.stopPropagation()}
                                                 >
-                                                    {canShowApproval ? (
-                                                        <div className="flex flex-wrap items-center gap-2">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                disabled={isReviewing}
+                                                                aria-label={`Actions for ${application.student_name}`}
+                                                                className="h-8 w-8 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                            >
+                                                                {isReviewing ? (
+                                                                    <Spinner size="sm" />
+                                                                ) : (
+                                                                    <EllipsisVertical className="size-4" />
+                                                                )}
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
                                                             {canReject ? (
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="outline"
-                                                                    className="h-9 rounded-lg border-red-200 px-3 text-[12px] font-bold text-red-600 hover:bg-red-50"
+                                                                <DropdownMenuItem
                                                                     disabled={isReviewing}
-                                                                    onClick={() =>
-                                                                        onRejectRequest?.(
-                                                                            application
-                                                                        )
-                                                                    }
+                                                                    className="cursor-pointer gap-2"
+                                                                    onSelect={() => onRejectRequest?.(application)}
                                                                 >
+                                                                    <XCircle className="size-4 text-gray-500" />
                                                                     Reject
-                                                                </Button>
+                                                                </DropdownMenuItem>
                                                             ) : null}
                                                             {canApprove ? (
-                                                                <Button
-                                                                    type="button"
-                                                                    className="h-9 gap-1.5 rounded-lg bg-brand-byzantine px-3 text-[12px] font-bold hover:bg-brand-byzantine/90"
+                                                                <DropdownMenuItem
                                                                     disabled={isReviewing}
-                                                                    onClick={() =>
-                                                                        onApprove?.(application)
-                                                                    }
+                                                                    className="cursor-pointer gap-2"
+                                                                    onSelect={() => onApprove?.(application)}
                                                                 >
-                                                                    {isReviewing ? (
-                                                                        <>
-                                                                            <Spinner size="sm" />
-                                                                            Working...
-                                                                        </>
-                                                                    ) : (
-                                                                        "Approve"
-                                                                    )}
-                                                                </Button>
+                                                                    <CheckCircle2 className="size-4 text-gray-500" />
+                                                                    Approve
+                                                                </DropdownMenuItem>
                                                             ) : null}
-                                                        </div>
-                                                    ) : (
-                                                        <Typography
-                                                            as="span"
-                                                            className="text-sm text-muted-foreground"
-                                                        >
-                                                            —
-                                                        </Typography>
-                                                    )}
+                                                            {canReject ? (
+                                                                <DropdownMenuItem
+                                                                    disabled={isReviewing}
+                                                                    className="cursor-pointer gap-2"
+                                                                    onSelect={() => onDeferRequest?.(application)}
+                                                                >
+                                                                    <CalendarClock className="size-4 text-gray-500" />
+                                                                    Defer Intake
+                                                                </DropdownMenuItem>
+                                                            ) : null}
+                                                            {!canShowApproval ? (
+                                                                <DropdownMenuItem disabled>
+                                                                    No actions available
+                                                                </DropdownMenuItem>
+                                                            ) : null}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         )

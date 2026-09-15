@@ -5,6 +5,7 @@ import { Typography } from "@/components/shared/Typography"
 import { UniversityApplicationListTable } from "./application-list-table"
 import { withUniversityApplicationPageLogic } from "./withUniversityApplicationPageLogic"
 import { RejectApplicationDialog } from "@/app/(dashboard)/dashboard/application/_components/reject-application-dialog"
+import { DeferIntakeDialog } from "@/app/(dashboard)/dashboard/application/_components/defer-intake-dialog"
 import { MissingOfferTemplateAlert } from "@/app/(dashboard)/dashboard/all-application-view/_component/missing-offer-template-alert"
 import type {
     UniversityApplicationListResponse,
@@ -24,6 +25,10 @@ const UniversityApplicationPageView = memo(function UniversityApplicationPageVie
     rejectTarget,
     isRejectSubmitting,
     rejectErrorMessage,
+    deferDialogOpen,
+    deferTarget,
+    isDeferSubmitting,
+    deferErrorMessage,
     missingTemplateAlert,
     isCreatingOfferWithoutTemplate,
     onSearchChange,
@@ -32,8 +37,11 @@ const UniversityApplicationPageView = memo(function UniversityApplicationPageVie
     onPageChange,
     onApprove,
     onRejectRequest,
+    onDeferRequest,
     onRejectDialogOpenChange,
     onRejectSubmit,
+    onDeferDialogOpenChange,
+    onDeferSubmit,
     onCreateOfferWithoutTemplate,
     onMissingTemplateAlertOpenChange,
 }: UniversityApplicationPageLogicProps) {
@@ -63,6 +71,17 @@ const UniversityApplicationPageView = memo(function UniversityApplicationPageVie
                 onPageChange={onPageChange}
                 onApprove={onApprove}
                 onRejectRequest={onRejectRequest}
+                onDeferRequest={onDeferRequest}
+            />
+
+            <DeferIntakeDialog
+                open={deferDialogOpen}
+                studentName={deferTarget?.student_name ?? "this student"}
+                currentIntake={deferTarget?.intake_label ?? null}
+                isSubmitting={isDeferSubmitting}
+                errorMessage={deferErrorMessage ?? null}
+                onOpenChange={onDeferDialogOpenChange}
+                onSubmit={onDeferSubmit}
             />
 
             <RejectApplicationDialog

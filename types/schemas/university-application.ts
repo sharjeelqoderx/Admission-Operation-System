@@ -7,6 +7,7 @@ export const universityApplicationTabSchema = z.enum([
     "awaiting-signature",
     "recently-completed",
     "rejected",
+    "defer-intake",
 ])
 
 export const applicationReviewHistoryEntrySchema = z.object({
@@ -28,6 +29,8 @@ export const universityApplicationListItemSchema = z.object({
     pipeline_status: studentPipelineStatusSchema,
     submission_date: z.string().nullable(),
     rejection_history: z.array(applicationReviewHistoryEntrySchema),
+    is_deferred: z.boolean(),
+    custom_intake_date: z.string().nullable(),
     can_approve_for_signature: z.boolean(),
     can_reject: z.boolean(),
 })
@@ -38,6 +41,7 @@ export const universityApplicationTabCountsSchema = z.object({
     awaiting_signature: z.number(),
     recently_completed: z.number(),
     rejected: z.number(),
+    defer_intake: z.number(),
 })
 
 export const universityApplicationListResponseSchema = z.object({
