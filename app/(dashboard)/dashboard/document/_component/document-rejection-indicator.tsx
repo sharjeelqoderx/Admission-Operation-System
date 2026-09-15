@@ -34,6 +34,10 @@ function formatHistoryDate(value: string) {
     })
 }
 
+function formatFeedback(feedback: string) {
+    return feedback.replace(/^\[DEFERRED\]\s*/i, "Defer Intake: ")
+}
+
 export const DocumentRejectionIndicator = memo(function DocumentRejectionIndicator({
     history,
     placement,
@@ -67,7 +71,7 @@ export const DocumentRejectionIndicator = memo(function DocumentRejectionIndicat
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-[240px] px-3 py-2">
                         <Typography as="p" className="text-xs whitespace-pre-wrap leading-relaxed">
-                            {latest.feedback}
+                            {formatFeedback(latest.feedback)}
                         </Typography>
                     </TooltipContent>
                 </Tooltip>
@@ -124,7 +128,7 @@ export const DocumentRejectionIndicator = memo(function DocumentRejectionIndicat
                                     as="p"
                                     className="text-xs leading-relaxed text-gray-700 whitespace-pre-wrap"
                                 >
-                                    {entry.feedback}
+                                    {formatFeedback(entry.feedback)}
                                 </Typography>
                             </div>
                         ))}
