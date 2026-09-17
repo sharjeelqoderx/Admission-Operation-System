@@ -2,12 +2,7 @@
 
 import type { ComponentType } from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import {
-    keepPreviousData,
-    useMutation,
-    useQuery,
-    useQueryClient,
-} from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
     applyUrlSearchParamUpdates,
     readUrlSearchParam,
@@ -111,6 +106,7 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
     return function AllDocumentsPageContainer() {
         const queryClient = useQueryClient()
         const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+        const lastPaginationRef = useRef<DocumentListPagination>(EMPTY_PAGINATION)
         const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
         const [rejectTargetId, setRejectTargetId] = useState<string | null>(null)
         const [reviewingDocumentId, setReviewingDocumentId] = useState<string | null>(null)
@@ -121,6 +117,7 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
 
         const updateParams = useCallback((updates: Record<string, string>) => {
             setPage(1)
+            lastPaginationRef.current = EMPTY_PAGINATION
             setFilters((current) => {
                 const next = { ...current, ...updates } as DocumentAllFilters
                 applyUrlSearchParamUpdates({
@@ -152,6 +149,7 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
                 setFilters(next)
                 setSearchInput(next.q)
                 setPage(1)
+                lastPaginationRef.current = EMPTY_PAGINATION
             }
 
             window.addEventListener("popstate", syncFiltersFromUrl)
@@ -169,12 +167,13 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
         const documentsQuery = useQuery({
             queryKey: ["documents", "all", filters.q, filters.status, page, PAGE_LIMIT],
             queryFn: () => fetchAllDocuments(filters, page, PAGE_LIMIT),
-            placeholderData: keepPreviousData,
             staleTime: 60_000,
         })
 
         const prefetchPage = useCallback(
             (targetPage: number) => {
+                if (targetPage < 1) return
+
                 void queryClient.prefetchQuery({
                     queryKey: [
                         "documents",
@@ -188,24 +187,41 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
                     staleTime: 60_000,
                 })
             },
-            [filters, queryClient]
+            [filters.q, filters.status, queryClient]
         )
+
+        // Prefetch page 2 in parallel with the initial page 1 fetch.
+        useEffect(() => {
+            prefetchPage(2)
+        }, [prefetchPage])
 
         // Keep the next page warm: page 1 → prefetch 2, page 2 → prefetch 3, etc.
         useEffect(() => {
-            const totalPages = documentsQuery.data?.pagination?.totalPages ?? 0
+            const totalPages =
+                documentsQuery.data?.pagination?.totalPages ??
+                lastPaginationRef.current.totalPages
             const nextPage = page + 1
-            if (!documentsQuery.data || nextPage > totalPages) return
+            if (nextPage > totalPages) return
             prefetchPage(nextPage)
-        }, [documentsQuery.data, page, prefetchPage])
+        }, [documentsQuery.data?.pagination?.totalPages, page, prefetchPage])
+
+        if (documentsQuery.data?.pagination) {
+            lastPaginationRef.current = documentsQuery.data.pagination
+        }
+
+        const isPageReady = documentsQuery.data?.pagination?.page === page
+        const isPageLoading = documentsQuery.isFetching && !isPageReady
 
         const rows = useMemo(
-            () => (Array.isArray(documentsQuery.data?.data) ? documentsQuery.data.data : []),
-            [documentsQuery.data?.data]
+            () =>
+                isPageReady && Array.isArray(documentsQuery.data?.data)
+                    ? documentsQuery.data.data
+                    : [],
+            [documentsQuery.data?.data, isPageReady]
         )
 
         const pagination = documentsQuery.data?.pagination ?? {
-            ...EMPTY_PAGINATION,
+            ...lastPaginationRef.current,
             page,
         }
 
@@ -313,18 +329,20 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
             }
             setSearchInput("")
             setPage(1)
+            lastPaginationRef.current = EMPTY_PAGINATION
             setFilters({ q: "", status: "all" })
             applyUrlSearchParamUpdates({ q: null, status: null })
         }, [])
 
         const handlePageChange = useCallback(
             (nextPage: number) => {
-                const totalPages = pagination.totalPages
+                const totalPages =
+                    lastPaginationRef.current.totalPages || pagination.totalPages
                 const safePage = Math.min(Math.max(1, nextPage), Math.max(1, totalPages))
-                setPage(safePage)
                 if (safePage + 1 <= totalPages) {
                     prefetchPage(safePage + 1)
                 }
+                setPage(safePage)
             },
             [pagination.totalPages, prefetchPage]
         )
@@ -334,7 +352,9 @@ export function withAllDocumentsLogic(Component: ComponentType<AllDocumentsPageL
                 rows={rows}
                 pagination={pagination}
                 page={page}
-                isLoading={documentsQuery.isLoading && !documentsQuery.data}
+                isLoading={
+                    (documentsQuery.isLoading && !documentsQuery.data) || isPageLoading
+                }
                 isFetching={documentsQuery.isFetching}
                 isError={documentsQuery.isError}
                 q={filters.q}

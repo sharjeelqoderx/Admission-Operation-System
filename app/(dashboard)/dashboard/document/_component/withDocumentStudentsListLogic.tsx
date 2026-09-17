@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
     applyUrlSearchParamUpdates,
     readUrlSearchParam,
@@ -86,6 +86,7 @@ export function withDocumentStudentsListLogic(
     }: Pick<DocumentStudentsListLogicProps, "title" | "description" | "getViewHref"> = {}) {
         const queryClient = useQueryClient()
         const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+        const lastPaginationRef = useRef<DocumentListPagination>(EMPTY_PAGINATION)
         const [page, setPage] = useState(1)
         const initialFilters = readDocumentStudentsFiltersFromUrl()
         const [filters, setFilters] = useState<DocumentStudentsFilters>(initialFilters)
@@ -93,6 +94,7 @@ export function withDocumentStudentsListLogic(
 
         const updateParams = useCallback((updates: Record<string, string>) => {
             setPage(1)
+            lastPaginationRef.current = EMPTY_PAGINATION
             setFilters((current) => {
                 const next = { ...current, ...updates } as DocumentStudentsFilters
                 applyUrlSearchParamUpdates({
@@ -124,6 +126,7 @@ export function withDocumentStudentsListLogic(
                 setFilters(next)
                 setSearchInput(next.q)
                 setPage(1)
+                lastPaginationRef.current = EMPTY_PAGINATION
             }
 
             window.addEventListener("popstate", syncFiltersFromUrl)
@@ -138,15 +141,21 @@ export function withDocumentStudentsListLogic(
             }
         }, [])
 
+        const queryKey = useMemo(
+            () => ["documents", "students", filters.q, filters.status, page, PAGE_LIMIT] as const,
+            [filters.q, filters.status, page]
+        )
+
         const { data, isLoading, isFetching, isError, refetch } = useQuery({
-            queryKey: ["documents", "students", filters.q, filters.status, page, PAGE_LIMIT],
+            queryKey,
             queryFn: () => fetchDocumentStudents(filters, page, PAGE_LIMIT),
-            placeholderData: keepPreviousData,
             staleTime: 60_000,
         })
 
         const prefetchPage = useCallback(
             (targetPage: number) => {
+                if (targetPage < 1) return
+
                 void queryClient.prefetchQuery({
                     queryKey: [
                         "documents",
@@ -160,24 +169,37 @@ export function withDocumentStudentsListLogic(
                     staleTime: 60_000,
                 })
             },
-            [filters, queryClient]
+            [filters.q, filters.status, queryClient]
         )
+
+        // Prefetch page 2 in parallel with the initial page 1 fetch.
+        useEffect(() => {
+            prefetchPage(2)
+        }, [prefetchPage])
 
         // Keep the next page warm: page 1 → prefetch 2, page 2 → prefetch 3, etc.
         useEffect(() => {
-            const totalPages = data?.pagination?.totalPages ?? 0
+            const totalPages =
+                data?.pagination?.totalPages ?? lastPaginationRef.current.totalPages
             const nextPage = page + 1
-            if (!data || nextPage > totalPages) return
+            if (nextPage > totalPages) return
             prefetchPage(nextPage)
-        }, [data, page, prefetchPage])
+        }, [data?.pagination?.totalPages, page, prefetchPage])
+
+        if (data?.pagination) {
+            lastPaginationRef.current = data.pagination
+        }
+
+        const isPageReady = data?.pagination?.page === page
+        const isPageLoading = isFetching && !isPageReady
 
         const rows = useMemo(
-            () => (Array.isArray(data?.data) ? data.data : []),
-            [data?.data]
+            () => (isPageReady && Array.isArray(data?.data) ? data.data : []),
+            [data?.data, isPageReady]
         )
 
         const pagination = data?.pagination ?? {
-            ...EMPTY_PAGINATION,
+            ...lastPaginationRef.current,
             page,
         }
 
@@ -189,18 +211,19 @@ export function withDocumentStudentsListLogic(
             }
             setSearchInput("")
             setPage(1)
+            lastPaginationRef.current = EMPTY_PAGINATION
             setFilters({ q: "", status: "all" })
             applyUrlSearchParamUpdates({ q: null, status: null })
         }, [])
 
         const handlePageChange = useCallback(
             (nextPage: number) => {
-                const totalPages = pagination.totalPages
+                const totalPages = lastPaginationRef.current.totalPages || pagination.totalPages
                 const safePage = Math.min(Math.max(1, nextPage), Math.max(1, totalPages))
-                setPage(safePage)
                 if (safePage + 1 <= totalPages) {
                     prefetchPage(safePage + 1)
                 }
+                setPage(safePage)
             },
             [pagination.totalPages, prefetchPage]
         )
@@ -210,7 +233,7 @@ export function withDocumentStudentsListLogic(
                 rows={rows}
                 pagination={pagination}
                 page={page}
-                isLoading={isLoading && !data}
+                isLoading={(isLoading && !data) || isPageLoading}
                 isFetching={isFetching}
                 isError={isError}
                 q={filters.q}

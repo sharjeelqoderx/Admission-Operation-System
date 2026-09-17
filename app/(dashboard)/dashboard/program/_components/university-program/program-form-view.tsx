@@ -28,10 +28,12 @@ type UniversityProgramFormViewProps = {
     values: UniversityProgramUpsert
     documentTypes: DocumentTypeOption[]
     selectedDocumentTypeIds: string[]
+    documentRequirements: Array<{ document_type_id: string; requirement_type: "REQUIRED" | "OPTIONAL" }>
     isSubmitting: boolean
     errorMessage: string | null
     onChange: <K extends keyof UniversityProgramUpsert>(key: K, value: UniversityProgramUpsert[K]) => void
     onToggleDocumentType: (documentTypeId: string) => void
+    onSetRequirementType: (documentTypeId: string, requirementType: "REQUIRED" | "OPTIONAL") => void
     onSubmit: () => void
 }
 
@@ -48,10 +50,12 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
     values,
     documentTypes,
     selectedDocumentTypeIds,
+    documentRequirements,
     isSubmitting,
     errorMessage,
     onChange,
     onToggleDocumentType,
+    onSetRequirementType,
     onSubmit,
 }: UniversityProgramFormViewProps) {
     return (
@@ -286,25 +290,77 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {documentTypes.map((documentType) => {
                             const isSelected = selectedDocumentTypeIds.includes(documentType.id)
+                            const requirement = documentRequirements.find(
+                                (req) => req.document_type_id === documentType.id
+                            )
+                            const isRequired = isSelected && requirement?.requirement_type === "REQUIRED"
 
                             return (
                                 <button
                                     key={documentType.id}
                                     type="button"
-                                    onClick={() => onToggleDocumentType(documentType.id)}
+                                    onClick={() => {
+                                        if (isRequired) {
+                                            // If required, remove it
+                                            onToggleDocumentType(documentType.id)
+                                        } else {
+                                            // Add or keep as required
+                                            if (!isSelected) {
+                                                onToggleDocumentType(documentType.id)
+                                            }
+                                            onSetRequirementType(documentType.id, "REQUIRED")
+                                        }
+                                    }}
                                     className={
-                                        isSelected
-                                            ? "cursor-pointer rounded-xl border-2 border-brand-byzantine bg-brand-byzantine/5 px-4 py-3 text-left"
-                                            : "cursor-pointer rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-left"
+                                        isRequired
+                                            ? "relative cursor-pointer rounded-xl border-2 border-brand-byzantine bg-brand-byzantine/5 px-4 py-3 text-left transition-all hover:bg-brand-byzantine/10"
+                                            : "relative cursor-pointer rounded-xl border border-gray-300 bg-white px-4 py-3 text-left transition-all hover:bg-gray-50"
                                     }
                                 >
-                                    <Typography as="span" font="sub-text" className="font-semibold text-brand-primary">
-                                        {documentType.name}
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1">
+                                            <Typography
+                                                as="span"
+                                                font="sub-text"
+                                                className="font-semibold text-brand-primary"
+                                            >
+                                                {documentType.name}
+                                            </Typography>
+                                        </div>
+                                        {isRequired && (
+                                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-byzantine">
+                                                <svg
+                                                    className="h-3 w-3 text-white"
+                                                    fill="none"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth="2.5"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path d="M5 13l4 4L19 7"></path>
+                                                </svg>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <Typography
+                                        as="span"
+                                        font="small"
+                                        className={
+                                            isRequired
+                                                ? "mt-1 block text-xs font-medium text-brand-byzantine"
+                                                : "mt-1 block text-xs text-gray-500"
+                                        }
+                                    >
+                                        {isRequired ? "Required" : "Optional"}
                                     </Typography>
                                 </button>
                             )
                         })}
                     </div>
+                    <Typography as="p" font="small" className="text-xs text-gray-500">
+                        Click on a document to mark it as Required. Click again to unmark.
+                    </Typography>
                 </div>
 
                 <div className="flex flex-wrap gap-3">

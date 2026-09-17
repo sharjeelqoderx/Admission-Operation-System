@@ -200,6 +200,7 @@ export async function fetchUniversityProgramDetail(
                     id,
                     document_type_id,
                     is_deleted,
+                    requirement_type,
                     document_type:document_type_id ( name )
                 )
             )
@@ -220,6 +221,7 @@ export async function fetchUniversityProgramDetail(
                 id: string
                 document_type_id: string
                 is_deleted?: boolean | null
+                requirement_type?: "REQUIRED" | "OPTIONAL" | null
                 document_type: { name: string | null } | { name: string | null }[] | null
             }) => !row.is_deleted
         )
@@ -228,6 +230,7 @@ export async function fetchUniversityProgramDetail(
             id: string
             document_type_id: string
             is_deleted?: boolean | null
+            requirement_type?: "REQUIRED" | "OPTIONAL" | null
             document_type: { name: string | null } | { name: string | null }[] | null
         }) => {
             const documentType = unwrapRelation(row.document_type)
@@ -236,6 +239,7 @@ export async function fetchUniversityProgramDetail(
                 id: row.id,
                 document_type_id: row.document_type_id,
                 name: documentType?.name ?? null,
+                requirement_type: row.requirement_type ?? "REQUIRED",
             }
         }
     )
@@ -279,11 +283,15 @@ async function getProgramWriteClient(): Promise<ProgramWriteClient> {
 async function syncDegreeDocumentRequirements(
     writeClient: ProgramWriteClient,
     degreeId: string | null | undefined,
-    documentTypeIds?: string[]
+    documentRequirements?: Array<{ document_type_id: string; requirement_type: "REQUIRED" | "OPTIONAL" }>
 ) {
-    if (!documentTypeIds || !degreeId) return
+    if (!documentRequirements || !degreeId) return
 
-    const uniqueIds = [...new Set(documentTypeIds.filter(Boolean))]
+    const uniqueReqs = documentRequirements.filter(
+        (req, index, self) =>
+            req.document_type_id &&
+            index === self.findIndex((r) => r.document_type_id === req.document_type_id)
+    )
     const now = new Date().toISOString()
 
     const { data: existingRows, error: existingError } = await writeClient
@@ -298,10 +306,10 @@ async function syncDegreeDocumentRequirements(
     const existingByTypeId = new Map(
         (existingRows ?? []).map((row) => [row.document_type_id, row])
     )
-    const selected = new Set(uniqueIds)
+    const selectedTypeIds = new Set(uniqueReqs.map((req) => req.document_type_id))
 
     const toSoftDelete = (existingRows ?? []).filter(
-        (row) => !selected.has(row.document_type_id) && !row.is_deleted
+        (row) => !selectedTypeIds.has(row.document_type_id) && !row.is_deleted
     )
 
     if (toSoftDelete.length > 0) {
@@ -318,15 +326,15 @@ async function syncDegreeDocumentRequirements(
         }
     }
 
-    for (const documentTypeId of uniqueIds) {
-        const existing = existingByTypeId.get(documentTypeId)
+    for (const req of uniqueReqs) {
+        const existing = existingByTypeId.get(req.document_type_id)
 
         if (existing) {
             const { error: updateError } = await writeClient
                 .from("degree_requirement")
                 .update({
                     is_deleted: false,
-                    requirement_type: "REQUIRED",
+                    requirement_type: req.requirement_type,
                     updated_at: now,
                 })
                 .eq("id", existing.id)
@@ -339,8 +347,8 @@ async function syncDegreeDocumentRequirements(
 
         const { error: insertError } = await writeClient.from("degree_requirement").insert({
             degree_id: degreeId,
-            document_type_id: documentTypeId,
-            requirement_type: "REQUIRED",
+            document_type_id: req.document_type_id,
+            requirement_type: req.requirement_type,
             is_deleted: false,
         })
 
@@ -408,7 +416,7 @@ export async function createUniversityProgram(params: {
         throw new Error(courseError?.message ?? "Failed to create course")
     }
 
-    await syncDegreeDocumentRequirements(writeClient, degree.id, payload.document_type_ids)
+    await syncDegreeDocumentRequirements(writeClient, degree.id, payload.document_requirements)
 
     return { courseId: course.id }
 }
@@ -466,7 +474,7 @@ export async function updateUniversityProgram(params: {
     await syncDegreeDocumentRequirements(
         writeClient,
         course?.degree_id,
-        params.payload.document_type_ids
+        params.payload.document_requirements
     )
 
     return { courseId: params.courseId }

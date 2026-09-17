@@ -57,6 +57,14 @@ export const universityProgramUpsertSchema = z.object({
     professional_skills: z.string().trim().optional(),
     management_skills: z.string().trim().optional(),
     document_type_ids: z.array(z.string().uuid()).optional(),
+    document_requirements: z
+        .array(
+            z.object({
+                document_type_id: z.string().uuid(),
+                requirement_type: z.enum(["REQUIRED", "OPTIONAL"]),
+            })
+        )
+        .optional(),
     university_profile_id: z.string().uuid().optional(),
 })
 
@@ -68,6 +76,7 @@ export const universityProgramDetailSchema = universityProgramUpsertSchema.exten
             id: z.string().uuid(),
             document_type_id: z.string().uuid(),
             name: z.string().nullable(),
+            requirement_type: z.enum(["REQUIRED", "OPTIONAL"]),
         })
     ),
 })

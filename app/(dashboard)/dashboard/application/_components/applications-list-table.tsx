@@ -235,7 +235,7 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                 <TableHead className="w-12 px-3" aria-hidden />
                             )}
                             {showStudentColumn && (
-                                <TableHead className="px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
+                                <TableHead className="w-[220px] max-w-[220px] px-3 py-3 text-[10px] font-extrabold tracking-widest text-brand-blue-text uppercase">
                                     Student
                                 </TableHead>
                             )}
@@ -315,7 +315,10 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                         )}
                                     >
                                         {showRejectionAlertColumn && (
-                                            <TableCell className="px-3 py-5 whitespace-nowrap">
+                                            <TableCell 
+                                                className="px-3 py-5 whitespace-nowrap"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
                                                 {rejectionHistory.length > 0 ? (
                                                     <DocumentRejectionIndicator
                                                         history={rejectionHistory}
@@ -326,9 +329,9 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                         )}
 
                                         {showStudentColumn && (
-                                            <TableCell className="px-3 py-3 whitespace-nowrap">
-                                                <div className="flex items-center gap-3">
-                                                    <Avatar className="size-10 rounded-xl border-2 border-white/50">
+                                            <TableCell className="px-3 py-3 w-[220px] max-w-[220px]">
+                                                <div className="flex items-center gap-3 w-full">
+                                                    <Avatar className="size-10 rounded-xl border-2 border-white/50 shrink-0">
                                                         <AvatarImage
                                                             src={
                                                                 app.student?.avatar_url ??
@@ -341,17 +344,19 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                                             {initials}
                                                         </AvatarFallback>
                                                     </Avatar>
-                                                    <div className="flex flex-col">
+                                                    <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
                                                         <Typography
                                                             as="span"
-                                                            className="text-sm font-bold text-gray-900"
+                                                            className="text-sm font-bold text-gray-900 truncate block"
+                                                            title={studentName}
                                                         >
                                                             {studentName}
                                                         </Typography>
                                                         {app.student?.student_code && (
                                                             <Typography
                                                                 as="span"
-                                                                className="text-xs font-normal text-muted-foreground"
+                                                                className="text-xs font-normal text-muted-foreground truncate block"
+                                                                title={`ID: ${app.student.student_code}`}
                                                             >
                                                                 ID: {app.student.student_code}
                                                             </Typography>
@@ -359,7 +364,8 @@ export const ApplicationsListTable = React.memo(function ApplicationsListTable({
                                                         {app.student?.email && (
                                                             <Typography
                                                                 as="span"
-                                                                className="text-xs font-normal text-muted-foreground"
+                                                                className="text-xs font-normal text-muted-foreground truncate block"
+                                                                title={app.student.email}
                                                             >
                                                                 {app.student.email}
                                                             </Typography>

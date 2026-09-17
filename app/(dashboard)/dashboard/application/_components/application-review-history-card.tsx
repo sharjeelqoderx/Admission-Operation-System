@@ -37,6 +37,10 @@ function getStatusLabel(status: string) {
     }
 }
 
+function formatFeedback(feedback: string) {
+    return feedback.replace(/^\[DEFERRED\]\s*/i, "Defer Intake: ")
+}
+
 export const ApplicationReviewHistoryCard = memo(function ApplicationReviewHistoryCard({
     history,
     className,
@@ -80,7 +84,7 @@ export const ApplicationReviewHistoryCard = memo(function ApplicationReviewHisto
                                 as="p"
                                 className="text-xs font-normal text-muted-foreground whitespace-pre-wrap leading-relaxed"
                             >
-                                {entry.feedback}
+                                {formatFeedback(entry.feedback)}
                             </Typography>
                         ) : null}
                     </div>

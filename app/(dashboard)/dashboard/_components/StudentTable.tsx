@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useCallback, useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { StudentDocumentVault } from "../student/_components/withStudentDocumentVaultLogic"
 import { Typography } from "@/components/shared/Typography"
 import {
     ChevronLeft,
@@ -356,22 +356,13 @@ export const StudentTable = React.memo(function StudentTable({
                                                     onKeyDown={(event) => event.stopPropagation()}
                                                 >
                                                     {student.profile_id ? (
-                                                        <Link
-                                                            href={`/dashboard/document/student/${student.profile_id}?from=students`}
-                                                            className="block rounded-lg p-2 -m-2 hover:bg-brand-secondary/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-secondary/40"
-                                                            aria-label={`View documents for ${studentName}`}
-                                                        >
-                                                            <Typography as="span" className="text-sm font-bold text-brand-blue-text">
-                                                                {student.document_upload_percentage ?? 0}%
-                                                            </Typography>
-                                                            <Progress
-                                                                value={student.document_upload_percentage ?? 0}
-                                                                className="h-1.5 w-24 mt-1.5"
-                                                            />
-                                                            <Typography as="span" className="text-[11px] text-gray-500 font-light mt-1.5 block">
-                                                                {student.documents_uploaded_count ?? 0}/{student.total_document_types ?? 0} uploaded
-                                                            </Typography>
-                                                        </Link>
+                                                        <StudentDocumentVault
+                                                            studentId={student.profile_id}
+                                                            studentName={studentName}
+                                                            documentsUploadedCount={student.documents_uploaded_count ?? 0}
+                                                            totalDocumentTypes={student.total_document_types ?? 0}
+                                                            documentUploadPercentage={student.document_upload_percentage ?? 0}
+                                                        />
                                                     ) : (
                                                         <>
                                                             <Typography as="span" className="text-sm font-bold text-brand-blue-text">

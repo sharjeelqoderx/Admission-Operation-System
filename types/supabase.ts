@@ -91,6 +91,9 @@ export type Database = {
           course_id: string
           created_at: string
           id: string
+          is_deferred: boolean
+          deferred_from_application_id: string | null
+          custom_intake_date: string | null
           profile_id: string
           status: Database["public"]["Enums"]["app_status_enum"]
           submitted_by_profile_id: string | null
@@ -102,6 +105,9 @@ export type Database = {
           course_id: string
           created_at?: string
           id?: string
+          is_deferred?: boolean
+          deferred_from_application_id?: string | null
+          custom_intake_date?: string | null
           profile_id: string
           status?: Database["public"]["Enums"]["app_status_enum"]
           submitted_by_profile_id?: string | null
@@ -113,6 +119,9 @@ export type Database = {
           course_id?: string
           created_at?: string
           id?: string
+          is_deferred?: boolean
+          deferred_from_application_id?: string | null
+          custom_intake_date?: string | null
           profile_id?: string
           status?: Database["public"]["Enums"]["app_status_enum"]
           submitted_by_profile_id?: string | null

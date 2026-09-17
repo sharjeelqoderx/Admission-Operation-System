@@ -32,6 +32,7 @@ export const EMPTY_UNIVERSITY_APPLICATION_LIST: UniversityApplicationListRespons
         awaiting_signature: 0,
         recently_completed: 0,
         rejected: 0,
+        defer_intake: 0,
     },
     data: [],
     pagination: {
@@ -61,6 +62,8 @@ type ApplicationRow = {
     course_id: string
     submitted_by_profile_id: string | null
     university_id: string
+    is_deferred: boolean
+    custom_intake_date: string | null
 }
 
 type OfferRow = {
@@ -120,7 +123,11 @@ function formatSubmissionDate(value?: string | null) {
     })
 }
 
-function buildIntakeLabel(course?: CourseRow | null) {
+function buildIntakeLabel(course?: CourseRow | null, customIntakeDate?: string | null) {
+    if (customIntakeDate) {
+        return resolveIntakeLabel({ intake_starts_on: customIntakeDate })
+    }
+
     const degree = course?.degree
         ? Array.isArray(course.degree)
             ? course.degree[0] ?? null
@@ -173,9 +180,12 @@ function matchesTab(
     pipelineStatus: string,
     applicationStatus: string,
     updatedAt: string,
-    offer?: OfferRow
+    offer?: OfferRow,
+    isDeferred = false
 ) {
     switch (tab) {
+        case "defer-intake":
+            return isDeferred
         case "pending-review":
             return applicationStatus === "PENDING" && pipelineStatus === "Created"
         case "awaiting-signature":
@@ -285,7 +295,7 @@ function mapListItem(params: {
         student_code: params.studentCode,
         avatar_url: params.avatarUrl,
         course_name: getProgramName(params.course),
-        intake_label: buildIntakeLabel(params.course),
+        intake_label: buildIntakeLabel(params.course, params.application.custom_intake_date),
         agent_name: params.agentLabel,
         pipeline_status: resolveStudentPipelineStatus({
             applicationStatus: params.application.status,
@@ -294,6 +304,8 @@ function mapListItem(params: {
         }),
         submission_date: formatSubmissionDate(params.application.created_at),
         rejection_history: params.rejectionHistory,
+        is_deferred: params.application.is_deferred,
+        custom_intake_date: params.application.custom_intake_date,
         can_approve_for_signature: canApproveApplicationForSignature({
             role: params.viewerRole,
             applicationStatus: params.application.status,
@@ -393,7 +405,7 @@ export async function fetchUniversityApplicationList(params: {
     let applicationsQuery = supabase
         .from("application")
         .select(
-            "id, application_no, status, created_at, updated_at, profile_id, course_id, submitted_by_profile_id, university_id"
+            "id, application_no, status, created_at, updated_at, profile_id, course_id, submitted_by_profile_id, university_id, is_deferred, custom_intake_date"
         )
         .order("created_at", { ascending: false })
 
@@ -508,6 +520,7 @@ export async function fetchUniversityApplicationList(params: {
             return matchesTab("recently-completed", pipelineStatus, application.status, application.updated_at, offer)
         }).length,
         rejected: allApplicationRows.filter((application) => application.status === "REJECTED").length,
+        defer_intake: allApplicationRows.filter((application) => application.is_deferred).length,
     }
 
     // Apply filters
@@ -540,7 +553,8 @@ export async function fetchUniversityApplicationList(params: {
                 item.pipeline_status,
                 originalApplication.status,
                 originalApplication.updated_at,
-                offer
+                offer,
+                originalApplication.is_deferred
             )
         })
     }

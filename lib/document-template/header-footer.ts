@@ -16,18 +16,75 @@ export const DOCUMENT_TEMPLATE_HEADER_CONTACT_CLASS = "document-template-header-
 export const DOCUMENT_TEMPLATE_HEADER_CONTACT_COLOR = "#7D89A6"
 export const DOCUMENT_TEMPLATE_HEADER_LOGO_MAX_HEIGHT_PX = 52
 
-const HEADER_BLOCK_REGEX = new RegExp(
-    `<div\\s+class="${DOCUMENT_TEMPLATE_HEADER_CLASS}"[^>]*data-document-region="header"[^>]*>[\\s\\S]*?<\\/div>`,
-    "i"
-)
-const FOOTER_BLOCK_REGEX = new RegExp(
-    `<div\\s+class="${DOCUMENT_TEMPLATE_FOOTER_CLASS}"[^>]*data-document-region="footer"[^>]*>[\\s\\S]*?<\\/div>`,
-    "i"
-)
-const BODY_WRAPPER_REGEX = new RegExp(
-    `<div\\s+class="${DOCUMENT_TEMPLATE_BODY_CLASS}"[^>]*data-document-region="body"[^>]*>([\\s\\S]*?)<\\/div>`,
-    "i"
-)
+const DOCUMENT_REGION_OPEN_TAG_REGEX = (
+    className: string,
+    region: "header" | "body" | "footer"
+) =>
+    new RegExp(
+        `<div\\s+class="${className}"[^>]*data-document-region="${region}"[^>]*>`,
+        "i"
+    )
+
+type DocumentRegionBlock = {
+    fullBlock: string
+    innerHtml: string
+}
+
+/** Matches the closing </div> for an opening tag, respecting nested divs. */
+function findMatchingDivCloseIndex(html: string, contentStartIndex: number): number | null {
+    let depth = 1
+    let index = contentStartIndex
+    const lower = html.toLowerCase()
+
+    while (index < html.length && depth > 0) {
+        const nextOpen = lower.indexOf("<div", index)
+        const nextClose = lower.indexOf("</div>", index)
+
+        if (nextClose === -1) {
+            return null
+        }
+
+        if (nextOpen !== -1 && nextOpen < nextClose) {
+            depth += 1
+            index = nextOpen + 4
+            continue
+        }
+
+        depth -= 1
+        if (depth === 0) {
+            return nextClose
+        }
+
+        index = nextClose + 6
+    }
+
+    return null
+}
+
+function extractDocumentRegionBlock(
+    html: string,
+    className: string,
+    region: "header" | "body" | "footer"
+): DocumentRegionBlock | null {
+    const openMatch = DOCUMENT_REGION_OPEN_TAG_REGEX(className, region).exec(html)
+    if (!openMatch || openMatch.index === undefined) {
+        return null
+    }
+
+    const openTag = openMatch[0]
+    const contentStartIndex = openMatch.index + openTag.length
+    const closeStartIndex = findMatchingDivCloseIndex(html, contentStartIndex)
+    if (closeStartIndex === null) {
+        return null
+    }
+
+    const closeEndIndex = closeStartIndex + "</div>".length
+
+    return {
+        fullBlock: html.slice(openMatch.index, closeEndIndex),
+        innerHtml: html.slice(contentStartIndex, closeStartIndex).trim(),
+    }
+}
 
 export type DocumentTemplateLayout = {
     headerHtml: string | null
@@ -219,11 +276,15 @@ export function parseFooterHtml(html: string): DocumentTemplateFooterFields | nu
 }
 
 export function hasTemplateHeader(html: string): boolean {
-    return HEADER_BLOCK_REGEX.test(html)
+    return (
+        extractDocumentRegionBlock(html, DOCUMENT_TEMPLATE_HEADER_CLASS, "header") !== null
+    )
 }
 
 export function hasTemplateFooter(html: string): boolean {
-    return FOOTER_BLOCK_REGEX.test(html)
+    return (
+        extractDocumentRegionBlock(html, DOCUMENT_TEMPLATE_FOOTER_CLASS, "footer") !== null
+    )
 }
 
 export function parseDocumentLayout(fullHtml: string): DocumentTemplateLayout {
@@ -236,20 +297,32 @@ export function parseDocumentLayout(fullHtml: string): DocumentTemplateLayout {
     let footerHtml: string | null = null
     let remaining = normalized
 
-    const headerMatch = normalized.match(HEADER_BLOCK_REGEX)
-    if (headerMatch) {
-        headerHtml = headerMatch[0]
-        remaining = remaining.replace(headerMatch[0], "").trim()
+    const headerBlock = extractDocumentRegionBlock(
+        remaining,
+        DOCUMENT_TEMPLATE_HEADER_CLASS,
+        "header"
+    )
+    if (headerBlock) {
+        headerHtml = headerBlock.fullBlock
+        remaining = remaining.replace(headerBlock.fullBlock, "").trim()
     }
 
-    const footerMatch = remaining.match(FOOTER_BLOCK_REGEX)
-    if (footerMatch) {
-        footerHtml = footerMatch[0]
-        remaining = remaining.replace(footerMatch[0], "").trim()
+    const footerBlock = extractDocumentRegionBlock(
+        remaining,
+        DOCUMENT_TEMPLATE_FOOTER_CLASS,
+        "footer"
+    )
+    if (footerBlock) {
+        footerHtml = footerBlock.fullBlock
+        remaining = remaining.replace(footerBlock.fullBlock, "").trim()
     }
 
-    const bodyWrapperMatch = remaining.match(BODY_WRAPPER_REGEX)
-    const bodyHtml = bodyWrapperMatch ? bodyWrapperMatch[1].trim() : remaining
+    const bodyBlock = extractDocumentRegionBlock(
+        remaining,
+        DOCUMENT_TEMPLATE_BODY_CLASS,
+        "body"
+    )
+    const bodyHtml = bodyBlock ? bodyBlock.innerHtml : remaining
 
     if (headerHtml) {
         const headerFields = parseHeaderHtml(headerHtml)

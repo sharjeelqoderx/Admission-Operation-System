@@ -187,6 +187,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         headerFields,
         footerFields,
     })
+    const lastEmittedContentRef = useRef<string | null>(null)
 
     layoutRef.current = {
         hasHeader,
@@ -200,13 +201,13 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
             const { hasHeader: showHeader, hasFooter: showFooter, headerFields: header, footerFields: footer } =
                 layoutRef.current
 
-            onChange?.(
-                composeDocumentLayout({
-                    headerHtml: showHeader ? buildHeaderHtml(header) : null,
-                    bodyHtml,
-                    footerHtml: showFooter ? buildFooterHtml(footer) : null,
-                })
-            )
+            const composed = composeDocumentLayout({
+                headerHtml: showHeader ? buildHeaderHtml(header) : null,
+                bodyHtml,
+                footerHtml: showFooter ? buildFooterHtml(footer) : null,
+            })
+            lastEmittedContentRef.current = composed
+            onChange?.(composed)
         },
         [onChange]
     )
@@ -268,6 +269,12 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
     useEffect(() => {
         if (!editor) return
 
+        // Skip re-sync when this update came from the editor's own onChange emit.
+        // Prevents setContent from overwriting the document (and undo history) on every edit.
+        if (content === lastEmittedContentRef.current) {
+            return
+        }
+
         const layout = parseDocumentLayout(content)
         setHasHeader(Boolean(layout.headerHtml))
         setHasFooter(Boolean(layout.footerHtml))
@@ -283,7 +290,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         if (editor.getHTML() !== layout.bodyHtml) {
             editor.commands.setContent(layout.bodyHtml, { emitUpdate: false })
         }
-    }, [content, editor])
+    }, [content, editor, locale])
 
     useEffect(() => {
         if (!editor) return

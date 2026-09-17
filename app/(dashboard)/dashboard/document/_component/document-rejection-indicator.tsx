@@ -34,6 +34,10 @@ function formatHistoryDate(value: string) {
     })
 }
 
+function formatFeedback(feedback: string) {
+    return feedback.replace(/^\[DEFERRED\]\s*/i, "Defer Intake: ")
+}
+
 export const DocumentRejectionIndicator = memo(function DocumentRejectionIndicator({
     history,
     placement,
@@ -55,6 +59,9 @@ export const DocumentRejectionIndicator = memo(function DocumentRejectionIndicat
                         <PopoverTrigger asChild>
                             <button
                                 type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                }}
                                 className="flex items-center justify-center shrink-0 text-red-600 hover:text-red-700 transition-colors"
                                 aria-label="View rejection history"
                             >
@@ -64,13 +71,16 @@ export const DocumentRejectionIndicator = memo(function DocumentRejectionIndicat
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-[240px] px-3 py-2">
                         <Typography as="p" className="text-xs whitespace-pre-wrap leading-relaxed">
-                            {latest.feedback}
+                            {formatFeedback(latest.feedback)}
                         </Typography>
                     </TooltipContent>
                 </Tooltip>
                 <PopoverContent
                     side="bottom"
                     align={align}
+                    onClick={(e) => {
+                        e.stopPropagation()
+                    }}
                     className="w-[300px] overflow-hidden p-0 gap-0 shadow-lg ring-1 ring-red-100/70"
                 >
                     <div className="border-b border-red-100 bg-red-50/80 px-4 py-3">
@@ -118,7 +128,7 @@ export const DocumentRejectionIndicator = memo(function DocumentRejectionIndicat
                                     as="p"
                                     className="text-xs leading-relaxed text-gray-700 whitespace-pre-wrap"
                                 >
-                                    {entry.feedback}
+                                    {formatFeedback(entry.feedback)}
                                 </Typography>
                             </div>
                         ))}
