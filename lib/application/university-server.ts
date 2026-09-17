@@ -16,6 +16,8 @@ import {
 import { canApproveApplicationForSignature, canRejectApplication } from "@/lib/application/review-access"
 import { loadApplicationReviewMeta, loadRejectionHistoryByApplicationIds } from "@/lib/application/review-meta"
 import { fetchInChunks } from "@/lib/supabase/query-in-chunks"
+import { rpcUniversityApplicationsList, toUniversityIdsParam } from "@/lib/rpc/dashboard"
+import type { StudentPipelineStatus } from "@/types/schemas/university-student"
 import type {
     UniversityApplicationDetail,
     UniversityApplicationDetailPageData,
@@ -398,29 +400,54 @@ export async function fetchUniversityApplicationList(params: {
     const supabase = await createSupabaseServerClient()
     const page = params.page ?? 1
     const limit = params.limit ?? 10
-    const searchTerm = params.q?.trim().toLowerCase() ?? ""
-    const tab = params.tab ?? "all"
 
-    // First fetch ALL applications to calculate tab counts (this is necessary for count accuracy)
-    let applicationsQuery = supabase
-        .from("application")
-        .select(
-            "id, application_no, status, created_at, updated_at, profile_id, course_id, submitted_by_profile_id, university_id, is_deferred, custom_intake_date"
+    try {
+        const rpcResult = await rpcUniversityApplicationsList(supabase, {
+            universityIds: toUniversityIdsParam(params.universityScope),
+            q: params.q,
+            tab: params.tab,
+            page,
+            limit,
+        })
+
+        const applicationIds = rpcResult.data.map((item) => item.id)
+        const rejectionHistoryByApplicationId = await loadRejectionHistoryByApplicationIds(
+            supabase,
+            applicationIds
         )
-        .order("created_at", { ascending: false })
 
-    if (params.universityScope) {
-        applicationsQuery = applyUniversityIdFilter(
-            applicationsQuery,
-            "university_id",
-            params.universityScope
-        )
-    }
+        const data: UniversityApplicationListItem[] = rpcResult.data.map((item) => ({
+            id: item.id,
+            student_name: item.student_name,
+            student_code: item.student_code,
+            avatar_url: item.avatar_url,
+            course_name: item.course_name,
+            intake_label: item.intake_label,
+            agent_name: item.agent_name,
+            pipeline_status: item.pipeline_status as StudentPipelineStatus,
+            submission_date: item.submission_date,
+            rejection_history: rejectionHistoryByApplicationId.get(item.id) ?? [],
+            is_deferred: item.is_deferred,
+            custom_intake_date: item.custom_intake_date,
+            can_approve_for_signature: canApproveApplicationForSignature({
+                role: params.viewerRole,
+                applicationStatus: item.app_status,
+                hasOffer: item.has_offer,
+            }),
+            can_reject: canRejectApplication({
+                role: params.viewerRole,
+                applicationStatus: item.app_status,
+                hasOffer: item.has_offer,
+            }),
+        }))
 
-    const { data: allApplications, error: applicationsError } = await applicationsQuery
-
-    if (applicationsError) {
-        console.error("[fetchUniversityApplicationList]", applicationsError.message)
+        return {
+            tab_counts: rpcResult.tab_counts,
+            data,
+            pagination: rpcResult.pagination,
+        }
+    } catch (error) {
+        console.error("[fetchUniversityApplicationList]", error)
         return {
             ...EMPTY_UNIVERSITY_APPLICATION_LIST,
             pagination: {
@@ -429,151 +456,6 @@ export async function fetchUniversityApplicationList(params: {
                 limit,
             },
         }
-    }
-
-    const allApplicationRows = (allApplications ?? []) as ApplicationRow[]
-    const allApplicationIds = allApplicationRows.map((application) => application.id)
-    const allProfileIds = [...new Set(allApplicationRows.map((application) => application.profile_id))]
-    const allAgentProfileIds = [
-        ...new Set(
-            allApplicationRows
-                .map((application) => application.submitted_by_profile_id)
-                .filter((id): id is string => Boolean(id))
-        ),
-    ]
-    const allCourseIds = [...new Set(allApplicationRows.map((application) => application.course_id))]
-
-    const [offers, profiles, students, courseById, agentOrgByProfileId, rejectionHistoryByApplicationId] =
-        await Promise.all([
-            loadOffersByApplicationIds(supabase, allApplicationIds),
-            loadProfilesByIds(supabase, allProfileIds),
-            loadStudentsByProfileIds(supabase, allProfileIds),
-            loadCoursesById(supabase, allCourseIds),
-            loadAgentOrganizations(supabase, allAgentProfileIds),
-            loadRejectionHistoryByApplicationIds(supabase, allApplicationIds),
-        ])
-
-    const offerByApplicationId = new Map(offers.map((offer) => [offer.application_id, offer]))
-
-    const profileById = new Map(profiles.map((profile) => [profile.id, profile]))
-
-    const studentCodeByProfileId = new Map(
-        students.map((student) => [student.profile_id, student.student_code])
-    )
-
-    // Create all list items for filtering/counting
-    const allListItems = allApplicationRows.map((application) => {
-        const profile = profileById.get(application.profile_id)
-        const studentName = formatFullName(profile?.first_name, profile?.last_name)
-        const course = courseById.get(application.course_id)
-        const offer = offerByApplicationId.get(application.id)
-
-        const isDirect =
-            !application.submitted_by_profile_id ||
-            application.submitted_by_profile_id === application.profile_id
-
-        const agentLabel = isDirect
-            ? "Direct Application"
-            : agentOrgByProfileId.get(application.submitted_by_profile_id!) ?? "University Partner"
-
-        return mapListItem({
-            application,
-            studentName,
-            studentCode: studentCodeByProfileId.get(application.profile_id) ?? null,
-            avatarUrl: profile?.avatar_url ?? null,
-            course,
-            agentLabel,
-            offer,
-            rejectionHistory: rejectionHistoryByApplicationId.get(application.id) ?? [],
-            viewerRole: params.viewerRole,
-        })
-    })
-
-    // Calculate tab counts
-    const tabCounts = {
-        all: allListItems.length,
-        pending_review: allApplicationRows.filter((application) => {
-            const offer = offerByApplicationId.get(application.id)
-            const pipelineStatus = resolveStudentPipelineStatus({
-                applicationStatus: application.status,
-                offerStatus: offer?.status,
-                hasOffer: Boolean(offer),
-            })
-            return matchesTab("pending-review", pipelineStatus, application.status, application.updated_at, offer)
-        }).length,
-        awaiting_signature: allApplicationRows.filter((application) => {
-            const offer = offerByApplicationId.get(application.id)
-            const pipelineStatus = resolveStudentPipelineStatus({
-                applicationStatus: application.status,
-                offerStatus: offer?.status,
-                hasOffer: Boolean(offer),
-            })
-            return matchesTab("awaiting-signature", pipelineStatus, application.status, application.updated_at, offer)
-        }).length,
-        recently_completed: allApplicationRows.filter((application) => {
-            const offer = offerByApplicationId.get(application.id)
-            const pipelineStatus = resolveStudentPipelineStatus({
-                applicationStatus: application.status,
-                offerStatus: offer?.status,
-                hasOffer: Boolean(offer),
-            })
-            return matchesTab("recently-completed", pipelineStatus, application.status, application.updated_at, offer)
-        }).length,
-        rejected: allApplicationRows.filter((application) => application.status === "REJECTED").length,
-        defer_intake: allApplicationRows.filter((application) => application.is_deferred).length,
-    }
-
-    // Apply filters
-    let filteredItems = allListItems
-
-    if (searchTerm) {
-        const profileIdByApplicationId = new Map(
-            allApplicationRows.map((application) => [application.id, application.profile_id])
-        )
-
-        filteredItems = filteredItems.filter((item) => {
-            const profileId = profileIdByApplicationId.get(item.id)?.toLowerCase() ?? ""
-            const haystack = [item.student_name, item.student_code, profileId]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase()
-
-            return haystack.includes(searchTerm)
-        })
-    }
-
-    if (tab !== "all") {
-        filteredItems = filteredItems.filter((item) => {
-            const originalApplication = allApplicationRows.find((row) => row.id === item.id)
-            if (!originalApplication) return false
-
-            const offer = offerByApplicationId.get(originalApplication.id)
-            return matchesTab(
-                tab,
-                item.pipeline_status,
-                originalApplication.status,
-                originalApplication.updated_at,
-                offer,
-                originalApplication.is_deferred
-            )
-        })
-    }
-
-    // Apply pagination
-    const total = filteredItems.length
-    const totalPages = Math.max(Math.ceil(total / limit), 1)
-    const start = (page - 1) * limit
-    const paginatedItems = filteredItems.slice(start, start + limit)
-
-    return {
-        tab_counts: tabCounts,
-        data: paginatedItems,
-        pagination: {
-            total,
-            page,
-            limit,
-            totalPages,
-        },
     }
 }
 

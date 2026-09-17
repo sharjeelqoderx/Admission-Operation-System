@@ -4,75 +4,19 @@ import {
     createSupabaseServiceClient,
 } from "@/lib/supabase/server"
 import { withProfileDisplayName } from "@/lib/utils/profile"
-import {
-    isMissingOfferTemplateColumnError,
-    OFFER_LIST_SELECT_LEGACY,
-    OFFER_LIST_SELECT_WITH_TEMPLATE,
-} from "@/lib/offer/select-fields"
 import type {
     OfferListItem,
     OfferListQuery,
     OfferListResponse,
 } from "@/types/schemas/offer"
 import type { Database } from "@/types/supabase"
-import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
+import { isUniversityRole } from "@/lib/auth/university-role"
 import { resolveUniversityApplicationScope } from "@/lib/auth/university-scope"
 import { Role } from "@/types/enums/role"
+import { rpcOffersList, toUniversityIdsParam } from "@/lib/rpc/dashboard"
 
 type DbClient = SupabaseClient<Database>
 type OfferRole = Role.STUDENT | Role.AGENT | Role.ADMIN | Role.MANAGEMENT | Role.SUPER_ADMIN
-
-function matchesSearch(offer: OfferListItem, searchTerm: string) {
-    if (!searchTerm) return true
-
-    const haystack = [
-        offer.application?.student?.name,
-        offer.application?.student?.email,
-        offer.application?.course?.name,
-        offer.application?.course?.degree?.name,
-        offer.application?.application_no,
-    ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-
-    return haystack.includes(searchTerm)
-}
-
-function matchesStatus(offer: OfferListItem, status?: string) {
-    if (!status || status === "all") return true
-    return offer.status.toUpperCase() === status.toUpperCase()
-}
-
-function matchesCourse(offer: OfferListItem, courseId?: string) {
-    if (!courseId || courseId === "all") return true
-    return offer.application?.course?.id === courseId
-}
-
-function applyRoleFilter(
-    offers: OfferListItem[],
-    role: OfferRole,
-    userId: string,
-    universityScopeIds: string[] | null
-) {
-    if (role === Role.STUDENT) {
-        return offers.filter((offer) => offer.application?.profile_id === userId)
-    }
-
-    if (isUniversityRole(role)) {
-        if (universityScopeIds === null) {
-            return offers
-        }
-
-        return offers.filter((offer) =>
-            offer.application?.university_id
-                ? universityScopeIds.includes(offer.application.university_id)
-                : false
-        )
-    }
-
-    return offers
-}
 
 type RawOfferProfile = {
     id?: string
@@ -90,47 +34,6 @@ type RawOfferListItem = Omit<OfferListItem, "application"> & {
     }) | null
 }
 
-async function fetchRawOffers(
-    client: DbClient,
-    options?: { studentProfileId?: string }
-): Promise<RawOfferListItem[]> {
-    let primaryQuery = client
-        .from("offer_letter")
-        .select(OFFER_LIST_SELECT_WITH_TEMPLATE)
-        .order("created_at", { ascending: false })
-
-    if (options?.studentProfileId) {
-        primaryQuery = primaryQuery.eq("application.profile_id", options.studentProfileId)
-    }
-
-    const primaryResult = await primaryQuery
-
-    const offersResult =
-        primaryResult.error && isMissingOfferTemplateColumnError(primaryResult.error.message)
-            ? await (() => {
-                  let legacyQuery = client
-                      .from("offer_letter")
-                      .select(OFFER_LIST_SELECT_LEGACY)
-                      .order("created_at", { ascending: false })
-
-                  if (options?.studentProfileId) {
-                      legacyQuery = legacyQuery.eq(
-                          "application.profile_id",
-                          options.studentProfileId
-                      )
-                  }
-
-                  return legacyQuery
-              })()
-            : primaryResult
-
-    if (offersResult.error) {
-        throw new Error(offersResult.error.message)
-    }
-
-    return (offersResult.data ?? []) as unknown as RawOfferListItem[]
-}
-
 function mapStudentForList(profile: RawOfferProfile): NonNullable<
     NonNullable<OfferListItem["application"]>["student"]
 > | null {
@@ -138,7 +41,7 @@ function mapStudentForList(profile: RawOfferProfile): NonNullable<
     const named = withProfileDisplayName(profile)
     return {
         id: profile.id,
-        name: named?.name ?? null,
+        name: profile.name ?? named?.name ?? null,
         avatar_url: profile.avatar_url ?? null,
         email: profile.email ?? null,
     }
@@ -151,7 +54,7 @@ function mapUniversityForList(profile: RawOfferProfile): NonNullable<
     const named = withProfileDisplayName(profile)
     return {
         id: profile.id,
-        name: named?.name ?? null,
+        name: profile.name ?? named?.name ?? null,
     }
 }
 
@@ -194,43 +97,34 @@ export async function fetchOffersList(
 ): Promise<OfferListResponse> {
     const page = options.page || 1
     const limit = options.limit || 10
-    const searchTerm = (options.q ?? "").trim().toLowerCase()
 
     const userClient = await createSupabaseServerClient()
     const readClient =
         options.role === Role.STUDENT ? userClient : createSupabaseServiceClient()
 
-    const mapped = mapOfferRows(
-        await fetchRawOffers(readClient as DbClient, {
-            studentProfileId: options.role === Role.STUDENT ? options.userId : undefined,
-        })
-    )
     const universityScope = isUniversityRole(options.role)
         ? await resolveUniversityApplicationScope(userClient, options.userId, options.role)
         : { universityIds: null }
-    const roleFiltered = applyRoleFilter(
-        mapped,
-        options.role,
-        options.userId,
-        universityScope.universityIds
-    )
-    const filtered = roleFiltered
-        .filter((offer) => matchesSearch(offer, searchTerm))
-        .filter((offer) => matchesStatus(offer, options.status))
-        .filter((offer) => matchesCourse(offer, options.course_id))
 
-    const total = filtered.length
-    const totalPages = Math.max(1, Math.ceil(total / limit))
-    const safePage = Math.min(page, totalPages)
-    const start = (safePage - 1) * limit
+    const rpcResult = await rpcOffersList(readClient as DbClient, {
+        universityIds:
+            options.role === Role.STUDENT
+                ? null
+                : isUniversityRole(options.role)
+                  ? toUniversityIdsParam(universityScope)
+                  : null,
+        studentProfileId: options.role === Role.STUDENT ? options.userId : undefined,
+        q: options.q,
+        status: options.status,
+        course_id: options.course_id,
+        page,
+        limit,
+    })
+
+    const mapped = mapOfferRows(rpcResult.data as RawOfferListItem[])
 
     return {
-        data: filtered.slice(start, start + limit),
-        pagination: {
-            total,
-            page: safePage,
-            limit,
-            totalPages: total === 0 ? 0 : totalPages,
-        },
+        data: mapped,
+        pagination: rpcResult.pagination,
     }
 }

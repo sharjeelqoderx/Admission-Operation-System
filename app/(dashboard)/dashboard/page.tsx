@@ -1,22 +1,16 @@
-"use client"
-
-import { ClientDashboard } from "./_components/client-dashboard"
 import { UniversityOverviewPageContent } from "./_components/university-overview/page-content"
+import { DashboardPageClient } from "./_components/dashboard-page-client"
+import { getDashboardRole } from "@/lib/dashboard/server"
+import { fetchUniversityOverviewForPage } from "@/lib/university-overview/server"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
-import { DashboardPageSkeleton } from "@/components/shared/page-skeleton"
-import { useAuth } from "@/hooks/useAuth"
 
-export default function DashboardPage() {
-    const { me } = useAuth()
-    const role = me.data?.role
+export default async function DashboardPage() {
+    const role = await getDashboardRole()
 
-    if (!role) {
-        return <DashboardPageSkeleton />
+    if (role && isUniversityStaffRole(role)) {
+        const initialOverview = await fetchUniversityOverviewForPage()
+        return <UniversityOverviewPageContent initialOverview={initialOverview ?? undefined} />
     }
 
-    if (isUniversityStaffRole(role)) {
-        return <UniversityOverviewPageContent />
-    }
-
-    return <ClientDashboard role={role} />
+    return <DashboardPageClient fallbackRole={role ?? undefined} />
 }

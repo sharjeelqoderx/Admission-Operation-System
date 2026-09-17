@@ -10,6 +10,7 @@ import type {
     UniversityProgramUpsert,
 } from "@/types/schemas/university-program"
 import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
+import { rpcUniversityProgramsList } from "@/lib/rpc/dashboard"
 import { Role } from "@/types/enums/role"
 
 function formatDeadlineLabel(value?: string | null) {
@@ -78,87 +79,38 @@ export async function fetchUniversityProgramList(params: {
     level_id?: string
     page?: number
     limit?: number
+    universityIds?: string[] | null
 }): Promise<UniversityProgramListResponse> {
     const supabase = await createSupabaseServerClient()
     const page = params.page ?? 1
     const limit = params.limit ?? 10
-    const searchTerm = params.q?.trim().toLowerCase() ?? ""
-    const levelId = params.level_id?.trim() || undefined
 
-    const { data, error, count } = await supabase
-        .from("course")
-        .select(
-            `
-            id,
-            name,
-            created_at,
-            updated_at,
-            degree_id,
-            deadline_date,
-            category,
-            degree:degree_id (
-                id,
-                name,
-                credits,
-                location,
-                language_of_study,
-                duration,
-                fees,
-                study_mode,
-                intake_date,
-                intake_starts_on,
-                agent_commission,
-                level_id
-            )
-        `,
-            { count: "exact" }
-        )
-        .eq("is_deleted", false)
-        .order("created_at", { ascending: false })
+    const rpcResult = await rpcUniversityProgramsList(supabase, {
+        universityIds: params.universityIds ?? null,
+        q: params.q,
+        level_id: params.level_id,
+        page,
+        limit,
+    })
 
-    if (error) {
-        throw new Error(error.message)
-    }
-
-    let courses = await attachLevelsToCourses(supabase, (data ?? []) as unknown as CourseRow[])
-
-    if (levelId) {
-        courses = courses.filter((course) => course.degree?.level_id === levelId)
-    }
-
-    let items = courses.map((course) => mapListItem(course as Parameters<typeof mapListItem>[0]))
-
-    if (searchTerm) {
-        items = items.filter((item) => {
-            const haystack = [
-                item.name,
-                item.category,
-                item.level_name,
-                item.location,
-                item.intake_label,
-            ]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase()
-
-            return haystack.includes(searchTerm)
-        })
-    }
-
-    const hasFilters = Boolean(searchTerm || levelId)
-    const total = hasFilters ? items.length : count ?? items.length
-    const totalPages = Math.max(Math.ceil(total / limit), 1)
-    const start = (page - 1) * limit
-    const paginatedItems = items.slice(start, start + limit)
+    const items: UniversityProgramListItem[] = rpcResult.data.map((course) => ({
+        id: course.id,
+        name: course.name,
+        category: course.category,
+        level_name: course.level_name,
+        intake_label: course.intake_label,
+        deadline_label: course.deadline_label,
+        location: course.location,
+        duration: course.duration,
+        tuition_fees: course.tuition_fees,
+        agent_commission: course.agent_commission,
+        created_at: course.created_at,
+        updated_at: course.updated_at,
+    }))
 
     return {
-        data: paginatedItems,
-        pagination: {
-            total,
-            page,
-            limit,
-            totalPages,
-        },
+        data: items,
+        pagination: rpcResult.pagination,
     }
 }
 

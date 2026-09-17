@@ -1433,6 +1433,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      application_matches_tab: {
+        Args: {
+          p_tab: string
+          p_pipeline_status: string
+          p_app_status: string
+          p_updated_at: string
+          p_offer_accepted_at: string
+          p_offer_created_at: string
+          p_is_deferred: boolean
+        }
+        Returns: boolean
+      }
       can_access_university_application: {
         Args: { target_university_id: string }
         Returns: boolean
@@ -1441,8 +1453,102 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["role_enum"]
       }
+      fetch_agent_students_list: {
+        Args: {
+          p_search?: string
+          p_status?: string
+          p_page?: number
+          p_limit?: number
+        }
+        Returns: Json
+      }
+      fetch_document_students_list: {
+        Args: {
+          p_profile_ids?: string[]
+          p_agent_id?: string
+          p_search?: string
+          p_status?: string
+          p_page?: number
+          p_limit?: number
+        }
+        Returns: Json
+      }
+      fetch_offers_list: {
+        Args: {
+          p_university_ids?: string[]
+          p_student_profile_id?: string
+          p_search?: string
+          p_status?: string
+          p_course_id?: string
+          p_page?: number
+          p_limit?: number
+        }
+        Returns: Json
+      }
+      fetch_university_overview: {
+        Args: { p_university_ids?: string[] }
+        Returns: Json
+      }
+      fetch_university_applications_list: {
+        Args: {
+          p_university_ids?: string[]
+          p_search?: string
+          p_tab?: string
+          p_page?: number
+          p_limit?: number
+        }
+        Returns: Json
+      }
+      fetch_university_programs_list: {
+        Args: {
+          p_university_ids?: string[]
+          p_search?: string
+          p_level_id?: string
+          p_page?: number
+          p_limit?: number
+        }
+        Returns: Json
+      }
+      fetch_university_students_list: {
+        Args: {
+          p_university_ids?: string[]
+          p_search?: string
+          p_status?: string
+          p_page?: number
+          p_limit?: number
+        }
+        Returns: Json
+      }
+      format_dashboard_date: {
+        Args: { p_value: string }
+        Returns: string
+      }
+      format_intake_label: {
+        Args: {
+          p_intake_starts_on: string
+          p_intake_date: string
+          p_custom_intake?: string
+        }
+        Returns: string
+      }
       is_university_role: { Args: never; Returns: boolean }
       management_university_scope_ids: { Args: never; Returns: string[] }
+      matches_university_scope: {
+        Args: { p_university_id: string; p_scope_ids: string[] }
+        Returns: boolean
+      }
+      pipeline_status_slug: {
+        Args: { p_pipeline_status: string }
+        Returns: string
+      }
+      resolve_pipeline_status: {
+        Args: {
+          p_app_status: string
+          p_offer_status: string
+          p_has_offer: boolean
+        }
+        Returns: string
+      }
       soft_delete_document_template: {
         Args: { template_id: string }
         Returns: undefined

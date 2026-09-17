@@ -14,7 +14,9 @@ import type {
     UniversityStudentListResponse,
 } from "@/types/schemas/university-student"
 import { isUniversityStaffRole, resolveUniversityScopeId } from "@/lib/auth/university-role"
+import { rpcUniversityStudentsList, toUniversityIdsParam } from "@/lib/rpc/dashboard"
 import { Role } from "@/types/enums/role"
+import type { StudentPipelineStatus } from "@/types/schemas/university-student"
 
 type StudentRow = {
     profile_id: string
@@ -246,174 +248,21 @@ export async function fetchUniversityStudentList(params: {
     limit?: number
 }): Promise<UniversityStudentListResponse> {
     const supabase = await createSupabaseServerClient()
-    const page = params.page ?? 1
-    const limit = params.limit ?? 10
-    const searchTerm = params.q?.trim().toLowerCase() ?? ""
-    const statusFilter = params.status?.toLowerCase() ?? "all"
-
-    const { data: students, error: studentsError } = await supabase
-        .from("student")
-        .select(`
-            profile_id,
-            student_code,
-            country,
-            state,
-            city,
-            nationality,
-            guardian_phone,
-            created_by_agent_id,
-            profile:profile_id (
-                id,
-                first_name,
-                last_name,
-                email,
-                phone,
-                date_of_birth,
-                avatar_url,
-                role
-            )
-        `)
-        .order("created_at", { ascending: false })
-
-    if (studentsError) {
-        throw new Error(studentsError.message)
-    }
-
-    const studentRows = (students ?? []).map((student) => {
-        const row = student as StudentRow & {
-            profile: StudentRow["profile"] | StudentRow["profile"][] | null
-        }
-        const profile = Array.isArray(row.profile) ? row.profile[0] ?? null : row.profile
-
-        return {
-            ...row,
-            profile,
-        }
-    }).filter((student) => student.profile?.role === Role.STUDENT)
-
-    const profileIds = studentRows.map((student) => student.profile_id)
-
-    const { data: applications, error: applicationsError } = await fetchInChunks<ApplicationRow>(
-        profileIds,
-        async (chunkIds) =>
-            supabase
-                .from("application")
-                .select(
-                    "id, profile_id, application_no, status, created_at, submitted_by_profile_id, course_id, university_id"
-                )
-                .in("profile_id", chunkIds)
-                .order("created_at", { ascending: false })
-    )
-
-    if (applicationsError) {
-        throw new Error(applicationsError.message)
-    }
-
-    const applicationRows = applications ?? []
-    const applicationIds = applicationRows.map((application) => application.id)
-
-    const { data: offers, error: offersError } = await fetchInChunks<OfferRow>(
-        applicationIds,
-        async (chunkIds) =>
-            supabase
-                .from("offer_letter")
-                .select("application_id, status, created_at")
-                .in("application_id", chunkIds)
-    )
-
-    if (offersError) {
-        throw new Error(offersError.message)
-    }
-
-    const offerByApplicationId = new Map(
-        (offers ?? []).map((offer) => [offer.application_id, offer])
-    )
-
-    const courseIds = [
-        ...new Set(applicationRows.map((application) => application.course_id).filter(Boolean)),
-    ]
-    const courseById = await loadCoursesById(supabase, courseIds)
-
-    const agentProfileIds = [
-        ...new Set(
-            applicationRows
-                .map((application) => application.submitted_by_profile_id)
-                .filter((id): id is string => Boolean(id))
-        ),
-    ]
-    const agentNameByProfileId = await loadAgentNames(supabase, agentProfileIds)
-
-    let listItems = studentRows.map((student) => {
-        const application = pickApplicationForStudent(
-            applicationRows,
-            student.profile_id,
-            params.universityId ?? undefined
-        )
-        const offer = application ? offerByApplicationId.get(application.id) : undefined
-        const course = application ? courseById.get(application.course_id) : undefined
-        const agentName = application?.submitted_by_profile_id
-            ? agentNameByProfileId.get(application.submitted_by_profile_id) ?? null
-            : null
-
-        return mapListItem({
-            student,
-            application: application ?? null,
-            offer,
-            course,
-            agentName,
-        })
+    const rpcResult = await rpcUniversityStudentsList(supabase, {
+        universityIds: toUniversityIdsParam(undefined, params.universityId),
+        q: params.q,
+        status: params.status,
+        page: params.page,
+        limit: params.limit,
     })
 
-    const enrolledProfileIds = new Set<string>()
-    for (const application of applicationRows) {
-        const offer = offerByApplicationId.get(application.id)
-        if (application.status === "APPROVED" || offer?.status === "ACCEPTED") {
-            enrolledProfileIds.add(application.profile_id)
-        }
-    }
-
-    const stats = {
-        total_students: studentRows.length,
-        applied: new Set(applicationRows.map((application) => application.profile_id)).size,
-        enrolled: enrolledProfileIds.size,
-    }
-
-    if (searchTerm) {
-        listItems = listItems.filter((item) => {
-            const haystack = [
-                item.name,
-                item.student_code,
-                item.program_name,
-                item.intake_label,
-            ]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase()
-
-            return haystack.includes(searchTerm)
-        })
-    }
-
-    if (statusFilter !== "all") {
-        listItems = listItems.filter(
-            (item) => item.pipeline_status.toLowerCase().replace(/\s+/g, "-") === statusFilter
-        )
-    }
-
-    const total = listItems.length
-    const totalPages = Math.max(Math.ceil(total / limit), 1)
-    const start = (page - 1) * limit
-    const paginatedItems = listItems.slice(start, start + limit)
-
     return {
-        stats,
-        data: paginatedItems,
-        pagination: {
-            total,
-            page,
-            limit,
-            totalPages,
-        },
+        stats: rpcResult.stats,
+        data: rpcResult.data.map((item) => ({
+            ...item,
+            pipeline_status: item.pipeline_status as StudentPipelineStatus,
+        })),
+        pagination: rpcResult.pagination,
     }
 }
 

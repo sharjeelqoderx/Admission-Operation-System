@@ -1,5 +1,6 @@
 import { formatFullName } from "@/lib/utils/profile"
 import { createSupabaseServiceClient } from "@/lib/supabase/server"
+import { rpcAgentStudentsList } from "@/lib/rpc/dashboard"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 import {
@@ -69,7 +70,6 @@ export async function fetchStudentsListForAgent(
         return { error: "Forbidden" }
     }
 
-    // Agents and super admins see all students (same staff-wide visibility as offers / applications).
     const db = createSupabaseServiceClient()
 
     const q = options.q ?? ""
@@ -77,131 +77,89 @@ export async function fetchStudentsListForAgent(
     const page = options.page ?? 1
     const limit = options.limit ?? 10
 
-    const { data: rawStudents, error } = await db
-        .from("student")
-        .select(`
-            *,
-            profile:profile_id (*)
-        `)
-        .order("created_at", { ascending: false })
-
-    if (error) {
+    let rpcResult
+    try {
+        rpcResult = await rpcAgentStudentsList(db, {
+            q,
+            status,
+            page,
+            limit,
+        })
+    } catch {
         return { error: "Failed to fetch students" }
     }
 
-    let students = rawStudents ?? []
-    const searchTerm = q.toLowerCase()
-    const statusFilter = status.toLowerCase()
-
-    students = students.filter((student) => {
-        const studentStatus = (
-            (student as { status?: string | null }).status || "CREATED"
-        ).toLowerCase()
-        if (statusFilter !== "all" && studentStatus !== statusFilter) {
-            return false
-        }
-
-        if (!searchTerm) {
-            return true
-        }
-
-        const studentCode = student.student_code?.toLowerCase() || ""
-        const country = student.country?.toLowerCase() || ""
-        const profileName = formatFullName(
-            student.profile?.first_name,
-            student.profile?.last_name
-        ).toLowerCase()
-        const profileEmail = student.profile?.email?.toLowerCase() || ""
-
-        return (
-            studentCode.includes(searchTerm) ||
-            country.includes(searchTerm) ||
-            profileName.includes(searchTerm) ||
-            profileEmail.includes(searchTerm)
-        )
-    })
-
-    const pagination: StudentListPagination = {
-        total: students.length,
-        page,
-        limit,
-        totalPages: students.length > 0 ? Math.max(1, Math.ceil(students.length / limit)) : 0,
-    }
-
-    const start = (page - 1) * limit
-    students = students.slice(start, start + limit)
-
-    if (students.length === 0) {
-        return { data: [], pagination }
-    }
-
-    const profileIds = students.map((student) => student.profile_id)
-
-    const [{ count: totalDocumentTypes }, { data: documents }, { data: educationRows }] =
-        await Promise.all([
-            db.from("document_type").select("id", { count: "exact", head: true }),
-            db
-                .from("document")
-                .select("profile_id, document_type_id")
-                .in("profile_id", profileIds)
-                .not("document_type_id", "is", null),
-            db.from("education").select("profile_id, qualification").in("profile_id", profileIds),
-        ])
-
-    const uploadedByProfile = new Map<string, Set<string>>()
-    for (const doc of documents ?? []) {
-        if (!doc.document_type_id) continue
-        const existing = uploadedByProfile.get(doc.profile_id) ?? new Set<string>()
-        existing.add(doc.document_type_id)
-        uploadedByProfile.set(doc.profile_id, existing)
-    }
-
-    const educationByProfile = new Map<string, Array<{ qualification: string | null }>>()
-    for (const row of educationRows ?? []) {
-        const existing = educationByProfile.get(row.profile_id) ?? []
-        existing.push({ qualification: row.qualification })
-        educationByProfile.set(row.profile_id, existing)
+    if (rpcResult.data.length === 0) {
+        return { data: [], pagination: rpcResult.pagination }
     }
 
     const qualificationIds = [
         ...new Set(
-            (educationRows ?? [])
-                .map((row) => row.qualification)
-                .filter((value): value is string => Boolean(value))
+            rpcResult.data.flatMap((row) =>
+                row.education_rows
+                    .map((education) => education.qualification)
+                    .filter((value): value is string => Boolean(value))
+            )
         ),
     ]
 
     const qualificationById = await resolveQualificationsById(db, qualificationIds)
-    const total = totalDocumentTypes ?? 0
+    const totalDocumentTypes = rpcResult.total_document_types
 
-    const data: StudentListItem[] = students.map((student) => {
-        const documentsUploadedCount = uploadedByProfile.get(student.profile_id)?.size ?? 0
+    const data: StudentListItem[] = rpcResult.data.map((row) => {
+        const student = row.student as StudentListItem & {
+            first_name?: string | null
+            last_name?: string | null
+            email?: string | null
+            phone?: string | null
+            avatar_url?: string | null
+            gender?: string | null
+            date_of_birth?: string | null
+            profile_pk?: string
+        }
+
+        const documentsUploadedCount = row.documents_uploaded_count
         const documentUploadPercentage =
-            total > 0 ? Math.round((documentsUploadedCount / total) * 100) : 0
+            totalDocumentTypes > 0
+                ? Math.round((documentsUploadedCount / totalDocumentTypes) * 100)
+                : 0
 
-        const profile = student.profile
-            ? {
-                ...student.profile,
-                name: formatFullName(student.profile.first_name, student.profile.last_name),
-            }
-            : student.profile
+        const profile = {
+            id: student.profile_id,
+            name: formatFullName(student.first_name, student.last_name),
+            email: student.email ?? null,
+            phone: student.phone ?? null,
+            avatar_url: student.avatar_url ?? null,
+            gender: student.gender ?? null,
+            date_of_birth: student.date_of_birth ?? null,
+        }
 
         const highestQualification = resolveHighestQualificationName(
-            educationByProfile.get(student.profile_id) ?? [],
+            row.education_rows,
             qualificationById
         )
 
         return {
-            ...student,
-            profile,
+            id: student.id,
+            profile_id: student.profile_id,
+            student_code: student.student_code ?? null,
+            city: student.city ?? null,
+            state: student.state ?? null,
+            country: student.country ?? null,
+            nationality: student.nationality ?? null,
+            aps_requirement: student.aps_requirement ?? null,
+            guardian_email: student.guardian_email ?? null,
+            guardian_phone: student.guardian_phone ?? null,
+            created_at: student.created_at,
             documents_uploaded_count: documentsUploadedCount,
-            total_document_types: total,
+            total_document_types: totalDocumentTypes,
             document_upload_percentage: documentUploadPercentage,
             highest_qualification: highestQualification,
+            profile,
         }
     })
 
-    return { data, pagination }
+    return { data, pagination: rpcResult.pagination }
 }
 
 export type StudentDashboardStats = {

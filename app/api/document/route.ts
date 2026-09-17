@@ -13,8 +13,8 @@ import {
     resolveUniversityApplicationScope,
 } from "@/lib/auth/university-scope"
 import { saveDocumentUpload } from "@/lib/supabase/save-document-upload"
-import { fetchInChunks } from "@/lib/supabase/query-in-chunks"
 import { paginateDocumentRows, parseDocumentPageLimit } from "@/lib/document/paginate"
+import { rpcDocumentStudentsList } from "@/lib/rpc/dashboard"
 import { Role } from "@/types/enums/role"
 
 export async function GET(req: NextRequest) {
@@ -102,27 +102,9 @@ export async function GET(req: NextRequest) {
             )
         }
  
-        const studentSelect = `
-                id,
-                profile_id,
-                student_code,
-                created_at,
-                profile:profile_id (id, first_name, last_name, avatar_url)
-            `
-
-        let students: Array<{
-            id: string
-            profile_id: string
-            student_code: string | null
-            created_at: string
-            profile: {
-                id: string
-                first_name: string | null
-                last_name: string | null
-                avatar_url: string | null
-            } | null
-        }> = []
         const staffRole = profile?.role
+        let agentId: string | undefined
+        let profileIds: string[] | null = null
 
         if (profile?.role === Role.AGENT) {
             const { data: agentRow } = await supabase
@@ -138,21 +120,7 @@ export async function GET(req: NextRequest) {
                 )
             }
 
-            const { data: agentStudents, error: studentsError } = await supabase
-                .from("student")
-                .select(studentSelect)
-                .eq("created_by_agent_id", agentRow.id)
-                .order("created_at", { ascending: false })
-
-            if (studentsError) {
-                console.error("students error:", studentsError)
-                return NextResponse.json(
-                    { error: "Failed to fetch students", details: studentsError },
-                    { status: 500 }
-                )
-            }
-
-            students = (agentStudents ?? []) as unknown as typeof students
+            agentId = agentRow.id
         } else if (isUniversityStaffRole(profile?.role)) {
             const scope = await resolveUniversityApplicationScope(
                 supabase,
@@ -160,22 +128,7 @@ export async function GET(req: NextRequest) {
                 profile?.role
             )
 
-            if (scope.universityIds === null) {
-                const { data: staffStudents, error: studentsError } = await supabase
-                    .from("student")
-                    .select(studentSelect)
-                    .order("created_at", { ascending: false })
-
-                if (studentsError) {
-                    console.error("students error:", studentsError)
-                    return NextResponse.json(
-                        { error: "Failed to fetch students", details: studentsError },
-                        { status: 500 }
-                    )
-                }
-
-                students = (staffStudents ?? []) as unknown as typeof students
-            } else {
+            if (scope.universityIds !== null) {
                 let applicationsQuery = supabase.from("application").select("profile_id")
                 applicationsQuery = applyUniversityIdFilter(
                     applicationsQuery,
@@ -193,7 +146,7 @@ export async function GET(req: NextRequest) {
                     )
                 }
 
-                const profileIds = [
+                profileIds = [
                     ...new Set(
                         (applications ?? [])
                             .map((application) => application.profile_id)
@@ -211,125 +164,29 @@ export async function GET(req: NextRequest) {
                         { status: 200 }
                     )
                 }
-
-                const { data: scopedStudents, error: scopedStudentsError } = await fetchInChunks(
-                    profileIds,
-                    async (chunkIds) =>
-                        supabase
-                            .from("student")
-                            .select(studentSelect)
-                            .in("profile_id", chunkIds)
-                            .order("created_at", { ascending: false })
-                )
-
-                if (scopedStudentsError) {
-                    console.error("students error:", scopedStudentsError)
-                    return NextResponse.json(
-                        { error: "Failed to fetch students", details: scopedStudentsError },
-                        { status: 500 }
-                    )
-                }
-
-                students = (scopedStudents ?? []) as unknown as typeof students
             }
         } else {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        if (!students.length) {
-            return NextResponse.json(
-                {
-                    data: [],
-                    pagination: { total: 0, page: 1, limit, totalPages: 0 },
-                    role: staffRole,
-                },
-                { status: 200 }
-            )
-        }
-
-        const profileIds = students.map((student) => student.profile_id)
-
-        const documentSelect =
-            "id, profile_id, document_type_id, document_type:document_type_id(name), created_at, document_review(status, created_at), document_files(file_url, type)"
-
-        const { data: documents, error: docsError } = await fetchInChunks(
+        const rpcResult = await rpcDocumentStudentsList(supabase, {
             profileIds,
-            async (chunkIds) =>
-                supabase
-                    .from("document")
-                    .select(documentSelect)
-                    .in("profile_id", chunkIds)
-                    .order("created_at", { ascending: false })
-        )
-
-        if (docsError) {
-            console.error("documents error:", docsError)
-            return NextResponse.json(
-                { error: "Failed to fetch documents", details: docsError },
-                { status: 500 }
-            )
-        }
-
-        const result = students
-            .map((student) => {
-                const docs = (documents ?? []).filter(
-                    (document) => document.profile_id === student.profile_id
-                )
-
-                const profileName = formatFullName(
-                    student.profile?.first_name,
-                    student.profile?.last_name
-                ).toLowerCase()
-                const studentCode = (student.student_code ?? "").toLowerCase()
-                if (
-                    search &&
-                    !profileName.includes(search) &&
-                    !studentCode.includes(search)
-                ) {
-                    return null
-                }
-
-                const lastDoc = docs.length
-                    ? [...docs].sort(
-                          (a, b) =>
-                              new Date(b.created_at).getTime() -
-                              new Date(a.created_at).getTime()
-                      )[0]
-                    : null
-
-                const lastStatus = lastDoc?.document_review?.[0]?.status ?? null
-
-                if (status && status.toLowerCase() !== "all" && lastStatus !== status) return null
-
-                return {
-                    student_id: student.profile_id,
-                    student_name: formatFullName(
-                        student.profile?.first_name,
-                        student.profile?.last_name,
-                        "—"
-                    ),
-                    student_code: student.student_code ?? null,
-                    avatar_url: student.profile?.avatar_url ?? null,
-                    document_count: docs.length,
-                    last_uploaded_at: lastDoc?.created_at ?? null,
-                    last_doc_status: lastStatus,
-                }
-            })
-            .filter(Boolean)
-            .sort((a, b) => {
-                const aTime = a?.last_uploaded_at
-                    ? new Date(a.last_uploaded_at).getTime()
-                    : 0
-                const bTime = b?.last_uploaded_at
-                    ? new Date(b.last_uploaded_at).getTime()
-                    : 0
-                return bTime - aTime
-            })
-
-        const paged = paginateDocumentRows(result, page, limit)
+            agentId,
+            search: search ?? "",
+            status: status ?? "all",
+            page,
+            limit,
+        })
 
         return NextResponse.json(
-            { data: paged.data, pagination: paged.pagination, role: staffRole },
+            {
+                data: rpcResult.data.map((row) => ({
+                    ...row,
+                    student_name: row.student_name || "—",
+                })),
+                pagination: rpcResult.pagination,
+                role: staffRole,
+            },
             { status: 200 }
         )
     } catch {
