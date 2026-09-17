@@ -11,6 +11,7 @@ import {
 } from "@/lib/offer/select-fields";
 import { parseDocumentTemplateWatermark } from "@/lib/document-template/watermark"
 import { renderOfferBodyHtml } from "@/lib/offer/render-offer-body-html";
+import { findTemplateIdForCourseId } from "@/lib/document-template/program-assignment"
 import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role";
 
@@ -129,12 +130,20 @@ export async function GET(
               }
             : applicationRecord
 
+        const savedDocumentTemplateId = (offer as { document_template_id?: string | null })
+            .document_template_id
+        const applicationCourse = applicationRecord?.course as { id?: string | null } | null | undefined
+        const resolvedDocumentTemplateId =
+            savedDocumentTemplateId ??
+            (applicationCourse?.id
+                ? await findTemplateIdForCourseId(supabase, applicationCourse.id)
+                : null)
+
         const renderedBodyHtml =
             applicationRecord && typeof applicationRecord.id === "string" && typeof applicationRecord.profile_id === "string"
                 ? await renderOfferBodyHtml(supabase, {
                       bodyHtml: (offer as { body_html?: string | null }).body_html,
-                      documentTemplateId: (offer as { document_template_id?: string | null })
-                          .document_template_id,
+                      documentTemplateId: resolvedDocumentTemplateId,
                       createdAt: offer.created_at,
                       checklistItems: (offer as { checklist_items?: unknown }).checklist_items,
                       checklistProofs: (offer as { checklist_proofs?: unknown }).checklist_proofs,
@@ -155,8 +164,7 @@ export async function GET(
                 : null
 
         let templateWatermark = null
-        const documentTemplateId = (offer as { document_template_id?: string | null })
-            .document_template_id
+        const documentTemplateId = resolvedDocumentTemplateId
 
         if (documentTemplateId) {
             const { data: templateRow } = await supabase
@@ -171,6 +179,7 @@ export async function GET(
 
         const mappedOffer = {
             ...offer,
+            document_template_id: documentTemplateId,
             rendered_body_html: renderedBodyHtml,
             template_watermark: templateWatermark,
             application: mappedApplication,

@@ -39,6 +39,7 @@ import {
     buildLegacyLetterHeadHtml,
     buildSignatureBlockHtml,
     buildTemplateOfferLetterHtml,
+    paginateOfferLetterHtml,
 } from "@/lib/offer/offer-letter-html"
 
 
@@ -527,7 +528,7 @@ export default function OfferDetailsPage() {
             acceptedAt,
         })
 
-        const html = buildTemplateOfferLetterHtml(conditionalLetterBodyHtml, {
+        const html = buildTemplateOfferLetterHtml(paginateOfferLetterHtml(conditionalLetterBodyHtml), {
             title: `Conditional Letter – ${student?.name || "Applicant"}`,
             signatureHtml,
             watermark: offer?.template_watermark ?? null,
@@ -597,7 +598,7 @@ export default function OfferDetailsPage() {
 
             iframeDoc.open()
             iframeDoc.write(
-                buildTemplateOfferLetterHtml(conditionalLetterBodyHtml, {
+                buildTemplateOfferLetterHtml(paginateOfferLetterHtml(conditionalLetterBodyHtml), {
                     title: `Conditional Letter – ${student?.name || "Applicant"}`,
                     signatureHtml,
                     watermark: offer?.template_watermark ?? null,
