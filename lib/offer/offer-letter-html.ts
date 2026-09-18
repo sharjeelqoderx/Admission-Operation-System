@@ -1,9 +1,37 @@
 import {
     A4_DOCUMENT_PRINT_STYLES,
+    A4_PAGE_HEIGHT_PX,
+    A4_PAGE_PADDING_Y_MM,
+    A4_DOCUMENT_CONTENT_CLASS,
+    mmToPx,
     buildDocumentPageWatermarkHtml,
     splitTemplateBodyIntoPages,
 } from "@/lib/document-template/a4-document"
-import { parseDocumentLayout } from "@/lib/document-template/header-footer"
+import {
+    composeDocumentLayout,
+    parseDocumentLayout,
+} from "@/lib/document-template/header-footer"
+import { paginateBodyHtmlByA4Height } from "@/lib/document-template/a4-pagination"
+
+const OFFER_BODY_WIDTH_PX = 794 - mmToPx(15) * 2
+const OFFER_BODY_HEIGHT_PX = A4_PAGE_HEIGHT_PX - mmToPx(A4_PAGE_PADDING_Y_MM) * 2
+
+export function paginateOfferLetterHtml(fullHtml: string): string {
+  if (typeof document === "undefined") return fullHtml
+
+  const layout = parseDocumentLayout(fullHtml)
+  const pages = paginateBodyHtmlByA4Height(layout.bodyHtml, {
+    containerWidthPx: OFFER_BODY_WIDTH_PX,
+    contentClassName: A4_DOCUMENT_CONTENT_CLASS,
+    maxBodyHeightPx: OFFER_BODY_HEIGHT_PX,
+  })
+
+  return composeDocumentLayout({
+    headerHtml: layout.headerHtml,
+    bodyHtml: pages.join('<div data-page-break="true"></div>'),
+    footerHtml: layout.footerHtml,
+  })
+}
 
 export function buildSignatureBlockHtml(options: {
     status: string
