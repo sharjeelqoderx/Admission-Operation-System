@@ -4,6 +4,7 @@ import {
     tryCreateSupabaseServiceClient,
 } from "@/lib/supabase/server"
 import { assertCanReviewApplication } from "@/lib/application/review-access"
+import { syncApplicationToSugar } from "@/lib/sugar/sync-application"
 
 type RouteParams = {
     params: Promise<{ id: string }>
@@ -193,6 +194,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             }
         }
 
+        const sugarSync = await syncApplicationToSugar(newApplication.id, writeClient)
+
         return NextResponse.json({
             success: true,
             data: {
@@ -200,6 +203,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 new_application_id: newApplication.id,
             },
             message: "Application deferred successfully",
+            sugar_sync: sugarSync,
         })
     } catch (error) {
         console.error("Defer application error:", error)
