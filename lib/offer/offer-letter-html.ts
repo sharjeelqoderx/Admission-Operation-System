@@ -6,6 +6,7 @@ import {
     mmToPx,
     buildDocumentPageWatermarkHtml,
     splitTemplateBodyIntoPages,
+    prepareDocumentBodyHtmlForStaticRender,
 } from "@/lib/document-template/a4-document"
 import {
     composeDocumentLayout,
@@ -162,7 +163,7 @@ export function buildTemplateOfferLetterHtml(
 ): string {
     const title = options?.title ?? "Offer Letter"
     const signatureHtml = options?.signatureHtml ?? ""
-    const layout = parseDocumentLayout(bodyHtml)
+    const layout = parseDocumentLayout(prepareDocumentBodyHtmlForStaticRender(bodyHtml))
     const pages = splitTemplateBodyIntoPages(layout.bodyHtml)
 
     const pageSections = pages

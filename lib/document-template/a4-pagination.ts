@@ -66,29 +66,10 @@ function measureBlockHeight(block: HTMLElement, options: PaginateHtmlOptions): n
     return height
 }
 
-/**
- * Splits body HTML into A4-sized pages. Manual page-break markers take priority;
- * otherwise blocks are distributed by measured height.
- */
-export function paginateBodyHtmlByA4Height(
-    bodyHtml: string,
+function distributeBlocksByHeight(
+    normalized: string,
     options: PaginateHtmlOptions
 ): string[] {
-    const manualPages = splitTemplateBodyIntoPages(bodyHtml)
-
-    if (manualPages.length > 1) {
-        return manualPages
-    }
-
-    const normalized = manualPages[0]?.trim() ?? ""
-    if (!normalized) {
-        return [""]
-    }
-
-    if (typeof document === "undefined") {
-        return [normalized]
-    }
-
     const measureRoot = createMeasurementContainer(options)
     measureRoot.innerHTML = normalized
 
@@ -134,4 +115,39 @@ export function paginateBodyHtmlByA4Height(
     flushPage()
 
     return pages.length > 0 ? pages : [normalized]
+}
+
+function paginateSegmentByA4Height(
+    segmentHtml: string,
+    options: PaginateHtmlOptions
+): string[] {
+    const normalized = segmentHtml.trim()
+    if (!normalized) {
+        return [""]
+    }
+
+    if (typeof document === "undefined") {
+        return [normalized]
+    }
+
+    return distributeBlocksByHeight(normalized, options)
+}
+
+/**
+ * Splits body HTML into A4-sized pages. Manual page-break markers take
+ * priority (one page per marker segment); each segment that overflows a
+ * single page is additionally split by measured height so no content is
+ * clipped in preview or print.
+ */
+export function paginateBodyHtmlByA4Height(
+    bodyHtml: string,
+    options: PaginateHtmlOptions
+): string[] {
+    const manualPages = splitTemplateBodyIntoPages(bodyHtml)
+
+    if (manualPages.length > 1) {
+        return manualPages.flatMap((page) => paginateSegmentByA4Height(page, options))
+    }
+
+    return paginateSegmentByA4Height(manualPages[0] ?? "", options)
 }
