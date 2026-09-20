@@ -1,6 +1,9 @@
 import { cn } from "@/lib/utils"
 
-import { splitTemplateBodyIntoPages } from "@/lib/document-template/a4-document"
+import {
+    splitTemplateBodyIntoPages,
+    stripLeadingTrailingPageBreakMarkers,
+} from "@/lib/document-template/a4-document"
 import {
     getDefaultHeaderContactText,
     type TemplateLocale,
@@ -322,7 +325,9 @@ export function parseDocumentLayout(fullHtml: string): DocumentTemplateLayout {
         DOCUMENT_TEMPLATE_BODY_CLASS,
         "body"
     )
-    const bodyHtml = bodyBlock ? bodyBlock.innerHtml : remaining
+    const bodyHtml = stripLeadingTrailingPageBreakMarkers(
+        bodyBlock ? bodyBlock.innerHtml : remaining
+    )
 
     if (headerHtml) {
         const headerFields = parseHeaderHtml(headerHtml)
@@ -341,7 +346,7 @@ export function composeDocumentLayout(layout: DocumentTemplateLayout): string {
         parts.push(layout.headerHtml.trim())
     }
 
-    const body = layout.bodyHtml.trim()
+    const body = stripLeadingTrailingPageBreakMarkers(layout.bodyHtml)
     if (body) {
         parts.push(
             `<div class="${DOCUMENT_TEMPLATE_BODY_CLASS}" data-document-region="body">${body}</div>`

@@ -58,6 +58,7 @@ import {
     DEFAULT_CENTER_LOGO_WIDTH,
     DOCUMENT_IMAGE_CLASS,
     DOCUMENT_LOGO_LINE_CLASS,
+    DOCUMENT_PAGE_BREAK_CLASS,
     buildDocumentHeadingBlock,
     buildHeaderImageBlock,
     buildLogoImageHtml,
@@ -474,6 +475,67 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
         editor?.chain().focus().insertDocumentPageBreak().run()
     }, [editor])
 
+    /**
+     * Handles clicks on the page-break badge actions ("Remove break" /
+     * "Delete page"). Runs in the capture phase so ProseMirror never turns
+     * the click into a selection change.
+     */
+    const handleEditorClickCapture = useCallback(
+        (event: React.MouseEvent<HTMLDivElement>) => {
+            if (!editor) return
+
+            const target = event.target as HTMLElement
+            const actionElement = target.closest<HTMLElement>("[data-page-break-action]")
+            if (!actionElement) return
+
+            const action = actionElement.getAttribute("data-page-break-action")
+            const breakElement = target.closest<HTMLElement>(`.${DOCUMENT_PAGE_BREAK_CLASS}`)
+            if (!action || !breakElement) return
+
+            event.preventDefault()
+            event.stopPropagation()
+
+            const breakElements = Array.from(
+                editor.view.dom.querySelectorAll<HTMLElement>(`.${DOCUMENT_PAGE_BREAK_CLASS}`)
+            )
+            const breakIndex = breakElements.indexOf(breakElement)
+            if (breakIndex < 0) return
+
+            const breakPositions: number[] = []
+            editor.state.doc.descendants((node, pos) => {
+                if (node.type.name === "documentPageBreak") {
+                    breakPositions.push(pos)
+                }
+            })
+
+            const breakPos = breakPositions[breakIndex]
+            if (breakPos === undefined) return
+
+            if (action === "delete-page") {
+                // Remove the break plus everything up to the next page break
+                // (or the end of the document) — i.e. the page that starts here.
+                const endPos = breakPositions[breakIndex + 1] ?? editor.state.doc.content.size
+                editor
+                    .chain()
+                    .focus()
+                    .deleteRange({ from: breakPos, to: endPos })
+                    .run()
+                return
+            }
+
+            // "remove" — delete just the break so both pages merge.
+            const breakNode = editor.state.doc.nodeAt(breakPos)
+            if (!breakNode) return
+
+            editor
+                .chain()
+                .focus()
+                .deleteRange({ from: breakPos, to: breakPos + breakNode.nodeSize })
+                .run()
+        },
+        [editor]
+    )
+
     const insertVariable = useCallback(
         (key: string) => {
             editor?.chain().focus().insertContent(`{{${key}}}`).run()
@@ -534,7 +596,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
     }
 
     return (
-        <div className={cn("space-y-3", className)}>
+        <div className={cn("space-y-3", className)} onClickCapture={handleEditorClickCapture}>
             {editable ? (
                 <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-3">
                     <div className="flex flex-wrap items-center gap-2">
@@ -954,7 +1016,9 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                     <Typography as="p" font="small" className="text-muted-foreground">
                         Header and footer stay fixed at the top and bottom of every page — like
                         Google Docs and Word. Only the center area is editable for letter content.
-                        When content exceeds one page, a new A4 page is added automatically.
+                        When a page&apos;s content grows beyond A4 height, the sheet extends and
+                        shows an overflow marker — insert a page break to start the next page.
+                        View uses the same page breaks so it matches what you see here.
                     </Typography>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -974,8 +1038,9 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
                     </div>
 
                     <Typography as="p" font="small" className="text-muted-foreground">
-                        Content flows across A4 pages automatically. Use Page break to force the
-                        next section onto a new page in preview and PDF.
+                        Use Page break to force the next section onto a new page. Every page break
+                        shows a badge in the document — use “Remove break” to merge two pages or
+                        “Delete page” to remove the page after it (Ctrl+Z undoes both).
                     </Typography>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -1215,6 +1280,7 @@ export const DocumentTemplateEditor = memo(function DocumentTemplateEditor({
             ) : null}
 
             <DocumentTemplateA4PaginatedSheet
+                editor={editor}
                 hasHeader={hasHeader}
                 hasFooter={hasFooter}
                 headerHtml={buildHeaderHtml(headerFields)}

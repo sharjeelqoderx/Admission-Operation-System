@@ -313,6 +313,13 @@
   display: none;
 }
 
+/* Print-only render root used by the document template preview.
+   Kept hidden on screen; when printing, the app is hidden and only this
+   root prints — each page on its own physical A4 sheet. */
+.document-template-print-root {
+  display: none;
+}
+
 @media print {
   @page {
     size: A4;
@@ -323,25 +330,31 @@
     background: white !important;
   }
 
-  body * {
-    visibility: hidden;
-  }
-
-  .document-template-print-target,
-  .document-template-print-target * {
-    visibility: visible;
-  }
-
-  .document-template-print-target {
-    position: absolute;
-    left: 0;
-    top: 0;
-    box-shadow: none !important;
-    width: 210mm !important;
-    min-height: 297mm !important;
-  }
-
-  .document-center-logo-placeholder {
+  /* Hide the whole app; only the dedicated print root below prints. */
+  body > *:not(.document-template-print-root) {
     display: none !important;
+  }
+
+  .document-template-print-root {
+    display: block !important;
+  }
+
+  .document-template-print-root .document-template-print-page {
+    position: relative;
+    width: 210mm !important;
+    height: 297mm !important;
+    padding: 20mm 15mm !important;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .document-template-print-root .document-template-print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 }
