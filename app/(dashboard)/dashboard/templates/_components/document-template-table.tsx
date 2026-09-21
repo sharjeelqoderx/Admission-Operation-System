@@ -1,6 +1,7 @@
 "use client"
 
 import { memo } from "react"
+import Link from "next/link"
 import { AlertCircle, FileText } from "lucide-react"
 import { TableSkeleton } from "@/components/shared/table-skeleton"
 import { Typography } from "@/components/shared/Typography"
@@ -25,14 +26,12 @@ type DocumentTemplateTableProps = {
     errorMessage?: string
     deletingId: string | null
     cloningId: string | null
-    onView: (template: DocumentTemplateListItem) => void
-    onEdit: (template: DocumentTemplateListItem) => void
     onClone: (template: DocumentTemplateListItem) => void
     onDelete: (template: DocumentTemplateListItem) => void
     onRetry: () => void
-    viewOnly?: boolean
     canClone?: boolean
     canDelete?: boolean
+    canEdit?: boolean
 }
 
 const COLUMN_COUNT = 5
@@ -58,14 +57,12 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
     errorMessage,
     deletingId,
     cloningId,
-    onView,
-    onEdit,
     onClone,
     onDelete,
     onRetry,
-    viewOnly = false,
     canClone = false,
     canDelete = true,
+    canEdit = false,
 }: DocumentTemplateTableProps) {
     if (isLoading) {
         return (
@@ -171,11 +168,15 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                     )}
                                 >
                                     <TableCell className="max-w-[180px] px-4 py-5">
-                                        <span className="block truncate" title={template.title}>
+                                        <Link
+                                            href={`/dashboard/templates/${template.id}`}
+                                            className="block truncate hover:underline"
+                                            title={template.title}
+                                        >
                                             <Typography as="span" className="text-sm font-bold text-gray-900">
                                                 {template.title}
                                             </Typography>
-                                        </span>
+                                        </Link>
                                     </TableCell>
 
                                     <TableCell className="max-w-[180px] px-4 py-5">
@@ -247,11 +248,9 @@ export const DocumentTemplateTable = memo(function DocumentTemplateTable({
                                                     deletingId === template.id ||
                                                     cloningId === template.id
                                                 }
-                                                viewOnly={viewOnly}
                                                 canClone={canClone}
                                                 canDelete={canDelete}
-                                                onView={onView}
-                                                onEdit={onEdit}
+                                                canEdit={canEdit}
                                                 onClone={onClone}
                                                 onDelete={onDelete}
                                             />

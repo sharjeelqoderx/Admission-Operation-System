@@ -1,8 +1,8 @@
 "use client"
 
 import { memo } from "react"
-import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
+import { ArrowLeft, Save } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { ErrorView } from "@/components/shared/error-view"
@@ -19,7 +19,7 @@ import { TEMPLATE_LOCALE_OPTIONS } from "@/lib/document-template/locale"
 import type { DocumentTemplateDates } from "@/lib/document-template/date-variables"
 import type { DocumentTemplateWatermark } from "@/lib/document-template/watermark"
 import type { TemplateLocale } from "@/types/schemas/document-template"
-import { DocumentTemplateEditor } from "./document-template-editor"
+import { DocumentEditor } from "./document-editor"
 import { DocumentTemplateProgramSelect } from "./document-template-program-select"
 
 type Props = {
@@ -45,6 +45,7 @@ type Props = {
     saveLabel?: string
 }
 
+/** Create-template form wrapper — edit page uses DocumentEditorPage directly. */
 export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
     heading,
     backHref = "/dashboard/templates",
@@ -69,12 +70,7 @@ export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
 }: Props) {
     return (
         <main className="relative space-y-6">
-            <BluryCard
-                isCentered={false}
-                blurAmount="backdrop-blur-lg"
-                blendColorClass="bg-white/10"
-                childClass="space-y-6"
-            >
+            <BluryCard isCentered={false} blurAmount="backdrop-blur-lg" blendColorClass="bg-white/10" childClass="space-y-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-1">
                         {onBack ? (
@@ -94,13 +90,7 @@ export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
                             {heading}
                         </Typography>
                     </div>
-
-                    <Button
-                        type="button"
-                        className="gap-2"
-                        disabled={isSaving}
-                        onClick={onSave}
-                    >
+                    <Button type="button" className="gap-2" disabled={isSaving} onClick={onSave}>
                         <Save className="size-4" />
                         {isSaving ? "Saving..." : saveLabel}
                     </Button>
@@ -108,39 +98,19 @@ export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
 
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                        <Typography as="label" font="sub-text" className="font-semibold">
-                            Template title
-                        </Typography>
-                        <Input
-                            value={title}
-                            placeholder="e.g. Admission Offer Letter"
-                            onChange={(event) => onTitleChange(event.target.value)}
-                        />
+                        <Typography as="label" font="sub-text" className="font-semibold">Template title</Typography>
+                        <Input value={title} placeholder="e.g. Admission Offer Letter" onChange={(e) => onTitleChange(e.target.value)} />
                     </div>
-
                     <div className="space-y-2">
-                        <Typography as="label" font="sub-text" className="font-semibold">
-                            Letter language
-                        </Typography>
-                        <Select
-                            value={locale}
-                            onValueChange={(value) => onLocaleChange(value as TemplateLocale)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select language" />
-                            </SelectTrigger>
+                        <Typography as="label" font="sub-text" className="font-semibold">Letter language</Typography>
+                        <Select value={locale} onValueChange={(v) => onLocaleChange(v as TemplateLocale)}>
+                            <SelectTrigger><SelectValue placeholder="Select language" /></SelectTrigger>
                             <SelectContent>
-                                {TEMPLATE_LOCALE_OPTIONS.map((option) => (
-                                    <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
-                                    </SelectItem>
+                                {TEMPLATE_LOCALE_OPTIONS.map((o) => (
+                                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Typography as="p" font="small" className="text-muted-foreground">
-                            Salutations, titles, dates, and checklist labels follow this language
-                            when the letter is generated.
-                        </Typography>
                     </div>
                 </div>
 
@@ -153,14 +123,14 @@ export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
 
                 {formError ? <ErrorView message={formError} /> : null}
 
-                <DocumentTemplateEditor
-                    content={bodyHtml}
+                <DocumentEditor
+                    bodyHtml={bodyHtml}
                     locale={locale}
                     templateDates={templateDates}
-                    onTemplateDatesChange={onTemplateDatesChange}
                     watermark={watermark}
+                    onBodyChange={onBodyChange}
+                    onTemplateDatesChange={onTemplateDatesChange}
                     onWatermarkChange={onWatermarkChange}
-                    onChange={onBodyChange}
                 />
             </BluryCard>
         </main>

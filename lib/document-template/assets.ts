@@ -4,8 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import type { DocumentTemplateAsset } from "@/types/schemas/document-template"
 
-export const DOCUMENT_TEMPLATE_ASSETS_BUCKET = "student-admission"
-export const DOCUMENT_TEMPLATE_ASSETS_FOLDER = "document-template-assets"
+/** Supabase Storage → Files → Buckets → media → assets/ */
+export const DOCUMENT_TEMPLATE_ASSETS_BUCKET = "media"
+export const DOCUMENT_TEMPLATE_ASSETS_FOLDER = "assets"
 
 const ALLOWED_IMAGE_TYPES = new Set([
     "image/jpeg",

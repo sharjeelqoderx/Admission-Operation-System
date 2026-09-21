@@ -15,11 +15,15 @@ export const DocumentTemplateDatesSchema = z.object({
     visa_participation_deadline: z.string().nullable().optional(),
 })
 
+export const DocumentTemplateWatermarkPositionSchema = z.enum(["center", "top", "bottom"])
+
 export const DocumentTemplateWatermarkSchema = z.object({
     enabled: z.boolean(),
     image_url: z.string().nullable().optional(),
     opacity: z.number().min(0).max(1).optional(),
     size_px: z.number().int().positive().optional(),
+    position: DocumentTemplateWatermarkPositionSchema.optional(),
+    rotation_deg: z.number().min(-180).max(180).optional(),
 })
 
 export const DocumentTemplateFormSchema = z.object({

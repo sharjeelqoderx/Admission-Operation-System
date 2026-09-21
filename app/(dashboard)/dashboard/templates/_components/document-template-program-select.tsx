@@ -15,62 +15,118 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import type { DocumentTemplateProgramOptionsResponse } from "@/types/schemas/document-template"
+import type {
+    DocumentTemplateCourseSummary,
+    DocumentTemplateProgramOption,
+} from "@/types/schemas/document-template"
+import { fetchDocumentTemplateProgramOptions } from "@/lib/document-template/client"
 import { DOCUMENT_TEMPLATE_PROGRAM_OPTIONS_QUERY_KEY } from "@/lib/document-template/query-cache"
 
 type DocumentTemplateProgramSelectProps = {
     value: string[]
     excludeTemplateId?: string | null
+    assignedPrograms?: DocumentTemplateCourseSummary[]
     disabled?: boolean
     onChange: (programIds: string[]) => void
 }
 
-async function fetchProgramOptions(
-    excludeTemplateId?: string | null
-): Promise<DocumentTemplateProgramOptionsResponse["data"]> {
-    const params = new URLSearchParams()
-    if (excludeTemplateId) {
-        params.set("exclude_template_id", excludeTemplateId)
+function mergeProgramOptions(
+    options: DocumentTemplateProgramOption[],
+    assignedPrograms: DocumentTemplateCourseSummary[] | undefined,
+    selectedIds: string[]
+): DocumentTemplateProgramOption[] {
+    const byId = new Map<string, DocumentTemplateProgramOption>()
+
+    for (const option of options) {
+        byId.set(option.id, option)
     }
 
-    const query = params.toString()
-    const res = await fetch(
-        `/api/document-template/program-options${query ? `?${query}` : ""}`
-    )
-    const json = await res.json()
-
-    if (!res.ok) {
-        throw new Error(json?.error ?? "Failed to fetch program options")
+    for (const program of assignedPrograms ?? []) {
+        if (!byId.has(program.id)) {
+            byId.set(program.id, {
+                id: program.id,
+                label: program.label,
+                is_assigned: true,
+                assigned_template_id: null,
+                assigned_template_title: null,
+            })
+        }
     }
 
-    return json.data
+    for (const id of selectedIds) {
+        if (!byId.has(id)) {
+            byId.set(id, {
+                id,
+                label: id,
+                is_assigned: false,
+                assigned_template_id: null,
+                assigned_template_title: null,
+            })
+        }
+    }
+
+    return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label))
+}
+
+function resolveSelectedPrograms(
+    value: string[],
+    options: DocumentTemplateProgramOption[]
+): DocumentTemplateProgramOption[] {
+    const byId = new Map(options.map((option) => [option.id, option]))
+    return value
+        .map((id) => byId.get(id) ?? {
+            id,
+            label: id,
+            is_assigned: false,
+            assigned_template_id: null,
+            assigned_template_title: null,
+        })
+        .filter((option, index, list) => list.findIndex((item) => item.id === option.id) === index)
 }
 
 export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgramSelect({
     value,
     excludeTemplateId,
+    assignedPrograms,
     disabled = false,
     onChange,
 }: DocumentTemplateProgramSelectProps) {
     const programOptionsQuery = useQuery({
         queryKey: [...DOCUMENT_TEMPLATE_PROGRAM_OPTIONS_QUERY_KEY, excludeTemplateId ?? "new"],
-        queryFn: () => fetchProgramOptions(excludeTemplateId),
+        queryFn: () => fetchDocumentTemplateProgramOptions(excludeTemplateId),
         staleTime: Infinity,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
     })
 
     const options = useMemo(
-        () => programOptionsQuery.data ?? [],
-        [programOptionsQuery.data]
+        () =>
+            mergeProgramOptions(
+                programOptionsQuery.data ?? [],
+                assignedPrograms,
+                value
+            ),
+        [assignedPrograms, programOptionsQuery.data, value]
     )
 
     const selectedSet = useMemo(() => new Set(value), [value])
 
     const selectedOptions = useMemo(
-        () => options.filter((option) => selectedSet.has(option.id)),
-        [options, selectedSet]
+        () => resolveSelectedPrograms(value, options),
+        [options, value]
     )
+
+    const emptyOptionsMessage = useMemo(() => {
+        if (value.length > 0) {
+            return "No additional programs available"
+        }
+
+        if (excludeTemplateId) {
+            return "No programs linked yet. Every active program may already belong to another template."
+        }
+
+        return "Every active program is already linked to another offer template. Edit an existing template to manage assignments."
+    }, [excludeTemplateId, value.length])
 
     const toggleProgram = useCallback(
         (programId: string) => {
@@ -93,14 +149,14 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
     const summaryLabel = useMemo(() => {
         if (selectedOptions.length === 0) {
             return options.length === 0
-                ? "No available programs"
+                ? emptyOptionsMessage
                 : "Select one or more programs"
         }
         if (selectedOptions.length === 1) {
             return selectedOptions[0].label
         }
         return `${selectedOptions.length} programs selected`
-    }, [options.length, selectedOptions])
+    }, [emptyOptionsMessage, options.length, selectedOptions])
 
     return (
         <div className="space-y-3 rounded-xl border border-brand-secondary/20 bg-white/50 p-4 shadow-sm">
@@ -131,7 +187,7 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                             <Button
                                 type="button"
                                 variant="outline"
-                                disabled={disabled || options.length === 0}
+                                disabled={disabled || (options.length === 0 && value.length === 0)}
                                 className={cn(
                                     "h-auto min-h-11 w-full justify-between rounded-lg border-brand-secondary/25 bg-white/80 px-3 py-2 text-left font-normal hover:bg-white",
                                     selectedOptions.length === 0 && "text-muted-foreground"
@@ -149,7 +205,7 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                         >
                             {options.length === 0 ? (
                                 <Typography as="p" font="small" className="px-2 py-3 text-muted-foreground">
-                                    No available programs
+                                    {emptyOptionsMessage}
                                 </Typography>
                             ) : (
                                 <div className="space-y-1">

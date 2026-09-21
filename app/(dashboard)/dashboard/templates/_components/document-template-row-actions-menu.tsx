@@ -1,6 +1,7 @@
 "use client"
 
 import { memo } from "react"
+import Link from "next/link"
 import { CopyPlus, EllipsisVertical, Eye, Pencil, Trash2 } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { Spinner } from "@/components/shared/page-loader"
@@ -17,11 +18,9 @@ import type { DocumentTemplateListItem } from "@/types/schemas/document-template
 type DocumentTemplateRowActionsMenuProps = {
     template: DocumentTemplateListItem
     isBusy?: boolean
-    viewOnly?: boolean
     canClone?: boolean
     canDelete?: boolean
-    onView: (template: DocumentTemplateListItem) => void
-    onEdit: (template: DocumentTemplateListItem) => void
+    canEdit?: boolean
     onClone: (template: DocumentTemplateListItem) => void
     onDelete: (template: DocumentTemplateListItem) => void
 }
@@ -29,11 +28,9 @@ type DocumentTemplateRowActionsMenuProps = {
 export const DocumentTemplateRowActionsMenu = memo(function DocumentTemplateRowActionsMenu({
     template,
     isBusy = false,
-    viewOnly = false,
     canClone = false,
     canDelete = true,
-    onView,
-    onEdit,
+    canEdit = false,
     onClone,
     onDelete,
 }: DocumentTemplateRowActionsMenuProps) {
@@ -56,25 +53,23 @@ export const DocumentTemplateRowActionsMenu = memo(function DocumentTemplateRowA
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem
-                    className="cursor-pointer"
-                    onClick={() => onView(template)}
-                >
-                    <Eye className="size-4 shrink-0 text-gray-600" />
-                    <Typography as="span" className="text-sm font-semibold text-gray-800">
-                        View
-                    </Typography>
+                <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link href={`/dashboard/templates/${template.id}`}>
+                        <Eye className="size-4 shrink-0 text-gray-600" />
+                        <Typography as="span" className="text-sm font-semibold text-gray-800">
+                            View
+                        </Typography>
+                    </Link>
                 </DropdownMenuItem>
 
-                {!viewOnly ? (
-                    <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => onEdit(template)}
-                    >
-                        <Pencil className="size-4 shrink-0 text-gray-600" />
-                        <Typography as="span" className="text-sm font-semibold text-gray-800">
-                            Edit
-                        </Typography>
+                {canEdit ? (
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                        <Link href={`/dashboard/templates/${template.id}/edit`}>
+                            <Pencil className="size-4 shrink-0 text-gray-600" />
+                            <Typography as="span" className="text-sm font-semibold text-gray-800">
+                                Edit
+                            </Typography>
+                        </Link>
                     </DropdownMenuItem>
                 ) : null}
 

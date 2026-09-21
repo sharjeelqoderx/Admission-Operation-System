@@ -13,6 +13,10 @@ export const DOCUMENT_PAGE_WATERMARK_CLASS = "document-page-watermark"
 export const DOCUMENT_PAGE_BREAK_MARKER_REGEX =
     /<div[^>]*data-page-break=["']true["'][^>]*>[\s\S]*?<\/div>/gi
 
+/** Editor-only automatic page breaks — stripped before view/print height pagination. */
+export const DOCUMENT_AUTO_PAGE_BREAK_MARKER_REGEX =
+    /<div[^>]*data-auto-page-break=["']true["'][^>]*>[\s\S]*?<\/div>/gi
+
 /** Canonical serialized page-break marker used when normalizing template HTML. */
 export const PAGE_BREAK_MARKER_HTML = `<div class="${DOCUMENT_PAGE_BREAK_CLASS}" data-page-break="true"></div>`
 
@@ -66,6 +70,11 @@ export function splitTemplateBodyIntoPages(bodyHtml: string): string[] {
  * and normalizes the remaining markers to the canonical serialized form.
  * Middle markers (including intentional blank pages) are preserved.
  */
+/** Removes invisible auto page breaks inserted by the editor layout engine. */
+export function stripAutoPageBreakMarkers(html: string): string {
+    return html.replace(DOCUMENT_AUTO_PAGE_BREAK_MARKER_REGEX, "").trim()
+}
+
 export function stripLeadingTrailingPageBreakMarkers(html: string): string {
     const normalized = html.trim()
     if (!normalized) return ""
@@ -84,6 +93,8 @@ export function buildDocumentPageWatermarkHtml(
         image_url?: string | null
         opacity?: number
         size_px?: number
+        position?: "center" | "top" | "bottom"
+        rotation_deg?: number
     } | null
 ): string {
     if (watermark?.enabled === false) {
@@ -96,16 +107,41 @@ export function buildDocumentPageWatermarkHtml(
         typeof watermark?.opacity === "number" && watermark.opacity >= 0 && watermark.opacity <= 1
             ? watermark.opacity
             : 0.12
+    const position = watermark?.position === "top" || watermark?.position === "bottom" ? watermark.position : "center"
+    const rotationDeg =
+        typeof watermark?.rotation_deg === "number" && Number.isFinite(watermark.rotation_deg)
+            ? Math.max(-180, Math.min(180, Math.round(watermark.rotation_deg)))
+            : 0
 
-    return `<div class="${DOCUMENT_PAGE_WATERMARK_CLASS}" aria-hidden="true" style="--watermark-size:${sizePx}px;--watermark-opacity:${opacity};"><img src="${logoSrc}" alt="" width="${sizePx}" height="${sizePx}" style="opacity:${opacity};width:${sizePx}px;height:${sizePx}px;" /></div>`
+    const alignItems =
+        position === "top" ? "flex-start" : position === "bottom" ? "flex-end" : "center"
+    const containerParts = [
+        `--watermark-size:${sizePx}px`,
+        `--watermark-opacity:${opacity}`,
+        "display:flex",
+        `align-items:${alignItems}`,
+        "justify-content:center",
+    ]
+    if (position === "top") containerParts.push("padding-top:10%")
+    if (position === "bottom") containerParts.push("padding-bottom:10%")
+
+    const imageStyle = [
+        `opacity:${opacity}`,
+        `width:${sizePx}px`,
+        `height:${sizePx}px`,
+        "object-fit:contain",
+        `transform:rotate(${rotationDeg}deg)`,
+    ].join(";")
+
+    return `<div class="${DOCUMENT_PAGE_WATERMARK_CLASS}" aria-hidden="true" style="${containerParts.join(";")}"><img src="${logoSrc}" alt="" width="${sizePx}" height="${sizePx}" style="${imageStyle}" /></div>`
 }
 
 export const A4_DOCUMENT_MULTI_PAGE_STACK_CLASS = cn("flex flex-col items-center gap-4")
 
 export const DOCUMENT_HEADING_STYLES = cn(
-    "[&_h1]:mb-4 [&_h1]:text-[28px] [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:text-gray-900",
-    "[&_h2]:mb-3 [&_h2]:text-[22px] [&_h2]:font-semibold [&_h2]:leading-snug [&_h2]:text-gray-900",
-    "[&_h3]:mb-2 [&_h3]:text-[18px] [&_h3]:font-semibold [&_h3]:leading-snug [&_h3]:text-gray-800",
+    "[&_h1]:mb-2 [&_h1]:mt-3 [&_h1]:text-[20pt] [&_h1]:font-normal [&_h1]:leading-[1.15] [&_h1]:text-gray-900",
+    "[&_h2]:mb-2 [&_h2]:mt-3 [&_h2]:text-[16pt] [&_h2]:font-normal [&_h2]:leading-[1.15] [&_h2]:text-gray-900",
+    "[&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-[14pt] [&_h3]:font-normal [&_h3]:leading-[1.15] [&_h3]:text-gray-800",
     "[&_h1.document-main-heading]:text-center [&_h1.document-main-heading]:uppercase",
     "[&_h1.document-main-heading]:tracking-[0.08em] [&_h1.document-main-heading]:text-brand-byzantine",
     "[&_h1.document-main-heading]:text-[24px] [&_h1.document-main-heading]:font-black"
@@ -149,8 +185,14 @@ export function mmToPx(mm: number): number {
 export const A4_PAGE_HEIGHT_PX = mmToPx(A4_PAGE_HEIGHT_MM)
 
 export const A4_DOCUMENT_CONTENT_CLASS = cn(
-    "prose prose-sm max-w-none w-full",
+    "prose max-w-none w-full",
+    "text-[11pt] leading-[1.15] font-normal text-gray-900",
     "focus:outline-none",
+    // Google Docs-style flow: one Enter = one line, no extra paragraph gap.
+    "[&_p:empty]:m-0 [&_p:empty]:min-h-[1.15em]",
+    "[&_p:has(>br.ProseMirror-trailingBreak:only-child)]:m-0",
+    "[&_p:has(>br.ProseMirror-trailingBreak:only-child)]:min-h-[1.15em]",
+    "[&_p]:my-0 [&_p]:leading-[1.15]",
     DOCUMENT_HEADING_STYLES,
     "[&_table]:w-full [&_table]:border-collapse",
     "[&_td]:border [&_td]:border-border [&_td]:p-2",
@@ -166,7 +208,13 @@ export const A4_DOCUMENT_CONTENT_CLASS = cn(
     "[&_p.document-logo-line]:gap-3",
     "[&_img.document-logo]:inline-block [&_img.document-logo]:align-middle [&_img.document-logo]:object-contain",
     "[&_img.document-logo]:max-h-[120px] [&_img.document-logo]:h-auto",
-    "[&_img.document-image]:my-4 [&_img.document-image]:max-w-full [&_img.document-image]:h-auto",
+    "[&_img.document-image]:my-4 [&_img.document-image]:block [&_img.document-image]:max-w-full",
+    "[&_img.document-image]:h-auto [&_img.document-image]:object-contain",
+    "[&_p:has(>img.document-image)]:my-4 [&_p:has(>img.document-image)]:block",
+    "[&_p:has(>img.document-image)]:leading-none [&_p:has(>img.document-image)]:min-h-[1px]",
+    "[&_p:has(>img.document-image)_img]:mx-auto",
+    "[&_.image-resizer]:my-4 [&_.image-resizer]:block [&_.image-resizer]:max-w-full",
+    "[&_.image-resizer_img]:block [&_.image-resizer_img]:h-auto [&_.image-resizer_img]:max-w-full",
     // Signature + stamp row (name under sign, stamp tight beside it)
     "[&_table.document-sign-stamp-table]:my-3 [&_table.document-sign-stamp-table]:w-auto",
     "[&_table.document-sign-stamp-table]:max-w-full [&_table.document-sign-stamp-table]:border-0",
@@ -191,7 +239,10 @@ export const A4_DOCUMENT_CONTENT_CLASS = cn(
     "[&_.document-requirements-checklist]:font-sans",
     "[&_.requirement-checklist-row]:items-start [&_.requirement-checklist-row]:gap-1 [&_.requirement-checklist-row]:py-0.5",
     "[&_.requirement-checkbox]:shrink-0",
-    "[&_.document-page-break]:relative [&_.document-page-break]:my-0 [&_.document-page-break]:min-h-[26px]",
+    "[&_.document-page-break]:relative [&_.document-page-break]:my-0 [&_.document-page-break]:min-h-0",
+    "[&_.document-page-break[data-auto-page-break='true']]:block [&_.document-page-break[data-auto-page-break='true']]:min-h-0",
+    "[&_.document-page-break[data-auto-page-break='true']]:m-0 [&_.document-page-break[data-auto-page-break='true']]:overflow-hidden",
+    "[&_.document-page-break[data-auto-page-break='true']]:border-0 [&_.document-page-break[data-auto-page-break='true']]:p-0",
     "[&_.document-page-break]:py-0 [&_.document-page-break]:border-0 [&_.document-page-break]:bg-transparent",
     "[&_.document-page-break-badge]:absolute [&_.document-page-break-badge]:top-0 [&_.document-page-break-badge]:left-1/2",
     "[&_.document-page-break-badge]:z-30 [&_.document-page-break-badge]:-translate-x-1/2",
@@ -229,7 +280,7 @@ export function buildDocumentHeadingBlock(title = DEFAULT_DOCUMENT_HEADING_TEXT)
     return `<h1 class="${DOCUMENT_MAIN_HEADING_CLASS}" style="text-align: center;">${title}</h1>`
 }
 
-export const DEFAULT_TEMPLATE_BODY_HTML = `${buildDocumentHeadingBlock()}<p></p>`
+export const DEFAULT_TEMPLATE_BODY_HTML = buildDocumentHeadingBlock()
 
 /** Inline CSS for multi-page offer letter HTML / PDF rendering. */
 export const A4_DOCUMENT_PRINT_STYLES = `

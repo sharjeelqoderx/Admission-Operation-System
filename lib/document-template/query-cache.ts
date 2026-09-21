@@ -9,6 +9,10 @@ export const DOCUMENT_TEMPLATES_QUERY_KEY = ["document-templates"] as const
 export const DOCUMENT_TEMPLATE_PROGRAM_OPTIONS_QUERY_KEY =
     ["document-template-program-options"] as const
 
+export function documentTemplateQueryKey(templateId: string) {
+    return ["document-template", templateId] as const
+}
+
 export function upsertDocumentTemplateInCache(
     queryClient: QueryClient,
     template: DocumentTemplateListItem

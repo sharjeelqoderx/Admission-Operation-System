@@ -81,7 +81,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
         const toastId = toast.loading("Creating template...")
 
         try {
-            await createMutation.mutateAsync({
+            const created = await createMutation.mutateAsync({
                 title: title.trim(),
                 body_html: bodyHtml,
                 locale,
@@ -90,7 +90,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
                 course_ids: programIds,
             })
             toast.success("Document template created successfully.", { id: toastId })
-            router.push("/dashboard/templates")
+            router.push(`/dashboard/templates/${created.data.id}/edit`)
         } catch (error) {
             const message =
                 error instanceof Error ? error.message : "Failed to create document template"

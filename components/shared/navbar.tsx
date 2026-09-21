@@ -60,6 +60,9 @@ const getTitleFromPathname = (pathname: string): string => {
     if (pathname.includes('/dashboard/all-application-view/') && segments.length >= 3) return 'Application Details';
     if (pathname.includes('/dashboard/offer/') && segments.length >= 3) return 'Offer Details';
     if (pathname === '/dashboard/templates') return 'Templates';
+    if (pathname === '/dashboard/templates/new') return 'Create Template';
+    if (pathname.includes('/dashboard/templates/') && pathname.endsWith('/edit')) return 'Edit Template';
+    if (pathname.includes('/dashboard/templates/') && segments.length >= 3) return 'View Template';
     // if (pathname === '/dashboard/degree-requirements') return 'Degree Requirements';
 
     const lastSegment = segments[segments.length - 1];

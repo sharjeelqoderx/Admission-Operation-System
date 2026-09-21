@@ -4,6 +4,7 @@ import {
     splitTemplateBodyIntoPages,
     stripLeadingTrailingPageBreakMarkers,
 } from "@/lib/document-template/a4-document"
+import { paginateBodyHtmlByA4Height } from "@/lib/document-template/a4-pagination"
 import {
     getDefaultHeaderContactText,
     type TemplateLocale,
@@ -18,6 +19,8 @@ export const DOCUMENT_TEMPLATE_HEADER_BRAND_CLASS = "document-template-header-br
 export const DOCUMENT_TEMPLATE_HEADER_CONTACT_CLASS = "document-template-header-contact"
 export const DOCUMENT_TEMPLATE_HEADER_CONTACT_COLOR = "#7D89A6"
 export const DOCUMENT_TEMPLATE_HEADER_LOGO_MAX_HEIGHT_PX = 52
+/** Space between header block and body (matches `mb-4` on `.document-template-header`). */
+export const DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX = 16
 
 const DOCUMENT_REGION_OPEN_TAG_REGEX = (
     className: string,
@@ -363,6 +366,41 @@ export function composeDocumentLayout(layout: DocumentTemplateLayout): string {
 export function splitTemplateLayoutIntoPages(fullHtml: string): DocumentTemplatePageSlice[] {
     const layout = parseDocumentLayout(fullHtml)
     const bodyPages = splitTemplateBodyIntoPages(layout.bodyHtml)
+
+    return bodyPages.map((bodyHtml) => ({
+        headerHtml: layout.headerHtml,
+        bodyHtml,
+        footerHtml: layout.footerHtml,
+    }))
+}
+
+type PaginateTemplateLayoutOptions = {
+    containerWidthPx: number
+    contentClassName: string
+    maxBodyHeightPx: number
+}
+
+/**
+ * Splits a full template (header / body / footer) into fixed A4 page slices.
+ * Manual page breaks are honoured first; each segment that still exceeds one
+ * page is further split by measured block height so overflow starts on a new page.
+ */
+export function paginateTemplateLayoutByA4Height(
+    fullHtml: string,
+    options: PaginateTemplateLayoutOptions
+): DocumentTemplatePageSlice[] {
+    const layout = parseDocumentLayout(fullHtml)
+    const bodyPages = paginateBodyHtmlByA4Height(layout.bodyHtml, options)
+
+    if (bodyPages.length === 0) {
+        return [
+            {
+                headerHtml: layout.headerHtml,
+                bodyHtml: "",
+                footerHtml: layout.footerHtml,
+            },
+        ]
+    }
 
     return bodyPages.map((bodyHtml) => ({
         headerHtml: layout.headerHtml,

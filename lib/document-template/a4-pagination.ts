@@ -2,7 +2,9 @@ import {
     A4_PAGE_HEIGHT_PX,
     A4_PAGE_STACK_GAP_PX,
     splitTemplateBodyIntoPages,
+    stripAutoPageBreakMarkers,
 } from "@/lib/document-template/a4-document"
+import { DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX } from "@/lib/document-template/header-footer"
 
 export function calculateA4PageCount(contentHeightPx: number, bodySlotHeightPx?: number): number {
     if (!Number.isFinite(contentHeightPx) || contentHeightPx <= 0) {
@@ -22,16 +24,15 @@ export function calculateA4BodySlotHeightPx(options: {
     footerHeightPx: number
     verticalPaddingPx: number
 }): number {
-    const headerHeight = options.hasHeader ? options.headerHeightPx : 0
-    const footerHeight = options.hasFooter ? options.footerHeightPx : 0
+    const headerContentPx = options.hasHeader ? options.headerHeightPx : 0
+    const footerContentPx = options.hasFooter ? options.footerHeightPx : 0
+    const headerBodyGapPx = options.hasHeader ? DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX : 0
 
-    return Math.max(
-        120,
-        A4_PAGE_HEIGHT_PX -
-            options.verticalPaddingPx * 2 -
-            headerHeight -
-            footerHeight
-    )
+    const topReservePx =
+        options.verticalPaddingPx + headerContentPx + headerBodyGapPx
+    const bottomReservePx = options.verticalPaddingPx + footerContentPx
+
+    return Math.max(120, A4_PAGE_HEIGHT_PX - topReservePx - bottomReservePx)
 }
 
 export function calculateA4StackHeightPx(pageCount: number): number {
@@ -61,7 +62,20 @@ function createMeasurementContainer(options: PaginateHtmlOptions): HTMLDivElemen
 function measureBlockHeight(block: HTMLElement, options: PaginateHtmlOptions): number {
     const container = createMeasurementContainer(options)
     container.innerHTML = block.outerHTML
-    const height = container.scrollHeight
+    const measured = container.firstElementChild
+
+    let height = container.scrollHeight
+
+    if (measured instanceof HTMLElement) {
+        height = Math.max(height, measured.offsetHeight, measured.scrollHeight)
+
+        measured.querySelectorAll<HTMLElement>("img, figure, .document-image-float").forEach(
+            (element) => {
+                height = Math.max(height, element.offsetHeight, element.scrollHeight)
+            }
+        )
+    }
+
     container.remove()
     return height
 }
@@ -143,7 +157,8 @@ export function paginateBodyHtmlByA4Height(
     bodyHtml: string,
     options: PaginateHtmlOptions
 ): string[] {
-    const manualPages = splitTemplateBodyIntoPages(bodyHtml)
+    const normalizedBody = stripAutoPageBreakMarkers(bodyHtml)
+    const manualPages = splitTemplateBodyIntoPages(normalizedBody)
 
     if (manualPages.length > 1) {
         return manualPages.flatMap((page) => paginateSegmentByA4Height(page, options))
