@@ -8,7 +8,6 @@ import { PanelSkeleton } from "@/components/shared/page-skeleton"
 import { ErrorView } from "@/components/shared/error-view"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
     Popover,
     PopoverContent,
@@ -208,25 +207,37 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                                     {emptyOptionsMessage}
                                 </Typography>
                             ) : (
-                                <div className="space-y-1">
+                                <div className="space-y-1" role="listbox" aria-multiselectable="true">
                                     {options.map((option) => {
                                         const checked = selectedSet.has(option.id)
                                         return (
-                                            <button
+                                            <div
                                                 key={option.id}
-                                                type="button"
+                                                role="option"
+                                                aria-selected={checked}
+                                                tabIndex={0}
                                                 className={cn(
-                                                    "flex w-full items-start gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-brand-secondary/10",
+                                                    "flex w-full cursor-pointer items-start gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-brand-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-secondary/30",
                                                     checked && "bg-brand-secondary/5"
                                                 )}
                                                 onClick={() => toggleProgram(option.id)}
+                                                onKeyDown={(event) => {
+                                                    if (event.key === "Enter" || event.key === " ") {
+                                                        event.preventDefault()
+                                                        toggleProgram(option.id)
+                                                    }
+                                                }}
                                             >
-                                                <Checkbox
-                                                    checked={checked}
-                                                    className="mt-0.5"
-                                                    tabIndex={-1}
+                                                <span
                                                     aria-hidden
-                                                />
+                                                    className={cn(
+                                                        "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-[4px] border border-input transition-colors",
+                                                        checked &&
+                                                            "border-primary bg-primary text-primary-foreground"
+                                                    )}
+                                                >
+                                                    {checked ? <Check className="size-3.5" /> : null}
+                                                </span>
                                                 <div className="min-w-0 flex-1 space-y-0.5">
                                                     <Typography
                                                         as="span"
@@ -246,7 +257,7 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                                                 {checked ? (
                                                     <Check className="mt-0.5 size-4 shrink-0 text-brand-secondary" />
                                                 ) : null}
-                                            </button>
+                                            </div>
                                         )
                                     })}
                                 </div>
