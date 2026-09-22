@@ -17,7 +17,7 @@ export const DOCUMENT_TEMPLATE_LAYOUT_TRANSACTION_META = "documentTemplateLayout
 
 const PAGE_FLOW_ATTR = "data-doc-page-flow"
 const BODY_OVERFLOW_TOLERANCE_PX = 2
-/** Keep lines clear of the bottom padding / footer mask so glyphs are not sliced. */
+/** Keep last line fully above the bottom padding/footer mask (no half-cut glyphs). */
 const BODY_FOOTER_SAFETY_PX = 16
 /** Minimum height for empty paragraphs/lines in pagination. */
 const MIN_FLOW_BLOCK_HEIGHT_PX = 22
@@ -253,10 +253,15 @@ export function resolveBlockFlowTarget(
         }
     }
 
+    // Never allow even 1px into the bottom mask — that reads as half-cut text.
+    // Short lines get a one-line safety pad; tall fill blocks keep the full body slot.
+    const lineSafetyPx =
+        blockHeightPx <= MIN_FLOW_BLOCK_HEIGHT_PX * 2 ? MIN_FLOW_BLOCK_HEIGHT_PX : 0
     const bodyFitLimitPx =
-        band.bodyEndPx - (layout.hasFooter ? BODY_FOOTER_SAFETY_PX : 0)
+        band.bodyEndPx -
+        (layout.hasFooter ? BODY_FOOTER_SAFETY_PX : lineSafetyPx)
 
-    if (naturalTopPx + blockHeightPx <= bodyFitLimitPx + BODY_OVERFLOW_TOLERANCE_PX) {
+    if (naturalTopPx + blockHeightPx <= bodyFitLimitPx) {
         return {
             pageIndex,
             targetBodyStartPx: band.bodyStartPx,
@@ -516,7 +521,7 @@ export function computeVisualPageFlowPlan(options: {
 
         if (
             blockHeight <= sheetLayout.bodyHeightPx &&
-            placedBottomPx > placedBand.bodyEndPx + BODY_OVERFLOW_TOLERANCE_PX
+            placedBottomPx > placedBand.bodyEndPx
         ) {
             let targetPage = placedPageIndex + 1
 
@@ -1082,12 +1087,13 @@ export function refineVisualPageFlowPlan(options: {
 }
 
 /**
- * After decorations paint, push any block whose real box intersects the footer
- * band or inter-page gap. Catches under-measured images/logos that the height
- * planner thought would fit.
+ * After decorations paint, fix page-flow margins using real boxes:
+ * - Push blocks that start in the header/gap/footer or (if they fit one page)
+ *   overflow the bottom mask.
+ * - Remove erroneous margins that only create empty gaps inside an already-valid
+ *   page body (the "extra gap on page 2" bug).
  *
- * Mutates `plan`. Caller must re-apply decorations after a change, then can
- * call again (cascading pushes for later blocks).
+ * Mutates `plan`. Caller must re-apply decorations after a change.
  */
 export function correctVisualPageFlowPlanFromPaintedGeometry(options: {
     proseMirror: HTMLElement
@@ -1097,7 +1103,6 @@ export function correctVisualPageFlowPlanFromPaintedGeometry(options: {
 }): boolean {
     const { proseMirror, layoutRoot, plan, sheetLayout } = options
     const rootTop = layoutRoot.getBoundingClientRect().top
-    let changed = false
 
     const blocks = Array.from(proseMirror.children).filter(
         (child): child is HTMLElement => child instanceof HTMLElement
@@ -1118,53 +1123,99 @@ export function correctVisualPageFlowPlanFromPaintedGeometry(options: {
         const paintedBottomPx = rect.bottom - rootTop
         const paintedHeightPx = paintedBottomPx - paintedTopPx
         const key = `block-${index}`
+        const currentMargin = plan.overflowMarginTopByKey[key] ?? 0
 
         const pageIndex = getPageIndexForLayoutY(paintedTopPx, sheetLayout)
         const band = getA4SheetBand(pageIndex, sheetLayout)
-        const bodyFitLimitPx =
-            band.bodyEndPx - (sheetLayout.hasFooter ? BODY_FOOTER_SAFETY_PX : 0)
+        const bottomSafetyPx = sheetLayout.hasFooter
+            ? BODY_FOOTER_SAFETY_PX
+            : MIN_FLOW_BLOCK_HEIGHT_PX
+        const bodyFitLimitPx = band.bodyEndPx - bottomSafetyPx
+
+        // Collapse bogus page-break margins that create empty holes between two
+        // blocks already on the same page body (e.g. after a tall prior block).
+        if (currentMargin > 0.5 && index > 0) {
+            const prev = blocks[index - 1]
+            if (
+                prev instanceof HTMLElement &&
+                !isLegacyAutoPageBreakElement(prev) &&
+                !isManualPageBreakElement(prev)
+            ) {
+                const prevBottomPx = prev.getBoundingClientRect().bottom - rootTop
+                const prevPageIndex = getPageIndexForLayoutY(prevBottomPx, sheetLayout)
+                // Never shrink a real inter-page jump.
+                if (prevPageIndex === pageIndex) {
+                    const paintedInBody =
+                        paintedTopPx >= band.bodyStartPx - BODY_OVERFLOW_TOLERANCE_PX &&
+                        paintedTopPx < band.bodyEndPx - BODY_OVERFLOW_TOLERANCE_PX
+                    const prevEndsInSameBody =
+                        prevBottomPx >= band.bodyStartPx - BODY_OVERFLOW_TOLERANCE_PX &&
+                        prevBottomPx <= bodyFitLimitPx + MIN_FLOW_BLOCK_HEIGHT_PX
+                    const orphanGapPx = paintedTopPx - prevBottomPx
+
+                    // Only collapse clearly bogus holes (full line+), with hysteresis
+                    // so push/shrink cannot oscillate every frame.
+                    if (
+                        paintedInBody &&
+                        prevEndsInSameBody &&
+                        orphanGapPx > MIN_FLOW_BLOCK_HEIGHT_PX
+                    ) {
+                        const nextMargin = currentMargin - orphanGapPx
+                        if (nextMargin > 0.5) {
+                            plan.overflowMarginTopByKey[key] = nextMargin
+                        } else {
+                            delete plan.overflowMarginTopByKey[key]
+                        }
+                        return true
+                    }
+                }
+            }
+        }
+
+        // Also drop margins whose natural top is already inside this same body band.
+        if (currentMargin > 0.5) {
+            const naturalTopPx = paintedTopPx - currentMargin
+            const naturalPageIndex = getPageIndexForLayoutY(naturalTopPx, sheetLayout)
+            const naturalBand = getA4SheetBand(naturalPageIndex, sheetLayout)
+            const naturalInBody =
+                naturalTopPx >= naturalBand.bodyStartPx - BODY_OVERFLOW_TOLERANCE_PX &&
+                naturalTopPx < naturalBand.bodyEndPx - BODY_OVERFLOW_TOLERANCE_PX
+            const paintedInBody =
+                paintedTopPx >= band.bodyStartPx - BODY_OVERFLOW_TOLERANCE_PX &&
+                paintedTopPx < band.bodyEndPx - BODY_OVERFLOW_TOLERANCE_PX
+
+            if (naturalInBody && paintedInBody && naturalPageIndex === pageIndex) {
+                delete plan.overflowMarginTopByKey[key]
+                return true
+            }
+        }
 
         const startsInHeaderZone =
             paintedTopPx < band.bodyStartPx - BODY_OVERFLOW_TOLERANCE_PX &&
             paintedTopPx >= band.pageTopPx - BODY_OVERFLOW_TOLERANCE_PX
-        const startsInFooterOrGap =
-            paintedTopPx >= bodyFitLimitPx - BODY_OVERFLOW_TOLERANCE_PX
-        const overflowsBody =
-            paintedBottomPx > bodyFitLimitPx + BODY_OVERFLOW_TOLERANCE_PX
-
-        if (!startsInHeaderZone && !startsInFooterOrGap && !overflowsBody) {
-            continue
-        }
-
+        const startsInFooterOrGap = paintedTopPx >= bodyFitLimitPx
+        const overflowsBody = paintedBottomPx > bodyFitLimitPx
         const fitsOneBody =
             paintedHeightPx <= sheetLayout.bodyHeightPx + BODY_OVERFLOW_TOLERANCE_PX
-        const remainingOnPagePx = bodyFitLimitPx - paintedTopPx
-        // Tall pasted blocks (logo + paragraphs in one node) still get sliced when they
-        // start late on a page. Push the whole block to the next body if less than half
-        // of it fits on the current page (or remaining space is under one line box).
-        const startedTooLateForTallBlock =
-            !fitsOneBody &&
-            overflowsBody &&
-            paintedTopPx > band.bodyStartPx + BODY_OVERFLOW_TOLERANCE_PX &&
-            (remainingOnPagePx < paintedHeightPx * 0.5 ||
-                remainingOnPagePx < MIN_FLOW_BLOCK_HEIGHT_PX * 2)
 
-        if (
-            !fitsOneBody &&
-            !startsInHeaderZone &&
-            !startsInFooterOrGap &&
-            !startedTooLateForTallBlock
-        ) {
+        // Only move whole blocks that are clearly in a forbidden band, or short
+        // blocks that spill past the bottom. Never yank tall mid-page blocks to
+        // the next page — that leaves a huge empty gap.
+        const shouldPush =
+            startsInHeaderZone ||
+            startsInFooterOrGap ||
+            (fitsOneBody && overflowsBody)
+
+        if (!shouldPush) {
             continue
         }
 
         let targetPage = pageIndex
-        if (
-            startsInFooterOrGap ||
-            (fitsOneBody && overflowsBody) ||
-            startedTooLateForTallBlock
-        ) {
+        if (startsInFooterOrGap || (fitsOneBody && overflowsBody)) {
             targetPage = pageIndex + 1
+        }
+        if (startsInHeaderZone) {
+            targetPage = pageIndex
         }
 
         if (fitsOneBody) {
@@ -1172,7 +1223,7 @@ export function correctVisualPageFlowPlanFromPaintedGeometry(options: {
                 targetPage < 64 &&
                 getA4SheetBand(targetPage, sheetLayout).bodyEndPx -
                     getA4SheetBand(targetPage, sheetLayout).bodyStartPx <
-                    paintedHeightPx - BODY_OVERFLOW_TOLERANCE_PX
+                    paintedHeightPx
             ) {
                 targetPage += 1
             }
@@ -1180,18 +1231,21 @@ export function correctVisualPageFlowPlanFromPaintedGeometry(options: {
 
         const targetStartPx = getA4SheetBand(targetPage, sheetLayout).bodyStartPx
         const deltaPx = targetStartPx - paintedTopPx
-        if (deltaPx <= 0.5) {
+        if (Math.abs(deltaPx) <= 0.5) {
             continue
         }
 
-        const nextMargin = (plan.overflowMarginTopByKey[key] ?? 0) + deltaPx
-        plan.overflowMarginTopByKey[key] = nextMargin
-        changed = true
-        // One correction per pass — later blocks shift when decorations re-apply.
-        break
+        if (deltaPx > 0) {
+            plan.overflowMarginTopByKey[key] = currentMargin + deltaPx
+        } else if (currentMargin + deltaPx > 0.5) {
+            plan.overflowMarginTopByKey[key] = currentMargin + deltaPx
+        } else {
+            delete plan.overflowMarginTopByKey[key]
+        }
+        return true
     }
 
-    return changed
+    return false
 }
 
 function measureContentExtentFromDom(proseMirror: HTMLElement): number {

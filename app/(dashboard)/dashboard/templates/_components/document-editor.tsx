@@ -345,6 +345,7 @@ const EditorCanvas = memo(function EditorCanvas({
     })
     const lastPlanRef = useRef<VisualPageFlowPlan | null>(null)
     const isLayoutingRef = useRef(false)
+    const layoutQuietUntilRef = useRef(0)
     const layoutFrameRef = useRef<number | null>(null)
     const layoutDebounceRef = useRef<number | null>(null)
     const [, bump] = useReducer((n: number) => n + 1, 0)
@@ -434,10 +435,9 @@ const EditorCanvas = memo(function EditorCanvas({
                 dispatchPlan(result.plan)
             }
 
-            // Paint-correct: push blocks that still intersect the page gap/footer
-            // (common after paste when image/logo height was under-measured).
+            // Paint-correct once or twice only — more passes oscillate (vibrate).
             if (editor && pm && layoutRoot && sheetLayout.bodyHeightPx > 0) {
-                for (let pass = 0; pass < 8; pass += 1) {
+                for (let pass = 0; pass < 2; pass += 1) {
                     pm.getBoundingClientRect()
                     void pm.offsetHeight
                     if (
@@ -482,15 +482,10 @@ const EditorCanvas = memo(function EditorCanvas({
             }
 
             syncLayoutMetrics()
-
-            requestAnimationFrame(() => {
-                syncLayoutMetrics()
-
-                if (editor && result.planChanged && layoutRef.current.pageCount > 1) {
-                    editor.commands.scrollIntoView()
-                }
-            })
         } finally {
+            // Keep ResizeObserver quiet until after paint settles — otherwise
+            // decoration height changes re-enter layout and the page vibrates.
+            layoutQuietUntilRef.current = performance.now() + 120
             isLayoutingRef.current = false
         }
     }, [applyMetrics, editor, hasFooter, hasHeader])
@@ -513,7 +508,6 @@ const EditorCanvas = memo(function EditorCanvas({
                 if (layoutFrameRef.current) {
                     cancelAnimationFrame(layoutFrameRef.current)
                 }
-                // One frame: let TipTap commit the DOM for the edit, then reflow pages.
                 layoutFrameRef.current = requestAnimationFrame(() => {
                     layoutFrameRef.current = null
                     runLayout()
@@ -527,7 +521,7 @@ const EditorCanvas = memo(function EditorCanvas({
             layoutDebounceRef.current = window.setTimeout(() => {
                 layoutDebounceRef.current = null
                 run()
-            }, 16)
+            }, 48)
         },
         [runLayout]
     )
@@ -536,8 +530,8 @@ const EditorCanvas = memo(function EditorCanvas({
         lastPlanRef.current = null
         schedule(true)
         const obs = new ResizeObserver(() => {
-            // Ignore resizes caused by our own page-flow decoration apply.
             if (isLayoutingRef.current) return
+            if (performance.now() < layoutQuietUntilRef.current) return
             schedule()
         })
         ;[headerMeasureRef.current, footerMeasureRef.current].forEach((el) => el && obs.observe(el))
