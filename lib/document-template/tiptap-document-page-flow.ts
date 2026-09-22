@@ -10,7 +10,26 @@ export const DOCUMENT_PAGE_FLOW_META = "documentPageFlowPlan"
 const EMPTY_PLAN: VisualPageFlowPlan = {
     overflowMarginTopByKey: {},
     manualFillHeightByKey: {},
+    lineSpacers: [],
     pageCount: 1,
+}
+
+function createLineSpacerElement(heightPx: number): HTMLElement {
+    const el = document.createElement("div")
+    el.dataset.docPageFlowSpacer = "true"
+    el.className = "doc-page-flow-spacer"
+    el.contentEditable = "false"
+    el.setAttribute("aria-hidden", "true")
+    el.style.cssText = [
+        `height:${Math.max(0, heightPx)}px`,
+        "margin:0",
+        "padding:0",
+        "border:0",
+        "width:100%",
+        "pointer-events:none",
+        "user-select:none",
+    ].join(";")
+    return el
 }
 
 function buildDecorationsFromPlan(doc: Parameters<typeof DecorationSet.create>[0], plan: VisualPageFlowPlan) {
@@ -49,6 +68,26 @@ function buildDecorationsFromPlan(doc: Parameters<typeof DecorationSet.create>[0
             )
         }
     })
+
+    for (const spacer of plan.lineSpacers ?? []) {
+        if (spacer.heightPx <= 0.5) {
+            continue
+        }
+        if (spacer.pos < 0 || spacer.pos > doc.content.size) {
+            continue
+        }
+        const heightPx = spacer.heightPx
+        decorations.push(
+            Decoration.widget(
+                spacer.pos,
+                () => createLineSpacerElement(heightPx),
+                {
+                    side: -1,
+                    key: `doc-page-flow-spacer-${spacer.pos}-${Math.round(heightPx)}`,
+                }
+            )
+        )
+    }
 
     return DecorationSet.create(doc, decorations)
 }
@@ -99,11 +138,16 @@ export const DocumentPageFlow = Extension.create({
                             return buildDecorationsFromPlan(newState.doc, storage.plan)
                         }
 
-                        // Remap existing decorations across the edit. Rebuilding from the
-                        // stale plan would attach old page-push margins to the wrong blocks
-                        // after paste (visible flicker / mid-page text cuts).
+                        // Index-based keys go stale on edit. Clearing overflow margins
+                        // until the next layout pass avoids wrong-block pushes (hide /
+                        // huge page-2 holes). Layout re-applies the fresh plan immediately.
                         if (tr.docChanged) {
-                            return set.map(tr.mapping, tr.doc)
+                            return buildDecorationsFromPlan(newState.doc, {
+                                overflowMarginTopByKey: {},
+                                manualFillHeightByKey: {},
+                                lineSpacers: [],
+                                pageCount: storage.plan.pageCount,
+                            })
                         }
 
                         return set
