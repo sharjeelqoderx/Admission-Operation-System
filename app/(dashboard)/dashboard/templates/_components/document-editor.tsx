@@ -116,6 +116,7 @@ import {
 } from "@/lib/document-template/a4-document"
 import {
     applyEditorVisualPageFlow,
+    correctVisualPageFlowPlanFromPaintedGeometry,
     DOCUMENT_TEMPLATE_LAYOUT_TRANSACTION_META,
     getA4SheetBand,
     isDocumentTemplateLayoutSyncActive,
@@ -407,16 +408,6 @@ const EditorCanvas = memo(function EditorCanvas({
                           proseMirror: pm,
                           sheetLayout,
                           previousPlan: lastPlanRef.current,
-                          onPlanPass: (plan) => {
-                              if (!editor) {
-                                  return
-                              }
-                              editor.view.dispatch(
-                                  editor.state.tr
-                                      .setMeta(DOCUMENT_PAGE_FLOW_META, plan)
-                                      .setMeta(DOCUMENT_TEMPLATE_LAYOUT_TRANSACTION_META, true)
-                              )
-                          },
                       })
                     : {
                           pageCount: 1,
@@ -430,12 +421,38 @@ const EditorCanvas = memo(function EditorCanvas({
                           blockElements: [],
                       }
 
-            if (editor) {
+            const dispatchPlan = (plan: VisualPageFlowPlan) => {
+                if (!editor) return
                 editor.view.dispatch(
                     editor.state.tr
-                        .setMeta(DOCUMENT_PAGE_FLOW_META, result.plan)
+                        .setMeta(DOCUMENT_PAGE_FLOW_META, plan)
                         .setMeta(DOCUMENT_TEMPLATE_LAYOUT_TRANSACTION_META, true)
                 )
+            }
+
+            if (editor && result.planChanged) {
+                dispatchPlan(result.plan)
+            }
+
+            // Paint-correct: push blocks that still intersect the page gap/footer
+            // (common after paste when image/logo height was under-measured).
+            if (editor && pm && layoutRoot && sheetLayout.bodyHeightPx > 0) {
+                for (let pass = 0; pass < 8; pass += 1) {
+                    pm.getBoundingClientRect()
+                    void pm.offsetHeight
+                    if (
+                        !correctVisualPageFlowPlanFromPaintedGeometry({
+                            proseMirror: pm,
+                            layoutRoot,
+                            plan: result.plan,
+                            sheetLayout,
+                        })
+                    ) {
+                        break
+                    }
+                    dispatchPlan(result.plan)
+                    result.planChanged = true
+                }
             }
 
             lastPlanRef.current = result.plan
@@ -496,12 +513,10 @@ const EditorCanvas = memo(function EditorCanvas({
                 if (layoutFrameRef.current) {
                     cancelAnimationFrame(layoutFrameRef.current)
                 }
-                // Two frames: let TipTap finish the edit, then clear old decorations before measure.
+                // One frame: let TipTap commit the DOM for the edit, then reflow pages.
                 layoutFrameRef.current = requestAnimationFrame(() => {
-                    layoutFrameRef.current = requestAnimationFrame(() => {
-                        layoutFrameRef.current = null
-                        runLayout()
-                    })
+                    layoutFrameRef.current = null
+                    runLayout()
                 })
                 return
             }
@@ -520,7 +535,11 @@ const EditorCanvas = memo(function EditorCanvas({
     useLayoutEffect(() => {
         lastPlanRef.current = null
         schedule(true)
-        const obs = new ResizeObserver(() => schedule())
+        const obs = new ResizeObserver(() => {
+            // Ignore resizes caused by our own page-flow decoration apply.
+            if (isLayoutingRef.current) return
+            schedule()
+        })
         ;[headerMeasureRef.current, footerMeasureRef.current].forEach((el) => el && obs.observe(el))
         const pm = editorRef.current?.querySelector<HTMLElement>(".ProseMirror")
         if (pm) {
@@ -552,7 +571,7 @@ const EditorCanvas = memo(function EditorCanvas({
     useEffect(() => {
         const pm = editorRef.current?.querySelector<HTMLElement>(".ProseMirror")
         if (!pm) return
-        const onLoad = () => schedule()
+        const onLoad = () => schedule(true)
         pm.querySelectorAll("img").forEach((img) => {
             if (!img.complete) img.addEventListener("load", onLoad, { once: true })
         })
