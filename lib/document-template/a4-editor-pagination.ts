@@ -22,16 +22,10 @@ const BODY_FOOTER_SAFETY_PX = 28
 /** Minimum height for empty paragraphs/lines in pagination. */
 const MIN_FLOW_BLOCK_HEIGHT_PX = 22
 
-function bodyBottomClearancePx(layout: A4SheetLayout, blockHeightPx: number): number {
-    const isShortLine = blockHeightPx <= MIN_FLOW_BLOCK_HEIGHT_PX * 2
-    if (isShortLine) {
-        // One full line must stay above the footer/padding mask.
-        return layout.hasFooter
-            ? Math.max(BODY_FOOTER_SAFETY_PX, MIN_FLOW_BLOCK_HEIGHT_PX)
-            : MIN_FLOW_BLOCK_HEIGHT_PX
-    }
-    // Tall blocks keep almost the full body slot; paint-correct still catches clips.
-    return layout.hasFooter ? 8 : 0
+function bodyBottomClearancePx(_layout: A4SheetLayout, _blockHeightPx: number): number {
+    // Last-line reserve is already baked into bodyEnd via footerZone/editorBottom.
+    // Extra clearance here only created early pushes and empty mid-page gaps.
+    return 0
 }
 
 export type EditorBodyLayoutMetrics = {
@@ -41,6 +35,7 @@ export type EditorBodyLayoutMetrics = {
     pageStridePx: number
     headerZonePx: number
     footerZonePx: number
+    footerChromePx: number
 }
 
 /** Fixed A4 sheet bands: header (top) → body → footer (bottom) on every page. */
@@ -53,7 +48,10 @@ export type A4SheetLayout = {
     flowStridePx: number
     verticalPaddingPx: number
     headerZonePx: number
+    /** Bottom band used for bodyEnd / masks (includes last-line reserve). */
     footerZonePx: number
+    /** Actual footer HTML overlay height (no last-line reserve). */
+    footerChromePx: number
     bodyHeightPx: number
     editorTopPx: number
     editorBottomPx: number
@@ -133,8 +131,11 @@ export function calculateEditorBodyLayoutMetrics(options: {
     const lastLineReservePx = MIN_FLOW_BLOCK_HEIGHT_PX
 
     const headerZonePx = verticalPaddingPx + headerContentPx + headerBodyGapPx
-    // Include last-line reserve in the bottom band so bodyEnd / masks / planner agree.
-    const footerZonePx = verticalPaddingPx + footerContentPx + lastLineReservePx
+    const footerChromePx = options.hasFooter ? verticalPaddingPx + footerContentPx : 0
+    // Mask/bodyEnd include last-line reserve; footer HTML uses footerChromePx only.
+    const footerZonePx = options.hasFooter
+        ? footerChromePx + lastLineReservePx
+        : 0
 
     const editorTopPx = options.hasHeader ? headerZonePx : verticalPaddingPx
     const editorBottomPx = options.hasFooter
@@ -144,7 +145,10 @@ export function calculateEditorBodyLayoutMetrics(options: {
     const maxBodyHeightPx = Math.max(120, A4_PAGE_HEIGHT_PX - editorTopPx - editorBottomPx)
 
     const pageStridePx =
-        maxBodyHeightPx + footerZonePx + A4_PAGE_STACK_GAP_PX + headerZonePx
+        maxBodyHeightPx +
+        (options.hasFooter ? footerZonePx : editorBottomPx) +
+        A4_PAGE_STACK_GAP_PX +
+        headerZonePx
 
     return {
         editorTopPx,
@@ -153,6 +157,7 @@ export function calculateEditorBodyLayoutMetrics(options: {
         pageStridePx,
         headerZonePx,
         footerZonePx,
+        footerChromePx,
     }
 }
 
@@ -181,6 +186,7 @@ export function resolveA4SheetLayout(options: {
         verticalPaddingPx: mmToPx(A4_PAGE_PADDING_Y_MM),
         headerZonePx: metrics.headerZonePx,
         footerZonePx: metrics.footerZonePx,
+        footerChromePx: metrics.footerChromePx,
         bodyHeightPx: metrics.maxBodyHeightPx,
         editorTopPx: metrics.editorTopPx,
         editorBottomPx: metrics.editorBottomPx,
@@ -514,9 +520,14 @@ export function computeVisualPageFlowPlan(options: {
             ) {
                 marginTop = 0
             }
+            // Never invent more than one page-jump of space (prevents huge empty holes).
+            marginTop = Math.min(
+                marginTop,
+                sheetLayout.visualStridePx + sheetLayout.editorTopPx
+            )
         }
 
-        if (marginTop > 0) {
+        if (marginTop > 0.5) {
             overflowMarginTopByKey[block.key] = marginTop
         }
 

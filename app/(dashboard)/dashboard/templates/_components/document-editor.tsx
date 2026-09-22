@@ -116,7 +116,6 @@ import {
 } from "@/lib/document-template/a4-document"
 import {
     applyEditorVisualPageFlow,
-    correctVisualPageFlowPlanFromPaintedGeometry,
     DOCUMENT_TEMPLATE_LAYOUT_TRANSACTION_META,
     getA4SheetBand,
     isDocumentTemplateLayoutSyncActive,
@@ -366,7 +365,8 @@ const EditorCanvas = memo(function EditorCanvas({
                 c.sheetLayout.flowStridePx === opts.sheetLayout.flowStridePx &&
                 c.sheetLayout.bodyHeightPx === opts.sheetLayout.bodyHeightPx &&
                 c.sheetLayout.headerZonePx === opts.sheetLayout.headerZonePx &&
-                c.sheetLayout.footerZonePx === opts.sheetLayout.footerZonePx
+                c.sheetLayout.footerZonePx === opts.sheetLayout.footerZonePx &&
+                c.sheetLayout.footerChromePx === opts.sheetLayout.footerChromePx
             ) {
                 return
             }
@@ -431,28 +431,8 @@ const EditorCanvas = memo(function EditorCanvas({
                 )
             }
 
-            if (editor && result.planChanged) {
+            if (editor) {
                 dispatchPlan(result.plan)
-            }
-
-            // Paint-correct: push-only passes (no margin shrink — that hid text again).
-            if (editor && pm && layoutRoot && sheetLayout.bodyHeightPx > 0) {
-                for (let pass = 0; pass < 4; pass += 1) {
-                    pm.getBoundingClientRect()
-                    void pm.offsetHeight
-                    if (
-                        !correctVisualPageFlowPlanFromPaintedGeometry({
-                            proseMirror: pm,
-                            layoutRoot,
-                            plan: result.plan,
-                            sheetLayout,
-                        })
-                    ) {
-                        break
-                    }
-                    dispatchPlan(result.plan)
-                    result.planChanged = true
-                }
             }
 
             lastPlanRef.current = result.plan
@@ -482,25 +462,6 @@ const EditorCanvas = memo(function EditorCanvas({
             }
 
             syncLayoutMetrics()
-
-            // One more paint-correct after the browser commits decoration layout.
-            // Catches the last line that still straddles the footer mask.
-            if (editor && pm && layoutRoot && sheetLayout.bodyHeightPx > 0) {
-                requestAnimationFrame(() => {
-                    if (
-                        correctVisualPageFlowPlanFromPaintedGeometry({
-                            proseMirror: pm,
-                            layoutRoot,
-                            plan: result.plan,
-                            sheetLayout,
-                        })
-                    ) {
-                        dispatchPlan(result.plan)
-                        lastPlanRef.current = result.plan
-                        syncLayoutMetrics()
-                    }
-                })
-            }
         } finally {
             // Keep ResizeObserver quiet until after paint settles — otherwise
             // decoration height changes re-enter layout and the page vibrates.
@@ -725,7 +686,7 @@ const EditorCanvas = memo(function EditorCanvas({
                                             )}
                                             style={{
                                                 bottom: 0,
-                                                height: bottomReservePx,
+                                                height: sheetLayout.footerChromePx,
                                                 paddingLeft: padX,
                                                 paddingRight: padX,
                                                 paddingBottom: sheetLayout.verticalPaddingPx,
