@@ -96,10 +96,14 @@ export const DocumentPageFlow = Extension.create({
 
                         if (metaPlan) {
                             storage.plan = metaPlan
+                            return buildDecorationsFromPlan(newState.doc, storage.plan)
                         }
 
-                        if (metaPlan || tr.docChanged) {
-                            return buildDecorationsFromPlan(newState.doc, storage.plan)
+                        // Remap existing decorations across the edit. Rebuilding from the
+                        // stale plan would attach old page-push margins to the wrong blocks
+                        // after paste (visible flicker / mid-page text cuts).
+                        if (tr.docChanged) {
+                            return set.map(tr.mapping, tr.doc)
                         }
 
                         return set
