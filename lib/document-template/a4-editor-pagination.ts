@@ -22,16 +22,10 @@ const BODY_FOOTER_SAFETY_PX = 28
 /** Minimum height for empty paragraphs/lines in pagination. */
 const MIN_FLOW_BLOCK_HEIGHT_PX = 22
 
-function bodyBottomClearancePx(layout: A4SheetLayout, blockHeightPx: number): number {
-    const isShortLine = blockHeightPx <= MIN_FLOW_BLOCK_HEIGHT_PX * 2
-    if (isShortLine) {
-        // One full line must stay above the footer/padding mask.
-        return layout.hasFooter
-            ? Math.max(BODY_FOOTER_SAFETY_PX, MIN_FLOW_BLOCK_HEIGHT_PX)
-            : MIN_FLOW_BLOCK_HEIGHT_PX
-    }
-    // Tall blocks keep almost the full body slot; paint-correct still catches clips.
-    return layout.hasFooter ? 8 : 0
+function bodyBottomClearancePx(_layout: A4SheetLayout, _blockHeightPx: number): number {
+    // Last-line reserve is already baked into bodyEnd via footerZone/editorBottom.
+    // Extra clearance here only created early pushes and empty mid-page gaps.
+    return 0
 }
 
 export type EditorBodyLayoutMetrics = {
@@ -41,6 +35,7 @@ export type EditorBodyLayoutMetrics = {
     pageStridePx: number
     headerZonePx: number
     footerZonePx: number
+    footerChromePx: number
 }
 
 /** Fixed A4 sheet bands: header (top) → body → footer (bottom) on every page. */
@@ -53,7 +48,10 @@ export type A4SheetLayout = {
     flowStridePx: number
     verticalPaddingPx: number
     headerZonePx: number
+    /** Bottom band used for bodyEnd / masks (includes last-line reserve). */
     footerZonePx: number
+    /** Actual footer HTML overlay height (no last-line reserve). */
+    footerChromePx: number
     bodyHeightPx: number
     editorTopPx: number
     editorBottomPx: number
@@ -116,6 +114,9 @@ export function resolveEditorRegionHeights(options: {
 /**
  * Page layout: HEADER ZONE → BODY → FOOTER ZONE per sheet.
  * Header/footer zones (and their gaps) are outside the body flow.
+ *
+ * Always reserves one line above the footer/bottom padding so the last body line
+ * cannot sit half-under the white mask (the "hidden at page end" bug).
  */
 export function calculateEditorBodyLayoutMetrics(options: {
     hasHeader: boolean
@@ -127,17 +128,27 @@ export function calculateEditorBodyLayoutMetrics(options: {
     const headerContentPx = options.hasHeader ? options.headerHeightPx : 0
     const footerContentPx = options.hasFooter ? options.footerHeightPx : 0
     const headerBodyGapPx = options.hasHeader ? DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX : 0
+    const lastLineReservePx = MIN_FLOW_BLOCK_HEIGHT_PX
 
     const headerZonePx = verticalPaddingPx + headerContentPx + headerBodyGapPx
-    const footerZonePx = verticalPaddingPx + footerContentPx
+    const footerChromePx = options.hasFooter ? verticalPaddingPx + footerContentPx : 0
+    // Mask/bodyEnd include last-line reserve; footer HTML uses footerChromePx only.
+    const footerZonePx = options.hasFooter
+        ? footerChromePx + lastLineReservePx
+        : 0
 
     const editorTopPx = options.hasHeader ? headerZonePx : verticalPaddingPx
-    const editorBottomPx = options.hasFooter ? footerZonePx : verticalPaddingPx
+    const editorBottomPx = options.hasFooter
+        ? footerZonePx
+        : verticalPaddingPx + lastLineReservePx
 
     const maxBodyHeightPx = Math.max(120, A4_PAGE_HEIGHT_PX - editorTopPx - editorBottomPx)
 
     const pageStridePx =
-        maxBodyHeightPx + footerZonePx + A4_PAGE_STACK_GAP_PX + headerZonePx
+        maxBodyHeightPx +
+        (options.hasFooter ? footerZonePx : editorBottomPx) +
+        A4_PAGE_STACK_GAP_PX +
+        headerZonePx
 
     return {
         editorTopPx,
@@ -146,6 +157,7 @@ export function calculateEditorBodyLayoutMetrics(options: {
         pageStridePx,
         headerZonePx,
         footerZonePx,
+        footerChromePx,
     }
 }
 
@@ -174,6 +186,7 @@ export function resolveA4SheetLayout(options: {
         verticalPaddingPx: mmToPx(A4_PAGE_PADDING_Y_MM),
         headerZonePx: metrics.headerZonePx,
         footerZonePx: metrics.footerZonePx,
+        footerChromePx: metrics.footerChromePx,
         bodyHeightPx: metrics.maxBodyHeightPx,
         editorTopPx: metrics.editorTopPx,
         editorBottomPx: metrics.editorBottomPx,
@@ -188,9 +201,10 @@ export function getA4SheetBand(pageIndex: number, layout: A4SheetLayout): A4Shee
     const topReservePx = layout.hasHeader
         ? layout.headerZonePx
         : layout.verticalPaddingPx
+    // Use editorBottomPx so the last-line reserve is always masked (footer or plain).
     const bottomReservePx = layout.hasFooter
         ? layout.footerZonePx
-        : layout.verticalPaddingPx
+        : layout.editorBottomPx
     const bodyStartPx = pageTopPx + topReservePx
     const bodyEndPx = pageTopPx + layout.pageHeightPx - bottomReservePx
 
@@ -269,6 +283,23 @@ export function resolveBlockFlowTarget(
     const bodyFitLimitPx = band.bodyEndPx - bodyBottomClearancePx(layout, blockHeightPx)
 
     if (naturalTopPx + blockHeightPx <= bodyFitLimitPx) {
+        return {
+            pageIndex,
+            targetBodyStartPx: band.bodyStartPx,
+            needsPush: false,
+        }
+    }
+
+    // Tall blocks (taller than one body slot) must keep flowing from a valid body
+    // start — pushing them wholesale empties the current page. Mid-block spacers
+    // skip footer/gap/header; short blocks still move as a whole.
+    const startsInBody =
+        naturalTopPx >= band.bodyStartPx - BODY_OVERFLOW_TOLERANCE_PX &&
+        naturalTopPx < bodyFitLimitPx
+    if (
+        blockHeightPx > layout.bodyHeightPx + BODY_OVERFLOW_TOLERANCE_PX &&
+        startsInBody
+    ) {
         return {
             pageIndex,
             targetBodyStartPx: band.bodyStartPx,
@@ -436,7 +467,84 @@ export type VisualPageFlowBlock = {
 export type VisualPageFlowPlan = {
     overflowMarginTopByKey: Record<string, number>
     manualFillHeightByKey: Record<string, number>
+    /**
+     * In-flow spacers that skip footer + page-gap + next header inside a tall
+     * block. Positions are ProseMirror doc positions (widget before that pos).
+     */
+    lineSpacers: Array<{ pos: number; heightPx: number }>
     pageCount: number
+}
+
+const EMPTY_VISUAL_PAGE_FLOW_PLAN: VisualPageFlowPlan = {
+    overflowMarginTopByKey: {},
+    manualFillHeightByKey: {},
+    lineSpacers: [],
+    pageCount: 1,
+}
+
+/** Distance from a page body end to the next page body start (masked band). */
+export function pageBoundarySkipPx(layout: A4SheetLayout): number {
+    return Math.max(0, layout.visualStridePx - layout.bodyHeightPx)
+}
+
+/**
+ * Advance layout Y through a tall block, inserting virtual page-boundary skips
+ * so following blocks land on the correct page (matches line-spacer widgets).
+ */
+function advanceLayoutYThroughBlock(
+    layoutTopPx: number,
+    blockHeightPx: number,
+    layout: A4SheetLayout
+): { layoutBottomPx: number; skipCount: number; totalSkipPx: number } {
+    let y = layoutTopPx
+    let remaining = blockHeightPx
+    let skipCount = 0
+    let totalSkipPx = 0
+    let guard = 0
+
+    while (remaining > 0.5 && guard < 64) {
+        guard += 1
+        const pageIndex = getPageIndexForLayoutY(y, layout)
+        const band = getA4SheetBand(pageIndex, layout)
+
+        if (y >= band.bodyEndPx - BODY_OVERFLOW_TOLERANCE_PX) {
+            const nextStart = getA4SheetBand(pageIndex + 1, layout).bodyStartPx
+            const skip = Math.max(0, nextStart - y)
+            y = nextStart
+            if (skip > 0.5) {
+                skipCount += 1
+                totalSkipPx += skip
+            }
+            continue
+        }
+
+        if (y < band.bodyStartPx - BODY_OVERFLOW_TOLERANCE_PX) {
+            const skip = Math.max(0, band.bodyStartPx - y)
+            y = band.bodyStartPx
+            if (skip > 0.5) {
+                skipCount += 1
+                totalSkipPx += skip
+            }
+            continue
+        }
+
+        const fit = band.bodyEndPx - y
+        const take = Math.min(remaining, fit)
+        y += take
+        remaining -= take
+
+        if (remaining > 0.5) {
+            const nextStart = getA4SheetBand(pageIndex + 1, layout).bodyStartPx
+            const skip = Math.max(0, nextStart - y)
+            y = nextStart
+            if (skip > 0.5) {
+                skipCount += 1
+                totalSkipPx += skip
+            }
+        }
+    }
+
+    return { layoutBottomPx: y, skipCount, totalSkipPx }
 }
 
 /**
@@ -455,10 +563,15 @@ export function computeVisualPageFlowPlan(options: {
     const manualFillHeightByKey: Record<string, number> = {}
 
     if (sheetLayout.bodyHeightPx <= 0 || blocks.length === 0) {
-        return { overflowMarginTopByKey, manualFillHeightByKey, pageCount: 1 }
+        return {
+            overflowMarginTopByKey,
+            manualFillHeightByKey,
+            lineSpacers: [],
+            pageCount: 1,
+        }
     }
 
-    let flowY = 0
+    let contentY = 0
     let maxContentBottomPx = 0
 
     blocks.forEach((block, blockIndex) => {
@@ -467,9 +580,11 @@ export function computeVisualPageFlowPlan(options: {
         }
 
         if (block.kind === "manual-break") {
-            const pageIndex = getPageIndexForLayoutY(flowY, sheetLayout)
+            const layoutY = contentY + sheetLayout.editorTopPx
+            const pageIndex = getPageIndexForLayoutY(layoutY, sheetLayout)
             const nextBodyStart = getA4SheetBand(pageIndex + 1, sheetLayout).bodyStartPx
-            manualFillHeightByKey[block.key] = Math.max(0, nextBodyStart - flowY)
+            const nextContentY = Math.max(0, nextBodyStart - sheetLayout.editorTopPx)
+            manualFillHeightByKey[block.key] = Math.max(0, nextContentY - contentY)
             const hasContentAfter = blocks
                 .slice(blockIndex + 1)
                 .some(
@@ -478,9 +593,12 @@ export function computeVisualPageFlowPlan(options: {
                         (next.kind !== "content" || next.height > 0)
                 )
             if (hasContentAfter) {
-                flowY = nextBodyStart
+                contentY = nextContentY
             }
-            maxContentBottomPx = Math.max(maxContentBottomPx, flowY)
+            maxContentBottomPx = Math.max(
+                maxContentBottomPx,
+                contentY + sheetLayout.editorTopPx
+            )
             return
         }
 
@@ -490,40 +608,43 @@ export function computeVisualPageFlowPlan(options: {
             return
         }
 
-        // Virtual layout Y decides breaks and margins. Do not use live DOM offsetTop:
-        // after a paste, natural DOM tops are packed at the top of the sheet and would
-        // cancel real page pushes (text then paints through the gap and looks sliced).
-        const layoutTopPx = flowY
+        // Content-box Y (0 at first line) + editorTopPx = layout-root Y.
+        // Decoration apply margin-top in the content box — keep that space consistent.
+        const layoutTopPx = contentY + sheetLayout.editorTopPx
         const flowTarget = resolveBlockFlowTarget(layoutTopPx, blockHeight, sheetLayout)
         let marginTop = 0
+        let placedContentY = contentY
 
         if (flowTarget.needsPush) {
-            marginTop = Math.max(0, flowTarget.targetBodyStartPx - layoutTopPx)
-            // Top body inset is applied via editor paddingTop — not decoration margin.
             if (
                 blockIndex === 0 &&
                 flowTarget.targetBodyStartPx === sheetLayout.editorTopPx
             ) {
+                // Page-1 top inset is paddingTop — never a decoration margin.
                 marginTop = 0
+                placedContentY = 0
+            } else {
+                // Exact jump to the next body slot. Never cap this — a short cap
+                // leaves the block straddling footer/gap (hidden text) and lands
+                // mid-page on the next sheet (extra empty hole).
+                const contentTargetY = Math.max(
+                    0,
+                    flowTarget.targetBodyStartPx - sheetLayout.editorTopPx
+                )
+                marginTop = Math.max(0, contentTargetY - contentY)
+                placedContentY = contentY + marginTop
             }
         }
 
-        if (marginTop > 0) {
+        if (marginTop > 0.5) {
             overflowMarginTopByKey[block.key] = marginTop
         }
 
-        let placedTopPx = flowTarget.needsPush ? flowTarget.targetBodyStartPx : layoutTopPx
-        if (
-            blockIndex === 0 &&
-            flowTarget.needsPush &&
-            flowTarget.targetBodyStartPx === sheetLayout.editorTopPx
-        ) {
-            placedTopPx = sheetLayout.editorTopPx
-        }
-        let placedBottomPx = placedTopPx + blockHeight
+        let placedBottomPx = placedContentY + blockHeight + sheetLayout.editorTopPx
 
-        // Correct under-measured blocks (e.g. signature/stamp tables) that still overflow the body slot.
-        const placedPageIndex = getPageIndexForLayoutY(placedTopPx, sheetLayout)
+        // If a normal-sized block still spills past the body slot, move it wholly.
+        const placedLayoutTop = placedContentY + sheetLayout.editorTopPx
+        const placedPageIndex = getPageIndexForLayoutY(placedLayoutTop, sheetLayout)
         const placedBand = getA4SheetBand(placedPageIndex, sheetLayout)
 
         if (
@@ -542,23 +663,37 @@ export function computeVisualPageFlowPlan(options: {
             }
 
             const targetStart = getA4SheetBand(targetPage, sheetLayout).bodyStartPx
-            marginTop = Math.max(marginTop, targetStart - layoutTopPx)
-            if (marginTop > 0) {
+            const contentTargetY = Math.max(0, targetStart - sheetLayout.editorTopPx)
+            marginTop = Math.max(0, contentTargetY - contentY)
+            if (marginTop > 0.5) {
                 overflowMarginTopByKey[block.key] = marginTop
             } else {
                 delete overflowMarginTopByKey[block.key]
             }
-            placedTopPx = targetStart
-            placedBottomPx = targetStart + blockHeight
+            placedContentY = contentTargetY
+            placedBottomPx = placedContentY + blockHeight + sheetLayout.editorTopPx
+            contentY = placedContentY + blockHeight
+        } else if (blockHeight > sheetLayout.bodyHeightPx) {
+            // Tall block keeps flowing; virtual Y skips masked page boundaries so
+            // the next block aligns to a real body slot (line-spacer widgets match).
+            const advanced = advanceLayoutYThroughBlock(
+                placedLayoutTop,
+                blockHeight,
+                sheetLayout
+            )
+            placedBottomPx = advanced.layoutBottomPx
+            contentY = Math.max(0, placedBottomPx - sheetLayout.editorTopPx)
+        } else {
+            contentY = placedContentY + blockHeight
         }
 
-        flowY = placedBottomPx
         maxContentBottomPx = Math.max(maxContentBottomPx, placedBottomPx)
     })
 
     return {
         overflowMarginTopByKey,
         manualFillHeightByKey,
+        lineSpacers: [],
         pageCount: computePageCountFromLayoutExtent(maxContentBottomPx, sheetLayout),
     }
 }
@@ -569,6 +704,20 @@ export function areVisualPageFlowPlansEqual(
 ): boolean {
     if (left.pageCount !== right.pageCount) {
         return false
+    }
+
+    const leftSpacers = left.lineSpacers ?? []
+    const rightSpacers = right.lineSpacers ?? []
+    if (leftSpacers.length !== rightSpacers.length) {
+        return false
+    }
+    for (let i = 0; i < leftSpacers.length; i += 1) {
+        if (
+            leftSpacers[i].pos !== rightSpacers[i].pos ||
+            Math.abs(leftSpacers[i].heightPx - rightSpacers[i].heightPx) > 0.5
+        ) {
+            return false
+        }
     }
 
     const keys = new Set([
@@ -725,6 +874,13 @@ function measureBlockFlowFootprint(block: HTMLElement): number {
         height = Math.max(height, blockRect.height, block.scrollHeight)
     }
 
+    // Pagination spacer widgets are in-flow chrome — not content height.
+    block
+        .querySelectorAll<HTMLElement>('[data-doc-page-flow-spacer="true"]')
+        .forEach((spacer) => {
+            height -= spacer.offsetHeight
+        })
+
     return Math.max(height, MIN_FLOW_BLOCK_HEIGHT_PX)
 }
 
@@ -829,7 +985,12 @@ export function buildEditorVisualPageFlowPlan(
     const flowBlocks = collectFlowBlocks(proseMirror)
 
     if (flowBlocks.length === 0) {
-        return { overflowMarginTopByKey: {}, manualFillHeightByKey: {}, pageCount: 1 }
+        return {
+            overflowMarginTopByKey: {},
+            manualFillHeightByKey: {},
+            lineSpacers: [],
+            pageCount: 1,
+        }
     }
 
     return computeVisualPageFlowPlan({
@@ -891,7 +1052,9 @@ export function computePageCountFromResolvedPlan(options: {
         return 1
     }
 
-    let flowY = 0
+    // Replay in the same content-box space as computeVisualPageFlowPlan
+    // (Y=0 at first line; layout Y = contentY + editorTopPx).
+    let contentY = 0
     let maxBottomPx = 0
 
     blocks.forEach((block, blockIndex) => {
@@ -909,9 +1072,12 @@ export function computePageCountFromResolvedPlan(options: {
                         (next.kind !== "content" || next.height > 0)
                 )
             if (hasContentAfter && fill > 0) {
-                flowY += fill
+                contentY += fill
             }
-            maxBottomPx = Math.max(maxBottomPx, flowY)
+            maxBottomPx = Math.max(
+                maxBottomPx,
+                contentY + sheetLayout.editorTopPx
+            )
             return
         }
 
@@ -919,27 +1085,39 @@ export function computePageCountFromResolvedPlan(options: {
             return
         }
 
-        const layoutTopPx = flowY
         const marginTop = plan.overflowMarginTopByKey[block.key] ?? 0
+        let placedContentY = contentY + Math.max(0, marginTop)
 
-        let placedTopPx = layoutTopPx
-        if (marginTop > 0) {
-            placedTopPx = layoutTopPx + marginTop
-        } else {
-            const flowTarget = resolveBlockFlowTarget(layoutTopPx, block.height, sheetLayout)
-            placedTopPx = flowTarget.needsPush ? flowTarget.targetBodyStartPx : layoutTopPx
-            if (
-                blockIndex === 0 &&
-                flowTarget.needsPush &&
-                flowTarget.targetBodyStartPx === sheetLayout.editorTopPx
-            ) {
-                placedTopPx = sheetLayout.editorTopPx
+        if (marginTop <= 0.5) {
+            const layoutTopPx = contentY + sheetLayout.editorTopPx
+            const flowTarget = resolveBlockFlowTarget(
+                layoutTopPx,
+                block.height,
+                sheetLayout
+            )
+            if (flowTarget.needsPush) {
+                if (
+                    blockIndex === 0 &&
+                    flowTarget.targetBodyStartPx === sheetLayout.editorTopPx
+                ) {
+                    placedContentY = 0
+                } else {
+                    placedContentY = Math.max(
+                        0,
+                        flowTarget.targetBodyStartPx - sheetLayout.editorTopPx
+                    )
+                }
             }
         }
 
-        let placedBottomPx = placedTopPx + block.height
+        let placedBottomPx =
+            placedContentY + block.height + sheetLayout.editorTopPx
 
-        const placedPageIndex = getPageIndexForLayoutY(placedTopPx, sheetLayout)
+        const placedLayoutTop = placedContentY + sheetLayout.editorTopPx
+        const placedPageIndex = getPageIndexForLayoutY(
+            placedLayoutTop,
+            sheetLayout
+        )
         const placedBand = getA4SheetBand(placedPageIndex, sheetLayout)
 
         if (
@@ -957,10 +1135,16 @@ export function computePageCountFromResolvedPlan(options: {
                 targetPage += 1
             }
 
-            placedBottomPx = getA4SheetBand(targetPage, sheetLayout).bodyStartPx + block.height
+            placedBottomPx =
+                getA4SheetBand(targetPage, sheetLayout).bodyStartPx +
+                block.height
+            placedContentY = Math.max(
+                0,
+                placedBottomPx - block.height - sheetLayout.editorTopPx
+            )
         }
 
-        flowY = placedBottomPx
+        contentY = placedContentY + block.height
         maxBottomPx = Math.max(maxBottomPx, placedBottomPx)
     })
 
@@ -1251,14 +1435,174 @@ function captureVisualPageFlowPlanFromDom(options: {
     return {
         overflowMarginTopByKey,
         manualFillHeightByKey,
+        lineSpacers: [],
         pageCount: computePageCountFromContentExtent(extent, pageStridePx, maxBodyHeightPx),
     }
+}
+
+/**
+ * Merge client rects that share the same visual line (similar top).
+ */
+function mergeClientRectsIntoLines(rects: DOMRect[]): DOMRect[] {
+    if (rects.length === 0) {
+        return []
+    }
+
+    const sorted = [...rects].sort((a, b) => a.top - b.top || a.left - b.left)
+    const lines: DOMRect[] = []
+    const lineTolerancePx = 4
+
+    for (const rect of sorted) {
+        if (rect.height < 1 || rect.width < 1) {
+            continue
+        }
+        const last = lines[lines.length - 1]
+        if (last && Math.abs(rect.top - last.top) <= lineTolerancePx) {
+            const left = Math.min(last.left, rect.left)
+            const right = Math.max(last.right, rect.right)
+            const top = Math.min(last.top, rect.top)
+            const bottom = Math.max(last.bottom, rect.bottom)
+            lines[lines.length - 1] = new DOMRect(left, top, right - left, bottom - top)
+        } else {
+            lines.push(rect)
+        }
+    }
+
+    return lines
+}
+
+/** Visible line boxes inside a block (text + replaced elements). */
+function measureBlockLineBoxes(block: HTMLElement): DOMRect[] {
+    const rects: DOMRect[] = []
+    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT)
+
+    let node = walker.nextNode()
+    while (node) {
+        if (node.textContent && node.textContent.length > 0) {
+            const range = document.createRange()
+            range.selectNodeContents(node)
+            rects.push(...Array.from(range.getClientRects()))
+        }
+        node = walker.nextNode()
+    }
+
+    block
+        .querySelectorAll<HTMLElement>("img, br, table, figure, .document-image-float")
+        .forEach((el) => {
+            const r = el.getBoundingClientRect()
+            if (r.height > 0) {
+                rects.push(r)
+            }
+        })
+
+    if (rects.length === 0) {
+        const blockRect = block.getBoundingClientRect()
+        if (blockRect.height > 0) {
+            return [blockRect]
+        }
+        return []
+    }
+
+    return mergeClientRectsIntoLines(rects)
+}
+
+/**
+ * Find in-flow spacers that jump lines out of footer/gap/header bands onto the
+ * next body slot. One spacer per layout pass (re-run picks up the next page).
+ */
+export function collectVisualPageFlowLineSpacers(options: {
+    proseMirror: HTMLElement
+    layoutRoot: HTMLElement
+    sheetLayout: A4SheetLayout
+    posAtCoords: (coords: { left: number; top: number }) => { pos: number } | null
+}): Array<{ pos: number; heightPx: number }> {
+    const { proseMirror, layoutRoot, sheetLayout, posAtCoords } = options
+    const rootTop = layoutRoot.getBoundingClientRect().top
+    const spacers: Array<{ pos: number; heightPx: number }> = []
+    const usedPositions = new Set<number>()
+
+    Array.from(proseMirror.children).forEach((child) => {
+        if (!(child instanceof HTMLElement)) {
+            return
+        }
+        if (isLegacyAutoPageBreakElement(child) || isManualPageBreakElement(child)) {
+            return
+        }
+
+        // Skip our own spacer widgets if they appear as children somehow.
+        if (child.dataset.docPageFlowSpacer === "true") {
+            return
+        }
+
+        const blockHeight = measureBlockFlowFootprint(child)
+        // Short blocks are handled by whole-block margin push.
+        if (blockHeight <= sheetLayout.bodyHeightPx + BODY_OVERFLOW_TOLERANCE_PX) {
+            return
+        }
+
+        const lines = measureBlockLineBoxes(child)
+        for (const line of lines) {
+            const lineTop = line.top - rootTop
+            const lineBottom = line.bottom - rootTop
+            const pageIndex = getPageIndexForLayoutY(lineTop, sheetLayout)
+            const band = getA4SheetBand(pageIndex, sheetLayout)
+
+            const intersectsNonBody =
+                lineBottom > band.bodyEndPx + 0.5 ||
+                lineTop >= band.bodyEndPx - 0.5 ||
+                lineTop < band.bodyStartPx - BODY_OVERFLOW_TOLERANCE_PX
+
+            if (!intersectsNonBody) {
+                continue
+            }
+
+            let snapStartPx: number
+            if (
+                lineTop < band.bodyStartPx - BODY_OVERFLOW_TOLERANCE_PX &&
+                lineTop >= band.pageTopPx - BODY_OVERFLOW_TOLERANCE_PX
+            ) {
+                // Line sits in the header band — pull it down to this page body.
+                snapStartPx = band.bodyStartPx
+            } else {
+                // Line intersects footer / gap — jump to the next page body.
+                snapStartPx = getA4SheetBand(pageIndex + 1, sheetLayout).bodyStartPx
+            }
+
+            const spacerPx = snapStartPx - lineTop
+            if (spacerPx <= 1) {
+                continue
+            }
+
+            const hit = posAtCoords({
+                left: line.left + Math.min(4, Math.max(1, line.width / 2)),
+                top: line.top + Math.min(4, Math.max(1, line.height / 2)),
+            })
+            if (!hit) {
+                continue
+            }
+
+            const pos = hit.pos
+            if (usedPositions.has(pos)) {
+                continue
+            }
+            usedPositions.add(pos)
+            spacers.push({ pos, heightPx: spacerPx })
+            // One spacer per tall block per pass — next layout pass continues.
+            break
+        }
+    })
+
+    return spacers
 }
 
 export type ApplyEditorVisualPageFlowOptions = {
     proseMirror: HTMLElement
     sheetLayout: A4SheetLayout
     previousPlan?: VisualPageFlowPlan | null
+    layoutRoot?: HTMLElement | null
+    posAtCoords?:
+        | ((coords: { left: number; top: number }) => { pos: number } | null)
+        | null
     /** @deprecated No longer used — plans apply in a single pass to avoid flicker. */
     onPlanPass?: (plan: VisualPageFlowPlan) => void
 }
@@ -1283,7 +1627,13 @@ export type ApplyEditorVisualPageFlowResult = {
 export function applyEditorVisualPageFlow(
     options: ApplyEditorVisualPageFlowOptions
 ): ApplyEditorVisualPageFlowResult {
-    const { proseMirror, sheetLayout, previousPlan = null } = options
+    const {
+        proseMirror,
+        sheetLayout,
+        previousPlan = null,
+        layoutRoot = null,
+        posAtCoords = null,
+    } = options
 
     // Force a layout read so height measurements are current after paste/edit.
     proseMirror.getBoundingClientRect()
@@ -1294,10 +1644,25 @@ export function applyEditorVisualPageFlow(
         sheetLayout,
     })
 
-    for (let iteration = 0; iteration < 4; iteration += 1) {
-        if (!refineVisualPageFlowPlan({ proseMirror, plan, sheetLayout })) {
-            break
+    if (layoutRoot && posAtCoords) {
+        const found = collectVisualPageFlowLineSpacers({
+            proseMirror,
+            layoutRoot,
+            sheetLayout,
+            posAtCoords,
+        })
+        // Accumulate across passes — each paint can only place the next boundary
+        // accurately. Dropping prior spacers collapses earlier page breaks.
+        const byPos = new Map<number, { pos: number; heightPx: number }>()
+        for (const spacer of previousPlan?.lineSpacers ?? []) {
+            if (spacer.heightPx > 0.5) {
+                byPos.set(spacer.pos, spacer)
+            }
         }
+        for (const spacer of found) {
+            byPos.set(spacer.pos, spacer)
+        }
+        plan.lineSpacers = Array.from(byPos.values()).sort((a, b) => a.pos - b.pos)
     }
 
     const flowBlocks = collectFlowBlocks(proseMirror)

@@ -116,7 +116,6 @@ import {
 } from "@/lib/document-template/a4-document"
 import {
     applyEditorVisualPageFlow,
-    correctVisualPageFlowPlanFromPaintedGeometry,
     DOCUMENT_TEMPLATE_LAYOUT_TRANSACTION_META,
     getA4SheetBand,
     isDocumentTemplateLayoutSyncActive,
@@ -290,7 +289,7 @@ const A4EditorPageShell = memo(function A4EditorPageShell({
     } = sheetLayout
 
     const topReservePx = hasHeader ? headerZonePx : verticalPaddingPx
-    const bottomReservePx = hasFooter ? footerZonePx : verticalPaddingPx
+    const bottomReservePx = hasFooter ? footerZonePx : sheetLayout.editorBottomPx
 
     return (
         <div
@@ -348,6 +347,7 @@ const EditorCanvas = memo(function EditorCanvas({
     const layoutQuietUntilRef = useRef(0)
     const layoutFrameRef = useRef<number | null>(null)
     const layoutDebounceRef = useRef<number | null>(null)
+    const lineSpacerPassRef = useRef(0)
     const [, bump] = useReducer((n: number) => n + 1, 0)
 
     const padX = mmToPx(A4_PAGE_PADDING_X_MM)
@@ -366,7 +366,8 @@ const EditorCanvas = memo(function EditorCanvas({
                 c.sheetLayout.flowStridePx === opts.sheetLayout.flowStridePx &&
                 c.sheetLayout.bodyHeightPx === opts.sheetLayout.bodyHeightPx &&
                 c.sheetLayout.headerZonePx === opts.sheetLayout.headerZonePx &&
-                c.sheetLayout.footerZonePx === opts.sheetLayout.footerZonePx
+                c.sheetLayout.footerZonePx === opts.sheetLayout.footerZonePx &&
+                c.sheetLayout.footerChromePx === opts.sheetLayout.footerChromePx
             ) {
                 return
             }
@@ -409,12 +410,17 @@ const EditorCanvas = memo(function EditorCanvas({
                           proseMirror: pm,
                           sheetLayout,
                           previousPlan: lastPlanRef.current,
+                          layoutRoot,
+                          posAtCoords: editor
+                              ? (coords) => editor.view.posAtCoords(coords)
+                              : null,
                       })
                     : {
                           pageCount: 1,
                           plan: lastPlanRef.current ?? {
                               overflowMarginTopByKey: {},
                               manualFillHeightByKey: {},
+                              lineSpacers: [],
                               pageCount: 1,
                           },
                           planChanged: false,
@@ -431,30 +437,11 @@ const EditorCanvas = memo(function EditorCanvas({
                 )
             }
 
-            if (editor && result.planChanged) {
+            if (editor) {
                 dispatchPlan(result.plan)
             }
 
-            // Paint-correct: push-only passes (no margin shrink — that hid text again).
-            if (editor && pm && layoutRoot && sheetLayout.bodyHeightPx > 0) {
-                for (let pass = 0; pass < 4; pass += 1) {
-                    pm.getBoundingClientRect()
-                    void pm.offsetHeight
-                    if (
-                        !correctVisualPageFlowPlanFromPaintedGeometry({
-                            proseMirror: pm,
-                            layoutRoot,
-                            plan: result.plan,
-                            sheetLayout,
-                        })
-                    ) {
-                        break
-                    }
-                    dispatchPlan(result.plan)
-                    result.planChanged = true
-                }
-            }
-
+            const previousSpacerCount = lastPlanRef.current?.lineSpacers?.length ?? 0
             lastPlanRef.current = result.plan
 
             const syncLayoutMetrics = () => {
@@ -482,10 +469,32 @@ const EditorCanvas = memo(function EditorCanvas({
             }
 
             syncLayoutMetrics()
+
+            // Tall blocks need multiple passes (one page-boundary spacer per paint).
+            const nextSpacerCount = result.plan.lineSpacers?.length ?? 0
+            if (
+                nextSpacerCount > previousSpacerCount &&
+                lineSpacerPassRef.current < 8
+            ) {
+                lineSpacerPassRef.current += 1
+                layoutQuietUntilRef.current = performance.now() + 32
+                requestAnimationFrame(() => {
+                    if (layoutFrameRef.current) cancelAnimationFrame(layoutFrameRef.current)
+                    layoutFrameRef.current = requestAnimationFrame(() => {
+                        layoutFrameRef.current = null
+                        runLayout()
+                    })
+                })
+            } else {
+                lineSpacerPassRef.current = 0
+            }
         } finally {
             // Keep ResizeObserver quiet until after paint settles — otherwise
             // decoration height changes re-enter layout and the page vibrates.
-            layoutQuietUntilRef.current = performance.now() + 120
+            layoutQuietUntilRef.current = Math.max(
+                layoutQuietUntilRef.current,
+                performance.now() + 120
+            )
             isLayoutingRef.current = false
         }
     }, [applyMetrics, editor, hasFooter, hasHeader])
@@ -550,7 +559,18 @@ const EditorCanvas = memo(function EditorCanvas({
         if (!editor) return
         const onCreate = () => schedule()
         const onUpdate = ({ transaction }: { transaction: { docChanged?: boolean; getMeta: (k: string) => unknown } }) => {
-            if (shouldRunEditorLayoutForTransaction(transaction)) schedule(true)
+            if (!shouldRunEditorLayoutForTransaction(transaction)) return
+            // Doc edits invalidate index-keyed spacers/margins — drop them before replan.
+            if (transaction.docChanged && lastPlanRef.current) {
+                lastPlanRef.current = {
+                    ...lastPlanRef.current,
+                    overflowMarginTopByKey: {},
+                    manualFillHeightByKey: {},
+                    lineSpacers: [],
+                }
+                lineSpacerPassRef.current = 0
+            }
+            schedule(true)
         }
         editor.on("create", onCreate)
         editor.on("update", onUpdate)
@@ -673,7 +693,7 @@ const EditorCanvas = memo(function EditorCanvas({
                                 : sheetLayout.verticalPaddingPx
                             const bottomReservePx = hasFooter
                                 ? sheetLayout.footerZonePx
-                                : sheetLayout.verticalPaddingPx
+                                : sheetLayout.editorBottomPx
 
                             return (
                                 <div
@@ -706,7 +726,7 @@ const EditorCanvas = memo(function EditorCanvas({
                                             )}
                                             style={{
                                                 bottom: 0,
-                                                height: bottomReservePx,
+                                                height: sheetLayout.footerChromePx,
                                                 paddingLeft: padX,
                                                 paddingRight: padX,
                                                 paddingBottom: sheetLayout.verticalPaddingPx,

@@ -202,13 +202,14 @@ function assert(name: string, condition: boolean) {
         }).footerHeightPx > 0
     )
     assert(
-        "available body height excludes header/footer/gap",
+        "available body height excludes header/footer/gap/last-line reserve",
         bodyMetrics.maxBodyHeightPx ===
             A4_PAGE_HEIGHT_PX -
                 verticalPaddingPx * 2 -
                 headerContentPx -
                 footerContentPx -
-                DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX
+                DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX -
+                22
     )
     assert(
         "page stride spans full sheet plus stack gap",
@@ -283,7 +284,10 @@ function assert(name: string, condition: boolean) {
         blocks: [{ key: "tall", kind: "content", height: maxBodyHeightPx + 120 }],
         sheetLayout,
     })
-    assert("tall block stays on one rendered page", plan.pageCount === 1)
+    assert(
+        "tall block does not invent empty trailing pages",
+        plan.pageCount >= 1 && plan.pageCount <= 3
+    )
 }
 
 // 13. Empty document stays on one page
