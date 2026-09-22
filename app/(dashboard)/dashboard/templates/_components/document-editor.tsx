@@ -435,9 +435,9 @@ const EditorCanvas = memo(function EditorCanvas({
                 dispatchPlan(result.plan)
             }
 
-            // Paint-correct once or twice only — more passes oscillate (vibrate).
+            // Paint-correct: push-only passes (no margin shrink — that hid text again).
             if (editor && pm && layoutRoot && sheetLayout.bodyHeightPx > 0) {
-                for (let pass = 0; pass < 2; pass += 1) {
+                for (let pass = 0; pass < 4; pass += 1) {
                     pm.getBoundingClientRect()
                     void pm.offsetHeight
                     if (
@@ -822,6 +822,12 @@ export const DocumentEditor = memo(function DocumentEditor({
         },
         editorProps: {
             attributes: { class: A4_DOCUMENT_CONTENT_CLASS },
+            // Soft-break lines cannot move to the next page as a unit — convert to
+            // paragraphs so page-end lines push cleanly instead of clipping in the footer.
+            transformPastedHTML: (html) =>
+                html
+                    .replace(/<br\s*\/?>/gi, "</p><p>")
+                    .replace(/<p>\s*<\/p>/gi, "<p></p>"),
             handlePaste: (_view, event) => {
                 const items = event.clipboardData?.items
                 if (!items) return false
