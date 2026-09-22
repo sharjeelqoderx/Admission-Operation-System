@@ -17,10 +17,22 @@ export const DOCUMENT_TEMPLATE_LAYOUT_TRANSACTION_META = "documentTemplateLayout
 
 const PAGE_FLOW_ATTR = "data-doc-page-flow"
 const BODY_OVERFLOW_TOLERANCE_PX = 2
-/** Keep last line fully above the bottom padding/footer mask (no half-cut glyphs). */
-const BODY_FOOTER_SAFETY_PX = 16
+/** Keep last line fully above the footer / bottom padding mask (no half-cut glyphs). */
+const BODY_FOOTER_SAFETY_PX = 28
 /** Minimum height for empty paragraphs/lines in pagination. */
 const MIN_FLOW_BLOCK_HEIGHT_PX = 22
+
+function bodyBottomClearancePx(layout: A4SheetLayout, blockHeightPx: number): number {
+    const isShortLine = blockHeightPx <= MIN_FLOW_BLOCK_HEIGHT_PX * 2
+    if (isShortLine) {
+        // One full line must stay above the footer/padding mask.
+        return layout.hasFooter
+            ? Math.max(BODY_FOOTER_SAFETY_PX, MIN_FLOW_BLOCK_HEIGHT_PX)
+            : MIN_FLOW_BLOCK_HEIGHT_PX
+    }
+    // Tall blocks keep almost the full body slot; paint-correct still catches clips.
+    return layout.hasFooter ? 8 : 0
+}
 
 export type EditorBodyLayoutMetrics = {
     editorTopPx: number
@@ -254,12 +266,7 @@ export function resolveBlockFlowTarget(
     }
 
     // Never allow even 1px into the bottom mask — that reads as half-cut text.
-    // Short lines get a one-line safety pad; tall fill blocks keep the full body slot.
-    const lineSafetyPx =
-        blockHeightPx <= MIN_FLOW_BLOCK_HEIGHT_PX * 2 ? MIN_FLOW_BLOCK_HEIGHT_PX : 0
-    const bodyFitLimitPx =
-        band.bodyEndPx -
-        (layout.hasFooter ? BODY_FOOTER_SAFETY_PX : lineSafetyPx)
+    const bodyFitLimitPx = band.bodyEndPx - bodyBottomClearancePx(layout, blockHeightPx)
 
     if (naturalTopPx + blockHeightPx <= bodyFitLimitPx) {
         return {
@@ -1127,30 +1134,38 @@ export function correctVisualPageFlowPlanFromPaintedGeometry(options: {
 
         const pageIndex = getPageIndexForLayoutY(paintedTopPx, sheetLayout)
         const band = getA4SheetBand(pageIndex, sheetLayout)
-        // Keep a full line clear of the bottom mask so lines are never half-hidden.
+        // Hard clip at the footer/padding edge — any overlap must move to the next page.
         const bodyFitLimitPx =
-            band.bodyEndPx -
-            (sheetLayout.hasFooter ? BODY_FOOTER_SAFETY_PX : MIN_FLOW_BLOCK_HEIGHT_PX)
+            band.bodyEndPx - bodyBottomClearancePx(sheetLayout, paintedHeightPx)
 
         const startsInHeaderZone =
             paintedTopPx < band.bodyStartPx - BODY_OVERFLOW_TOLERANCE_PX &&
             paintedTopPx >= band.pageTopPx - BODY_OVERFLOW_TOLERANCE_PX
-        const startsInFooterOrGap = paintedTopPx >= bodyFitLimitPx
-        const overflowsBody = paintedBottomPx > bodyFitLimitPx
+        const startsInFooterOrGap = paintedTopPx >= band.bodyEndPx - BODY_OVERFLOW_TOLERANCE_PX
+        // Strict: even 1px under the footer mask counts as overflow (half-cut letters).
+        const overflowsBody = paintedBottomPx > band.bodyEndPx - 0.5
         const fitsOneBody =
             paintedHeightPx <= sheetLayout.bodyHeightPx + BODY_OVERFLOW_TOLERANCE_PX
+        const nearPageBottom =
+            paintedTopPx > bodyFitLimitPx - MIN_FLOW_BLOCK_HEIGHT_PX * 2
 
         const shouldPush =
             startsInHeaderZone ||
             startsInFooterOrGap ||
-            (fitsOneBody && overflowsBody)
+            (fitsOneBody && overflowsBody) ||
+            // Short remnant stuck against the footer — push whole block to page 2.
+            (nearPageBottom && overflowsBody && paintedHeightPx <= sheetLayout.bodyHeightPx)
 
         if (!shouldPush) {
             continue
         }
 
         let targetPage = pageIndex
-        if (startsInFooterOrGap || (fitsOneBody && overflowsBody)) {
+        if (
+            startsInFooterOrGap ||
+            (fitsOneBody && overflowsBody) ||
+            (nearPageBottom && overflowsBody)
+        ) {
             targetPage = pageIndex + 1
         }
         if (startsInHeaderZone) {

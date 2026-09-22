@@ -822,6 +822,12 @@ export const DocumentEditor = memo(function DocumentEditor({
         },
         editorProps: {
             attributes: { class: A4_DOCUMENT_CONTENT_CLASS },
+            // Soft-break lines cannot move to the next page as a unit — convert to
+            // paragraphs so page-end lines push cleanly instead of clipping in the footer.
+            transformPastedHTML: (html) =>
+                html
+                    .replace(/<br\s*\/?>/gi, "</p><p>")
+                    .replace(/<p>\s*<\/p>/gi, "<p></p>"),
             handlePaste: (_view, event) => {
                 const items = event.clipboardData?.items
                 if (!items) return false
