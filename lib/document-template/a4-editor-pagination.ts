@@ -116,6 +116,9 @@ export function resolveEditorRegionHeights(options: {
 /**
  * Page layout: HEADER ZONE → BODY → FOOTER ZONE per sheet.
  * Header/footer zones (and their gaps) are outside the body flow.
+ *
+ * Always reserves one line above the footer/bottom padding so the last body line
+ * cannot sit half-under the white mask (the "hidden at page end" bug).
  */
 export function calculateEditorBodyLayoutMetrics(options: {
     hasHeader: boolean
@@ -127,12 +130,16 @@ export function calculateEditorBodyLayoutMetrics(options: {
     const headerContentPx = options.hasHeader ? options.headerHeightPx : 0
     const footerContentPx = options.hasFooter ? options.footerHeightPx : 0
     const headerBodyGapPx = options.hasHeader ? DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX : 0
+    const lastLineReservePx = MIN_FLOW_BLOCK_HEIGHT_PX
 
     const headerZonePx = verticalPaddingPx + headerContentPx + headerBodyGapPx
-    const footerZonePx = verticalPaddingPx + footerContentPx
+    // Include last-line reserve in the bottom band so bodyEnd / masks / planner agree.
+    const footerZonePx = verticalPaddingPx + footerContentPx + lastLineReservePx
 
     const editorTopPx = options.hasHeader ? headerZonePx : verticalPaddingPx
-    const editorBottomPx = options.hasFooter ? footerZonePx : verticalPaddingPx
+    const editorBottomPx = options.hasFooter
+        ? footerZonePx
+        : verticalPaddingPx + lastLineReservePx
 
     const maxBodyHeightPx = Math.max(120, A4_PAGE_HEIGHT_PX - editorTopPx - editorBottomPx)
 
@@ -188,9 +195,10 @@ export function getA4SheetBand(pageIndex: number, layout: A4SheetLayout): A4Shee
     const topReservePx = layout.hasHeader
         ? layout.headerZonePx
         : layout.verticalPaddingPx
+    // Use editorBottomPx so the last-line reserve is always masked (footer or plain).
     const bottomReservePx = layout.hasFooter
         ? layout.footerZonePx
-        : layout.verticalPaddingPx
+        : layout.editorBottomPx
     const bodyStartPx = pageTopPx + topReservePx
     const bodyEndPx = pageTopPx + layout.pageHeightPx - bottomReservePx
 

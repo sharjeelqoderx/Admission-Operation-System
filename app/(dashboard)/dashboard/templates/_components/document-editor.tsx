@@ -290,7 +290,7 @@ const A4EditorPageShell = memo(function A4EditorPageShell({
     } = sheetLayout
 
     const topReservePx = hasHeader ? headerZonePx : verticalPaddingPx
-    const bottomReservePx = hasFooter ? footerZonePx : verticalPaddingPx
+    const bottomReservePx = hasFooter ? footerZonePx : sheetLayout.editorBottomPx
 
     return (
         <div
@@ -482,6 +482,25 @@ const EditorCanvas = memo(function EditorCanvas({
             }
 
             syncLayoutMetrics()
+
+            // One more paint-correct after the browser commits decoration layout.
+            // Catches the last line that still straddles the footer mask.
+            if (editor && pm && layoutRoot && sheetLayout.bodyHeightPx > 0) {
+                requestAnimationFrame(() => {
+                    if (
+                        correctVisualPageFlowPlanFromPaintedGeometry({
+                            proseMirror: pm,
+                            layoutRoot,
+                            plan: result.plan,
+                            sheetLayout,
+                        })
+                    ) {
+                        dispatchPlan(result.plan)
+                        lastPlanRef.current = result.plan
+                        syncLayoutMetrics()
+                    }
+                })
+            }
         } finally {
             // Keep ResizeObserver quiet until after paint settles — otherwise
             // decoration height changes re-enter layout and the page vibrates.
@@ -673,7 +692,7 @@ const EditorCanvas = memo(function EditorCanvas({
                                 : sheetLayout.verticalPaddingPx
                             const bottomReservePx = hasFooter
                                 ? sheetLayout.footerZonePx
-                                : sheetLayout.verticalPaddingPx
+                                : sheetLayout.editorBottomPx
 
                             return (
                                 <div

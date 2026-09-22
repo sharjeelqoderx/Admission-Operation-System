@@ -202,13 +202,14 @@ function assert(name: string, condition: boolean) {
         }).footerHeightPx > 0
     )
     assert(
-        "available body height excludes header/footer/gap",
+        "available body height excludes header/footer/gap/last-line reserve",
         bodyMetrics.maxBodyHeightPx ===
             A4_PAGE_HEIGHT_PX -
                 verticalPaddingPx * 2 -
                 headerContentPx -
                 footerContentPx -
-                DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX
+                DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX -
+                22
     )
     assert(
         "page stride spans full sheet plus stack gap",
