@@ -57,6 +57,7 @@ import {
     Palette,
     PanelBottom,
     PanelTop,
+    PenLine,
     Pilcrow,
     Plus,
     Redo2,
@@ -116,6 +117,8 @@ import {
 } from "@/lib/document-template/a4-document"
 import {
     applyEditorVisualPageFlow,
+    reconcileVisualPageFlowFromPaintedGeometry,
+    DOCUMENT_TEMPLATE_FOOTER_MIN_HEIGHT_PX,
     DOCUMENT_TEMPLATE_LAYOUT_TRANSACTION_META,
     getA4SheetBand,
     isDocumentTemplateLayoutSyncActive,
@@ -155,6 +158,15 @@ import {
     type DocumentTemplateFooterFields,
     type DocumentTemplateHeaderFields,
 } from "@/lib/document-template/header-footer"
+import {
+    buildSignatureStampHtml,
+    DOCUMENT_TEMPLATE_SIGNATURE_STAMP_GAP_PX,
+    DOCUMENT_TEMPLATE_SIGNATURE_STAMP_MIN_HEIGHT_PX,
+    estimateSignatureStampContentHeightPx,
+    getDefaultSignatureStampFields,
+    parseSignatureStampHtml,
+    type DocumentTemplateSignatureStampFields,
+} from "@/lib/document-template/signature-stamp"
 import { isDefaultHeaderContactText, TEMPLATE_LOCALE_OPTIONS } from "@/lib/document-template/locale"
 import { DocumentPageBreak } from "@/lib/document-template/tiptap-document-page-break"
 import { DocumentPageFlow } from "@/lib/document-template/tiptap-document-page-flow"
@@ -208,7 +220,14 @@ export const DOCUMENT_TEMPLATE_ASSETS_QUERY_KEY = ["document-template-assets"] a
 const EDITOR_SHEET_OVERLAY_CLASS = "z-[100]"
 const EDITOR_SHEET_CONTENT_CLASS = "z-[100]"
 
-type AssetIntent = "header" | "header-logo" | "inline" | "logo" | "watermark"
+type AssetIntent =
+    | "header"
+    | "header-logo"
+    | "inline"
+    | "logo"
+    | "watermark"
+    | "signature"
+    | "stamp"
 
 async function fetchAssets(): Promise<DocumentTemplateAsset[]> {
     const res = await fetch("/api/document-template/assets")
@@ -314,16 +333,20 @@ const EditorCanvas = memo(function EditorCanvas({
     editor,
     hasHeader,
     hasFooter,
+    hasSignatureStamp,
     headerHtml,
     footerHtml,
+    signatureStampHtml,
     watermark,
     children,
 }: {
     editor: Editor | null
     hasHeader: boolean
     hasFooter: boolean
+    hasSignatureStamp: boolean
     headerHtml: string
     footerHtml: string
+    signatureStampHtml: string
     watermark: DocumentTemplateWatermark
     children: ReactNode
 }) {
@@ -331,13 +354,15 @@ const EditorCanvas = memo(function EditorCanvas({
     const layoutRootRef = useRef<HTMLDivElement>(null)
     const headerMeasureRef = useRef<HTMLDivElement>(null)
     const footerMeasureRef = useRef<HTMLDivElement>(null)
+    const signatureMeasureRef = useRef<HTMLDivElement>(null)
+    const hasBottomChrome = hasFooter || hasSignatureStamp
     const layoutRef = useRef({
         pageCount: 1,
         stackHeightPx: A4_PAGE_HEIGHT_PX,
         editorHeightPx: A4_PAGE_HEIGHT_PX,
         sheetLayout: resolveA4SheetLayout({
             hasHeader,
-            hasFooter,
+            hasFooter: hasBottomChrome,
             headerHeightPx: 0,
             footerHeightPx: 0,
         }),
@@ -386,15 +411,31 @@ const EditorCanvas = memo(function EditorCanvas({
         if (isLayoutingRef.current) return
         isLayoutingRef.current = true
         try {
+            const signatureHeightPx = hasSignatureStamp
+                ? Math.max(
+                      measureDocumentTemplateRegionContentHeight(signatureMeasureRef.current),
+                      estimateSignatureStampContentHeightPx(),
+                      DOCUMENT_TEMPLATE_SIGNATURE_STAMP_MIN_HEIGHT_PX
+                  )
+                : 0
+            const footerContentPx = hasFooter
+                ? Math.max(
+                      measureDocumentTemplateRegionContentHeight(footerMeasureRef.current),
+                      DOCUMENT_TEMPLATE_FOOTER_MIN_HEIGHT_PX
+                  )
+                : 0
+            const combinedFooterHeightPx =
+                signatureHeightPx +
+                footerContentPx +
+                (hasSignatureStamp && hasFooter ? DOCUMENT_TEMPLATE_SIGNATURE_STAMP_GAP_PX : 0)
+
             const sheetLayout = resolveA4SheetLayout({
                 hasHeader,
-                hasFooter,
+                hasFooter: hasBottomChrome,
                 headerHeightPx: hasHeader
                     ? measureDocumentTemplateRegionContentHeight(headerMeasureRef.current)
                     : 0,
-                footerHeightPx: hasFooter
-                    ? measureDocumentTemplateRegionContentHeight(footerMeasureRef.current)
-                    : 0,
+                footerHeightPx: hasBottomChrome ? combinedFooterHeightPx : 0,
             })
 
             const pm = editorRef.current?.querySelector<HTMLElement>(".ProseMirror")
@@ -439,6 +480,22 @@ const EditorCanvas = memo(function EditorCanvas({
 
             if (editor) {
                 dispatchPlan(result.plan)
+
+                // Decorations are now painted: push any block still sitting under the
+                // footer / stamp mask (or in the header band) to the next page, so no
+                // line is ever cut off or hidden. Bounded to avoid oscillation.
+                if (layoutRoot) {
+                    for (let pass = 0; pass < 24; pass += 1) {
+                        const corrected = reconcileVisualPageFlowFromPaintedGeometry({
+                            proseMirror: pm,
+                            layoutRoot,
+                            plan: result.plan,
+                            sheetLayout,
+                        })
+                        if (!corrected) break
+                        dispatchPlan(result.plan)
+                    }
+                }
             }
 
             const previousSpacerCount = lastPlanRef.current?.lineSpacers?.length ?? 0
@@ -497,7 +554,7 @@ const EditorCanvas = memo(function EditorCanvas({
             )
             isLayoutingRef.current = false
         }
-    }, [applyMetrics, editor, hasFooter, hasHeader])
+    }, [applyMetrics, editor, hasBottomChrome, hasFooter, hasHeader, hasSignatureStamp])
 
     const schedule = useCallback(
         (urgent = false) => {
@@ -537,13 +594,16 @@ const EditorCanvas = memo(function EditorCanvas({
 
     useLayoutEffect(() => {
         lastPlanRef.current = null
+        lineSpacerPassRef.current = 0
         schedule(true)
         const obs = new ResizeObserver(() => {
             if (isLayoutingRef.current) return
             if (performance.now() < layoutQuietUntilRef.current) return
             schedule()
         })
-        ;[headerMeasureRef.current, footerMeasureRef.current].forEach((el) => el && obs.observe(el))
+        ;[headerMeasureRef.current, footerMeasureRef.current, signatureMeasureRef.current].forEach(
+            (el) => el && obs.observe(el)
+        )
         const pm = editorRef.current?.querySelector<HTMLElement>(".ProseMirror")
         if (pm) {
             obs.observe(pm)
@@ -553,7 +613,16 @@ const EditorCanvas = memo(function EditorCanvas({
             if (layoutDebounceRef.current) window.clearTimeout(layoutDebounceRef.current)
             obs.disconnect()
         }
-    }, [editor, footerHtml, hasFooter, hasHeader, headerHtml, schedule])
+    }, [
+        editor,
+        footerHtml,
+        hasFooter,
+        hasHeader,
+        hasSignatureStamp,
+        headerHtml,
+        schedule,
+        signatureStampHtml,
+    ])
 
     useEffect(() => {
         if (!editor) return
@@ -583,13 +652,29 @@ const EditorCanvas = memo(function EditorCanvas({
     const { pageCount, stackHeightPx, editorHeightPx, sheetLayout } = layoutRef.current
 
     useEffect(() => {
-        const pm = editorRef.current?.querySelector<HTMLElement>(".ProseMirror")
-        if (!pm) return
         const onLoad = () => schedule(true)
-        pm.querySelectorAll("img").forEach((img) => {
-            if (!img.complete) img.addEventListener("load", onLoad, { once: true })
+        const roots = [
+            editorRef.current?.querySelector<HTMLElement>(".ProseMirror"),
+            signatureMeasureRef.current,
+            footerMeasureRef.current,
+            headerMeasureRef.current,
+        ].filter(Boolean) as HTMLElement[]
+
+        roots.forEach((root) => {
+            root.querySelectorAll("img").forEach((img) => {
+                if (!img.complete) img.addEventListener("load", onLoad, { once: true })
+            })
         })
-    }, [editor, schedule, editorHeightPx, pageCount, stackHeightPx])
+    }, [
+        editor,
+        schedule,
+        editorHeightPx,
+        pageCount,
+        stackHeightPx,
+        signatureStampHtml,
+        footerHtml,
+        headerHtml,
+    ])
     return (
         <div className="relative z-0 isolate flex justify-center bg-[#eef1f5] py-8 px-4">
             <div ref={layoutRootRef} className="relative mx-auto" style={{ width: pageW, maxWidth: "100%" }}>
@@ -599,6 +684,15 @@ const EditorCanvas = memo(function EditorCanvas({
                         className={cn("pointer-events-none absolute -left-[10000px] opacity-0", DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES)}
                         style={{ width: bodyW }}
                         dangerouslySetInnerHTML={{ __html: headerHtml }}
+                        aria-hidden
+                    />
+                ) : null}
+                {hasSignatureStamp ? (
+                    <div
+                        ref={signatureMeasureRef}
+                        className={cn("pointer-events-none absolute -left-[10000px] opacity-0", DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES)}
+                        style={{ width: bodyW }}
+                        dangerouslySetInnerHTML={{ __html: signatureStampHtml }}
                         aria-hidden
                     />
                 ) : null}
@@ -648,20 +742,23 @@ const EditorCanvas = memo(function EditorCanvas({
                             <div key={pageIndex}>
                                 {maskTopReserve ? (
                                     <div
-                                        className="absolute left-0 bg-white"
+                                        className="absolute left-0"
                                         style={{
                                             top: band.pageTopPx,
                                             height: band.bodyStartPx - band.pageTopPx,
                                             width: pageW,
+                                            backgroundColor: "#ffffff",
                                         }}
                                     />
                                 ) : null}
+                                {/* Full bottom reserve — opaque so body text cannot show through stamp PNGs. */}
                                 <div
-                                    className="absolute left-0 bg-white"
+                                    className="absolute left-0"
                                     style={{
                                         top: band.footerTopPx,
                                         height: band.pageBottomPx - band.footerTopPx,
                                         width: pageW,
+                                        backgroundColor: "#ffffff",
                                     }}
                                 />
                                 {pageIndex < pageCount - 1 ? (
@@ -679,10 +776,10 @@ const EditorCanvas = memo(function EditorCanvas({
                     })}
                 </div>
 
-                {/* Header + footer on every page — above body masks so chrome stays visible. */}
-                {hasHeader || hasFooter ? (
+                {/* Header + signature/stamp + footer on every page — above body masks. */}
+                {hasHeader || hasBottomChrome ? (
                     <div
-                        className="pointer-events-none absolute left-0 top-0 z-[15] w-full"
+                        className="pointer-events-none absolute left-0 top-0 z-[20] w-full"
                         style={{ height: editorHeightPx }}
                         aria-hidden
                     >
@@ -691,9 +788,6 @@ const EditorCanvas = memo(function EditorCanvas({
                             const topReservePx = hasHeader
                                 ? sheetLayout.headerZonePx
                                 : sheetLayout.verticalPaddingPx
-                            const bottomReservePx = hasFooter
-                                ? sheetLayout.footerZonePx
-                                : sheetLayout.editorBottomPx
 
                             return (
                                 <div
@@ -704,7 +798,7 @@ const EditorCanvas = memo(function EditorCanvas({
                                     {hasHeader ? (
                                         <div
                                             className={cn(
-                                                "absolute left-0 right-0 overflow-hidden bg-white",
+                                                "absolute left-0 right-0 overflow-hidden",
                                                 DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
                                             )}
                                             style={{
@@ -714,26 +808,53 @@ const EditorCanvas = memo(function EditorCanvas({
                                                 paddingLeft: padX,
                                                 paddingRight: padX,
                                                 boxSizing: "border-box",
+                                                backgroundColor: "#ffffff",
                                             }}
                                             dangerouslySetInnerHTML={{ __html: headerHtml }}
                                         />
                                     ) : null}
-                                    {hasFooter ? (
+                                    {hasBottomChrome ? (
                                         <div
                                             className={cn(
-                                                "absolute left-0 right-0 overflow-hidden bg-white",
+                                                "absolute left-0 right-0 overflow-hidden",
                                                 DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
                                             )}
                                             style={{
+                                                // Cover entire reserved bottom band so text never
+                                                // paints behind signature/stamp.
                                                 bottom: 0,
-                                                height: sheetLayout.footerChromePx,
+                                                height: sheetLayout.footerZonePx,
                                                 paddingLeft: padX,
                                                 paddingRight: padX,
                                                 paddingBottom: sheetLayout.verticalPaddingPx,
                                                 boxSizing: "border-box",
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                justifyContent: "flex-end",
+                                                gap:
+                                                    hasSignatureStamp && hasFooter
+                                                        ? DOCUMENT_TEMPLATE_SIGNATURE_STAMP_GAP_PX
+                                                        : 0,
+                                                backgroundColor: "#ffffff",
                                             }}
-                                            dangerouslySetInnerHTML={{ __html: footerHtml }}
-                                        />
+                                        >
+                                            {hasSignatureStamp ? (
+                                                <div
+                                                    style={{ backgroundColor: "#ffffff" }}
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: signatureStampHtml,
+                                                    }}
+                                                />
+                                            ) : null}
+                                            {hasFooter ? (
+                                                <div
+                                                    style={{ backgroundColor: "#ffffff" }}
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: footerHtml,
+                                                    }}
+                                                />
+                                            ) : null}
+                                        </div>
                                     ) : null}
                                 </div>
                             )
@@ -770,21 +891,34 @@ export const DocumentEditor = memo(function DocumentEditor({
     const layoutRef = useRef({
         hasHeader: Boolean(initial.headerHtml),
         hasFooter: Boolean(initial.footerHtml),
+        hasSignatureStamp: Boolean(initial.signatureStampHtml),
         headerFields: initial.headerHtml
             ? (parseHeaderHtml(initial.headerHtml) ?? getDefaultHeaderFields(locale))
             : getDefaultHeaderFields(locale),
         footerFields: initial.footerHtml
             ? (parseFooterHtml(initial.footerHtml) ?? DEFAULT_FOOTER_FIELDS)
             : DEFAULT_FOOTER_FIELDS,
+        signatureStampFields: initial.signatureStampHtml
+            ? (parseSignatureStampHtml(initial.signatureStampHtml) ??
+              getDefaultSignatureStampFields(locale))
+            : getDefaultSignatureStampFields(locale),
     })
     const lastEmit = useRef<string | null>(null)
 
     const [hasHeader, setHasHeader] = useState(layoutRef.current.hasHeader)
     const [hasFooter, setHasFooter] = useState(layoutRef.current.hasFooter)
+    const [hasSignatureStamp, setHasSignatureStamp] = useState(
+        layoutRef.current.hasSignatureStamp
+    )
     const [headerFields, setHeaderFields] = useState(layoutRef.current.headerFields)
     const [footerFields, setFooterFields] = useState(layoutRef.current.footerFields)
+    const [signatureStampFields, setSignatureStampFields] = useState(
+        layoutRef.current.signatureStampFields
+    )
 
-    const [sheet, setSheet] = useState<"header" | "footer" | "watermark" | "assets" | "variables" | null>(null)
+    const [sheet, setSheet] = useState<
+        "header" | "footer" | "signature-stamp" | "watermark" | "assets" | "variables" | null
+    >(null)
     const [assetIntent, setAssetIntent] = useState<AssetIntent | null>(null)
     const assetIntentRef = useRef<AssetIntent | null>(null)
     const returnSheetRef = useRef<typeof sheet>(null)
@@ -792,16 +926,31 @@ export const DocumentEditor = memo(function DocumentEditor({
     const [dateOptionId, setDateOptionId] = useState(TEMPLATE_DATE_INSERT_OPTIONS[0].id)
     const [dateValue, setDateValue] = useState("")
 
-    layoutRef.current = { hasHeader, hasFooter, headerFields, footerFields }
+    layoutRef.current = {
+        hasHeader,
+        hasFooter,
+        hasSignatureStamp,
+        headerFields,
+        footerFields,
+        signatureStampFields,
+    }
 
     const handleImageFileRef = useRef<(file: File) => void>(() => {})
 
     const emit = useCallback(
         (rawBody: string) => {
-            const { hasHeader: h, hasFooter: f, headerFields: hf, footerFields: ff } = layoutRef.current
+            const {
+                hasHeader: h,
+                hasFooter: f,
+                hasSignatureStamp: s,
+                headerFields: hf,
+                footerFields: ff,
+                signatureStampFields: sf,
+            } = layoutRef.current
             const composed = composeDocumentLayout({
                 headerHtml: h ? buildHeaderHtml(hf) : null,
                 bodyHtml: stripAutoPageBreakMarkers(rawBody),
+                signatureStampHtml: s ? buildSignatureStampHtml(sf) : null,
                 footerHtml: f ? buildFooterHtml(ff) : null,
             })
             lastEmit.current = composed
@@ -879,8 +1028,15 @@ export const DocumentEditor = memo(function DocumentEditor({
         const layout = parseDocumentLayout(bodyHtml)
         setHasHeader(Boolean(layout.headerHtml))
         setHasFooter(Boolean(layout.footerHtml))
+        setHasSignatureStamp(Boolean(layout.signatureStampHtml))
         if (layout.headerHtml) setHeaderFields(parseHeaderHtml(layout.headerHtml) ?? getDefaultHeaderFields(locale))
         if (layout.footerHtml) setFooterFields(parseFooterHtml(layout.footerHtml) ?? DEFAULT_FOOTER_FIELDS)
+        if (layout.signatureStampHtml) {
+            setSignatureStampFields(
+                parseSignatureStampHtml(layout.signatureStampHtml) ??
+                    getDefaultSignatureStampFields(locale)
+            )
+        }
         const norm = stripAutoPageBreakMarkers(layout.bodyHtml)
         if (editor.getHTML() !== norm) editor.commands.setContent(norm, { emitUpdate: false })
     }, [bodyHtml, editor, locale])
@@ -897,6 +1053,27 @@ export const DocumentEditor = memo(function DocumentEditor({
         emit(editor.getHTML())
     }, [editor, emit, hasHeader, locale])
 
+    useEffect(() => {
+        if (!editor || !hasSignatureStamp) return
+        const cur = layoutRef.current.signatureStampFields
+        const defaults = getDefaultSignatureStampFields(locale)
+        const previousDefaults = getDefaultSignatureStampFields(locale === "de" ? "en" : "de")
+        const greetingIsDefault =
+            cur.greeting === previousDefaults.greeting || cur.greeting === defaults.greeting
+        const titleIsDefault =
+            cur.title === previousDefaults.title || cur.title === defaults.title
+        if (!greetingIsDefault && !titleIsDefault) return
+        if (cur.greeting === defaults.greeting && cur.title === defaults.title) return
+        const updated = {
+            ...cur,
+            greeting: greetingIsDefault ? defaults.greeting : cur.greeting,
+            title: titleIsDefault ? defaults.title : cur.title,
+        }
+        setSignatureStampFields(updated)
+        layoutRef.current.signatureStampFields = updated
+        emit(editor.getHTML())
+    }, [editor, emit, hasSignatureStamp, locale])
+
     const patchHeader = useCallback(
         (next: DocumentTemplateHeaderFields) => {
             setHeaderFields(next)
@@ -910,6 +1087,15 @@ export const DocumentEditor = memo(function DocumentEditor({
         (next: DocumentTemplateFooterFields) => {
             setFooterFields(next)
             layoutRef.current.footerFields = next
+            emit(editor?.getHTML() ?? "")
+        },
+        [editor, emit]
+    )
+
+    const patchSignatureStamp = useCallback(
+        (next: DocumentTemplateSignatureStampFields) => {
+            setSignatureStampFields(next)
+            layoutRef.current.signatureStampFields = next
             emit(editor?.getHTML() ?? "")
         },
         [editor, emit]
@@ -944,6 +1130,26 @@ export const DocumentEditor = memo(function DocumentEditor({
             emit(editor?.getHTML() ?? "")
         },
         [editor, emit]
+    )
+
+    const setSignatureStampOn = useCallback(
+        (on: boolean) => {
+            if (on) {
+                const f = getDefaultSignatureStampFields(locale)
+                setHasSignatureStamp(true)
+                setSignatureStampFields(f)
+                layoutRef.current = {
+                    ...layoutRef.current,
+                    hasSignatureStamp: true,
+                    signatureStampFields: f,
+                }
+            } else {
+                setHasSignatureStamp(false)
+                layoutRef.current.hasSignatureStamp = false
+            }
+            emit(editor?.getHTML() ?? "")
+        },
+        [editor, emit, locale]
     )
 
     const patchWatermark = useCallback(
@@ -1006,7 +1212,11 @@ export const DocumentEditor = memo(function DocumentEditor({
     const applyAsset = useCallback(
         (asset: DocumentTemplateAsset, intent: AssetIntent) => {
             if (intent === "header-logo") patchHeader({ ...headerFields, logoUrl: asset.url })
-            else if (intent === "logo") insertLogo(asset.url)
+            else if (intent === "signature") {
+                patchSignatureStamp({ ...signatureStampFields, signatureUrl: asset.url })
+            } else if (intent === "stamp") {
+                patchSignatureStamp({ ...signatureStampFields, stampUrl: asset.url })
+            } else if (intent === "logo") insertLogo(asset.url)
             else if (intent === "watermark") {
                 onWatermarkChange({ ...watermark, enabled: true, image_url: asset.url })
             } else if (intent === "header") editor?.chain().focus().insertContentAt(0, buildHeaderImageBlock(asset.url)).run()
@@ -1019,7 +1229,17 @@ export const DocumentEditor = memo(function DocumentEditor({
             setAssetIntent(null)
             editor?.commands.focus()
         },
-        [editor, headerFields, insertImageBlock, insertLogo, onWatermarkChange, patchHeader, watermark]
+        [
+            editor,
+            headerFields,
+            insertImageBlock,
+            insertLogo,
+            onWatermarkChange,
+            patchHeader,
+            patchSignatureStamp,
+            signatureStampFields,
+            watermark,
+        ]
     )
 
     const queryClient = useQueryClient()
@@ -1114,6 +1334,7 @@ export const DocumentEditor = memo(function DocumentEditor({
 
     const headerHtml = buildHeaderHtml(headerFields)
     const footerHtml = buildFooterHtml(footerFields)
+    const signatureStampHtml = buildSignatureStampHtml(signatureStampFields)
 
     return (
         <div className="relative flex flex-col">
@@ -1170,6 +1391,7 @@ export const DocumentEditor = memo(function DocumentEditor({
                     <Button type="button" variant="ghost" size="xs" className="gap-1" onClick={() => setSheet("variables")}><Braces className="size-3.5" />Variables</Button>
                     <span className="mx-1 h-4 w-px bg-border" />
                     <Button type="button" variant={hasHeader ? "secondary" : "ghost"} size="xs" className="gap-1" onClick={() => setSheet("header")}><PanelTop className="size-3.5" />Header</Button>
+                    <Button type="button" variant={hasSignatureStamp ? "secondary" : "ghost"} size="xs" className="gap-1" onClick={() => setSheet("signature-stamp")}><PenLine className="size-3.5" />Sign &amp; Stamp</Button>
                     <Button type="button" variant={hasFooter ? "secondary" : "ghost"} size="xs" className="gap-1" onClick={() => setSheet("footer")}><PanelBottom className="size-3.5" />Footer</Button>
                     <Button type="button" variant="ghost" size="xs" className="gap-1" onClick={() => openAssets(null)}><FolderOpen className="size-3.5" />Assets</Button>
                     <Button
@@ -1192,8 +1414,10 @@ export const DocumentEditor = memo(function DocumentEditor({
                 editor={editor}
                 hasHeader={hasHeader}
                 hasFooter={hasFooter}
+                hasSignatureStamp={hasSignatureStamp}
                 headerHtml={headerHtml}
                 footerHtml={footerHtml}
+                signatureStampHtml={signatureStampHtml}
                 watermark={watermark}
             >
                 <EditorContent editor={editor} />
@@ -1267,6 +1491,103 @@ export const DocumentEditor = memo(function DocumentEditor({
                                         <Textarea rows={4} className="text-xs" value={footerFields[key]} onChange={(e) => patchFooter({ ...footerFields, [key]: e.target.value })} />
                                     </div>
                                 ))}
+                            </>
+                        ) : null}
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            {/* Signature & Stamp sheet */}
+            <Sheet open={sheet === "signature-stamp"} onOpenChange={(o) => !o && setSheet(null)}>
+                <SheetContent
+                    side="right"
+                    overlayClassName={EDITOR_SHEET_OVERLAY_CLASS}
+                    className={cn(EDITOR_SHEET_CONTENT_CLASS, "sm:max-w-md")}
+                >
+                    <SheetHeader>
+                        <SheetTitle>Sign &amp; Stamp</SheetTitle>
+                        <SheetDescription>
+                            Signature and official stamp — sits one line above the footer.
+                        </SheetDescription>
+                    </SheetHeader>
+                    <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
+                        <div className="flex items-center justify-between rounded-lg border px-3 py-2">
+                            <Typography as="span" font="small">Enabled</Typography>
+                            <Button
+                                size="sm"
+                                variant={hasSignatureStamp ? "default" : "outline"}
+                                onClick={() => setSignatureStampOn(!hasSignatureStamp)}
+                            >
+                                {hasSignatureStamp ? "On" : "Off"}
+                            </Button>
+                        </div>
+                        {hasSignatureStamp ? (
+                            <>
+                                <div className="overflow-x-auto rounded-lg border bg-white">
+                                    <div
+                                        className={cn(
+                                            "w-[180mm] max-w-none shrink-0 p-3",
+                                            DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
+                                        )}
+                                        dangerouslySetInnerHTML={{ __html: signatureStampHtml }}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Typography as="label" font="small">Greeting</Typography>
+                                    <Input
+                                        value={signatureStampFields.greeting}
+                                        onChange={(e) =>
+                                            patchSignatureStamp({
+                                                ...signatureStampFields,
+                                                greeting: e.target.value,
+                                            })
+                                        }
+                                    />
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-1"
+                                        onClick={() => openAssets("signature", "signature-stamp")}
+                                    >
+                                        <ImagePlus className="size-3.5" />
+                                        Change signature
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-1"
+                                        onClick={() => openAssets("stamp", "signature-stamp")}
+                                    >
+                                        <ImagePlus className="size-3.5" />
+                                        Change stamp
+                                    </Button>
+                                </div>
+                                <div className="space-y-1">
+                                    <Typography as="label" font="small">Name</Typography>
+                                    <Input
+                                        value={signatureStampFields.name}
+                                        onChange={(e) =>
+                                            patchSignatureStamp({
+                                                ...signatureStampFields,
+                                                name: e.target.value,
+                                            })
+                                        }
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <Typography as="label" font="small">Title</Typography>
+                                    <Input
+                                        value={signatureStampFields.title}
+                                        onChange={(e) =>
+                                            patchSignatureStamp({
+                                                ...signatureStampFields,
+                                                title: e.target.value,
+                                            })
+                                        }
+                                    />
+                                </div>
                             </>
                         ) : null}
                     </div>

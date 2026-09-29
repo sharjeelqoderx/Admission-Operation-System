@@ -9,6 +9,12 @@ import {
     getDefaultHeaderContactText,
     type TemplateLocale,
 } from "@/lib/document-template/locale"
+import {
+    buildSignatureStampHtml,
+    DOCUMENT_TEMPLATE_SIGNATURE_STAMP_CLASS,
+    DOCUMENT_TEMPLATE_SIGNATURE_STAMP_STYLES,
+    parseSignatureStampHtml,
+} from "@/lib/document-template/signature-stamp"
 
 export const DOCUMENT_TEMPLATE_HEADER_CLASS = "document-template-header"
 export const DOCUMENT_TEMPLATE_FOOTER_CLASS = "document-template-footer"
@@ -24,7 +30,7 @@ export const DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX = 16
 
 const DOCUMENT_REGION_OPEN_TAG_REGEX = (
     className: string,
-    region: "header" | "body" | "footer"
+    region: "header" | "body" | "footer" | "signature-stamp"
 ) =>
     new RegExp(
         `<div\\s+class="${className}"[^>]*data-document-region="${region}"[^>]*>`,
@@ -70,7 +76,7 @@ function findMatchingDivCloseIndex(html: string, contentStartIndex: number): num
 function extractDocumentRegionBlock(
     html: string,
     className: string,
-    region: "header" | "body" | "footer"
+    region: "header" | "body" | "footer" | "signature-stamp"
 ): DocumentRegionBlock | null {
     const openMatch = DOCUMENT_REGION_OPEN_TAG_REGEX(className, region).exec(html)
     if (!openMatch || openMatch.index === undefined) {
@@ -95,12 +101,14 @@ function extractDocumentRegionBlock(
 export type DocumentTemplateLayout = {
     headerHtml: string | null
     bodyHtml: string
+    signatureStampHtml: string | null
     footerHtml: string | null
 }
 
 export type DocumentTemplatePageSlice = {
     headerHtml: string | null
     bodyHtml: string
+    signatureStampHtml: string | null
     footerHtml: string | null
 }
 
@@ -163,7 +171,8 @@ export const DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES = cn(
     "[&_.document-template-footer_table]:w-full",
     "[&_[data-footer-text]]:m-0 [&_[data-footer-text]]:text-[9px]",
     "[&_[data-footer-text]]:leading-[1.4] [&_[data-footer-text]]:text-[#374151]",
-    "[&_[data-footer-text]]:font-[Arial,Helvetica,sans-serif]"
+    "[&_[data-footer-text]]:font-[Arial,Helvetica,sans-serif]",
+    DOCUMENT_TEMPLATE_SIGNATURE_STAMP_STYLES
 )
 
 function escapeHtml(value: string): string {
@@ -296,10 +305,16 @@ export function hasTemplateFooter(html: string): boolean {
 export function parseDocumentLayout(fullHtml: string): DocumentTemplateLayout {
     const normalized = fullHtml.trim()
     if (!normalized) {
-        return { headerHtml: null, bodyHtml: "", footerHtml: null }
+        return {
+            headerHtml: null,
+            bodyHtml: "",
+            signatureStampHtml: null,
+            footerHtml: null,
+        }
     }
 
     let headerHtml: string | null = null
+    let signatureStampHtml: string | null = null
     let footerHtml: string | null = null
     let remaining = normalized
 
@@ -311,6 +326,16 @@ export function parseDocumentLayout(fullHtml: string): DocumentTemplateLayout {
     if (headerBlock) {
         headerHtml = headerBlock.fullBlock
         remaining = remaining.replace(headerBlock.fullBlock, "").trim()
+    }
+
+    const signatureStampBlock = extractDocumentRegionBlock(
+        remaining,
+        DOCUMENT_TEMPLATE_SIGNATURE_STAMP_CLASS,
+        "signature-stamp"
+    )
+    if (signatureStampBlock) {
+        signatureStampHtml = signatureStampBlock.fullBlock
+        remaining = remaining.replace(signatureStampBlock.fullBlock, "").trim()
     }
 
     const footerBlock = extractDocumentRegionBlock(
@@ -339,7 +364,14 @@ export function parseDocumentLayout(fullHtml: string): DocumentTemplateLayout {
         }
     }
 
-    return { headerHtml, bodyHtml, footerHtml }
+    if (signatureStampHtml) {
+        const signatureFields = parseSignatureStampHtml(signatureStampHtml)
+        if (signatureFields) {
+            signatureStampHtml = buildSignatureStampHtml(signatureFields)
+        }
+    }
+
+    return { headerHtml, bodyHtml, signatureStampHtml, footerHtml }
 }
 
 export function composeDocumentLayout(layout: DocumentTemplateLayout): string {
@@ -356,6 +388,10 @@ export function composeDocumentLayout(layout: DocumentTemplateLayout): string {
         )
     }
 
+    if (layout.signatureStampHtml?.trim()) {
+        parts.push(layout.signatureStampHtml.trim())
+    }
+
     if (layout.footerHtml?.trim()) {
         parts.push(layout.footerHtml.trim())
     }
@@ -370,6 +406,7 @@ export function splitTemplateLayoutIntoPages(fullHtml: string): DocumentTemplate
     return bodyPages.map((bodyHtml) => ({
         headerHtml: layout.headerHtml,
         bodyHtml,
+        signatureStampHtml: layout.signatureStampHtml,
         footerHtml: layout.footerHtml,
     }))
 }
@@ -397,6 +434,7 @@ export function paginateTemplateLayoutByA4Height(
             {
                 headerHtml: layout.headerHtml,
                 bodyHtml: "",
+                signatureStampHtml: layout.signatureStampHtml,
                 footerHtml: layout.footerHtml,
             },
         ]
@@ -405,6 +443,7 @@ export function paginateTemplateLayoutByA4Height(
     return bodyPages.map((bodyHtml) => ({
         headerHtml: layout.headerHtml,
         bodyHtml,
+        signatureStampHtml: layout.signatureStampHtml,
         footerHtml: layout.footerHtml,
     }))
 }

@@ -30,6 +30,7 @@ export function paginateOfferLetterHtml(fullHtml: string): string {
   return composeDocumentLayout({
     headerHtml: layout.headerHtml,
     bodyHtml: pages.join('<div data-page-break="true"></div>'),
+    signatureStampHtml: layout.signatureStampHtml,
     footerHtml: layout.footerHtml,
   })
 }
@@ -178,6 +179,7 @@ export function buildTemplateOfferLetterHtml(
                 <div class="page-inner">
                     ${headerBlock}
                     <div class="page-body">${pageBody}${footerHtml}</div>
+                    ${layout.signatureStampHtml ?? ""}
                     ${documentFooterBlock}
                 </div>
             </section>`

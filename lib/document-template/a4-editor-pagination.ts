@@ -23,9 +23,9 @@ const BODY_FOOTER_SAFETY_PX = 28
 const MIN_FLOW_BLOCK_HEIGHT_PX = 22
 
 function bodyBottomClearancePx(_layout: A4SheetLayout, _blockHeightPx: number): number {
-    // Last-line reserve is already baked into bodyEnd via footerZone/editorBottom.
-    // Extra clearance here only created early pushes and empty mid-page gaps.
-    return 0
+    // Sub-pixel guard only — large clearance wrongly pushed near-full pages.
+    // Hidden lines under footer/stamp are fixed by painted-geometry correction.
+    return 1
 }
 
 export type EditorBodyLayoutMetrics = {
@@ -128,7 +128,8 @@ export function calculateEditorBodyLayoutMetrics(options: {
     const headerContentPx = options.hasHeader ? options.headerHeightPx : 0
     const footerContentPx = options.hasFooter ? options.footerHeightPx : 0
     const headerBodyGapPx = options.hasHeader ? DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX : 0
-    const lastLineReservePx = MIN_FLOW_BLOCK_HEIGHT_PX
+    // Reserve a full line above footer/stamp chrome so body never tucks under it.
+    const lastLineReservePx = BODY_FOOTER_SAFETY_PX
 
     const headerZonePx = verticalPaddingPx + headerContentPx + headerBodyGapPx
     const footerChromePx = options.hasFooter ? verticalPaddingPx + footerContentPx : 0
@@ -642,14 +643,16 @@ export function computeVisualPageFlowPlan(options: {
 
         let placedBottomPx = placedContentY + blockHeight + sheetLayout.editorTopPx
 
-        // If a normal-sized block still spills past the body slot, move it wholly.
+        // If a normal-sized block still spills past the usable body slot, move it wholly.
         const placedLayoutTop = placedContentY + sheetLayout.editorTopPx
         const placedPageIndex = getPageIndexForLayoutY(placedLayoutTop, sheetLayout)
         const placedBand = getA4SheetBand(placedPageIndex, sheetLayout)
+        const placedFitLimitPx =
+            placedBand.bodyEndPx - bodyBottomClearancePx(sheetLayout, blockHeight)
 
         if (
             blockHeight <= sheetLayout.bodyHeightPx &&
-            placedBottomPx > placedBand.bodyEndPx
+            placedBottomPx > placedFitLimitPx
         ) {
             let targetPage = placedPageIndex + 1
 
@@ -848,8 +851,10 @@ function measureBlockFlowFootprint(block: HTMLElement): number {
     }
 
     const blockRect = block.getBoundingClientRect()
-    let height =
-        Math.max(blockRect.height, block.scrollHeight) + readBlockMarginBottom(block)
+    // scrollHeight is integer-rounded (16.87 -> 17); trusting it adds ~0.13px per line and
+    // drifts the virtual flow away from the painted layout. Only use it for real overflow.
+    const scrollExtra = block.scrollHeight > blockRect.height + 1 ? block.scrollHeight : 0
+    let height = Math.max(blockRect.height, scrollExtra) + readBlockMarginBottom(block)
 
     block.querySelectorAll<HTMLElement>(
         "img, figure, table, .document-image-float, .document-sign-stamp-row, [data-resize-image-ui]"
@@ -881,7 +886,10 @@ function measureBlockFlowFootprint(block: HTMLElement): number {
             height -= spacer.offsetHeight
         })
 
-    return Math.max(height, MIN_FLOW_BLOCK_HEIGHT_PX)
+    // No artificial floor: inflating every line to MIN_FLOW_BLOCK_HEIGHT_PX made the
+    // virtual flow taller than the painted one (esp. with small fonts), so the planner
+    // pushed blocks to the next page while real space was still left (mid-page gaps).
+    return Math.max(height, 1)
 }
 
 function isManualPageBreakElement(element: HTMLElement): boolean {
@@ -1122,7 +1130,10 @@ export function computePageCountFromResolvedPlan(options: {
 
         if (
             block.height <= sheetLayout.bodyHeightPx &&
-            placedBottomPx > placedBand.bodyEndPx + BODY_OVERFLOW_TOLERANCE_PX
+            placedBottomPx >
+                placedBand.bodyEndPx -
+                    bodyBottomClearancePx(sheetLayout, block.height) +
+                    BODY_OVERFLOW_TOLERANCE_PX
         ) {
             let targetPage = placedPageIndex + 1
 
@@ -1325,9 +1336,9 @@ export function correctVisualPageFlowPlanFromPaintedGeometry(options: {
         const startsInHeaderZone =
             paintedTopPx < band.bodyStartPx - BODY_OVERFLOW_TOLERANCE_PX &&
             paintedTopPx >= band.pageTopPx - BODY_OVERFLOW_TOLERANCE_PX
-        const startsInFooterOrGap = paintedTopPx >= band.bodyEndPx - BODY_OVERFLOW_TOLERANCE_PX
-        // Strict: even 1px under the footer mask counts as overflow (half-cut letters).
-        const overflowsBody = paintedBottomPx > band.bodyEndPx - 0.5
+        const startsInFooterOrGap = paintedTopPx >= bodyFitLimitPx - BODY_OVERFLOW_TOLERANCE_PX
+        // Strict: any pixel under the footer/stamp mask must move to the next page.
+        const overflowsBody = paintedBottomPx > bodyFitLimitPx - 0.5
         const fitsOneBody =
             paintedHeightPx <= sheetLayout.bodyHeightPx + BODY_OVERFLOW_TOLERANCE_PX
         const nearPageBottom =
@@ -1368,17 +1379,133 @@ export function correctVisualPageFlowPlanFromPaintedGeometry(options: {
         }
 
         const targetStartPx = getA4SheetBand(targetPage, sheetLayout).bodyStartPx
-        const deltaPx = targetStartPx - paintedTopPx
+        // Derive absolute margin from the un-decorated top so repeated passes
+        // cannot compound into a multi-page gap.
+        const naturalTopPx = paintedTopPx - currentMargin
+        const requiredMargin = Math.max(0, targetStartPx - naturalTopPx)
+        const maxStepPx = sheetLayout.visualStridePx + sheetLayout.bodyHeightPx
+        const nextMargin = Math.min(requiredMargin, currentMargin + maxStepPx)
         // Hysteresis: ignore sub-pixel noise so we don't vibrate.
-        if (deltaPx <= 1) {
+        if (nextMargin <= currentMargin + 1) {
             continue
         }
 
-        plan.overflowMarginTopByKey[key] = currentMargin + deltaPx
+        plan.overflowMarginTopByKey[key] = nextMargin
         return true
     }
 
     return false
+}
+
+/**
+ * Reconciles every block's push margin against the *painted* layout (both directions).
+ *
+ * The planner works from summed heights (virtual Y); any measurement drift (fonts, images,
+ * collapsed margins, late-loading footer/stamp art) makes a block get pushed to the next page
+ * while real space is left (blank hole) or lets it sit under the footer/stamp mask (hidden text).
+ * Here each block's natural top is derived from the previous block's painted bottom, so the
+ * result depends only on what is actually on screen. Positions shift is tracked so a whole
+ * page can be fixed in one pass.
+ *
+ * Mutates `plan`. Returns true when a margin changed (caller re-dispatches and calls again).
+ */
+export function reconcileVisualPageFlowFromPaintedGeometry(options: {
+    proseMirror: HTMLElement
+    layoutRoot: HTMLElement
+    plan: VisualPageFlowPlan
+    sheetLayout: A4SheetLayout
+}): boolean {
+    const { proseMirror, layoutRoot, plan, sheetLayout } = options
+
+    // Tall-block line spacers use their own mid-block logic — don't fight them.
+    if ((plan.lineSpacers?.length ?? 0) > 0) {
+        return false
+    }
+
+    const rootTop = layoutRoot.getBoundingClientRect().top
+    const blocks = Array.from(proseMirror.children).filter(
+        (child): child is HTMLElement => child instanceof HTMLElement
+    )
+
+    let changed = false
+    let shift = 0
+    let prevBottomEdge: number | null = null
+    let prevMarginBottom = 0
+
+    for (let index = 0; index < blocks.length; index += 1) {
+        const block = blocks[index]
+        if (isLegacyAutoPageBreakElement(block)) {
+            continue
+        }
+
+        const rect = block.getBoundingClientRect()
+        const key = `block-${index}`
+        const paintedTop = rect.top - rootTop + shift
+        const paintedBottom = rect.bottom - rootTop + shift
+        const height = rect.height
+        const marginBottom = readBlockMarginBottom(block)
+
+        if (isManualPageBreakElement(block) || height <= 0) {
+            prevBottomEdge = paintedBottom
+            prevMarginBottom = 0
+            continue
+        }
+
+        const currentMargin = plan.overflowMarginTopByKey[key] ?? 0
+        const naturalTop =
+            prevBottomEdge === null ? paintedTop : prevBottomEdge + prevMarginBottom
+
+        let targetStart: number | null = null
+
+        if (prevBottomEdge !== null && height <= sheetLayout.bodyHeightPx) {
+            const pageIndex = getPageIndexForLayoutY(naturalTop, sheetLayout)
+            const band = getA4SheetBand(pageIndex, sheetLayout)
+            const fitLimit = band.bodyEndPx - bodyBottomClearancePx(sheetLayout, height)
+
+            if (naturalTop >= band.gapStartPx - BODY_OVERFLOW_TOLERANCE_PX) {
+                targetStart = getA4SheetBand(pageIndex + 1, sheetLayout).bodyStartPx
+            } else if (naturalTop < band.bodyStartPx - BODY_OVERFLOW_TOLERANCE_PX) {
+                targetStart = band.bodyStartPx
+            } else if (naturalTop + height > fitLimit) {
+                let targetPage = pageIndex + 1
+                while (
+                    targetPage < 64 &&
+                    getA4SheetBand(targetPage, sheetLayout).bodyEndPx -
+                        getA4SheetBand(targetPage, sheetLayout).bodyStartPx <
+                        height
+                ) {
+                    targetPage += 1
+                }
+                targetStart = getA4SheetBand(targetPage, sheetLayout).bodyStartPx
+            }
+        }
+
+        let requiredMargin = 0
+        if (targetStart !== null && prevBottomEdge !== null) {
+            requiredMargin = Math.max(0, targetStart - prevBottomEdge)
+        }
+
+        let nextTop = paintedTop
+        if (Math.abs(requiredMargin - currentMargin) > 1) {
+            if (requiredMargin > 0) {
+                plan.overflowMarginTopByKey[key] = requiredMargin
+            } else {
+                delete plan.overflowMarginTopByKey[key]
+            }
+            changed = true
+            // margin-top collapses with the previous block's margin-bottom.
+            const effectiveOld = Math.max(prevMarginBottom, currentMargin)
+            const effectiveNew = Math.max(prevMarginBottom, requiredMargin)
+            const delta = effectiveNew - effectiveOld
+            shift += delta
+            nextTop = paintedTop + delta
+        }
+
+        prevBottomEdge = nextTop + height
+        prevMarginBottom = marginBottom
+    }
+
+    return changed
 }
 
 function measureContentExtentFromDom(proseMirror: HTMLElement): number {
@@ -1568,7 +1695,12 @@ export function collectVisualPageFlowLineSpacers(options: {
                 snapStartPx = getA4SheetBand(pageIndex + 1, sheetLayout).bodyStartPx
             }
 
-            const spacerPx = snapStartPx - lineTop
+            // Cap at one visual page jump — uncapped spacers create the huge
+            // empty middle-of-page gap after paste/copy onto page 2+.
+            const spacerPx = Math.min(
+                snapStartPx - lineTop,
+                sheetLayout.visualStridePx
+            )
             if (spacerPx <= 1) {
                 continue
             }
@@ -1655,7 +1787,7 @@ export function applyEditorVisualPageFlow(
         // accurately. Dropping prior spacers collapses earlier page breaks.
         const byPos = new Map<number, { pos: number; heightPx: number }>()
         for (const spacer of previousPlan?.lineSpacers ?? []) {
-            if (spacer.heightPx > 0.5) {
+            if (spacer.heightPx > 0.5 && spacer.heightPx <= sheetLayout.visualStridePx + 1) {
                 byPos.set(spacer.pos, spacer)
             }
         }
