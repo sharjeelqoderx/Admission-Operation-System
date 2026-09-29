@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 type DocumentTemplateA4PageFrameProps = {
     headerHtml?: string | null
     footerHtml?: string | null
+    signatureStampHtml?: string | null
     bodyHtml?: string | null
     watermark?: DocumentTemplateWatermark | null
     bodyClassName?: string
@@ -24,6 +25,7 @@ type DocumentTemplateA4PageFrameProps = {
 export const DocumentTemplateA4PageFrame = memo(function DocumentTemplateA4PageFrame({
     headerHtml,
     footerHtml,
+    signatureStampHtml,
     bodyHtml,
     watermark,
     bodyClassName,
@@ -60,6 +62,12 @@ export const DocumentTemplateA4PageFrame = memo(function DocumentTemplateA4PageF
             ) : (
                 children ?? <div className="relative z-0 min-h-0 flex-1" aria-hidden />
             )}
+            {signatureStampHtml ? (
+                <div
+                    className="relative z-10 shrink-0 bg-white"
+                    dangerouslySetInnerHTML={{ __html: signatureStampHtml }}
+                />
+            ) : null}
             {footerHtml ? (
                 <div
                     className="relative z-10 mt-auto shrink-0 bg-white"

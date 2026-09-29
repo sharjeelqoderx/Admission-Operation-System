@@ -90,10 +90,12 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
 
         const hasHeader = Boolean(layout.headerHtml)
         const hasFooter = Boolean(layout.footerHtml)
+        const hasSignatureStamp = Boolean(layout.signatureStampHtml)
+        const hasBottomChrome = hasFooter || hasSignatureStamp
         const headerHeightPx = hasHeader
             ? measureDocumentTemplateRegionContentHeight(headerMeasureRef.current)
             : 0
-        const footerHeightPx = hasFooter
+        const footerHeightPx = hasBottomChrome
             ? measureDocumentTemplateRegionContentHeight(footerMeasureRef.current)
             : 0
 
@@ -101,13 +103,13 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
             return
         }
 
-        if (hasFooter && footerHeightPx <= 0) {
+        if (hasBottomChrome && footerHeightPx <= 0) {
             return
         }
 
         const maxBodyHeightPx = calculateA4BodySlotHeightPx({
             hasHeader,
-            hasFooter,
+            hasFooter: hasBottomChrome,
             headerHeightPx,
             footerHeightPx,
             verticalPaddingPx,
@@ -121,7 +123,14 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
 
         setPages(nextPages)
         setIsPaginated(true)
-    }, [bodyWidthPx, layout.footerHtml, layout.headerHtml, renderedHtml, verticalPaddingPx])
+    }, [
+        bodyWidthPx,
+        layout.footerHtml,
+        layout.headerHtml,
+        layout.signatureStampHtml,
+        renderedHtml,
+        verticalPaddingPx,
+    ])
 
     useLayoutEffect(() => {
         setIsPaginated(false)
@@ -173,6 +182,7 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
         <DocumentTemplateA4PageFrame
             key={key}
             headerHtml={page.headerHtml}
+            signatureStampHtml={page.signatureStampHtml}
             footerHtml={page.footerHtml}
             bodyHtml={page.bodyHtml}
             watermark={watermark}
@@ -194,7 +204,7 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
                     aria-hidden
                 />
             ) : null}
-            {layout.footerHtml ? (
+            {layout.signatureStampHtml || layout.footerHtml ? (
                 <div
                     ref={footerMeasureRef}
                     className={cn(
@@ -202,7 +212,9 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
                         DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
                     )}
                     style={{ width: bodyWidthPx }}
-                    dangerouslySetInnerHTML={{ __html: layout.footerHtml }}
+                    dangerouslySetInnerHTML={{
+                        __html: `${layout.signatureStampHtml ?? ""}${layout.footerHtml ?? ""}`,
+                    }}
                     aria-hidden
                 />
             ) : null}
@@ -232,6 +244,7 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
                     <div className={A4_DOCUMENT_MULTI_PAGE_STACK_CLASS}>
                         <DocumentTemplateA4PageFrame
                             headerHtml={layout.headerHtml}
+                            signatureStampHtml={layout.signatureStampHtml}
                             footerHtml={layout.footerHtml}
                             watermark={watermark}
                         />

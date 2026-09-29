@@ -209,7 +209,7 @@ function assert(name: string, condition: boolean) {
                 headerContentPx -
                 footerContentPx -
                 DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX -
-                22
+                28
     )
     assert(
         "page stride spans full sheet plus stack gap",
