@@ -370,9 +370,7 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
         form.setFieldValue("university_id", editApplication.university_id);
         form.setFieldValue(
             "intake_date",
-            editApplication.course?.degree?.intake_starts_on ||
-                editApplication.course?.degree?.intake_date ||
-                ""
+            editApplication.course?.degree?.intake_date || ""
         );
         form.setFieldValue("document_ids", attachedDocumentIds);
         form.setFieldValue("declarations", [false, false, false]);
@@ -862,9 +860,16 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
                         applyCourseToForm(form, courseFromParam, levels);
                     }
 
-                    const validationMessage = getCreateApplicationValidationMessage(
-                        form.state.values as CreateApplicationInput
-                    );
+                    const validationMessage = getCreateApplicationValidationMessage({
+                        profile_id: form.getFieldValue("profile_id"),
+                        course_id: form.getFieldValue("course_id"),
+                        university_id: form.getFieldValue("university_id"),
+                        document_ids: form.getFieldValue("document_ids") ?? [],
+                        intake_date: form.getFieldValue("intake_date"),
+                        tuition_fee: form.getFieldValue("tuition_fee"),
+                        currency: form.getFieldValue("currency"),
+                        declarations: form.getFieldValue("declarations") ?? [false, false, false],
+                    });
                     if (validationMessage) {
                         toast.error(validationMessage);
                         return;
