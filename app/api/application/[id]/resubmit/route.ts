@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { resubmitApplicationById } from "@/lib/application/resubmit"
+import { syncApplicationToSugar } from "@/lib/sugar/sync-application"
 import { ResubmitApplicationSchema } from "@/types/schemas/application"
 import type { ApplicationProfileRole } from "@/types/schemas/application"
 
@@ -58,10 +59,13 @@ export async function PATCH(
             )
         }
 
+        const sugarSync = await syncApplicationToSugar(result.application.id as string, supabase)
+
         return NextResponse.json(
             {
                 data: result.application,
                 message: "Application resubmitted successfully",
+                sugar_sync: sugarSync,
             },
             { status: 200 }
         )

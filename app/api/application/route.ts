@@ -5,6 +5,7 @@ import { CreateApplicationSchema, ApplicationListQuerySchema } from "@/types/sch
 import type { ApplicationProfileRole } from "@/types/schemas/application"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { resubmitApplicationById } from "@/lib/application/resubmit"
+import { syncApplicationToSugar } from "@/lib/sugar/sync-application"
 import { Role } from "@/types/enums/role"
 
 async function canAccessStudentApplications(
@@ -187,10 +188,13 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: "Application not found" }, { status: 404 })
             }
 
+            const sugarSync = await syncApplicationToSugar(resubmitResult.application.id, supabase)
+
             return NextResponse.json(
                 {
                     data: resubmitResult.application,
                     message: "Application resubmitted successfully",
+                    sugar_sync: sugarSync,
                 },
                 { status: 200 }
             )
@@ -250,10 +254,13 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        const sugarSync = await syncApplicationToSugar(application.id, supabase)
+
         return NextResponse.json(
             {
                 data: application,
                 message: "Application created successfully",
+                sugar_sync: sugarSync,
             },
             { status: 201 }
         )
