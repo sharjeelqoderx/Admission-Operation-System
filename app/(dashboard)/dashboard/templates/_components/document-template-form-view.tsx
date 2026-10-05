@@ -118,6 +118,7 @@ export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
                     value={programIds}
                     excludeTemplateId={templateId}
                     disabled={isSaving}
+                    popoverInModal
                     onChange={onProgramIdsChange}
                 />
 

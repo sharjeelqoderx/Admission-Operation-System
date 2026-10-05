@@ -159,8 +159,25 @@ import {
 } from "@/lib/document-template/header-footer"
 import {
     buildSignatureStampHtml,
+    clampSignatureStampBlockOffsetPx,
+    clampSignatureStampColumnGapPx,
+    clampSignatureFineOffsetPx,
+    clampStampFineOffsetPx,
+    clampSignatureStampImageHeightPx,
+    clampSignatureStampTextFontSizePx,
+    DOCUMENT_TEMPLATE_SIGNATURE_STAMP_BLOCK_OFFSET_MAX_PX,
+    DOCUMENT_TEMPLATE_SIGNATURE_STAMP_BLOCK_OFFSET_MIN_PX,
+    DOCUMENT_TEMPLATE_SIGNATURE_STAMP_COLUMN_GAP_MAX_PX,
+    DOCUMENT_TEMPLATE_SIGNATURE_FINE_OFFSET_MAX_PX,
+    DOCUMENT_TEMPLATE_SIGNATURE_FINE_OFFSET_MIN_PX,
+    DOCUMENT_TEMPLATE_STAMP_FINE_OFFSET_MAX_PX,
+    DOCUMENT_TEMPLATE_STAMP_FINE_OFFSET_MIN_PX,
     DOCUMENT_TEMPLATE_SIGNATURE_STAMP_GAP_PX,
+    normalizeSignatureStampFields,
+    signedOffsetToSliderPercent,
+    sliderPercentToSignedOffset,
     DOCUMENT_TEMPLATE_SIGNATURE_STAMP_MIN_HEIGHT_PX,
+    DOCUMENT_TEMPLATE_SIGNATURE_STAMP_STYLES,
     estimateSignatureStampContentHeightPx,
     getDefaultSignatureStampFields,
     parseSignatureStampHtml,
@@ -321,6 +338,151 @@ const FOOTER_COLS = [
     { key: "column3" as const, de: "Geschäftsführung", en: "Management" },
     { key: "column4" as const, de: "Register", en: "Legal" },
 ]
+
+const SIGNATURE_STAMP_SHEET_BODY_WIDTH_PX =
+    mmToPx(A4_PAGE_WIDTH_MM) - mmToPx(A4_PAGE_PADDING_X_MM) * 2
+
+/** Footer-band preview — scales to sidebar width, height hugs content. */
+const DocumentTemplateSignatureStampSheetPreview = memo(
+    function DocumentTemplateSignatureStampSheetPreview({ html }: { html: string }) {
+        const viewportRef = useRef<HTMLDivElement>(null)
+        const contentRef = useRef<HTMLDivElement>(null)
+        const [scale, setScale] = useState(1)
+        const [contentHeightPx, setContentHeightPx] = useState(72)
+
+        const measure = useCallback(() => {
+            const viewport = viewportRef.current
+            const content = contentRef.current
+            if (!viewport) return
+            const available = viewport.clientWidth
+            if (available > 0) {
+                setScale(Math.min(1, available / SIGNATURE_STAMP_SHEET_BODY_WIDTH_PX))
+            }
+            if (content) {
+                setContentHeightPx(Math.max(48, content.offsetHeight))
+            }
+        }, [])
+
+        useLayoutEffect(() => {
+            measure()
+            const viewport = viewportRef.current
+            const content = contentRef.current
+            if (!viewport) return
+            const observer = new ResizeObserver(() => measure())
+            observer.observe(viewport)
+            if (content) observer.observe(content)
+            return () => observer.disconnect()
+        }, [html, measure])
+
+        const scaledWidth = SIGNATURE_STAMP_SHEET_BODY_WIDTH_PX * scale
+        const scaledHeight = contentHeightPx * scale
+
+        const nudgeGutterPx = DOCUMENT_TEMPLATE_STAMP_FINE_OFFSET_MAX_PX
+        const bodyWidthWithGutterPx = SIGNATURE_STAMP_SHEET_BODY_WIDTH_PX + nudgeGutterPx * 2
+        const scaledOuterWidth = bodyWidthWithGutterPx * scale
+
+        return (
+            <div
+                ref={viewportRef}
+                className="flex w-full justify-center overflow-x-auto overflow-y-visible border-b border-brand-secondary/15 bg-[#eef1f5] py-2"
+            >
+                <div style={{ width: Math.max(scaledWidth, scaledOuterWidth), height: scaledHeight }}>
+                    <div
+                        style={{
+                            width: bodyWidthWithGutterPx,
+                            paddingLeft: nudgeGutterPx,
+                            paddingRight: nudgeGutterPx,
+                            boxSizing: "border-box",
+                            transform: `scale(${scale})`,
+                            transformOrigin: "top center",
+                        }}
+                    >
+                        <div
+                            ref={contentRef}
+                            className={cn(
+                                "box-border w-full overflow-visible bg-white px-0 py-1",
+                                DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES,
+                                DOCUMENT_TEMPLATE_SIGNATURE_STAMP_STYLES
+                            )}
+                            style={{ width: SIGNATURE_STAMP_SHEET_BODY_WIDTH_PX }}
+                            dangerouslySetInnerHTML={{ __html: html }}
+                        />
+                    </div>
+                </div>
+            </div>
+        )
+    }
+)
+
+function signedNudgeTrackBackground(percent: number): string {
+    const track = "#e2e8f0"
+    const fill = "#6366f1"
+    const center = 50
+    const p = Math.min(100, Math.max(0, percent))
+
+    if (p < center - 0.4) {
+        return `linear-gradient(to right, ${track} 0%, ${track} ${p}%, ${fill} ${p}%, ${fill} ${center}%, ${track} ${center}%, ${track} 100%)`
+    }
+    if (p > center + 0.4) {
+        return `linear-gradient(to right, ${track} 0%, ${track} ${center}%, ${fill} ${center}%, ${fill} ${p}%, ${track} ${p}%, ${track} 100%)`
+    }
+    return `linear-gradient(to right, ${track} 0%, ${track} 49.6%, ${fill} 49.6%, ${fill} 50.4%, ${track} 50.4%, ${track} 100%)`
+}
+
+const SignatureStampSignedNudgeSlider = memo(function SignatureStampSignedNudgeSlider({
+    label,
+    valuePx,
+    minPx,
+    maxPx,
+    onChange,
+}: {
+    label: string
+    valuePx: number
+    minPx: number
+    maxPx: number
+    onChange: (px: number) => void
+}) {
+    const sliderPercent = signedOffsetToSliderPercent(valuePx, minPx, maxPx)
+
+    return (
+        <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+                <Typography as="label" font="small">
+                    {label}
+                </Typography>
+                <Typography as="span" font="small" className="shrink-0 tabular-nums text-muted-foreground">
+                    {valuePx}px
+                </Typography>
+            </div>
+            <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={sliderPercent}
+                aria-valuemin={minPx}
+                aria-valuemax={maxPx}
+                aria-valuenow={valuePx}
+                className="h-2 w-full cursor-pointer appearance-none rounded-full accent-brand-secondary [&::-moz-range-thumb]:size-3.5 [&::-webkit-slider-thumb]:size-3.5"
+                style={{ background: signedNudgeTrackBackground(sliderPercent) }}
+                onChange={(e) =>
+                    onChange(sliderPercentToSignedOffset(Number(e.target.value), minPx, maxPx))
+                }
+            />
+            <div className="flex justify-between px-0.5">
+                <Typography as="span" font="small" className="text-[10px] text-muted-foreground">
+                    {minPx}
+                </Typography>
+                <Typography as="span" font="small" className="text-[10px] text-muted-foreground">
+                    0
+                </Typography>
+                <Typography as="span" font="small" className="text-[10px] text-muted-foreground">
+                    {maxPx}
+                </Typography>
+            </div>
+        </div>
+    )
+})
 
 // ─── Fixed A4 page shell — header zone → body slot → footer zone (297mm total) ─
 
@@ -849,7 +1011,7 @@ const EditorCanvas = memo(function EditorCanvas({
                                     {hasBottomChrome ? (
                                         <div
                                             className={cn(
-                                                "absolute left-0 right-0 overflow-hidden",
+                                                "absolute left-0 right-0 overflow-visible",
                                                 DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
                                             )}
                                             style={{
@@ -873,6 +1035,7 @@ const EditorCanvas = memo(function EditorCanvas({
                                         >
                                             {hasSignatureStamp ? (
                                                 <div
+                                                    className="w-full min-w-0 overflow-visible"
                                                     style={{ backgroundColor: "#ffffff" }}
                                                     dangerouslySetInnerHTML={{
                                                         __html: signatureStampHtml,
@@ -1127,8 +1290,9 @@ export const DocumentEditor = memo(function DocumentEditor({
 
     const patchSignatureStamp = useCallback(
         (next: DocumentTemplateSignatureStampFields) => {
-            setSignatureStampFields(next)
-            layoutRef.current.signatureStampFields = next
+            const normalized = normalizeSignatureStampFields(next)
+            setSignatureStampFields(normalized)
+            layoutRef.current.signatureStampFields = normalized
             emit(editor?.getHTML() ?? "")
         },
         [editor, emit]
@@ -1535,16 +1699,12 @@ export const DocumentEditor = memo(function DocumentEditor({
                 <SheetContent
                     side="right"
                     overlayClassName={EDITOR_SHEET_OVERLAY_CLASS}
-                    className={EDITOR_SHEET_CONTENT_CLASS}
+                    className={cn(EDITOR_SHEET_CONTENT_CLASS, "gap-0")}
                 >
-                    <SheetHeader>
+                    <SheetHeader className="gap-0 px-4 pb-2 pt-4">
                         <SheetTitle>Sign &amp; Stamp</SheetTitle>
-                        <SheetDescription>
-                            Signature and official stamp — sits one line above the footer.
-                        </SheetDescription>
                     </SheetHeader>
-                    <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
-                        <div className="flex items-center justify-between rounded-lg border px-3 py-2">
+                    <div className="flex items-center justify-between border-b border-brand-secondary/10 px-4 pb-2">
                             <Typography as="span" font="small">Enabled</Typography>
                             <Button
                                 size="sm"
@@ -1554,16 +1714,329 @@ export const DocumentEditor = memo(function DocumentEditor({
                                 {hasSignatureStamp ? "On" : "Off"}
                             </Button>
                         </div>
+                    {hasSignatureStamp ? (
+                        <DocumentTemplateSignatureStampSheetPreview html={signatureStampHtml} />
+                    ) : null}
+                    <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 pb-4 pt-3">
                         {hasSignatureStamp ? (
                             <>
-                                <div className="overflow-x-auto rounded-lg border bg-white">
+                                <div className="space-y-2 rounded-lg border px-3 py-3">
+                                    <Typography as="span" font="small" className="font-medium">
+                                        Parts
+                                    </Typography>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant={
+                                                signatureStampFields.showSignatureBlock
+                                                    ? "default"
+                                                    : "outline"
+                                            }
+                                            onClick={() =>
+                                                patchSignatureStamp({
+                                                    ...signatureStampFields,
+                                                    showSignatureBlock:
+                                                        !signatureStampFields.showSignatureBlock,
+                                                })
+                                            }
+                                        >
+                                            Signature &amp; text
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant={
+                                                signatureStampFields.showStamp ? "default" : "outline"
+                                            }
+                                            onClick={() =>
+                                                patchSignatureStamp({
+                                                    ...signatureStampFields,
+                                                    showStamp: !signatureStampFields.showStamp,
+                                                })
+                                            }
+                                        >
+                                            Stamp
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant={
+                                                signatureStampFields.stampFirst ? "default" : "outline"
+                                            }
+                                            disabled={
+                                                !signatureStampFields.showStamp ||
+                                                !signatureStampFields.showSignatureBlock
+                                            }
+                                            onClick={() =>
+                                                patchSignatureStamp({
+                                                    ...signatureStampFields,
+                                                    stampFirst: !signatureStampFields.stampFirst,
+                                                })
+                                            }
+                                        >
+                                            Swap sides
+                                        </Button>
+                                    </div>
+                                    <Typography as="p" font="small" className="text-muted-foreground">
+                                        {signatureStampFields.stampFirst
+                                            ? "Stamp on the left, signature on the right"
+                                            : "Signature on the left, stamp on the right"}
+                                    </Typography>
+                                </div>
+                                <div className="space-y-2 rounded-lg border px-3 py-3">
+                                    <Typography as="span" font="small" className="font-medium">
+                                        Position
+                                    </Typography>
+                                {(
+                                    [
+                                        {
+                                            key: "block",
+                                            label: "Whole row",
+                                            value: signatureStampFields.align,
+                                            onChange: (value: typeof signatureStampFields.align) =>
+                                                patchSignatureStamp({
+                                                    ...signatureStampFields,
+                                                    align: value,
+                                                }),
+                                        },
+                                        ...(signatureStampFields.showStamp
+                                            ? [
+                                                  {
+                                                      key: "stamp",
+                                                      label: "Stamp image",
+                                                      value: signatureStampFields.stampAlign,
+                                                      onChange: (
+                                                          value: typeof signatureStampFields.stampAlign
+                                                      ) =>
+                                                          patchSignatureStamp({
+                                                              ...signatureStampFields,
+                                                              stampAlign: value,
+                                                          }),
+                                                  },
+                                              ]
+                                            : []),
+                                        ...(signatureStampFields.showSignatureBlock
+                                            ? [
+                                                  {
+                                                      key: "sig-text",
+                                                      label: "Signature text",
+                                                      value: signatureStampFields.signatureTextAlign,
+                                                      onChange: (
+                                                          value: typeof signatureStampFields.signatureTextAlign
+                                                      ) =>
+                                                          patchSignatureStamp({
+                                                              ...signatureStampFields,
+                                                              signatureTextAlign: value,
+                                                          }),
+                                                  },
+                                              ]
+                                            : []),
+                                    ] as const
+                                ).map((row) => (
                                     <div
-                                        className={cn(
-                                            "w-[180mm] max-w-none shrink-0 p-3",
-                                            DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
-                                        )}
-                                        dangerouslySetInnerHTML={{ __html: signatureStampHtml }}
+                                        key={row.key}
+                                        className="flex flex-wrap items-center justify-between gap-2 py-1"
+                                    >
+                                        <Typography as="span" font="small" className="font-medium">
+                                            {row.label}
+                                        </Typography>
+                                        <div className="flex items-center gap-1">
+                                            {(
+                                                [
+                                                    {
+                                                        value: "left" as const,
+                                                        icon: AlignLeft,
+                                                        label: "Left",
+                                                    },
+                                                    {
+                                                        value: "center" as const,
+                                                        icon: AlignCenter,
+                                                        label: "Center",
+                                                    },
+                                                    {
+                                                        value: "right" as const,
+                                                        icon: AlignRight,
+                                                        label: "Right",
+                                                    },
+                                                ] as const
+                                            ).map(({ value, icon: Icon, label }) => (
+                                                <IconBtn
+                                                    key={value}
+                                                    label={label}
+                                                    active={row.value === value}
+                                                    onClick={() => row.onChange(value)}
+                                                >
+                                                    <Icon className="size-3.5" />
+                                                </IconBtn>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                                </div>
+                                <div className="space-y-3 rounded-lg border px-3 py-3">
+                                    <Typography as="span" font="small" className="font-medium">
+                                        Nudge (px)
+                                    </Typography>
+                                    <SignatureStampSignedNudgeSlider
+                                        label="Shift whole block"
+                                        valuePx={signatureStampFields.blockOffsetPx}
+                                        minPx={DOCUMENT_TEMPLATE_SIGNATURE_STAMP_BLOCK_OFFSET_MIN_PX}
+                                        maxPx={DOCUMENT_TEMPLATE_SIGNATURE_STAMP_BLOCK_OFFSET_MAX_PX}
+                                        onChange={(blockOffsetPx) =>
+                                            patchSignatureStamp({
+                                                ...signatureStampFields,
+                                                blockOffsetPx: clampSignatureStampBlockOffsetPx(blockOffsetPx),
+                                            })
+                                        }
                                     />
+                                    {signatureStampFields.showStamp &&
+                                    signatureStampFields.showSignatureBlock &&
+                                    signatureStampFields.stampAlign === "left" ? (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <Typography as="label" font="small">
+                                                    Gap between sign &amp; stamp
+                                                </Typography>
+                                                <Typography
+                                                    as="span"
+                                                    font="small"
+                                                    className="text-muted-foreground"
+                                                >
+                                                    {signatureStampFields.columnGapPx}px
+                                                </Typography>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min={0}
+                                                max={DOCUMENT_TEMPLATE_SIGNATURE_STAMP_COLUMN_GAP_MAX_PX}
+                                                step={1}
+                                                value={signatureStampFields.columnGapPx}
+                                                className="h-2 w-full cursor-pointer accent-brand-secondary"
+                                                onChange={(e) =>
+                                                    patchSignatureStamp({
+                                                        ...signatureStampFields,
+                                                        columnGapPx: clampSignatureStampColumnGapPx(
+                                                            Number(e.target.value)
+                                                        ),
+                                                    })
+                                                }
+                                            />
+                                        </div>
+                                    ) : null}
+                                    {signatureStampFields.showStamp ? (
+                                        <SignatureStampSignedNudgeSlider
+                                            label="Nudge stamp"
+                                            valuePx={signatureStampFields.stampFineOffsetPx}
+                                            minPx={DOCUMENT_TEMPLATE_STAMP_FINE_OFFSET_MIN_PX}
+                                            maxPx={DOCUMENT_TEMPLATE_STAMP_FINE_OFFSET_MAX_PX}
+                                            onChange={(stampFineOffsetPx) =>
+                                                patchSignatureStamp({
+                                                    ...signatureStampFields,
+                                                    stampFineOffsetPx:
+                                                        clampStampFineOffsetPx(stampFineOffsetPx),
+                                                })
+                                            }
+                                        />
+                                    ) : null}
+                                    {signatureStampFields.showSignatureBlock ? (
+                                        <SignatureStampSignedNudgeSlider
+                                            label="Nudge signature block"
+                                            valuePx={signatureStampFields.signatureFineOffsetPx}
+                                            minPx={DOCUMENT_TEMPLATE_SIGNATURE_FINE_OFFSET_MIN_PX}
+                                            maxPx={DOCUMENT_TEMPLATE_SIGNATURE_FINE_OFFSET_MAX_PX}
+                                            onChange={(signatureFineOffsetPx) =>
+                                                patchSignatureStamp({
+                                                    ...signatureStampFields,
+                                                    signatureFineOffsetPx:
+                                                        clampSignatureFineOffsetPx(
+                                                            signatureFineOffsetPx
+                                                        ),
+                                                })
+                                            }
+                                        />
+                                    ) : null}
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-3">
+                                    <div className="space-y-1">
+                                        <Typography as="label" font="small">Text size</Typography>
+                                        <Select
+                                            value={String(signatureStampFields.textFontSizePx)}
+                                            onValueChange={(v) =>
+                                                patchSignatureStamp({
+                                                    ...signatureStampFields,
+                                                    textFontSizePx: clampSignatureStampTextFontSizePx(
+                                                        Number(v)
+                                                    ),
+                                                })
+                                            }
+                                        >
+                                            <SelectTrigger className="h-8 text-xs">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="z-[120]">
+                                                {[8, 9, 10, 11, 12, 14, 16].map((size) => (
+                                                    <SelectItem key={size} value={String(size)}>
+                                                        {size}px
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Typography as="label" font="small">Signature height</Typography>
+                                        <Select
+                                            value={String(signatureStampFields.signatureHeightPx)}
+                                            onValueChange={(v) =>
+                                                patchSignatureStamp({
+                                                    ...signatureStampFields,
+                                                    signatureHeightPx: clampSignatureStampImageHeightPx(
+                                                        Number(v),
+                                                        32,
+                                                        200
+                                                    ),
+                                                })
+                                            }
+                                        >
+                                            <SelectTrigger className="h-8 text-xs">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="z-[120]">
+                                                {[40, 48, 56, 64, 72, 80].map((size) => (
+                                                    <SelectItem key={size} value={String(size)}>
+                                                        {size}px
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Typography as="label" font="small">Stamp height</Typography>
+                                        <Select
+                                            value={String(signatureStampFields.stampHeightPx)}
+                                            onValueChange={(v) =>
+                                                patchSignatureStamp({
+                                                    ...signatureStampFields,
+                                                    stampHeightPx: clampSignatureStampImageHeightPx(
+                                                        Number(v),
+                                                        48,
+                                                        320
+                                                    ),
+                                                })
+                                            }
+                                        >
+                                            <SelectTrigger className="h-8 text-xs">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="z-[120]">
+                                                {[96, 120, 152, 180, 200, 240].map((size) => (
+                                                    <SelectItem key={size} value={String(size)}>
+                                                        {size}px
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
                                     <Typography as="label" font="small">Greeting</Typography>
@@ -2097,6 +2570,7 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
                             value={programIds}
                             excludeTemplateId={templateId}
                             assignedPrograms={linkedPrograms}
+                            popoverInModal
                             onChange={setProgramIds}
                         />
                     </div>

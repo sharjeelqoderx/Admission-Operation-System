@@ -1021,20 +1021,57 @@ function measureBlockLayoutHeight(block: HTMLElement): number {
     return measureBlockFlowFootprint(block)
 }
 
+function blockHasMeaningfulContent(element: HTMLElement): boolean {
+    if (isManualPageBreakElement(element) || isLegacyAutoPageBreakElement(element)) {
+        return false
+    }
+
+    if (element.textContent?.trim()) {
+        return true
+    }
+
+    return element.querySelector("img, table, ul, ol, hr, iframe, svg") !== null
+}
+
+function hasMeaningfulBlockAfter(
+    blocks: HTMLElement[],
+    startIndex: number
+): boolean {
+    for (let index = startIndex + 1; index < blocks.length; index += 1) {
+        const block = blocks[index]
+        if (isLegacyAutoPageBreakElement(block)) {
+            continue
+        }
+        if (isManualPageBreakElement(block)) {
+            continue
+        }
+        if (blockHasMeaningfulContent(block)) {
+            return true
+        }
+    }
+    return false
+}
+
 /** Bottom edge of rendered content relative to the page stack root (px). */
 export function measureVisualContentExtent(
     proseMirror: HTMLElement,
     layoutRoot: HTMLElement
 ): number {
     const rootTop = layoutRoot.getBoundingClientRect().top
+    const blocks = Array.from(proseMirror.children).filter(
+        (child): child is HTMLElement => child instanceof HTMLElement
+    )
+
     let maxBottom = 0
 
-    Array.from(proseMirror.children).forEach((child) => {
-        if (!(child instanceof HTMLElement)) {
+    blocks.forEach((child, index) => {
+        if (isLegacyAutoPageBreakElement(child)) {
             return
         }
 
-        if (isLegacyAutoPageBreakElement(child)) {
+        // Manual page-break fill spans to the next sheet — ignore when nothing follows
+        // (otherwise the editor always shows one extra blank page).
+        if (isManualPageBreakElement(child) && !hasMeaningfulBlockAfter(blocks, index)) {
             return
         }
 
@@ -1184,6 +1221,19 @@ export function resolveEditorPageCount(options: {
 
     const extentPx = measureVisualContentExtent(options.proseMirror, options.layoutRoot)
     const domPageCount = computePageCountFromLayoutExtent(extentPx, options.sheetLayout)
+
+    if (domPageCount <= planPageCount) {
+        return planPageCount
+    }
+
+    // Painted geometry can lag one page ahead of the flow plan when only decoration
+    // margins shifted — never add more than one phantom sheet without plan support.
+    if (domPageCount === planPageCount + 1) {
+        const firstPageEndPx = getA4SheetBand(0, options.sheetLayout).gapEndPx
+        if (extentPx <= firstPageEndPx + BODY_OVERFLOW_TOLERANCE_PX) {
+            return planPageCount
+        }
+    }
 
     return Math.max(planPageCount, domPageCount)
 }
