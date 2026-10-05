@@ -3,10 +3,14 @@ import { z } from "zod"
 import {
     createSupabaseServerClient,
     createSupabaseServiceClient,
+    tryCreateSupabaseServiceClient,
 } from "@/lib/supabase/server"
 import { DocumentFormSchema } from "@/types/schemas/document"
 import { formatFullName } from "@/lib/utils/profile"
-import { assertCanUploadStudentDocument } from "@/lib/document/agent-access"
+import {
+    assertCanUploadStudentDocument,
+    resolveStudentProfileIdForUpload,
+} from "@/lib/document/agent-access"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import {
     applyUniversityIdFilter,
@@ -197,9 +201,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         const supabaseAuth = await createSupabaseServerClient()
-        const supabaseService = createSupabaseServiceClient()
+        const supabaseService =
+            tryCreateSupabaseServiceClient() ?? createSupabaseServiceClient()
 
-        const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
+        const {
+            data: { user },
+            error: authError,
+        } = await supabaseAuth.auth.getUser()
         if (authError || !user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         }
@@ -209,14 +217,18 @@ export async function POST(req: NextRequest) {
         const rawFiles = formData.getAll("files")
         const files = rawFiles.filter((file): file is File => file instanceof File)
 
+        // Students may omit student_id — default to their own profile.
+        const rawStudentId = String(formData.get("student_id") ?? "").trim() || user.id
+
         const validated = DocumentFormSchema.parse({
-            student_id: formData.get("student_id") ?? "",
+            student_id: rawStudentId,
             document_type_id: formData.get("document_type_id") ?? "",
             files,
             comment: formData.get("comment") ?? undefined,
         })
 
-        const { data: profile, error: profileError } = await supabaseAuth
+        // Prefer service client for role lookup (avoids false 403 when profile RLS is tight).
+        const { data: profile, error: profileError } = await supabaseService
             .from("profile")
             .select("role")
             .eq("id", user.id)
@@ -226,20 +238,40 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: profileError.message }, { status: 500 })
         }
 
+        if (!profile?.role) {
+            return NextResponse.json({ error: "Profile not found" }, { status: 404 })
+        }
+
+        const resolvedStudentProfileId =
+            profile.role === Role.STUDENT && validated.student_id === user.id
+                ? user.id
+                : ((await resolveStudentProfileIdForUpload(
+                      supabaseService,
+                      validated.student_id
+                  )) ?? validated.student_id)
+
         const canUpload = await assertCanUploadStudentDocument(
-            supabaseAuth,
+            supabaseService,
             user.id,
-            profile?.role,
-            validated.student_id
+            profile.role,
+            resolvedStudentProfileId
         )
 
         if (!canUpload) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+            return NextResponse.json(
+                {
+                    error:
+                        profile.role === Role.STUDENT
+                            ? "You can only upload documents for your own profile"
+                            : "Forbidden",
+                },
+                { status: 403 }
+            )
         }
 
         const document = await saveDocumentUpload({
             supabase: supabaseService,
-            studentProfileId: validated.student_id,
+            studentProfileId: resolvedStudentProfileId,
             uploadedByProfileId: user.id,
             documentTypeId: validated.document_type_id,
             files: validated.files,

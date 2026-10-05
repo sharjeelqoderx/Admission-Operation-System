@@ -63,10 +63,24 @@ import {
     type QualificationSnapshot,
 } from "@/lib/utils/qualification-upgrade"
 import type { DegreeOption } from "@/hooks/useDegrees"
+import {
+    HIGHEST_EDUCATION_OPTIONS,
+    getHighestEducationLabel,
+    isHighestEducationLevel,
+} from "@/types/schemas/highest-education"
+
 function buildProfileQualificationSnapshot(
     academic: Pick<AcademicFormItem, "qualification">,
     degrees: DegreeOption[]
 ): QualificationSnapshot {
+    if (isHighestEducationLevel(academic.qualification)) {
+        return {
+            qualification: academic.qualification,
+            levelName: null,
+            degreeName: null,
+        }
+    }
+
     const degree = degrees.find((entry) => entry.id === academic.qualification)
 
     return {
@@ -74,6 +88,18 @@ function buildProfileQualificationSnapshot(
         levelName: degree?.level?.name ?? null,
         degreeName: degree?.name ?? null,
     }
+}
+
+function formatQualificationLabel(
+    qualification: string,
+    degrees: DegreeOption[]
+): string {
+    if (isHighestEducationLevel(qualification)) {
+        return getHighestEducationLabel(qualification)
+    }
+
+    const degree = degrees.find((entry) => entry.id === qualification)
+    return degree ? formatDegreeLabel(degree) : qualification || "N/A"
 }
 
 function genderFromTitle(title: string): "MALE" | "FEMALE" | undefined {
@@ -1006,30 +1032,34 @@ function ProfilePageView({ initialData }: PageContentProps) {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                                 {/* Highest Degree */}
                                                 <div className="space-y-2">
-                                                    <FieldLabel>Highest Degree</FieldLabel>
+                                                    <FieldLabel>Highest Level of Education</FieldLabel>
                                                     {isEditingAcademic ? (
                                                         <Select
-                                                            value={item.qualification}
+                                                            value={item.qualification || undefined}
                                                             onValueChange={(v) => {
                                                                 const current = [...field.state.value]
                                                                 current[index].qualification = v
                                                                 field.handleChange(current)
                                                             }}
                                                         >
-                                                            <SelectTrigger><SelectValue placeholder="Select highest degree" /></SelectTrigger>
+                                                            <SelectTrigger><SelectValue placeholder="Select highest level of education" /></SelectTrigger>
                                                             <SelectContent>
-                                                                {degrees.map((degree) => (
-                                                                    <SelectItem key={degree.id} value={degree.id}>
-                                                                        {formatDegreeLabel(degree)}
+                                                                {item.qualification &&
+                                                                    !isHighestEducationLevel(item.qualification) && (
+                                                                        <SelectItem value={item.qualification} disabled>
+                                                                            {formatQualificationLabel(item.qualification, degrees)}
+                                                                        </SelectItem>
+                                                                    )}
+                                                                {HIGHEST_EDUCATION_OPTIONS.map((option) => (
+                                                                    <SelectItem key={option.value} value={option.value}>
+                                                                        {option.label}
                                                                     </SelectItem>
                                                                 ))}
                                                             </SelectContent>
                                                         </Select>
                                                     ) : (
                                                         <Typography className="p-3 bg-white/10 rounded-lg font-medium">
-                                                            {degrees.find((d) => d.id === item.qualification)
-                                                                ? formatDegreeLabel(degrees.find((d) => d.id === item.qualification)!)
-                                                                : "N/A"}
+                                                            {formatQualificationLabel(item.qualification, degrees)}
                                                         </Typography>
                                                     )}
                                                 </div>

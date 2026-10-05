@@ -340,7 +340,25 @@ export const agentProfileSchema = z.object({
 
 export const degreeStep2Schema = z.object({
     academics: z.array(z.object({
-        qualification: z.string().uuid("Select degree"),
+        qualification: z.union(
+            [
+                z.enum([
+                    "higher_secondary",
+                    "bachelor_ongoing",
+                    "bachelor_completed",
+                    "master",
+                ]),
+                z
+                    .string()
+                    .regex(
+                        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+                        "Select highest level of education"
+                    ),
+            ],
+            {
+                message: "Select highest level of education",
+            }
+        ),
 
         instituteName: z
             .string()

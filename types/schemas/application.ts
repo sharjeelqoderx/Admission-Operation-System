@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { ReactFormExtendedApi } from "@tanstack/react-form";
 import type { Tables, Database } from "@/types/supabase";
 import type { StudentListItem } from "@/lib/student/list";
+import { PostgresUuidSchema } from "@/types/schemas/uuid";
 
 export type ApplicationProfileRole = Database["public"]["Enums"]["role_enum"];
 
@@ -19,7 +20,7 @@ export const ApplicationListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
   status: ApplicationStatusFilterSchema.optional(),
-  degree_id: z.string().uuid().optional(),
+  degree_id: PostgresUuidSchema.optional(),
   date_from: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "date_from must be YYYY-MM-DD")
@@ -51,9 +52,10 @@ export type ApplicationListPagination = z.infer<typeof applicationListPagination
 
 export const CreateApplicationSchema = z.object({
   profile_id: z.string().min(1, "Please select a student"),
-  course_id: z.string().uuid("Please select a course"),
-  university_id: z.string().min(1, "Invalid university"),
-  document_ids: z.array(z.string()).min(1, "Please attach at least one document"),
+  course_id: PostgresUuidSchema,
+  university_id: z.string().min(1, "Program university is missing. Re-open this program and try again."),
+  // Required docs are enforced in the form UI; optional-only programs can submit with none.
+  document_ids: z.array(z.string()),
   intake_date: z.string().min(1, "Please select an academic session"),
   tuition_fee: z.number().optional(),
   currency: z.string().optional(),

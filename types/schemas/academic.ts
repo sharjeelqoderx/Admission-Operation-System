@@ -1,4 +1,6 @@
 import { z } from "zod"
+import { HighestEducationLevelSchema } from "@/types/schemas/highest-education"
+import { PostgresUuidSchema } from "@/types/schemas/uuid"
 
 export const GradeTypeSchema = z.enum(["percentage", "gpa"])
 
@@ -6,9 +8,17 @@ export type GradeType = z.infer<typeof GradeTypeSchema>
 
 export type OptionalGradeType = GradeType | ""
 
+/** Fixed education levels (preferred) or legacy degree / education_type UUIDs. */
+export const AcademicQualificationSchema = z.union(
+    [HighestEducationLevelSchema, PostgresUuidSchema],
+    {
+        message: "Select highest level of education",
+    }
+)
+
 export const AcademicItemSchema = z
     .object({
-        qualification: z.string().uuid("Invalid degree"),
+        qualification: AcademicQualificationSchema,
         instituteName: z.string().min(2, "Institute name required"),
         grade_type: GradeTypeSchema,
         gpa: z.number().min(0).max(4).nullable().optional(),

@@ -61,6 +61,7 @@ export const COURSE_SELECT = `
     is_deleted,
     degree_id,
     deadline_date,
+    profile_id,
     ${COURSE_CONTENT_SELECT},
     degree:degree_id (
         ${COURSE_DEGREE_SELECT}

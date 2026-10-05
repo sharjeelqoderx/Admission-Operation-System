@@ -158,7 +158,15 @@ function applyCourseToForm(
     levels: LevelOption[]
 ) {
     form.setFieldValue("course_id", course.id);
-    form.setFieldValue("intake_date", resolveCourseIntakeDate(course));
+
+    const intakeDate = resolveCourseIntakeDate(course);
+    if (intakeDate) {
+        form.setFieldValue("intake_date", intakeDate);
+    } else if (!form.getFieldValue("intake_date")) {
+        // Keep submit unblocked when program intake was left empty.
+        form.setFieldValue("intake_date", new Date().toISOString().slice(0, 10));
+    }
+
     form.setFieldValue("tuition_fee", parseCourseFees(course.degree?.fees));
 
     const universityId = resolveCourseUniversityId(course, levels);
@@ -855,9 +863,19 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
                         return;
                     }
 
-                    // Ensure course/university/intake are populated before validate (deep-link case).
+                    // Ensure course/university/intake + student are populated before validate (deep-link case).
+                    if (user?.role === Role.STUDENT && user.id) {
+                        form.setFieldValue("profile_id", user.id);
+                    }
+
                     if (courseFromParam) {
                         applyCourseToForm(form, courseFromParam, levels);
+                    } else if (programDetailResponse?.data?.id === courseIdParam) {
+                        applyCourseToForm(
+                            form,
+                            programDetailResponse.data as CourseProgram,
+                            levels
+                        );
                     }
 
                     const validationMessage = getCreateApplicationValidationMessage({
@@ -1067,15 +1085,19 @@ function SupportingDocumentUploadModal({
     const [frontFile, setFrontFile] = useState<File | null>(null);
     const [backFile, setBackFile] = useState<File | null>(null);
     const queryClient = useQueryClient();
+    const { me } = useAuth();
+    const authUserId = me.data?.id;
+    const uploadStudentId =
+        me.data?.role === Role.STUDENT && authUserId ? authUserId : studentId;
 
     const uploadMutation = useMutation({
         mutationFn: async () => {
-            if (!studentId || !documentType?.id || !frontFile) {
+            if (!uploadStudentId || !documentType?.id || !frontFile) {
                 throw new Error("Please upload the front side file");
             }
 
             const formData = new FormData();
-            formData.set("student_id", studentId);
+            formData.set("student_id", uploadStudentId);
             formData.set("document_type_id", documentType.id);
             formData.append("files", frontFile);
             if (backFile) {

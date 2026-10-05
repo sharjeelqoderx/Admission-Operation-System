@@ -2055,7 +2055,7 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
                             <Typography as="label" font="small">Letter language</Typography>
                             <Select value={locale} onValueChange={(v) => setLocale(v as TemplateLocale)}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>{TEMPLATE_LOCALE_OPTIONS.map((o) => (
+                                <SelectContent className="z-[110]">{TEMPLATE_LOCALE_OPTIONS.map((o) => (
                                     <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                                 ))}</SelectContent>
                             </Select>

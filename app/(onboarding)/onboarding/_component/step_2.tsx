@@ -10,12 +10,16 @@ import type { z } from "zod"
 import { F } from "./_shared"
 import { useAuth } from "@/hooks/useAuth"
 import { FormPageSkeleton } from "@/components/shared/page-skeleton"
-import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import {
     type AcademicFormItem,
     createEmptyAcademicItem,
     mapAcademicToFormItem,
 } from "@/types/schemas/academic"
+import {
+    HIGHEST_EDUCATION_OPTIONS,
+    getHighestEducationLabel,
+    isHighestEducationLevel,
+} from "@/types/schemas/highest-education"
 
 type Defaults = z.input<typeof degreeStep2Schema>
 
@@ -36,7 +40,6 @@ function getFieldState(field: {
 function Step2Form({ defaultValues, onBack, onNext }: { defaultValues: Defaults; onBack: () => void; onNext: () => void }) {
     const { me, academic: saveAcademic } = useAuth()
     const { data: meData, refetch: refetchMe } = me
-    const { data: degrees = [], isLoading: loadingDegrees } = useDegrees()
 
     const form = useForm({
         defaultValues,
@@ -88,20 +91,29 @@ function Step2Form({ defaultValues, onBack, onNext }: { defaultValues: Defaults;
                                                             <F
                                                                 isInvalid={isInvalid}
                                                                 error={error}
-                                                                label="Highest Degree"
+                                                                label="Highest Level of Education"
                                                             >
                                                                 <Select
-                                                                    value={subField.state.value}
+                                                                    value={subField.state.value || undefined}
                                                                     onValueChange={subField.handleChange}
-                                                                    disabled={loadingDegrees}
                                                                 >
                                                                     <SelectTrigger className="h-12 w-full">
-                                                                        <SelectValue placeholder={loadingDegrees ? "Loading..." : "Select highest degree"} />
+                                                                        <SelectValue placeholder="Select highest level of education" />
                                                                     </SelectTrigger>
                                                                     <SelectContent>
-                                                                        {degrees.map((degree) => (
-                                                                            <SelectItem key={degree.id} value={degree.id}>
-                                                                                {formatDegreeLabel(degree)}
+                                                                        {subField.state.value &&
+                                                                            !isHighestEducationLevel(subField.state.value) && (
+                                                                                <SelectItem
+                                                                                    value={subField.state.value}
+                                                                                    disabled
+                                                                                >
+                                                                                    {getHighestEducationLabel(subField.state.value) ||
+                                                                                        "Previous selection — choose a new level"}
+                                                                                </SelectItem>
+                                                                            )}
+                                                                        {HIGHEST_EDUCATION_OPTIONS.map((option) => (
+                                                                            <SelectItem key={option.value} value={option.value}>
+                                                                                {option.label}
                                                                             </SelectItem>
                                                                         ))}
                                                                     </SelectContent>

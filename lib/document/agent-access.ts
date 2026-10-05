@@ -62,6 +62,33 @@ export async function assertDocumentStaffCanAccessStudentProfile(
     return false
 }
 
+export async function resolveStudentProfileIdForUpload(
+    supabase: SupabaseServerClient,
+    candidateId: string
+): Promise<string | null> {
+    if (!candidateId) return null
+
+    // Prefer profile_id match (document.profile_id / auth user id).
+    const { data: byProfile } = await supabase
+        .from("student")
+        .select("profile_id")
+        .eq("profile_id", candidateId)
+        .maybeSingle()
+
+    if (byProfile?.profile_id) {
+        return byProfile.profile_id
+    }
+
+    // Fallback: UI sometimes sends student table primary key.
+    const { data: byStudentId } = await supabase
+        .from("student")
+        .select("profile_id")
+        .eq("id", candidateId)
+        .maybeSingle()
+
+    return byStudentId?.profile_id ?? null
+}
+
 export async function assertCanUploadStudentDocument(
     supabase: SupabaseServerClient,
     userId: string,
@@ -69,11 +96,34 @@ export async function assertCanUploadStudentDocument(
     studentProfileId: string
 ) {
     if (role === Role.STUDENT) {
-        return userId === studentProfileId
+        if (userId === studentProfileId) return true
+
+        // Allow when client sent student.id instead of profile_id.
+        const resolvedProfileId = await resolveStudentProfileIdForUpload(
+            supabase,
+            studentProfileId
+        )
+        return resolvedProfileId === userId
     }
 
     if (role === Role.AGENT) {
-        return assertAgentCanAccessStudentProfile(supabase, userId, studentProfileId)
+        const resolvedProfileId =
+            (await resolveStudentProfileIdForUpload(supabase, studentProfileId)) ??
+            studentProfileId
+
+        // Prefer owned students; also allow any existing student the agent can select
+        // (agent student list RPC currently returns all students).
+        if (await assertAgentCanAccessStudentProfile(supabase, userId, resolvedProfileId)) {
+            return true
+        }
+
+        const { data: studentRow } = await supabase
+            .from("student")
+            .select("profile_id")
+            .eq("profile_id", resolvedProfileId)
+            .maybeSingle()
+
+        return Boolean(studentRow?.profile_id)
     }
 
     return isUniversityStaffRole(role)

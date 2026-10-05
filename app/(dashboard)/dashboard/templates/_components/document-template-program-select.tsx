@@ -181,7 +181,7 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                 />
             ) : (
                 <div className="space-y-3">
-                    <Popover>
+                    <Popover modal={false}>
                         <PopoverTrigger asChild>
                             <Button
                                 type="button"
@@ -200,7 +200,9 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                         </PopoverTrigger>
                         <PopoverContent
                             align="start"
-                            className="w-[var(--radix-popover-trigger-width)] max-h-72 overflow-y-auto p-2"
+                            sideOffset={6}
+                            collisionPadding={12}
+                            className="z-[110] w-[var(--radix-popover-trigger-width)] max-h-72 overflow-y-auto p-2"
                         >
                             {options.length === 0 ? (
                                 <Typography as="p" font="small" className="px-2 py-3 text-muted-foreground">
