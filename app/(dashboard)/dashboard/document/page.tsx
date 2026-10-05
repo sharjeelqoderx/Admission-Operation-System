@@ -1,6 +1,6 @@
 "use client"
 
-import { ListPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "./loading"
 import { useAuth } from "@/hooks/useAuth"
 import { CourseDocumentsView } from "./_component/course-documents-view"
 import { DocumentStudentsList } from "./_component/document-students-list"
@@ -11,7 +11,7 @@ export default function DocumentPage() {
     const { data: user, isLoading } = me
 
     if (isLoading) {
-        return <ListPageSkeleton />
+        return <Loading />
     }
 
     if (isDocumentStaffRole(user?.role)) {

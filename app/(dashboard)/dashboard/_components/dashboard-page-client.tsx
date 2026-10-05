@@ -1,7 +1,7 @@
 "use client"
 
 import { ClientDashboard } from "./client-dashboard"
-import { DashboardPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "../loading"
 import { useAuth } from "@/hooks/useAuth"
 
 type DashboardPageClientProps = {
@@ -13,7 +13,7 @@ export function DashboardPageClient({ fallbackRole }: DashboardPageClientProps) 
     const role = me.data?.role ?? fallbackRole
 
     if (!role) {
-        return <DashboardPageSkeleton />
+        return <Loading />
     }
 
     return <ClientDashboard role={role} />

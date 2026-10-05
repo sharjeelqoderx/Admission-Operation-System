@@ -1,5 +1,5 @@
 import { Suspense, type ReactNode } from "react"
-import { DashboardPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "./loading"
 
 export default function DashboardPagesLayout({
     children,
@@ -9,7 +9,7 @@ export default function DashboardPagesLayout({
     modal: ReactNode
 }) {
     return (
-        <Suspense fallback={<DashboardPageSkeleton />}>
+        <Suspense fallback={<Loading />}>
             {children}
             {modal}
         </Suspense>

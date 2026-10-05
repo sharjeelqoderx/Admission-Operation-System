@@ -74,7 +74,6 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { Typography } from "@/components/shared/Typography"
-import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
 import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -211,6 +210,40 @@ import { DocumentPageWatermark } from "./document-center-logo-placeholder"
 import { DocumentTemplateAttachedPrograms } from "./document-template-attached-programs"
 import { DocumentTemplateProgramSelect } from "./document-template-program-select"
 import { cn } from "@/lib/utils"
+
+const EDITOR_LOADING_PULSE = "bg-gray-200/60 rounded animate-pulse"
+const EDITOR_LOADING_PULSE_SOFT = "bg-gray-200/40 rounded animate-pulse"
+
+function DocumentEditorInlineLoading() {
+    return (
+        <div className="min-h-[60vh] animate-in fade-in duration-300">
+            <div className="space-y-6">
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className={`${EDITOR_LOADING_PULSE} h-10 w-32 rounded-lg`} />
+                    <div className={`${EDITOR_LOADING_PULSE} h-10 min-w-[200px] flex-1 rounded-lg`} />
+                    <div className={`${EDITOR_LOADING_PULSE} h-10 w-28 rounded-lg`} />
+                </div>
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+                    <div className="min-h-[480px] space-y-4 rounded-xl border border-white/60 bg-white/40 p-6 backdrop-blur-lg">
+                        <div className={`${EDITOR_LOADING_PULSE} h-6 w-48`} />
+                        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                            <div key={i} className={`${EDITOR_LOADING_PULSE_SOFT} h-4 w-full`} />
+                        ))}
+                    </div>
+                    <div className="space-y-4 rounded-xl border border-white/60 bg-white/40 p-6 backdrop-blur-lg">
+                        <div className={`${EDITOR_LOADING_PULSE} h-6 w-40`} />
+                        {[0, 1, 2, 3, 4, 5].map((i) => (
+                            <div
+                                key={i}
+                                className={`${EDITOR_LOADING_PULSE} h-12 w-full rounded-lg`}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
 
 // ─── Assets API ─────────────────────────────────────────────────────────────
 
@@ -1988,7 +2021,7 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
     }, [programIds.length, router, saveMut, templateId, title])
 
     if (templateQuery.isLoading || !template || loadedTemplateKey !== `${template.id}-${template.updated_at}`) {
-        return <DetailPageSkeleton />
+        return <DocumentEditorInlineLoading />
     }
 
     if (templateQuery.isError || !template) {

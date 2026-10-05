@@ -3,7 +3,7 @@
 import { useAuth } from "@/hooks/useAuth"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
-import { ListPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "./loading"
 import { PageContent } from "./_components/page-content"
 import { UniversityApplicationListPageContent } from "./_components/university-application/page-content"
 import { useRouter } from "next/navigation"
@@ -22,7 +22,7 @@ export default function ApplicationPage() {
     }, [role, router])
 
     if (!role) {
-        return <ListPageSkeleton />
+        return <Loading />
     }
 
     if (isUniversityStaffRole(role)) {
@@ -33,5 +33,5 @@ export default function ApplicationPage() {
         return <PageContent />
     }
 
-    return <ListPageSkeleton />
+    return <Loading />
 }

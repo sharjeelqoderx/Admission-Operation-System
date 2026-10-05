@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { PageContent } from "./_components/page-content"
-import { ListPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "./loading"
 
 export default function DegreeRequirementsPage() {
     const { me } = useAuth()
@@ -19,11 +19,11 @@ export default function DegreeRequirementsPage() {
     }, [role, router])
 
     if (!role) {
-        return <ListPageSkeleton />
+        return <Loading />
     }
 
     if (!isUniversityStaffRole(role)) {
-        return <ListPageSkeleton />
+        return <Loading />
     }
 
     return <PageContent />

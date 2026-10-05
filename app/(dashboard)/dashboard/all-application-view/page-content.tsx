@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select"
 import { BluryCard } from "@/components/shared/blury-card"
 import { DatePicker } from "@/components/shared/date-picker"
-import { ListPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "./loading"
 import { useDegrees, formatDegreeLabel } from "@/hooks/useDegrees"
 import { ApplicationsListTable } from "@/app/(dashboard)/dashboard/application/_components/applications-list-table"
 import { Role } from "@/types/enums/role"
@@ -250,7 +250,7 @@ const AllApplicationViewContent = withAllApplicationViewLogic(AllApplicationView
 
 export function PageContent({ initialData }: PageContentProps) {
     return (
-        <Suspense fallback={<ListPageSkeleton />}>
+        <Suspense fallback={<Loading />}>
             <AllApplicationViewContent initialData={initialData} />
         </Suspense>
     )

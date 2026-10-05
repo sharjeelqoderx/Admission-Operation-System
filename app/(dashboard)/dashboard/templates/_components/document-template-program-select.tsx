@@ -26,6 +26,8 @@ type DocumentTemplateProgramSelectProps = {
     excludeTemplateId?: string | null
     assignedPrograms?: DocumentTemplateCourseSummary[]
     disabled?: boolean
+    /** Keep popover width aligned with the field; allow vertical overflow (e.g. inside dialogs). */
+    popoverInModal?: boolean
     onChange: (programIds: string[]) => void
 }
 
@@ -88,6 +90,7 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
     excludeTemplateId,
     assignedPrograms,
     disabled = false,
+    popoverInModal = false,
     onChange,
 }: DocumentTemplateProgramSelectProps) {
     const programOptionsQuery = useQuery({
@@ -158,7 +161,7 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
     }, [emptyOptionsMessage, options.length, selectedOptions])
 
     return (
-        <div className="space-y-3 rounded-xl border border-brand-secondary/20 bg-white/50 p-4 shadow-sm">
+        <div className="min-w-0 max-w-full space-y-3 overflow-visible rounded-xl border border-brand-secondary/20 bg-white/50 p-4 shadow-sm">
             <div className="space-y-1">
                 <Typography as="label" font="sub-text" className="font-semibold text-gray-800">
                     Offer programs
@@ -180,7 +183,7 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                     }
                 />
             ) : (
-                <div className="space-y-3">
+                <div className="min-w-0 max-w-full space-y-3 overflow-visible">
                     <Popover modal={false}>
                         <PopoverTrigger asChild>
                             <Button
@@ -188,21 +191,31 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                                 variant="outline"
                                 disabled={disabled || (options.length === 0 && value.length === 0)}
                                 className={cn(
-                                    "h-auto min-h-11 w-full justify-between rounded-lg border-brand-secondary/25 bg-white/80 px-3 py-2 text-left font-normal hover:bg-white",
+                                    "h-auto min-h-11 w-full max-w-full min-w-0 justify-between rounded-lg border-brand-secondary/25 bg-white/80 px-3 py-2 text-left font-normal hover:bg-white",
                                     selectedOptions.length === 0 && "text-muted-foreground"
                                 )}
                             >
-                                <Typography as="span" className="line-clamp-2 text-sm">
+                                <Typography as="span" className="line-clamp-2 min-w-0 flex-1 text-sm">
                                     {summaryLabel}
                                 </Typography>
                                 <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent
+                            portalled={!popoverInModal}
                             align="start"
+                            side="bottom"
                             sideOffset={6}
-                            collisionPadding={12}
-                            className="z-[110] w-[var(--radix-popover-trigger-width)] max-h-72 overflow-y-auto p-2"
+                            avoidCollisions={!popoverInModal}
+                            collisionPadding={
+                                popoverInModal
+                                    ? { top: 16, bottom: 0, left: 8, right: 8 }
+                                    : 12
+                            }
+                            className={cn(
+                                "z-[110] box-border max-h-72 overflow-x-hidden overflow-y-auto p-2",
+                                "w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-trigger-width)] min-w-0"
+                            )}
                         >
                             {options.length === 0 ? (
                                 <Typography as="p" font="small" className="px-2 py-3 text-muted-foreground">
@@ -219,7 +232,7 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                                                 aria-selected={checked}
                                                 tabIndex={0}
                                                 className={cn(
-                                                    "flex w-full cursor-pointer items-start gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-brand-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-secondary/30",
+                                                    "flex w-full max-w-full min-w-0 cursor-pointer items-start gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-brand-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-secondary/30",
                                                     checked && "bg-brand-secondary/5"
                                                 )}
                                                 onClick={() => toggleProgram(option.id)}
@@ -243,7 +256,7 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                                                 <div className="min-w-0 flex-1 space-y-0.5">
                                                     <Typography
                                                         as="span"
-                                                        className="block text-sm font-medium text-gray-800"
+                                                        className="block break-words text-sm font-medium text-gray-800"
                                                     >
                                                         {option.label}
                                                     </Typography>

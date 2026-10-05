@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { TableSkeleton } from "@/components/shared/table-skeleton"
 
@@ -159,6 +160,71 @@ export function ListPageSkeleton() {
     return (
         <PageSkeleton showStats showFilters showTable tableColumns={6} tableRows={6} />
     )
+}
+
+/** List pages with search/filters and table only (no stat cards). */
+export function TableListPageSkeleton() {
+    return <PageSkeleton showFilters showTable tableColumns={7} tableRows={6} />
+}
+
+export function ProfilePageSkeleton() {
+    return (
+        <div className={cn("mx-auto max-w-5xl space-y-8 animate-in fade-in duration-300")}>
+            <div className="flex items-center gap-4">
+                <div className={cn(PULSE, "size-20 rounded-full")} />
+                <div className="space-y-2 flex-1">
+                    <div className={cn(PULSE, "h-6 w-48")} />
+                    <div className={cn(PULSE_SOFT, "h-4 w-64 max-w-full")} />
+                </div>
+            </div>
+            <FormPageSkeleton className="max-w-none" />
+        </div>
+    )
+}
+
+export function AuthFormPageSkeleton() {
+    return (
+        <div className="flex min-h-[60vh] items-center justify-center p-6 animate-in fade-in duration-300">
+            <div className="w-full max-w-md space-y-6 rounded-xl border border-white/60 bg-white/40 p-8 backdrop-blur-lg">
+                <div className="space-y-2 text-center">
+                    <div className={cn(PULSE, "mx-auto h-8 w-40")} />
+                    <div className={cn(PULSE_SOFT, "mx-auto h-4 w-56")} />
+                </div>
+                {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="space-y-2">
+                        <div className={cn(PULSE_SOFT, "h-3 w-24")} />
+                        <div className={cn(PULSE, "h-11 w-full rounded-lg")} />
+                    </div>
+                ))}
+                <div className={cn(PULSE, "h-11 w-full rounded-lg")} />
+            </div>
+        </div>
+    )
+}
+
+export function DocumentEditorPageSkeleton() {
+    return (
+        <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="flex flex-wrap items-center gap-3">
+                <div className={cn(PULSE, "h-10 w-32 rounded-lg")} />
+                <div className={cn(PULSE, "h-10 flex-1 min-w-[200px] rounded-lg")} />
+                <div className={cn(PULSE, "h-10 w-28 rounded-lg")} />
+            </div>
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="min-h-[480px] rounded-xl border border-white/60 bg-white/40 p-6 backdrop-blur-lg space-y-4">
+                    <div className={cn(PULSE, "h-6 w-48")} />
+                    {Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className={cn(PULSE_SOFT, "h-4 w-full")} />
+                    ))}
+                </div>
+                <PanelSkeleton rows={6} />
+            </div>
+        </div>
+    )
+}
+
+export function RouteLoadingShell({ children }: { children: ReactNode }) {
+    return <div className="min-h-[60vh] animate-in fade-in duration-300">{children}</div>
 }
 
 export function DetailPageSkeleton({ className }: { className?: string }) {

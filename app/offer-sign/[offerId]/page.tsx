@@ -8,7 +8,7 @@ import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { Spinner } from "@/components/shared/page-loader"
-import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "./loading"
 import {
     Download,
     Eye,
@@ -699,7 +699,7 @@ export default function OfferSignPage() {
     }
 
     if (!offerId || isLoading) {
-        return <DetailPageSkeleton />
+        return <Loading />
     }
 
     if (isError || !offer) {

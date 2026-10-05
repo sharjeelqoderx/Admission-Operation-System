@@ -3,7 +3,7 @@
 import { use, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "./loading"
 import { CourseDocumentsView } from "../../_component/course-documents-view"
 
 type PageProps = {
@@ -50,7 +50,7 @@ export default function StudentDocumentsPage({ params }: PageProps) {
     // Pass isLoading prop to CourseDocumentsView to prevent double skeleton
     // The view will show its own skeleton only when externalLoading is false
     if (isLoading && !student) {
-        return <DetailPageSkeleton />
+        return <Loading />
     }
 
     return (

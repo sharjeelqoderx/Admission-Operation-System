@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { DashboardPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "../../loading"
 import type { UniversityOverview } from "@/types/schemas/university-overview"
 import { normalizeUniversityOverview } from "@/types/schemas/university-overview"
 
@@ -43,7 +43,7 @@ export function withUniversityOverviewLogic(
         })
 
         if (!overviewQuery.data) {
-            return <DashboardPageSkeleton />
+            return <Loading />
         }
 
         return <Component overview={overviewQuery.data} />

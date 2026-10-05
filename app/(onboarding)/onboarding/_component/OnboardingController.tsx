@@ -11,7 +11,7 @@ import { BluryCard } from "@/components/shared/blury-card"
 import { useAuth } from "@/hooks/useAuth"
 import { Role } from "@/types/enums/role"
 
-import { FormPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "../loading"
 
 import { Step1Basic } from "./step_1"
 import { Step2Academic } from "./step_2"
@@ -134,7 +134,7 @@ function OnboardingControllerInner() {
     }
 
     if (step !== "welcome" && isLoading) {
-        return <FormPageSkeleton />
+        return <Loading />
     }
 
     if (step === "welcome") {

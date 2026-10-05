@@ -4,14 +4,14 @@ import { useAuth } from "@/hooks/useAuth"
 import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-role"
 import { AgentStudentProgramPage } from "./_components/agent-student-program-page"
 import { UniversityProgramListPageContent } from "./_components/university-program/page-content"
-import { ListPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "./loading"
 
 export default function ProgramPage() {
     const { me } = useAuth()
     const role = me.data?.role
 
     if (!role) {
-        return <ListPageSkeleton />
+        return <Loading />
     }
 
     if (isUniversityStaffRole(role)) {

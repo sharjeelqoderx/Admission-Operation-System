@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { AlertCircle, ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "../[program-id]/loading"
 import { BluryCard } from "@/components/shared/blury-card"
 import { useAuth } from "@/hooks/useAuth"
 import { Role } from "@/types/enums/role"
@@ -201,7 +201,7 @@ export function AgentStudentProgramDetailPage({
         }
     }, [course, degree, program, userRole])
 
-    if (isLoading) return <DetailPageSkeleton />
+    if (isLoading) return <Loading />
 
     if (isError || !course || !display) {
         return (

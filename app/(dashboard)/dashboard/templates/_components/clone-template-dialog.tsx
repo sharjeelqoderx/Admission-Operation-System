@@ -93,18 +93,20 @@ export const CloneTemplateDialog = memo(function CloneTemplateDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-lg" showCloseButton={!isCloning}>
+            <DialogContent
+                className="sm:max-w-lg overflow-x-hidden overflow-y-visible"
+                showCloseButton={!isCloning}
+            >
                 <DialogHeader>
                     <DialogTitle>Clone template</DialogTitle>
                     <DialogDescription>
-                        Choose a new title and assign one or more programs for the cloned template.
-                        The clone cannot keep the same name as the original. Use View to open the
-                        full template preview first.
+                        Set a new title and programs. The name must differ from the original. Use
+                        View to preview first.
                     </DialogDescription>
                 </DialogHeader>
 
                 {template ? (
-                    <div className="space-y-4">
+                    <div className="min-w-0 max-w-full space-y-4 overflow-visible">
                         <div className="space-y-2">
                             <Label htmlFor="clone-template-title">
                                 <Typography as="span" className="text-sm font-semibold text-gray-800">
@@ -129,6 +131,7 @@ export const CloneTemplateDialog = memo(function CloneTemplateDialog({
                         <DocumentTemplateProgramSelect
                             value={cloneProgramIds}
                             disabled={isCloning}
+                            popoverInModal
                             onChange={onProgramIdsChange}
                         />
 

@@ -8,7 +8,7 @@ import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { Spinner } from "@/components/shared/page-loader"
-import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "./loading"
 import { Download, Eye, Mail, GraduationCap, Calendar, ChevronLeft, Building2, Clock, MessageSquare, FileCheck, AlertCircle, CheckCircle2, X, CreditCard, ArrowRight, Check } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -702,7 +702,7 @@ function SignPageContent() {
     }
 
     if (isLoading) {
-        return <DetailPageSkeleton />
+        return <Loading />
     }
 
     if (isError || !offer) {
@@ -1020,7 +1020,7 @@ function SignPageContent() {
 
 export default function SignPage() {
     return (
-        <Suspense fallback={<DetailPageSkeleton />}>
+        <Suspense fallback={<Loading />}>
             <SignPageContent />
         </Suspense>
     )

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { Button } from "@/components/ui/button"
-import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "../[student-id]/loading"
 import { TableSkeleton } from "@/components/shared/table-skeleton"
 import {
     Table,
@@ -97,7 +97,7 @@ export function AgentStudentDetailPage({ studentId: id }: AgentStudentDetailPage
 
     const studentApplications = Array.isArray(applicationsData) ? applicationsData : []
 
-    if (isLoading) return <DetailPageSkeleton />
+    if (isLoading) return <Loading />
     if (isError || !student) return (
         <div className="py-20 text-center">
             <Typography as="p" font="sub-text" className="font-bold text-gray-500">Student not found.</Typography>

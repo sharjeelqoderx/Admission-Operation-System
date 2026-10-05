@@ -8,7 +8,7 @@ import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
-import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "./loading"
 import {
     Download,
     Eye,
@@ -666,27 +666,15 @@ export default function OfferDetailsPage() {
     }, [acceptedAt, applicationRef, conditionalLetterBodyHtml, offer, student?.name])
 
     if (isDownloadingLetterHead) {
-        return (
-            <div className="min-h-[60vh]">
-                <DetailPageSkeleton />
-            </div>
-        )
+        return <Loading />
     }
 
     if (isDownloadingConditionalLetter) {
-        return (
-            <div className="min-h-[60vh]">
-                <DetailPageSkeleton />
-            </div>
-        )
+        return <Loading />
     }
 
     if (!offerId || !isSessionReady || isLoading) {
-        return (
-            <div className="min-h-[60vh]">
-                <DetailPageSkeleton />
-            </div>
-        )
+        return <Loading />
     }
 
     if (isError || !offer) {

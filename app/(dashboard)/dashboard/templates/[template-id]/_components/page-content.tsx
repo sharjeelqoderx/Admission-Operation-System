@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft, Pencil, Printer } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
-import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
+import Loading from "../../loading"
 import { Button } from "@/components/ui/button"
 import { fetchDocumentTemplate } from "@/lib/document-template/client"
 import { documentTemplateQueryKey } from "@/lib/document-template/query-cache"
@@ -34,7 +34,7 @@ export const ViewPageContent = memo(function ViewPageContent({
     }, [])
 
     if (templateQuery.isLoading) {
-        return <DetailPageSkeleton />
+        return <Loading />
     }
 
     if (templateQuery.isError || !templateQuery.data?.data) {
