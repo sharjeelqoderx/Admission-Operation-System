@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useCallback } from "react"
+import { memo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -20,7 +20,6 @@ import { DetailPageSkeleton } from "@/components/shared/page-skeleton"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { StudentProgressCard } from "@/app/(dashboard)/dashboard/student/[student-id]/_components/university-student/progress-card"
 import { MissingOfferTemplateAlert } from "@/app/(dashboard)/dashboard/all-application-view/_component/missing-offer-template-alert"
-import { useCreateOfferAction } from "@/app/(dashboard)/dashboard/all-application-view/_component/useCreateOfferAction"
 import { ApplicationReviewHistoryCard } from "@/app/(dashboard)/dashboard/application/_components/application-review-history-card"
 import { RejectApplicationDialog } from "@/app/(dashboard)/dashboard/application/_components/reject-application-dialog"
 import { applicationDetailCardClassName } from "@/app/(dashboard)/dashboard/application/_components/application-detail-card-styles"
@@ -76,31 +75,17 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
     errorMessage,
     rejectDialogOpen,
     isReviewSubmitting,
+    isRequestingSignature,
     reviewErrorMessage,
+    missingTemplateAlert,
+    isCreatingOfferWithoutTemplate,
     onRetry,
     onRejectRequest,
     onRejectDialogOpenChange,
     onRejectSubmit,
+    onCreateOfferWithoutTemplate,
+    onMissingTemplateAlertOpenChange,
 }: UniversityApplicationDetailLogicProps) {
-    const {
-        handleCreateOffer,
-        handleCreateOfferWithoutTemplate,
-        isCreatingOffer,
-        isCreatingOfferWithoutTemplate,
-        missingTemplateAlert,
-        closeMissingTemplateAlert,
-    } = useCreateOfferAction({
-        applicationId,
-        studentName: detail?.student_name,
-        invalidateQueryKeys: [["university-application-detail", applicationId]],
-        onOfferCreated: onRetry,
-    })
-
-    const handleApproveApplication = useCallback(() => {
-        if (isCreatingOffer) return
-        handleCreateOffer()
-    }, [handleCreateOffer, isCreatingOffer])
-
     if (isLoading) {
         return <DetailPageSkeleton />
     }
@@ -123,7 +108,7 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
         detail.avatar_url ??
         `https://ui-avatars.com/api/?name=${encodeURIComponent(detail.student_name)}&background=random`
 
-    const canShowActions = detail.can_approve_for_signature || detail.can_reject
+    const canShowActions = detail.can_reject
 
     return (
         <div className="mx-auto max-w-[1400px] space-y-6 px-4 pb-20 pt-4 lg:px-8">
@@ -153,8 +138,18 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
                     </div>
                 </div>
 
-                {canShowActions ? (
+                {canShowActions || isRequestingSignature ? (
                     <div className="flex flex-wrap items-center gap-2">
+                        {isRequestingSignature ? (
+                            <Button
+                                type="button"
+                                className="h-10 gap-2 rounded-xl px-5 text-sm font-medium"
+                                disabled
+                            >
+                                <Spinner size="sm" />
+                                Sending signature request...
+                            </Button>
+                        ) : null}
                         {detail.can_reject ? (
                             <Button
                                 type="button"
@@ -163,22 +158,6 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
                                 onClick={onRejectRequest}
                             >
                                 Reject
-                            </Button>
-                        ) : null}
-                        {detail.can_approve_for_signature ? (
-                            <Button
-                                className="h-10 gap-2 rounded-xl bg-brand-byzantine px-5 text-sm font-medium hover:bg-brand-byzantine/90"
-                                disabled={isCreatingOffer}
-                                onClick={handleApproveApplication}
-                            >
-                                {isCreatingOffer ? (
-                                    <>
-                                        <Spinner size="sm" />
-                                        Creating offer...
-                                    </>
-                                ) : (
-                                    "Approve"
-                                )}
                             </Button>
                         ) : null}
                     </div>
@@ -328,10 +307,8 @@ export const UniversityApplicationDetailView = memo(function UniversityApplicati
                 description={missingTemplateAlert.description}
                 allowCreateWithoutTemplate={missingTemplateAlert.allowCreateWithoutTemplate}
                 isCreatingWithoutTemplate={isCreatingOfferWithoutTemplate}
-                onCreateWithoutTemplate={handleCreateOfferWithoutTemplate}
-                onOpenChange={(open) => {
-                    if (!open) closeMissingTemplateAlert()
-                }}
+                onCreateWithoutTemplate={onCreateOfferWithoutTemplate}
+                onOpenChange={onMissingTemplateAlertOpenChange}
             />
 
             <RejectApplicationDialog

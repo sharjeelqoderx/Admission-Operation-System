@@ -154,6 +154,25 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Application not found" }, { status: 404 });
         }
 
+        const { data: existingOffer, error: existingOfferError } = await supabase
+            .from("offer_letter")
+            .select("id, status, created_at, application_id")
+            .eq("application_id", validated.application_id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+        if (existingOfferError) {
+            console.error("POST /api/offer existing offer lookup:", existingOfferError.message)
+        }
+
+        if (existingOffer) {
+            return NextResponse.json(
+                { data: existingOffer, message: "Offer already exists for this application" },
+                { status: 200 }
+            )
+        }
+
         const createWithoutTemplate = validated.create_without_template === true;
         const courseId = await resolveApplicationCourseId(supabase, validated.application_id);
 

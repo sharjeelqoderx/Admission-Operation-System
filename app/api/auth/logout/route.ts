@@ -11,7 +11,7 @@ export async function POST() {
         if (!supabaseUrl || !supabaseKey) {
             return err("Missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY", 500)
         }
-
+ 
         const cookieStore = await cookies()
         const response = NextResponse.json({
             success: true,

@@ -31,18 +31,17 @@ const UniversityApplicationPageView = memo(function UniversityApplicationPageVie
     deferErrorMessage,
     missingTemplateAlert,
     isCreatingOfferWithoutTemplate,
+    onCreateOfferWithoutTemplate,
     onSearchChange,
     onTabChange,
     onTabHover,
     onPageChange,
-    onApprove,
     onRejectRequest,
     onDeferRequest,
     onRejectDialogOpenChange,
     onRejectSubmit,
     onDeferDialogOpenChange,
     onDeferSubmit,
-    onCreateOfferWithoutTemplate,
     onMissingTemplateAlertOpenChange,
 }: UniversityApplicationPageLogicProps) {
     return (
@@ -69,7 +68,6 @@ const UniversityApplicationPageView = memo(function UniversityApplicationPageVie
                 onTabChange={onTabChange}
                 onTabHover={onTabHover}
                 onPageChange={onPageChange}
-                onApprove={onApprove}
                 onRejectRequest={onRejectRequest}
                 onDeferRequest={onDeferRequest}
             />

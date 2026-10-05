@@ -14,6 +14,7 @@ import { renderOfferBodyHtml } from "@/lib/offer/render-offer-body-html";
 import { findTemplateIdForCourseId } from "@/lib/document-template/program-assignment"
 import { isUniversityRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role";
+import { approveApplicationAfterOfferSignature } from "@/lib/application/approve-after-offer-signature";
 
 function canReadOffer(
     role: string | undefined,
@@ -253,7 +254,9 @@ export async function POST(
             .from("offer_letter")
             .select(`
                 id,
+                application_id,
                 application!inner (
+                    id,
                     profile_id
                 )
             `)
@@ -361,6 +364,17 @@ export async function POST(
                 },
                 { status: 500 }
             );
+        }
+
+        const applicationId =
+            existingOffer.application_id ??
+            (existingOffer.application as { id?: string } | null)?.id
+
+        if (applicationId) {
+            await approveApplicationAfterOfferSignature(writeClient, {
+                applicationId,
+                reviewedByProfileId: user.id,
+            })
         }
 
         return NextResponse.json(

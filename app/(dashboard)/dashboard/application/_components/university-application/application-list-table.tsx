@@ -5,7 +5,6 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
     CalendarClock,
-    CheckCircle2,
     ChevronLeft,
     ChevronRight,
     EllipsisVertical,
@@ -79,7 +78,6 @@ type UniversityApplicationListTableProps = {
     onTabHover: (value: UniversityApplicationTab) => void
     onPageChange: (page: number) => void
     reviewingApplicationId?: string | null
-    onApprove?: (application: UniversityApplicationListItem) => void
     onRejectRequest?: (application: UniversityApplicationListItem) => void
     onDeferRequest?: (application: UniversityApplicationListItem) => void
 }
@@ -109,7 +107,6 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
     onTabHover,
     onPageChange,
     reviewingApplicationId = null,
-    onApprove,
     onRejectRequest,
     onDeferRequest,
 }: UniversityApplicationListTableProps) {
@@ -242,11 +239,8 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                         const showRejectionIndicator = rejectionHistory.length > 0
                                         const isReviewing =
                                             reviewingApplicationId === application.id
-                                        const canApprove = Boolean(
-                                            application.can_approve_for_signature
-                                        )
                                         const canReject = Boolean(application.can_reject)
-                                        const canShowApproval = canApprove || canReject
+                                        const canShowActions = canReject
                                         const rowBg =
                                             index % 2 === 0 ? "bg-white/70" : "bg-white/45"
 
@@ -377,16 +371,6 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                                                     Reject
                                                                 </DropdownMenuItem>
                                                             ) : null}
-                                                            {canApprove ? (
-                                                                <DropdownMenuItem
-                                                                    disabled={isReviewing}
-                                                                    className="cursor-pointer gap-2"
-                                                                    onSelect={() => onApprove?.(application)}
-                                                                >
-                                                                    <CheckCircle2 className="size-4 text-gray-500" />
-                                                                    Approve
-                                                                </DropdownMenuItem>
-                                                            ) : null}
                                                             {canReject ? (
                                                                 <DropdownMenuItem
                                                                     disabled={isReviewing}
@@ -397,7 +381,7 @@ export const UniversityApplicationListTable = memo(function UniversityApplicatio
                                                                     Defer Intake
                                                                 </DropdownMenuItem>
                                                             ) : null}
-                                                            {!canShowApproval ? (
+                                                            {!canShowActions ? (
                                                                 <DropdownMenuItem disabled>
                                                                     No actions available
                                                                 </DropdownMenuItem>

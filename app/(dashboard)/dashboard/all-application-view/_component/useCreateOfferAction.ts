@@ -77,6 +77,7 @@ type CreateOfferTarget = {
 type UseCreateOfferActionOptions = {
     applicationId?: string
     studentName?: string | null
+    successMessage?: string
     onOfferCreated?: (offerId: string, applicationId: string) => void
     invalidateQueryKeys?: string[][]
 }
@@ -84,6 +85,7 @@ type UseCreateOfferActionOptions = {
 export function useCreateOfferAction({
     applicationId,
     studentName,
+    successMessage = "Offer created successfully",
     onOfferCreated,
     invalidateQueryKeys = [],
 }: UseCreateOfferActionOptions = {}) {
@@ -115,11 +117,11 @@ export function useCreateOfferAction({
 
     const handleOfferCreated = useCallback(
         (offerId: string, targetApplicationId: string) => {
-            toast.success("Offer created successfully")
+            toast.success(successMessage)
             invalidateOfferQueries(targetApplicationId)
             onOfferCreated?.(offerId, targetApplicationId)
         },
-        [invalidateOfferQueries, onOfferCreated]
+        [invalidateOfferQueries, onOfferCreated, successMessage]
     )
 
     const createOfferMutation = useMutation({

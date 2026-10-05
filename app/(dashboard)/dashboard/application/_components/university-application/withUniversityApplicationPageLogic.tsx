@@ -3,11 +3,11 @@
 import type { ComponentType } from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCreateOfferAction } from "@/app/(dashboard)/dashboard/all-application-view/_component/useCreateOfferAction"
 import {
     applyUrlSearchParamUpdates,
     readUrlSearchParam,
 } from "@/lib/navigation/replace-url-search-params"
-import { useCreateOfferAction } from "@/app/(dashboard)/dashboard/all-application-view/_component/useCreateOfferAction"
 import type {
     UniversityApplicationListItem,
     UniversityApplicationListResponse,
@@ -34,6 +34,16 @@ export type UniversityApplicationPageLogicProps = {
     deferTarget: UniversityApplicationListItem | null
     isDeferSubmitting: boolean
     deferErrorMessage?: string
+    onSearchChange: (value: string) => void
+    onTabChange: (value: UniversityApplicationTab) => void
+    onTabHover: (value: UniversityApplicationTab) => void
+    onPageChange: (page: number) => void
+    onRejectRequest: (application: UniversityApplicationListItem) => void
+    onDeferRequest: (application: UniversityApplicationListItem) => void
+    onRejectDialogOpenChange: (open: boolean) => void
+    onRejectSubmit: (reason: string) => void
+    onDeferDialogOpenChange: (open: boolean) => void
+    onDeferSubmit: (reason: string, newIntakeDate: string) => void
     missingTemplateAlert: {
         open: boolean
         title: string
@@ -41,17 +51,6 @@ export type UniversityApplicationPageLogicProps = {
         allowCreateWithoutTemplate: boolean
     }
     isCreatingOfferWithoutTemplate: boolean
-    onSearchChange: (value: string) => void
-    onTabChange: (value: UniversityApplicationTab) => void
-    onTabHover: (value: UniversityApplicationTab) => void
-    onPageChange: (page: number) => void
-    onApprove: (application: UniversityApplicationListItem) => void
-    onRejectRequest: (application: UniversityApplicationListItem) => void
-    onDeferRequest: (application: UniversityApplicationListItem) => void
-    onRejectDialogOpenChange: (open: boolean) => void
-    onRejectSubmit: (reason: string) => void
-    onDeferDialogOpenChange: (open: boolean) => void
-    onDeferSubmit: (reason: string, newIntakeDate: string) => void
     onCreateOfferWithoutTemplate: () => void
     onMissingTemplateAlertOpenChange: (open: boolean) => void
 }
@@ -129,16 +128,16 @@ export function withUniversityApplicationPageLogic(
         )
         const [deferDialogOpen, setDeferDialogOpen] = useState(false)
         const [deferTarget, setDeferTarget] = useState<UniversityApplicationListItem | null>(null)
+        const autoSignatureRequestedIds = useRef(new Set<string>())
 
         const {
             handleCreateOffer,
             handleCreateOfferWithoutTemplate,
-            isCreatingOffer,
             isCreatingOfferWithoutTemplate,
-            pendingApplicationId,
             missingTemplateAlert,
             closeMissingTemplateAlert,
         } = useCreateOfferAction({
+            successMessage: "Signature request sent",
             invalidateQueryKeys: [["university-applications"]],
         })
 
@@ -270,6 +269,20 @@ export function withUniversityApplicationPageLogic(
             initialOverview?.tab_counts,
         ])
 
+        useEffect(() => {
+            const applications = applicationsQuery.data?.data ?? []
+            for (const application of applications) {
+                if (!application.can_approve_for_signature) continue
+                if (autoSignatureRequestedIds.current.has(application.id)) continue
+
+                autoSignatureRequestedIds.current.add(application.id)
+                handleCreateOffer({
+                    applicationId: application.id,
+                    studentName: application.student_name,
+                })
+            }
+        }, [applicationsQuery.data, handleCreateOffer])
+
         const handleTabChange = useCallback(
             (value: UniversityApplicationTab) => {
                 updateFilters({ tab: value, page: "1" })
@@ -307,17 +320,6 @@ export function withUniversityApplicationPageLogic(
                 }
             }
         }, [])
-
-        const handleApprove = useCallback(
-            (application: UniversityApplicationListItem) => {
-                if (!application.can_approve_for_signature) return
-                handleCreateOffer({
-                    applicationId: application.id,
-                    studentName: application.student_name,
-                })
-            },
-            [handleCreateOffer]
-        )
 
         const handleRejectRequest = useCallback((application: UniversityApplicationListItem) => {
             if (!application.can_reject) return
@@ -364,7 +366,6 @@ export function withUniversityApplicationPageLogic(
         )
 
         const reviewingApplicationId =
-            (isCreatingOffer ? pendingApplicationId : null) ??
             (rejectMutation.isPending ? rejectTarget?.id ?? null : null) ??
             (deferMutation.isPending ? deferTarget?.id ?? null : null)
 
@@ -393,19 +394,18 @@ export function withUniversityApplicationPageLogic(
                 deferTarget={deferTarget}
                 isDeferSubmitting={deferMutation.isPending}
                 deferErrorMessage={deferErrorMessage}
-                missingTemplateAlert={missingTemplateAlert}
-                isCreatingOfferWithoutTemplate={isCreatingOfferWithoutTemplate}
                 onSearchChange={handleSearchChange}
                 onTabChange={handleTabChange}
                 onTabHover={handleTabHover}
                 onPageChange={(nextPage) => updateFilters({ page: String(nextPage) })}
-                onApprove={handleApprove}
                 onRejectRequest={handleRejectRequest}
                 onDeferRequest={handleDeferRequest}
                 onRejectDialogOpenChange={handleRejectDialogOpenChange}
                 onRejectSubmit={handleRejectSubmit}
                 onDeferDialogOpenChange={handleDeferDialogOpenChange}
                 onDeferSubmit={handleDeferSubmit}
+                missingTemplateAlert={missingTemplateAlert}
+                isCreatingOfferWithoutTemplate={isCreatingOfferWithoutTemplate}
                 onCreateOfferWithoutTemplate={handleCreateOfferWithoutTemplate}
                 onMissingTemplateAlertOpenChange={(open) => {
                     if (!open) closeMissingTemplateAlert()

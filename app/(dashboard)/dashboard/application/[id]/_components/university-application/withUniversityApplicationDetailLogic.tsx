@@ -1,8 +1,9 @@
 "use client"
 
 import type { ComponentType } from "react"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useCreateOfferAction } from "@/app/(dashboard)/dashboard/all-application-view/_component/useCreateOfferAction"
 import type {
     UniversityApplicationDetail,
     UniversityApplicationDetailPageData,
@@ -16,11 +17,21 @@ export type UniversityApplicationDetailLogicProps = {
     errorMessage: string
     rejectDialogOpen: boolean
     isReviewSubmitting: boolean
+    isRequestingSignature: boolean
     reviewErrorMessage?: string
+    missingTemplateAlert: {
+        open: boolean
+        title: string
+        description: string
+        allowCreateWithoutTemplate: boolean
+    }
+    isCreatingOfferWithoutTemplate: boolean
     onRetry: () => void
     onRejectRequest: () => void
     onRejectDialogOpenChange: (open: boolean) => void
     onRejectSubmit: (reason: string) => void
+    onCreateOfferWithoutTemplate: () => void
+    onMissingTemplateAlertOpenChange: (open: boolean) => void
 }
 
 async function fetchUniversityApplicationDetail(applicationId: string) {
@@ -58,12 +69,30 @@ export function withUniversityApplicationDetailLogic(
     }) {
         const queryClient = useQueryClient()
         const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+        const autoSignatureRequestedForId = useRef<string | null>(null)
 
         const detailQuery = useQuery({
             queryKey: ["university-application-detail", applicationId],
             queryFn: () => fetchUniversityApplicationDetail(applicationId),
             initialData: initialData.detail ?? undefined,
             retry: false,
+        })
+
+        const {
+            handleCreateOffer,
+            handleCreateOfferWithoutTemplate,
+            isCreatingOffer,
+            isCreatingOfferWithoutTemplate,
+            missingTemplateAlert,
+            closeMissingTemplateAlert,
+        } = useCreateOfferAction({
+            applicationId,
+            studentName: undefined,
+            successMessage: "Signature request sent",
+            invalidateQueryKeys: [["university-application-detail", applicationId]],
+            onOfferCreated: () => {
+                void detailQuery.refetch()
+            },
         })
 
         const reviewMutation = useMutation({
@@ -80,6 +109,7 @@ export function withUniversityApplicationDetailLogic(
         })
 
         const detail = detailQuery.data ?? initialData.detail ?? undefined
+
         const isLoading = detailQuery.isLoading && !detail
         const isError =
             !detail && !isLoading && (Boolean(initialData.error) || detailQuery.isError)
@@ -109,6 +139,17 @@ export function withUniversityApplicationDetailLogic(
                 ? reviewMutation.error.message
                 : undefined
 
+        useEffect(() => {
+            if (!detail?.can_approve_for_signature) return
+            if (autoSignatureRequestedForId.current === detail.id) return
+
+            autoSignatureRequestedForId.current = detail.id
+            handleCreateOffer({
+                applicationId: detail.id,
+                studentName: detail.student_name,
+            })
+        }, [detail, handleCreateOffer])
+
         return (
             <Component
                 applicationId={applicationId}
@@ -118,13 +159,20 @@ export function withUniversityApplicationDetailLogic(
                 errorMessage={errorMessage}
                 rejectDialogOpen={rejectDialogOpen}
                 isReviewSubmitting={reviewMutation.isPending}
+                isRequestingSignature={isCreatingOffer}
                 reviewErrorMessage={reviewErrorMessage}
+                missingTemplateAlert={missingTemplateAlert}
+                isCreatingOfferWithoutTemplate={isCreatingOfferWithoutTemplate}
                 onRetry={() => {
                     void detailQuery.refetch()
                 }}
                 onRejectRequest={handleRejectRequest}
                 onRejectDialogOpenChange={handleRejectDialogOpenChange}
                 onRejectSubmit={handleRejectSubmit}
+                onCreateOfferWithoutTemplate={handleCreateOfferWithoutTemplate}
+                onMissingTemplateAlertOpenChange={(open) => {
+                    if (!open) closeMissingTemplateAlert()
+                }}
             />
         )
     }
