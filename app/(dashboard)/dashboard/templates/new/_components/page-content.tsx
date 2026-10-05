@@ -15,6 +15,8 @@ import {
     type DocumentTemplateWatermark,
 } from "@/lib/document-template/watermark"
 import {
+    DOCUMENT_TEMPLATES_QUERY_KEY,
+    documentTemplateQueryKey,
     syncTemplateProgramsInOptionsCache,
     upsertDocumentTemplateInCache,
 } from "@/lib/document-template/query-cache"
@@ -62,6 +64,8 @@ export const CreatePageContent = memo(function CreatePageContent() {
         onSuccess: (response) => {
             upsertDocumentTemplateInCache(queryClient, response.data)
             syncTemplateProgramsInOptionsCache(queryClient, null, response.data)
+            queryClient.setQueryData(documentTemplateQueryKey(response.data.id), response)
+            void queryClient.invalidateQueries({ queryKey: DOCUMENT_TEMPLATES_QUERY_KEY })
         },
     })
 
@@ -81,7 +85,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
         const toastId = toast.loading("Creating template...")
 
         try {
-            const created = await createMutation.mutateAsync({
+            await createMutation.mutateAsync({
                 title: title.trim(),
                 body_html: bodyHtml,
                 locale,
@@ -90,7 +94,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
                 course_ids: programIds,
             })
             toast.success("Document template created successfully.", { id: toastId })
-            router.push(`/dashboard/templates/${created.data.id}/edit`)
+            router.push("/dashboard/templates")
         } catch (error) {
             const message =
                 error instanceof Error ? error.message : "Failed to create document template"

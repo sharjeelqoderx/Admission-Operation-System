@@ -1461,7 +1461,7 @@ export const DocumentEditor = memo(function DocumentEditor({
                 <SheetContent
                     side="right"
                     overlayClassName={EDITOR_SHEET_OVERLAY_CLASS}
-                    className={cn(EDITOR_SHEET_CONTENT_CLASS, "sm:max-w-md")}
+                    className={EDITOR_SHEET_CONTENT_CLASS}
                 >
                     <SheetHeader><SheetTitle>Header</SheetTitle><SheetDescription>Repeats on every page — outside the body.</SheetDescription></SheetHeader>
                     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
@@ -1499,7 +1499,7 @@ export const DocumentEditor = memo(function DocumentEditor({
                 <SheetContent
                     side="right"
                     overlayClassName={EDITOR_SHEET_OVERLAY_CLASS}
-                    className={cn(EDITOR_SHEET_CONTENT_CLASS, "sm:max-w-md")}
+                    className={EDITOR_SHEET_CONTENT_CLASS}
                 >
                     <SheetHeader><SheetTitle>Footer</SheetTitle><SheetDescription>Four columns — repeats on every page.</SheetDescription></SheetHeader>
                     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
@@ -1535,7 +1535,7 @@ export const DocumentEditor = memo(function DocumentEditor({
                 <SheetContent
                     side="right"
                     overlayClassName={EDITOR_SHEET_OVERLAY_CLASS}
-                    className={cn(EDITOR_SHEET_CONTENT_CLASS, "sm:max-w-md")}
+                    className={EDITOR_SHEET_CONTENT_CLASS}
                 >
                     <SheetHeader>
                         <SheetTitle>Sign &amp; Stamp</SheetTitle>
@@ -1632,7 +1632,7 @@ export const DocumentEditor = memo(function DocumentEditor({
                 <SheetContent
                     side="right"
                     overlayClassName={EDITOR_SHEET_OVERLAY_CLASS}
-                    className={cn(EDITOR_SHEET_CONTENT_CLASS, "sm:max-w-md")}
+                    className={EDITOR_SHEET_CONTENT_CLASS}
                 >
                     <SheetHeader>
                         <SheetTitle>Watermark</SheetTitle>
@@ -1811,7 +1811,7 @@ export const DocumentEditor = memo(function DocumentEditor({
                 <SheetContent
                     side="right"
                     overlayClassName={EDITOR_SHEET_OVERLAY_CLASS}
-                    className={cn(EDITOR_SHEET_CONTENT_CLASS, "sm:max-w-lg")}
+                    className={EDITOR_SHEET_CONTENT_CLASS}
                 >
                     <SheetHeader>
                         <SheetTitle>{assetIntent ? "Choose asset" : "Assets"}</SheetTitle>
@@ -1874,7 +1874,7 @@ export const DocumentEditor = memo(function DocumentEditor({
                 <SheetContent
                     side="right"
                     overlayClassName={EDITOR_SHEET_OVERLAY_CLASS}
-                    className={cn(EDITOR_SHEET_CONTENT_CLASS, "sm:max-w-md")}
+                    className={EDITOR_SHEET_CONTENT_CLASS}
                 >
                     <SheetHeader><SheetTitle>Variables</SheetTitle><SheetDescription>Inserted at cursor in the body.</SheetDescription></SheetHeader>
                     <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4">
@@ -2080,7 +2080,7 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
                 <SheetContent
                     side="right"
                     overlayClassName={EDITOR_SHEET_OVERLAY_CLASS}
-                    className={cn(EDITOR_SHEET_CONTENT_CLASS, "sm:max-w-md")}
+                    className={EDITOR_SHEET_CONTENT_CLASS}
                 >
                     <SheetHeader><SheetTitle>Template settings</SheetTitle><SheetDescription>Language and program assignment.</SheetDescription></SheetHeader>
                     <div className="space-y-4 px-4 pb-4">
