@@ -149,7 +149,7 @@ function resolveCourseUniversityId(course: CourseProgram, levels: LevelOption[])
     const levelId = course.degree?.level_id;
     if (!levelId) return undefined;
 
-    return levels.find((level) => level.id === levelId)?.university_id;
+    return levels.find((level) => level.id === levelId)?.university_id ?? undefined;
 }
 
 function applyCourseToForm(
