@@ -33,7 +33,6 @@ type UniversityProgramFormViewProps = {
     errorMessage: string | null
     onChange: <K extends keyof UniversityProgramUpsert>(key: K, value: UniversityProgramUpsert[K]) => void
     onToggleDocumentType: (documentTypeId: string) => void
-    onSetRequirementType: (documentTypeId: string, requirementType: "REQUIRED" | "OPTIONAL") => void
     onSubmit: () => void
 }
 
@@ -49,13 +48,11 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
     mode,
     values,
     documentTypes,
-    selectedDocumentTypeIds,
     documentRequirements,
     isSubmitting,
     errorMessage,
     onChange,
     onToggleDocumentType,
-    onSetRequirementType,
     onSubmit,
 }: UniversityProgramFormViewProps) {
     return (
@@ -286,31 +283,19 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                 </div>
 
                 <div className="space-y-3">
-                    <FieldLabel>Upload Documents</FieldLabel>
+                    <FieldLabel>Admission Documents</FieldLabel>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {documentTypes.map((documentType) => {
-                            const isSelected = selectedDocumentTypeIds.includes(documentType.id)
                             const requirement = documentRequirements.find(
                                 (req) => req.document_type_id === documentType.id
                             )
-                            const isRequired = isSelected && requirement?.requirement_type === "REQUIRED"
+                            const isRequired = requirement?.requirement_type === "REQUIRED"
 
                             return (
                                 <button
                                     key={documentType.id}
                                     type="button"
-                                    onClick={() => {
-                                        if (isRequired) {
-                                            // If required, remove it
-                                            onToggleDocumentType(documentType.id)
-                                        } else {
-                                            // Add or keep as required
-                                            if (!isSelected) {
-                                                onToggleDocumentType(documentType.id)
-                                            }
-                                            onSetRequirementType(documentType.id, "REQUIRED")
-                                        }
-                                    }}
+                                    onClick={() => onToggleDocumentType(documentType.id)}
                                     className={
                                         isRequired
                                             ? "relative cursor-pointer rounded-xl border-2 border-brand-byzantine bg-brand-byzantine/5 px-4 py-3 text-left transition-all hover:bg-brand-byzantine/10"
@@ -327,7 +312,7 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                                                 {documentType.name}
                                             </Typography>
                                         </div>
-                                        {isRequired && (
+                                        {isRequired ? (
                                             <div className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-byzantine">
                                                 <svg
                                                     className="h-3 w-3 text-white"
@@ -341,7 +326,7 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                                                     <path d="M5 13l4 4L19 7"></path>
                                                 </svg>
                                             </div>
-                                        )}
+                                        ) : null}
                                     </div>
                                     <Typography
                                         as="span"
@@ -359,7 +344,8 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                         })}
                     </div>
                     <Typography as="p" font="small" className="text-xs text-gray-500">
-                        Click on a document to mark it as Required. Click again to unmark.
+                        All documents start as Optional. Click a document to mark it Required; click
+                        again to make it Optional.
                     </Typography>
                 </div>
 

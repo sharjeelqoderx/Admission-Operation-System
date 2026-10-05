@@ -1,7 +1,28 @@
 import { z } from "zod"
+import { PostgresUuidSchema } from "@/types/schemas/uuid"
+
+/** Empty string / undefined → null so optional UUID fields never trip validation. */
+const optionalPostgresUuid = z.preprocess(
+    (value) => (value === "" || value === undefined ? null : value),
+    PostgresUuidSchema.nullable()
+)
+
+/** Empty string / undefined → null for optional YYYY-MM-DD dates. */
+const optionalProgramDate = z.preprocess(
+    (value) => (value === "" || value === undefined ? null : value),
+    z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD")
+        .nullable()
+)
+
+const optionalStudyType = z.preprocess(
+    (value) => (value === "" || value === undefined ? null : value),
+    z.enum(["full_time", "part_time"]).nullable()
+)
 
 export const universityProgramListItemSchema = z.object({
-    id: z.string().uuid(),
+    id: PostgresUuidSchema,
     name: z.string(),
     category: z.string().nullable(),
     level_name: z.string().nullable(),
@@ -29,26 +50,20 @@ export const universityProgramUpsertSchema = z.object({
     name: z.string().trim().min(1, "Program name is required"),
     category: z.string().trim().optional(),
     tuition_fees: z.string().trim().optional(),
-    agent_commission: z.coerce
-        .number()
-        .min(0, "Commission cannot be less than 0%")
-        .max(100, "Commission cannot exceed 100%")
-        .optional()
-        .nullable(),
+    agent_commission: z.preprocess(
+        (value) => (value === "" || value === undefined ? null : value),
+        z.coerce
+            .number()
+            .min(0, "Commission cannot be less than 0%")
+            .max(100, "Commission cannot exceed 100%")
+            .nullable()
+    ),
     location: z.string().trim().optional(),
     program_length: z.string().trim().optional(),
-    study_type: z.enum(["full_time", "part_time"]).optional().nullable(),
-    intake_date: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/, "Intake date must be YYYY-MM-DD")
-        .optional()
-        .nullable(),
-    application_deadline: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/, "Deadline must be YYYY-MM-DD")
-        .optional()
-        .nullable(),
-    level_id: z.string().uuid().optional().nullable(),
+    study_type: optionalStudyType,
+    intake_date: optionalProgramDate,
+    application_deadline: optionalProgramDate,
+    level_id: optionalPostgresUuid,
     program_detail: z.string().trim().optional(),
     admission_requirements: z.string().trim().optional(),
     perspectives: z.string().trim().optional(),
@@ -56,25 +71,25 @@ export const universityProgramUpsertSchema = z.object({
     competency_model: z.string().trim().optional(),
     professional_skills: z.string().trim().optional(),
     management_skills: z.string().trim().optional(),
-    document_type_ids: z.array(z.string().uuid()).optional(),
+    document_type_ids: z.array(PostgresUuidSchema).optional(),
     document_requirements: z
         .array(
             z.object({
-                document_type_id: z.string().uuid(),
+                document_type_id: PostgresUuidSchema,
                 requirement_type: z.enum(["REQUIRED", "OPTIONAL"]),
             })
         )
         .optional(),
-    university_profile_id: z.string().uuid().optional(),
+    university_profile_id: optionalPostgresUuid.optional(),
 })
 
 export const universityProgramDetailSchema = universityProgramUpsertSchema.extend({
-    id: z.string().uuid(),
+    id: PostgresUuidSchema,
     status: z.string(),
     document_requirements: z.array(
         z.object({
-            id: z.string().uuid(),
-            document_type_id: z.string().uuid(),
+            id: PostgresUuidSchema,
+            document_type_id: PostgresUuidSchema,
             name: z.string().nullable(),
             requirement_type: z.enum(["REQUIRED", "OPTIONAL"]),
         })

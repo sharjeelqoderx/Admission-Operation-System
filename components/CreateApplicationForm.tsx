@@ -113,7 +113,8 @@ function getMissingRequiredDocTypes(requiredDocTypes: ApplicationDocumentTypeSum
 }
 
 function areAllRequiredDocumentsAttached(requiredDocTypes: ApplicationDocumentTypeSummary[], documents: ApplicationStudentDocument[]) {
-    if (requiredDocTypes.length === 0) return documents.length > 0;
+    // Optional-only programs: no required uploads needed to submit.
+    if (requiredDocTypes.length === 0) return true;
     return getMissingRequiredDocTypes(requiredDocTypes, documents).length === 0;
 }
 
@@ -138,20 +139,38 @@ function collectAttachedDocumentIds(
         .map((d) => d.id);
 }
 
+function resolveCourseIntakeDate(course: CourseProgram): string {
+    return course.degree?.intake_starts_on || course.degree?.intake_date || "";
+}
+
+function resolveCourseUniversityId(course: CourseProgram, levels: LevelOption[]): string | undefined {
+    if (course.profile_id) return course.profile_id;
+
+    const levelId = course.degree?.level_id;
+    if (!levelId) return undefined;
+
+    return levels.find((level) => level.id === levelId)?.university_id;
+}
+
 function applyCourseToForm(
     form: CreateApplicationFormApi,
     course: CourseProgram,
     levels: LevelOption[]
 ) {
     form.setFieldValue("course_id", course.id);
-    form.setFieldValue("intake_date", course.degree?.intake_date || "N/A");
+    form.setFieldValue("intake_date", resolveCourseIntakeDate(course));
     form.setFieldValue("tuition_fee", parseCourseFees(course.degree?.fees));
 
-    const levelId = course.degree?.level_id;
-    const universityId = levels.find((level) => level.id === levelId)?.university_id;
+    const universityId = resolveCourseUniversityId(course, levels);
     if (universityId) {
         form.setFieldValue("university_id", universityId);
     }
+}
+
+function getCreateApplicationValidationMessage(value: CreateApplicationInput): string | null {
+    const parsed = CreateApplicationSchema.safeParse(value);
+    if (parsed.success) return null;
+    return parsed.error.issues[0]?.message ?? "Please complete the form";
 }
 
 function buildFlowSteps(
@@ -351,7 +370,9 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
         form.setFieldValue("university_id", editApplication.university_id);
         form.setFieldValue(
             "intake_date",
-            editApplication.course?.degree?.intake_date || "N/A"
+            editApplication.course?.degree?.intake_starts_on ||
+                editApplication.course?.degree?.intake_date ||
+                ""
         );
         form.setFieldValue("document_ids", attachedDocumentIds);
         form.setFieldValue("declarations", [false, false, false]);
@@ -589,12 +610,15 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
     ])
 
     useEffect(() => {
-        if (!selectedCourseId) return
-        if (courses.some((course) => course.id === selectedCourseId)) return
+        const formCourseId = form.getFieldValue("course_id")
+        if (!formCourseId) return
+        // Keep deep-linked / preselected course even if qualification filter omits it.
+        if (courseIdParam && formCourseId === courseIdParam) return
+        if (courses.some((course) => course.id === formCourseId)) return
 
         form.setFieldValue("course_id", "")
         form.setFieldValue("document_ids", [])
-    }, [courses, form, selectedCourseId])
+    }, [courseIdParam, courses, form])
 
     // Auto-attach documents that match required/optional course types
     useEffect(() => {
@@ -710,11 +734,6 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
                 toast.error(
                     `Missing required documents: ${missingRequired.map((m) => m.name).join(", ")}`
                 );
-                return;
-            }
-
-            if (requiredDocTypes.length === 0 && documents.length === 0) {
-                toast.error("Please upload at least one supporting document.");
                 return;
             }
 
@@ -838,12 +857,20 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
                         return;
                     }
 
-                    if (requiredDocTypes.length === 0 && documents.length === 0) {
-                        toast.error("Please upload at least one supporting document.");
+                    // Ensure course/university/intake are populated before validate (deep-link case).
+                    if (courseFromParam) {
+                        applyCourseToForm(form, courseFromParam, levels);
+                    }
+
+                    const validationMessage = getCreateApplicationValidationMessage(
+                        form.state.values as CreateApplicationInput
+                    );
+                    if (validationMessage) {
+                        toast.error(validationMessage);
                         return;
                     }
 
-                    form.handleSubmit();
+                    void form.handleSubmit();
                 }}
             >
                 {step === 1 && (
@@ -1522,15 +1549,7 @@ function Step2({
 
     const handleSelectCourse = useCallback(
         (course: CourseProgram) => {
-            form.setFieldValue("course_id", course.id);
-            form.setFieldValue("intake_date", course.degree?.intake_date || "N/A");
-            form.setFieldValue("tuition_fee", parseCourseFees(course.degree?.fees));
-
-            const levelId = course.degree?.level_id;
-            const universityId = levels.find((level) => level.id === levelId)?.university_id;
-            if (universityId) {
-                form.setFieldValue("university_id", universityId);
-            }
+            applyCourseToForm(form, course, levels);
         },
         [form, levels]
     );
@@ -1844,7 +1863,8 @@ function Step3({
 
     const isAllChecked = Array.isArray(declarations) && declarations.every(Boolean);
 
-    const intakeDate = selectedCourse?.degree?.intake_date;
+    const intakeDate =
+        selectedCourse?.degree?.intake_starts_on || selectedCourse?.degree?.intake_date || "";
     const uniqueIntakes = intakeDate ? [intakeDate] : [];
     const degreeName = selectedCourse?.degree?.name;
     const degreeFees = selectedCourse?.degree?.fees;
@@ -1997,22 +2017,35 @@ function Step3({
                 >
                     {isEditMode ? "Back to Documents" : "Back to Selection"}
                 </Button>
-                <Button
-                    type="submit"
-                    className={cn(
-                        "h-12 px-10",
-                        (isSubmitting || !isAllChecked || !allRequiredAttached) && "opacity-50 cursor-not-allowed grayscale-[0.5]"
-                    )}
-                    disabled={isSubmitting || !isAllChecked || !allRequiredAttached}
-                >
-                    {isSubmitting
-                        ? isEditMode
-                            ? "Resubmitting Application..."
-                            : "Submitting Application..."
-                        : isEditMode
-                          ? "Resubmit Application"
-                          : "Send Your Application"}
-                </Button>
+                <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end">
+                    <Button
+                        type="submit"
+                        className={cn(
+                            "h-12 px-10",
+                            (isSubmitting || !isAllChecked || !allRequiredAttached) &&
+                                "opacity-50 cursor-not-allowed grayscale-[0.5]"
+                        )}
+                        disabled={isSubmitting || !isAllChecked || !allRequiredAttached}
+                    >
+                        {isSubmitting
+                            ? isEditMode
+                                ? "Resubmitting Application..."
+                                : "Submitting Application..."
+                            : isEditMode
+                              ? "Resubmit Application"
+                              : "Send Your Application"}
+                    </Button>
+                    {!isSubmitting && !isAllChecked ? (
+                        <Typography as="p" className="text-[11px] text-amber-600 font-medium">
+                            Tick all 3 declarations above to enable submit.
+                        </Typography>
+                    ) : null}
+                    {!isSubmitting && isAllChecked && !allRequiredAttached ? (
+                        <Typography as="p" className="text-[11px] text-amber-600 font-medium">
+                            Upload all required documents to enable submit.
+                        </Typography>
+                    ) : null}
+                </div>
             </div>
         </div>
     );

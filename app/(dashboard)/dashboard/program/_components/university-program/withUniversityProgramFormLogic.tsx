@@ -20,6 +20,7 @@ const emptyValues: UniversityProgramUpsert = {
     study_type: null,
     intake_date: null,
     application_deadline: null,
+    level_id: null,
     program_detail: "",
     admission_requirements: "",
     perspectives: "",
@@ -48,7 +49,6 @@ export type UniversityProgramFormLogicProps = {
     errorMessage: string | null
     onChange: <K extends keyof UniversityProgramUpsert>(key: K, value: UniversityProgramUpsert[K]) => void
     onToggleDocumentType: (documentTypeId: string) => void
-    onSetRequirementType: (documentTypeId: string, requirementType: "REQUIRED" | "OPTIONAL") => void
     onSubmit: () => void
 }
 
@@ -75,6 +75,7 @@ export function withUniversityProgramFormLogic(Component: ComponentType<Universi
                       study_type: initialDetail.study_type,
                       intake_date: initialDetail.intake_date,
                       application_deadline: initialDetail.application_deadline,
+                      level_id: initialDetail.level_id ?? null,
                       program_detail: initialDetail.program_detail ?? "",
                       admission_requirements: initialDetail.admission_requirements ?? "",
                       perspectives: initialDetail.perspectives ?? "",
@@ -99,12 +100,7 @@ export function withUniversityProgramFormLogic(Component: ComponentType<Universi
         })
 
         const saveMutation = useMutation({
-            mutationFn: async () => {
-                const payload = {
-                    ...values,
-                    document_type_ids: values.document_type_ids ?? [],
-                }
-
+            mutationFn: async (payload: UniversityProgramUpsert) => {
                 const url =
                     mode === "edit" && courseId
                         ? `/api/university/programs/${courseId}`
@@ -142,78 +138,87 @@ export function withUniversityProgramFormLogic(Component: ComponentType<Universi
             []
         )
 
-        const onToggleDocumentType = useCallback((documentTypeId: string) => {
-            setValues((current) => {
-                const existing = current.document_type_ids ?? []
-                const existingReqs = current.document_requirements ?? []
+        const documentTypes = documentTypesQuery.data ?? []
 
-                if (existing.includes(documentTypeId)) {
-                    // Remove document
-                    return {
-                        ...current,
-                        document_type_ids: existing.filter((id) => id !== documentTypeId),
-                        document_requirements: existingReqs.filter(
-                            (req) => req.document_type_id !== documentTypeId
-                        ),
-                    }
-                } else {
-                    // Add document as REQUIRED (will be shown with purple bg and tick)
-                    return {
-                        ...current,
-                        document_type_ids: [...existing, documentTypeId],
-                        document_requirements: [
-                            ...existingReqs,
-                            { document_type_id: documentTypeId, requirement_type: "REQUIRED" as const },
-                        ],
-                    }
-                }
-            })
-        }, [])
+        // All document types are included; default OPTIONAL unless marked REQUIRED.
+        const documentRequirements = useMemo(() => {
+            const byId = new Map(
+                (values.document_requirements ?? []).map((req) => [req.document_type_id, req])
+            )
 
-        const onSetRequirementType = useCallback(
-            (documentTypeId: string, requirementType: "REQUIRED" | "OPTIONAL") => {
-                setValues((current) => {
-                    const existingReqs = current.document_requirements ?? []
-                    const updatedReqs = existingReqs.map((req) =>
-                        req.document_type_id === documentTypeId
-                            ? { ...req, requirement_type: requirementType }
-                            : req
-                    )
-
-                    return { ...current, document_requirements: updatedReqs }
-                })
-            },
-            []
-        )
+            return documentTypes.map((documentType) => ({
+                document_type_id: documentType.id,
+                requirement_type:
+                    byId.get(documentType.id)?.requirement_type === "REQUIRED"
+                        ? ("REQUIRED" as const)
+                        : ("OPTIONAL" as const),
+            }))
+        }, [documentTypes, values.document_requirements])
 
         const selectedDocumentTypeIds = useMemo(
-            () => values.document_type_ids ?? [],
-            [values.document_type_ids]
+            () => documentTypes.map((documentType) => documentType.id),
+            [documentTypes]
+        )
+
+        const onToggleDocumentType = useCallback(
+            (documentTypeId: string) => {
+                setValues((current) => {
+                    const types = documentTypesQuery.data ?? []
+                    const requiredIds = new Set(
+                        (current.document_requirements ?? [])
+                            .filter((req) => req.requirement_type === "REQUIRED")
+                            .map((req) => req.document_type_id)
+                    )
+
+                    if (requiredIds.has(documentTypeId)) {
+                        requiredIds.delete(documentTypeId)
+                    } else {
+                        requiredIds.add(documentTypeId)
+                    }
+
+                    return {
+                        ...current,
+                        document_type_ids: types.map((type) => type.id),
+                        document_requirements: types.map((type) => ({
+                            document_type_id: type.id,
+                            requirement_type: requiredIds.has(type.id)
+                                ? ("REQUIRED" as const)
+                                : ("OPTIONAL" as const),
+                        })),
+                    }
+                })
+                setErrorMessage(null)
+            },
+            [documentTypesQuery.data]
         )
 
         const onSubmit = useCallback(() => {
-            const parsed = universityProgramUpsertSchema.safeParse(values)
+            const parsed = universityProgramUpsertSchema.safeParse({
+                ...values,
+                document_type_ids: selectedDocumentTypeIds,
+                document_requirements: documentRequirements,
+            })
 
             if (!parsed.success) {
                 setErrorMessage(parsed.error.issues[0]?.message ?? "Invalid program details")
                 return
             }
 
-            saveMutation.mutate()
-        }, [saveMutation, values])
+            setErrorMessage(null)
+            saveMutation.mutate(parsed.data)
+        }, [documentRequirements, saveMutation, selectedDocumentTypeIds, values])
 
         return (
             <Component
                 mode={mode}
                 values={values}
-                documentTypes={documentTypesQuery.data ?? []}
+                documentTypes={documentTypes}
                 selectedDocumentTypeIds={selectedDocumentTypeIds}
-                documentRequirements={values.document_requirements ?? []}
+                documentRequirements={documentRequirements}
                 isSubmitting={saveMutation.isPending}
                 errorMessage={errorMessage}
                 onChange={onChange}
                 onToggleDocumentType={onToggleDocumentType}
-                onSetRequirementType={onSetRequirementType}
                 onSubmit={onSubmit}
             />
         )
