@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      account: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          id: string
+          platform: string
+          provider: string
+          refresh_token: string | null
+          token_expires_at: string | null
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          id?: string
+          platform: string
+          provider?: string
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          id?: string
+          platform?: string
+          provider?: string
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
       agent: {
         Row: {
           address: string | null
@@ -97,6 +133,7 @@ export type Database = {
           profile_id: string
           status: Database["public"]["Enums"]["app_status_enum"]
           submitted_by_profile_id: string | null
+          sugar_logic_interaction_id: string | null
           university_id: string
           updated_at: string
         }
@@ -111,6 +148,7 @@ export type Database = {
           profile_id: string
           status?: Database["public"]["Enums"]["app_status_enum"]
           submitted_by_profile_id?: string | null
+          sugar_logic_interaction_id?: string | null
           university_id: string
           updated_at?: string
         }
@@ -125,6 +163,7 @@ export type Database = {
           profile_id?: string
           status?: Database["public"]["Enums"]["app_status_enum"]
           submitted_by_profile_id?: string | null
+          sugar_logic_interaction_id?: string | null
           university_id?: string
           updated_at?: string
         }
