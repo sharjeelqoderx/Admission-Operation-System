@@ -203,7 +203,7 @@ export async function GET() {
         }
 
         const response = ok(payload)
-        response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=120")
+        response.headers.set("Cache-Control", "private, no-store")
         return response
     } catch (e) {
         console.log("error -> ", e)

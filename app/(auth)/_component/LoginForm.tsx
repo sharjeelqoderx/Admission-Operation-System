@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -17,7 +16,6 @@ import { clearSessionQueryCache } from "@/lib/query/session-cache"
 import { Eye, EyeOff } from "lucide-react"
 
 export function LoginForm() {
-    const router = useRouter()
     const queryClient = useQueryClient()
     const { login } = useAuth()
     const [apiError, setApiError] = useState("")
@@ -31,7 +29,8 @@ export function LoginForm() {
             try {
                 clearSessionQueryCache(queryClient)
                 await login.mutateAsync({ email: value.email, password: value.password })
-                router.push("/dashboard")
+                // Full navigation so no router/RSC cache from a previous user is reused.
+                window.location.assign("/dashboard")
             } catch (e: any) {
                 setApiError(e.message)
             }

@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { ChevronDown, Menu, X } from 'lucide-react';
 import {
     DropdownMenu,
@@ -81,18 +81,17 @@ export function Navbar({
     isSidebarOpen = false,
 }: NavbarProps) {
     const pathname = usePathname();
-    const router = useRouter();
     const { logout } = useAuth();
     const title = getTitleFromPathname(pathname);
 
     const handleLogout = async () => {
         try {
             await logout.mutateAsync();
-            router.replace('/login');
         } catch (e) {
             console.error('Logout failed');
-            router.replace('/login');
         }
+        // Full reload drops Next's client router cache and all in-memory state of the old user.
+        window.location.replace('/login');
     };
 
     return (

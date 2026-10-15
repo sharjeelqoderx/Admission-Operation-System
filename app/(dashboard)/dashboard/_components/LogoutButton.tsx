@@ -1,16 +1,18 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 
 export function LogoutButton() {
-    const router = useRouter()
     const { logout } = useAuth()
 
     const handleLogout = async () => {
-        await logout.mutateAsync()
-        router.replace("/login")
+        try {
+            await logout.mutateAsync()
+        } finally {
+            // Full reload drops Next's client router cache and all in-memory state of the old user.
+            window.location.replace("/login")
+        }
     }
 
     return (

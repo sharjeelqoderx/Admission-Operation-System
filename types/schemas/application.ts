@@ -128,6 +128,7 @@ export type ApplicationDetailDegree = Pick<
   | "name"
   | "fees"
   | "intake_date"
+  | "intake_starts_on"
   | "duration"
   | "location"
   | "language_of_study"

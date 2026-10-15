@@ -62,7 +62,7 @@ export async function GET() {
             { 
                 status: 200,
                 headers: {
-                    'Cache-Control': 'private, max-age=120, stale-while-revalidate=240',
+                    'Cache-Control': 'private, no-store',
                 },
             }
         )

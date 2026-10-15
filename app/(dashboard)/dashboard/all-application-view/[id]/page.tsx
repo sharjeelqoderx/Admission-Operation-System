@@ -13,7 +13,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ApplicationStatusBadge } from "@/app/(dashboard)/dashboard/application/_components/application-status-badge"
 import { formatFullName } from "@/lib/utils/profile"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { formatIntakeDate } from "@/lib/utils/program"
+import { resolveIntakeLabel } from "@/lib/utils/program"
 import { Role } from "@/types/enums/role"
 import {
     ChevronLeft,
@@ -224,7 +224,12 @@ export default function AllApplicationViewDetailsPage() {
                                     <Typography className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Intake</Typography>
                                     <div className="flex items-center gap-2">
                                         <Clock className="size-4 text-gray-400" />
-                                        <Typography className="font-bold text-brand-secondary">{formatIntakeDate(degree?.intake_date)}</Typography>
+                                        <Typography className="font-bold text-brand-secondary">{resolveIntakeLabel({
+                                            intake_starts_on:
+                                                application.custom_intake_date ??
+                                                degree?.intake_starts_on,
+                                            intake_date: degree?.intake_date,
+                                        }) ?? "N/A"}</Typography>
                                     </div>
                                 </div>
                                 <div className="space-y-1">
