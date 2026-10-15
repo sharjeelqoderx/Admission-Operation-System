@@ -24,7 +24,7 @@ import {
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { formatFullName } from "@/lib/utils/profile"
-import { formatIntakeDate } from "@/lib/utils/program"
+import { resolveIntakeLabel } from "@/lib/utils/program"
 import type { ApplicationDetailLogicProps } from "./withApplicationDetailLogic"
 
 const ApplicationDetailView = memo(function ApplicationDetailView({
@@ -248,7 +248,12 @@ const ApplicationDetailView = memo(function ApplicationDetailView({
                                     <div className="flex items-center gap-2">
                                         <Clock className="size-4 text-gray-400" />
                                         <Typography className="font-bold text-brand-secondary">
-                                            {formatIntakeDate(degree?.intake_date)}
+                                            {resolveIntakeLabel({
+                                                intake_starts_on:
+                                                    application.custom_intake_date ??
+                                                    degree?.intake_starts_on,
+                                                intake_date: degree?.intake_date,
+                                            }) ?? "N/A"}
                                         </Typography>
                                     </div>
                                 </div>

@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(result, {
             status: 200,
             headers: {
-                "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+                "Cache-Control": "private, no-store",
             },
         })
     } catch (e) {

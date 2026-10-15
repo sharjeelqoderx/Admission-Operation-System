@@ -1,12 +1,36 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server"
 import { fetchApplicationsList } from "@/lib/application/list"
 import { CreateApplicationSchema, ApplicationListQuerySchema } from "@/types/schemas/application"
 import type { ApplicationProfileRole } from "@/types/schemas/application"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
-import { resubmitApplicationById } from "@/lib/application/resubmit"
+import { linkApplicationDocuments, resubmitApplicationById } from "@/lib/application/resubmit"
 import { syncApplicationToSugar } from "@/lib/sugar/sync-application"
 import { Role } from "@/types/enums/role"
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * The session chosen in the form, stored as a date. Only accepted when it is one of the
+ * course's real intakes, so the form's "today" fallback is never persisted.
+ */
+function resolveSelectedIntakeDate(
+    selected: string,
+    degreeRelation:
+        | { intake_starts_on: string | null; intake_date: string | null }
+        | { intake_starts_on: string | null; intake_date: string | null }[]
+        | null
+): string | null {
+    const value = selected.trim().slice(0, 10)
+    if (!ISO_DATE.test(value)) return null
+
+    const degree = Array.isArray(degreeRelation) ? degreeRelation[0] : degreeRelation
+    const courseIntakes = [degree?.intake_starts_on, degree?.intake_date]
+        .filter((intake): intake is string => Boolean(intake))
+        .map((intake) => intake.slice(0, 10))
+
+    return courseIntakes.includes(value) ? value : null
+}
 
 async function canAccessStudentApplications(
     _supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
@@ -114,7 +138,7 @@ export async function GET(req: NextRequest) {
             { 
                 status: 200,
                 headers: {
-                    'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+                    'Cache-Control': 'private, no-store',
                 },
             }
         )
@@ -155,7 +179,7 @@ export async function POST(req: NextRequest) {
 
         const { data: course } = await supabase
             .from("course")
-            .select("id")
+            .select("id, degree:degree_id ( intake_starts_on, intake_date )")
             .eq("id", validatedData.course_id)
             .eq("is_deleted", false)
             .maybeSingle()
@@ -221,6 +245,10 @@ export async function POST(req: NextRequest) {
                 profile_id: validatedData.profile_id,
                 course_id: validatedData.course_id,
                 university_id: validatedData.university_id,
+                custom_intake_date: resolveSelectedIntakeDate(
+                    validatedData.intake_date,
+                    course.degree
+                ),
                 status: "PENDING",
                 submitted_by_profile_id: user.id,
             })
@@ -240,17 +268,26 @@ export async function POST(req: NextRequest) {
         }
 
         if (validatedData.document_ids && validatedData.document_ids.length > 0) {
-            const documentLinks = validatedData.document_ids.map((docId) => ({
-                application_id: application.id,
-                document_id: docId,
-            }))
-
-            const { error: docLinkError } = await supabase
-                .from("application_document")
-                .insert(documentLinks)
-
-            if (docLinkError) {
+            try {
+                await linkApplicationDocuments(
+                    supabase,
+                    application.id,
+                    validatedData.document_ids,
+                    application.profile_id
+                )
+            } catch (docLinkError) {
                 console.error("Document Linking Error:", docLinkError)
+                // Do not leave a PENDING application behind with no documents attached.
+                await createSupabaseServiceClient()
+                    .from("application")
+                    .delete()
+                    .eq("id", application.id)
+                return NextResponse.json(
+                    {
+                        error: "Failed to attach documents to the application. Please try again.",
+                    },
+                    { status: 500 }
+                )
             }
         }
 

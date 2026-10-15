@@ -26,6 +26,7 @@ const APPLICATION_DETAIL_SELECT = `
             name,
             fees,
             intake_date,
+            intake_starts_on,
             duration,
             location,
             language_of_study,
