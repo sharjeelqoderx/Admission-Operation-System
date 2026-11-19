@@ -14,11 +14,6 @@ import {
     withStudentDashboardLogic,
     type StudentDashboardViewProps,
 } from "../withStudentDashboardLogic"
-import type { StudentDashboardPageData } from "@/lib/student/server"
-
-type PageContentProps = {
-    initialData?: StudentDashboardPageData
-}
 
 const StatsDashboard = memo(function StatsDashboard({
     stats,
@@ -185,9 +180,5 @@ function StudentDashboardView({
     )
 }
 
-const StudentDashboardPageContent = memo(withStudentDashboardLogic(StudentDashboardView))
-StudentDashboardPageContent.displayName = "StudentDashboardPageContent"
-
-export function PageContent({ initialData }: PageContentProps) {
-    return <StudentDashboardPageContent initialData={initialData} />
-}
+export const PageContent = memo(withStudentDashboardLogic(StudentDashboardView))
+PageContent.displayName = "PageContent"

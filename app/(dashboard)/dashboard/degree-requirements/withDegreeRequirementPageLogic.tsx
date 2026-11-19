@@ -73,11 +73,7 @@ async function fetchOptions(): Promise<DegreeRequirementOptionsResponse["data"]>
 export function withDegreeRequirementPageLogic<P extends DegreeRequirementPageLogicProps>(
     Component: React.ComponentType<P>
 ) {
-    return function DegreeRequirementPageContainer({
-        initialRequirements,
-    }: {
-        initialRequirements?: DegreeRequirementListItem[]
-    }) {
+    return function DegreeRequirementPageContainer() {
         const queryClient = useQueryClient()
         const [includeDeleted, setIncludeDeleted] = useState(false)
         const [formError, setFormError] = useState<string | null>(null)
@@ -95,9 +91,6 @@ export function withDegreeRequirementPageLogic<P extends DegreeRequirementPageLo
         const listQuery = useQuery({
             queryKey: [...DEGREE_REQUIREMENTS_QUERY_KEY, includeDeleted ? "all" : "active"],
             queryFn: () => fetchRequirements(includeDeleted),
-            initialData: includeDeleted || !initialRequirements
-                ? undefined
-                : { data: initialRequirements },
             staleTime: Infinity,
             refetchOnWindowFocus: false,
         })

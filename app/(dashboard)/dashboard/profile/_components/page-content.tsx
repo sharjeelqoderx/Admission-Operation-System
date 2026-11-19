@@ -277,11 +277,7 @@ function F({ field, label, children }: { field: any; label: string; children: Re
     )
 }
 
-type PageContentProps = {
-    initialData: ProfilePageData
-}
-
-function ProfilePageView({ initialData }: PageContentProps) {
+function ProfilePageView() {
     const queryClient = useQueryClient()
     const [showSuccess, setShowSuccess] = useState(false)
     const [qualificationUpgradeNotice, setQualificationUpgradeNotice] = useState({
@@ -290,7 +286,7 @@ function ProfilePageView({ initialData }: PageContentProps) {
         description: "",
     })
     const { me } = useAuth()
-    const user = (me.data as ProfilePageData | undefined) ?? initialData
+    const user = me.data as ProfilePageData
     const isError = me.isError
     const { data: countries } = useCountries()
     
@@ -1921,6 +1917,6 @@ function ProfilePageView({ initialData }: PageContentProps) {
 const ProfilePageContent = memo(ProfilePageView)
 ProfilePageContent.displayName = "ProfilePageContent"
 
-export function PageContent({ initialData }: PageContentProps) {
-    return <ProfilePageContent initialData={initialData} />
+export function PageContent() {
+    return <ProfilePageContent />
 }

@@ -1,8 +1,9 @@
 "use client"
 
-import { memo } from "react"
 import type { ComponentType } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { ErrorView } from "@/components/shared/error-view"
+import Loading from "../../loading"
 import type { UniversityAgentDetail } from "@/types/schemas/university-agent"
 
 export type UniversityAgentDetailLogicProps = {
@@ -19,18 +20,28 @@ async function fetchUniversityAgentDetail(profileId: string) {
 export function withUniversityAgentDetailLogic(
     Component: ComponentType<UniversityAgentDetailLogicProps>
 ) {
-    return function UniversityAgentDetailContainer({
-        profileId,
-        initialDetail,
-    }: {
-        profileId: string
-        initialDetail: UniversityAgentDetail
-    }) {
+    return function UniversityAgentDetailContainer({ profileId }: { profileId: string }) {
         const detailQuery = useQuery({
             queryKey: ["university-agent-detail", profileId],
             queryFn: () => fetchUniversityAgentDetail(profileId),
-            initialData: initialDetail,
+            retry: false,
         })
+
+        if (detailQuery.isLoading) return <Loading />
+
+        if (!detailQuery.data) {
+            return (
+                <div className="flex justify-center py-40">
+                    <ErrorView
+                        message={
+                            detailQuery.error instanceof Error
+                                ? detailQuery.error.message
+                                : "University Partner not found"
+                        }
+                    />
+                </div>
+            )
+        }
 
         return <Component detail={detailQuery.data} />
     }

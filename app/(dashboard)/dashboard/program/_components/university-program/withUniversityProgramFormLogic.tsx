@@ -2,8 +2,10 @@
 
 import type { ComponentType } from "react"
 import { useCallback, useMemo, useState } from "react"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
+import { ErrorView } from "@/components/shared/error-view"
+import Loading from "../../[program-id]/edit/loading"
 import type {
     UniversityProgramDetail,
     UniversityProgramUpsert,
@@ -32,6 +34,41 @@ const emptyValues: UniversityProgramUpsert = {
     document_requirements: [],
 }
 
+function toFormValues(detail: UniversityProgramDetail): UniversityProgramUpsert {
+    return {
+        name: detail.name,
+        category: detail.category ?? "",
+        tuition_fees: detail.tuition_fees ?? "",
+        agent_commission: detail.agent_commission,
+        location: detail.location ?? "",
+        program_length: detail.program_length ?? "",
+        study_type: detail.study_type,
+        intake_date: detail.intake_date,
+        application_deadline: detail.application_deadline,
+        level_id: detail.level_id ?? null,
+        program_detail: detail.program_detail ?? "",
+        admission_requirements: detail.admission_requirements ?? "",
+        perspectives: detail.perspectives ?? "",
+        prospects_after_graduation: detail.prospects_after_graduation ?? "",
+        competency_model: detail.competency_model ?? "",
+        professional_skills: detail.professional_skills ?? "",
+        management_skills: detail.management_skills ?? "",
+        document_type_ids: detail.document_type_ids ?? [],
+        document_requirements:
+            detail.document_requirements?.map((req) => ({
+                document_type_id: req.document_type_id,
+                requirement_type: req.requirement_type,
+            })) ?? [],
+    }
+}
+
+async function fetchUniversityProgramDetail(courseId: string) {
+    const res = await fetch(`/api/university/programs/${courseId}`)
+    const json = await res.json()
+    if (!res.ok) throw new Error(json?.error ?? "Failed to fetch program detail")
+    return json.data as UniversityProgramDetail
+}
+
 async function fetchDocumentTypes() {
     const res = await fetch("/api/document-type")
     const json = await res.json()
@@ -53,7 +90,7 @@ export type UniversityProgramFormLogicProps = {
 }
 
 export function withUniversityProgramFormLogic(Component: ComponentType<UniversityProgramFormLogicProps>) {
-    return function UniversityProgramFormContainer({
+    function UniversityProgramFormContainer({
         mode,
         courseId,
         initialDetail,
@@ -63,34 +100,9 @@ export function withUniversityProgramFormLogic(Component: ComponentType<Universi
         initialDetail?: UniversityProgramDetail
     }) {
         const router = useRouter()
+        const queryClient = useQueryClient()
         const [values, setValues] = useState<UniversityProgramUpsert>(
-            initialDetail
-                ? {
-                      name: initialDetail.name,
-                      category: initialDetail.category ?? "",
-                      tuition_fees: initialDetail.tuition_fees ?? "",
-                      agent_commission: initialDetail.agent_commission,
-                      location: initialDetail.location ?? "",
-                      program_length: initialDetail.program_length ?? "",
-                      study_type: initialDetail.study_type,
-                      intake_date: initialDetail.intake_date,
-                      application_deadline: initialDetail.application_deadline,
-                      level_id: initialDetail.level_id ?? null,
-                      program_detail: initialDetail.program_detail ?? "",
-                      admission_requirements: initialDetail.admission_requirements ?? "",
-                      perspectives: initialDetail.perspectives ?? "",
-                      prospects_after_graduation: initialDetail.prospects_after_graduation ?? "",
-                      competency_model: initialDetail.competency_model ?? "",
-                      professional_skills: initialDetail.professional_skills ?? "",
-                      management_skills: initialDetail.management_skills ?? "",
-                      document_type_ids: initialDetail.document_type_ids ?? [],
-                      document_requirements:
-                          initialDetail.document_requirements?.map((req) => ({
-                              document_type_id: req.document_type_id,
-                              requirement_type: req.requirement_type,
-                          })) ?? [],
-                  }
-                : emptyValues
+            initialDetail ? toFormValues(initialDetail) : emptyValues
         )
         const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -120,6 +132,8 @@ export function withUniversityProgramFormLogic(Component: ComponentType<Universi
                 return json.data as { courseId: string }
             },
             onSuccess: (data) => {
+                queryClient.invalidateQueries({ queryKey: ["university-programs"] })
+                queryClient.invalidateQueries({ queryKey: ["university-program-detail", data.courseId] })
                 router.push(
                     mode === "create" ? "/dashboard/program" : `/dashboard/program/${data.courseId}/edit`
                 )
@@ -220,6 +234,38 @@ export function withUniversityProgramFormLogic(Component: ComponentType<Universi
                 onChange={onChange}
                 onToggleDocumentType={onToggleDocumentType}
                 onSubmit={onSubmit}
+            />
+        )
+    }
+
+    return function UniversityProgramFormLoader({
+        mode,
+        courseId,
+    }: {
+        mode: "create" | "edit"
+        courseId?: string
+    }) {
+        const detailQuery = useQuery({
+            queryKey: ["university-program-detail", courseId],
+            queryFn: () => fetchUniversityProgramDetail(courseId as string),
+            enabled: mode === "edit" && Boolean(courseId),
+            staleTime: Infinity,
+        })
+
+        if (detailQuery.isError) {
+            return <ErrorView message={detailQuery.error.message} />
+        }
+
+        if (mode === "edit" && !detailQuery.data) {
+            return <Loading />
+        }
+
+        return (
+            <UniversityProgramFormContainer
+                key={detailQuery.data?.id ?? "new"}
+                mode={mode}
+                courseId={courseId}
+                initialDetail={detailQuery.data}
             />
         )
     }

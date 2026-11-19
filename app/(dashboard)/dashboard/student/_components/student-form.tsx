@@ -60,8 +60,6 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import type { StudentFormPageData } from "@/lib/student/server"
-import type { UserRole } from "@/types"
 import { QualificationUpgradeDialog } from "@/components/shared/qualification-upgrade-dialog"
 import {
     getQualificationSnapshotFromEducation,
@@ -201,11 +199,60 @@ function F({ field, label, children }: { field: any; label: string; children: Re
     )
 }
 
+export type StudentFormPageData = {
+    title?: string | null
+    name?: string | null
+    first_name?: string | null
+    last_name?: string | null
+    email?: string | null
+    phone?: string | null
+    date_of_birth?: string | null
+    gender?: string | null
+    avatar_url?: string | null
+    student?: {
+        country?: string | null
+        state?: string | null
+        city?: string | null
+        nationality?: string | null
+        street_1?: string | null
+        street_2?: string | null
+        street_3?: string | null
+        post_code?: string | null
+        address?: string | null
+        zip_code?: string | null
+        guardian_email?: string | null
+        guardian_phone?: string | null
+        passport_file_url?: string | null
+    } | null
+    education?: Array<{
+        id?: string | null
+        qualification?: string | null
+        institution_name?: string | null
+        grade_type?: string | null
+        gpa?: number | string | null
+        obtained_marks?: number | string | null
+        total_marks?: number | string | null
+        qualification_degree?: {
+            level?: { name?: string | null } | null
+        } | null
+    }> | {
+        id?: string | null
+        qualification?: string | null
+        institution_name?: string | null
+        grade_type?: string | null
+        gpa?: number | string | null
+        obtained_marks?: number | string | null
+        total_marks?: number | string | null
+        qualification_degree?: {
+            level?: { name?: string | null } | null
+        } | null
+    } | null
+}
+
 type Props = {
     mode: "create" | "edit"
     studentId?: string
     defaultData?: StudentFormPageData
-    initialUser?: { id: string; role: UserRole } | null
 }
 
 type Document = {
@@ -852,15 +899,13 @@ function SupportingDocumentsSection({
     );
 }
 
-export function StudentForm({ mode, studentId, defaultData, initialUser }: Props) {
+export function StudentForm({ mode, studentId, defaultData }: Props) {
     const router = useRouter()
     const queryClient = useQueryClient()
 
     const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
     const [applicationDocError, setApplicationDocError] = useState<string | null>(null);
     const [createdStudentId, setCreatedStudentId] = useState<string | null>(null);
-    const [documents, setDocuments] = useState<Document[]>([]);
-    const [isDocumentsLoading, setIsDocumentsLoading] = useState(false);
     const [pendingFiles, setPendingFiles] = useState<Record<string, { front: File | null; back: File | null }>>({});
     const [isUploading, setIsUploading] = useState<Record<string, boolean>>({});
     const [qualificationUpgradeNotice, setQualificationUpgradeNotice] = useState({
@@ -882,7 +927,7 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
     const qualificationUpgradeDetectedRef = useRef(false)
 
     const { me } = useAuth()
-    const user = me.data ?? initialUser ?? undefined
+    const user = me.data ?? undefined
 
     const { data: programsResponse } = useQuery({
         queryKey: ["programs"],
@@ -906,18 +951,23 @@ export function StudentForm({ mode, studentId, defaultData, initialUser }: Props
         enabled: mode === "create" && user?.role === Role.AGENT,
     });
 
-    const refetchDocuments = useCallback(async () => {
-        if (!createdStudentId) return;
-        setIsDocumentsLoading(true);
-        try {
+    const documentsQuery = useQuery({
+        queryKey: ["student-documents", createdStudentId],
+        queryFn: async () => {
             const res = await fetch(`/api/document/student/${createdStudentId}`);
             if (!res.ok) throw new Error("Failed to fetch documents");
             const json = await res.json();
-            setDocuments(Array.isArray(json?.data) ? json.data : []);
-        } finally {
-            setIsDocumentsLoading(false);
-        }
-    }, [createdStudentId]);
+            return (Array.isArray(json?.data) ? json.data : []) as Document[];
+        },
+        enabled: Boolean(createdStudentId),
+    });
+    const documents = documentsQuery.data ?? [];
+    const isDocumentsLoading = documentsQuery.isFetching;
+
+    const refetchDocuments = useCallback(async () => {
+        if (!createdStudentId) return;
+        await queryClient.refetchQueries({ queryKey: ["student-documents", createdStudentId] });
+    }, [createdStudentId, queryClient]);
 
     const clearCourseSelection = useCallback(() => {
         setSelectedCourseIds([])

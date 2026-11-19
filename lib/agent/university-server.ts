@@ -13,7 +13,6 @@ import type {
     UniversityAgentListItem,
     UniversityAgentListResponse,
 } from "@/types/schemas/university-agent"
-import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import { Role } from "@/types/enums/role"
 
 const KYC_DOCUMENT_CODES = ["AGENT_REGISTRATION", "AGENT_ID_FRONT", "AGENT_ID_BACK"] as const
@@ -425,10 +424,6 @@ export async function fetchUniversityAgentDetail(profileId: string): Promise<Uni
     ]
     const courseById = await loadCoursesById(supabase, courseIds)
 
-    const studentCodeByProfileId = new Map(
-        students.map((student) => [student.profile_id, student.student_code])
-    )
-
     let enrolledCount = 0
     const mappedStudents = students.map((student) => {
         const studentApps = applicationRows.filter((app) => app.profile_id === student.profile_id)
@@ -521,58 +516,4 @@ export async function fetchUniversityAgentDetail(profileId: string): Promise<Uni
         documents: kyc?.documents ?? [],
         students: mappedStudents,
     }
-}
-
-export async function fetchUniversityAgentsForPage(params?: {
-    q?: string
-    status?: string
-    page?: number
-    limit?: number
-}) {
-    const supabase = await createSupabaseServerClient()
-    const {
-        data: { user },
-        error,
-    } = await supabase.auth.getUser()
-
-    if (error || !user) return null
-
-    const { data: profile } = await supabase
-        .from("profile")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle()
-
-    if (!isUniversityStaffRole(profile?.role)) {
-        return null
-    }
-
-    return fetchUniversityAgentList({
-        q: params?.q,
-        status: params?.status,
-        page: params?.page,
-        limit: params?.limit,
-    })
-}
-
-export async function fetchUniversityAgentDetailForPage(profileId: string) {
-    const supabase = await createSupabaseServerClient()
-    const {
-        data: { user },
-        error,
-    } = await supabase.auth.getUser()
-
-    if (error || !user) return null
-
-    const { data: profile } = await supabase
-        .from("profile")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle()
-
-    if (!isUniversityStaffRole(profile?.role)) {
-        return null
-    }
-
-    return fetchUniversityAgentDetail(profileId)
 }

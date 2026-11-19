@@ -2,7 +2,9 @@
 
 import type { ComponentType } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { ErrorView } from "@/components/shared/error-view"
 import type { UniversityStudentDetail } from "@/types/schemas/university-student"
+import Loading from "../../loading"
 
 export type UniversityStudentDetailLogicProps = {
     detail: UniversityStudentDetail
@@ -20,19 +22,18 @@ async function fetchUniversityStudentDetail(profileId: string) {
 export function withUniversityStudentDetailLogic(
     Component: ComponentType<UniversityStudentDetailLogicProps>
 ) {
-    return function UniversityStudentDetailContainer({
-        profileId,
-        initialDetail,
-    }: {
-        profileId: string
-        initialDetail: UniversityStudentDetail
-    }) {
-        const detailQuery = useQuery({
+    return function UniversityStudentDetailContainer({ profileId }: { profileId: string }) {
+        const { data, isLoading, error } = useQuery({
             queryKey: ["university-student-detail", profileId],
             queryFn: () => fetchUniversityStudentDetail(profileId),
-            initialData: initialDetail,
+            staleTime: 5 * 60 * 1000,
         })
 
-        return <Component detail={detailQuery.data} />
+        if (isLoading) return <Loading />
+        if (!data) {
+            return <ErrorView message={error instanceof Error ? error.message : "Student not found"} />
+        }
+
+        return <Component detail={data} />
     }
 }

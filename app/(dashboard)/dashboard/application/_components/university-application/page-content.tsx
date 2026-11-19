@@ -1,24 +1,20 @@
 "use client"
 
 import { memo } from "react"
+import Loading from "../../loading"
 import { Typography } from "@/components/shared/Typography"
 import { UniversityApplicationListTable } from "./application-list-table"
 import { withUniversityApplicationPageLogic } from "./withUniversityApplicationPageLogic"
 import { RejectApplicationDialog } from "@/app/(dashboard)/dashboard/application/_components/reject-application-dialog"
 import { DeferIntakeDialog } from "@/app/(dashboard)/dashboard/application/_components/defer-intake-dialog"
 import { MissingOfferTemplateAlert } from "@/app/(dashboard)/dashboard/all-application-view/_component/missing-offer-template-alert"
-import type {
-    UniversityApplicationListResponse,
-} from "@/types/schemas/university-application"
-import type {
-    UniversityApplicationInitialQuery,
-    UniversityApplicationPageLogicProps,
-} from "./withUniversityApplicationPageLogic"
+import type { UniversityApplicationPageLogicProps } from "./withUniversityApplicationPageLogic"
 
 const UniversityApplicationPageView = memo(function UniversityApplicationPageView({
     overview,
     searchValue,
     activeTab,
+    isLoading,
     isFetching,
     reviewingApplicationId,
     rejectDialogOpen,
@@ -44,6 +40,8 @@ const UniversityApplicationPageView = memo(function UniversityApplicationPageVie
     onDeferSubmit,
     onMissingTemplateAlertOpenChange,
 }: UniversityApplicationPageLogicProps) {
+    if (isLoading) return <Loading />
+
     return (
         <div className="space-y-8 animate-in fade-in duration-700">
             <div className="max-w-4xl space-y-2">
@@ -104,23 +102,6 @@ const UniversityApplicationPageView = memo(function UniversityApplicationPageVie
     )
 })
 
-const UniversityApplicationPageContent = withUniversityApplicationPageLogic(
+export const UniversityApplicationListPageContent = withUniversityApplicationPageLogic(
     UniversityApplicationPageView
 )
-
-type PageContentProps = {
-    initialOverview?: UniversityApplicationListResponse
-    initialQuery?: UniversityApplicationInitialQuery
-}
-
-export function UniversityApplicationListPageContent({
-    initialOverview,
-    initialQuery,
-}: PageContentProps) {
-    return (
-        <UniversityApplicationPageContent
-            initialOverview={initialOverview}
-            initialQuery={initialQuery}
-        />
-    )
-}

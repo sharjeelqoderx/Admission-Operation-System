@@ -24,7 +24,6 @@ import {
 
 type AgentStudentProgramDetailPageProps = {
     courseId: string
-    initialCourse: CourseProgram
 }
 
 type DocumentListItem = {
@@ -150,7 +149,6 @@ const FactBadge = memo(function FactBadge({ label }: { label: string }) {
 
 export function AgentStudentProgramDetailPage({
     courseId,
-    initialCourse,
 }: AgentStudentProgramDetailPageProps) {
     const { me } = useAuth()
     const userRole = me.data?.role
@@ -158,7 +156,7 @@ export function AgentStudentProgramDetailPage({
     const { data: course, isLoading, isError, error } = useQuery({
         queryKey: ["program", courseId],
         queryFn: () => fetchCourseDetail(courseId),
-        initialData: initialCourse,
+        staleTime: 5 * 60 * 1000,
         enabled: Boolean(courseId),
     })
 

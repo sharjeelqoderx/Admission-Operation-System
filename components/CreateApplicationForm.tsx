@@ -663,20 +663,27 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
             setDuplicateError(null);
 
             try {
-                const res = await fetch(`/api/application?student_id=${studentId}`);
+                // staleTime 0: always check against the latest applications, but keep the result
+                // under a React Query key so it is cached/invalidated with the other application data.
+                const existingApplications = await queryClient.fetchQuery({
+                    queryKey: ["applications", "by-student", studentId],
+                    queryFn: async () => {
+                        const res = await fetch(`/api/application?student_id=${studentId}`);
+                        if (!res.ok) throw new Error("Failed to fetch applications");
+                        const json = await res.json();
+                        return (json.data ?? []) as ApplicationDuplicateRow[];
+                    },
+                    staleTime: 0,
+                });
 
-                if (res.ok) {
-                    const json = await res.json();
-                    const existing = (json.data as ApplicationDuplicateRow[] | undefined)?.find(
-                        (app) =>
-                            app.course?.id === courseId && app.status !== "REJECTED"
-                    );
+                const existing = existingApplications.find(
+                    (app) => app.course?.id === courseId && app.status !== "REJECTED"
+                );
 
-                    if (existing) {
-                        setDuplicateError("Application is already created for this course");
-                        toast.error("Application is already created for this course");
-                        return false;
-                    }
+                if (existing) {
+                    setDuplicateError("Application is already created for this course");
+                    toast.error("Application is already created for this course");
+                    return false;
                 }
 
                 return true;
@@ -687,7 +694,7 @@ export function CreateApplicationForm({ applicationId }: { applicationId?: strin
                 setIsCheckingDuplicate(false);
             }
         },
-        [isEditMode]
+        [isEditMode, queryClient]
     );
 
 

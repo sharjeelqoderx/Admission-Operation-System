@@ -29,7 +29,6 @@ import {
 import type { DocumentTemplateListItem } from "@/types/schemas/document-template"
 
 type PageContentProps = {
-    initialTemplates?: DocumentTemplateListItem[]
     canCreateTemplate: boolean
     canDeleteTemplate: boolean
 }
@@ -301,13 +300,11 @@ const DocumentTemplatePageContent = memo(
 DocumentTemplatePageContent.displayName = "DocumentTemplatePageContent"
 
 export function PageContent({
-    initialTemplates,
     canCreateTemplate,
     canDeleteTemplate,
 }: PageContentProps) {
     return (
         <DocumentTemplatePageContent
-            initialTemplates={initialTemplates}
             canCreateTemplate={canCreateTemplate}
             canDeleteTemplate={canDeleteTemplate}
         />

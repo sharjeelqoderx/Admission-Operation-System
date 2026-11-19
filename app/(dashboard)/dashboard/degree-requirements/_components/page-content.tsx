@@ -28,7 +28,6 @@ import {
     type DegreeRequirementPageLogicProps,
 } from "../withDegreeRequirementPageLogic"
 import type {
-    DegreeRequirementListItem,
     DocumentRequirementType,
 } from "@/types/schemas/degree-requirement"
 
@@ -339,10 +338,6 @@ const DegreeRequirementPageContent = memo(
 
 DegreeRequirementPageContent.displayName = "DegreeRequirementPageContent"
 
-export function PageContent({
-    initialRequirements,
-}: {
-    initialRequirements?: DegreeRequirementListItem[]
-}) {
-    return <DegreeRequirementPageContent initialRequirements={initialRequirements} />
+export function PageContent() {
+    return <DegreeRequirementPageContent />
 }

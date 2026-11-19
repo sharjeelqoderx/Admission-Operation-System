@@ -10,34 +10,11 @@ import { resolveStudentPipelineStatus } from "@/lib/student/pipeline-status"
 import { resolveQualificationLabel } from "@/lib/education/resolve-qualification"
 import type {
     UniversityStudentDetail,
-    UniversityStudentListItem,
     UniversityStudentListResponse,
 } from "@/types/schemas/university-student"
-import { isUniversityStaffRole, resolveUniversityScopeId } from "@/lib/auth/university-role"
 import { rpcUniversityStudentsList, toUniversityIdsParam } from "@/lib/rpc/dashboard"
 import { Role } from "@/types/enums/role"
 import type { StudentPipelineStatus } from "@/types/schemas/university-student"
-
-type StudentRow = {
-    profile_id: string
-    student_code: string | null
-    country: string | null
-    state: string | null
-    city: string | null
-    nationality: string | null
-    guardian_phone: string | null
-    created_by_agent_id: string | null
-    profile: {
-        id: string
-        first_name: string | null
-        last_name: string | null
-        email: string | null
-        phone: string | null
-        date_of_birth: string | null
-        avatar_url: string | null
-        role: string | null
-    } | null
-}
 
 type ApplicationRow = {
     id: string
@@ -203,43 +180,6 @@ async function loadAgentOrganizations(
         ])
     )
 }
-
-function mapListItem(params: {
-    student: StudentRow
-    application: ApplicationRow | null
-    offer: OfferRow | undefined
-    course: CourseRow | undefined
-    agentName: string | null
-}): UniversityStudentListItem {
-    const name = formatFullName(
-        params.student.profile?.first_name,
-        params.student.profile?.last_name
-    )
-
-    const pipelineStatus = resolveStudentPipelineStatus({
-        applicationStatus: params.application?.status,
-        offerStatus: params.offer?.status,
-        hasOffer: Boolean(params.offer),
-    })
-
-    const appliedThrough =
-        params.application?.submitted_by_profile_id &&
-        params.application.submitted_by_profile_id !== params.student.profile_id
-            ? "University Partner"
-            : "Direct"
-
-    return {
-        profile_id: params.student.profile_id,
-        name,
-        student_code: params.student.student_code,
-        program_name: getProgramName(params.course),
-        intake_label: buildIntakeLabel(params.course),
-        applied_through: appliedThrough,
-        pipeline_status: pipelineStatus,
-        submission_date: formatSubmissionDate(params.application?.created_at),
-    }
-}
-
 export async function fetchUniversityStudentList(params: {
     universityId?: string | null
     q?: string
@@ -488,66 +428,4 @@ export async function fetchUniversityStudentDetail(params: {
               }
             : null,
     }
-}
-
-export async function fetchUniversityStudentsForPage(params?: {
-    q?: string
-    status?: string
-    page?: number
-    limit?: number
-}) {
-    const supabase = await createSupabaseServerClient()
-    const {
-        data: { user },
-        error,
-    } = await supabase.auth.getUser()
-
-    if (error || !user) {
-        return null
-    }
-
-    const { data: profile } = await supabase
-        .from("profile")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle()
-
-    if (!isUniversityStaffRole(profile?.role)) {
-        return null
-    }
-
-    return fetchUniversityStudentList({
-        universityId: resolveUniversityScopeId(profile?.role, user.id),
-        q: params?.q,
-        status: params?.status,
-        page: params?.page,
-        limit: params?.limit,
-    })
-}
-
-export async function fetchUniversityStudentDetailForPage(profileId: string) {
-    const supabase = await createSupabaseServerClient()
-    const {
-        data: { user },
-        error,
-    } = await supabase.auth.getUser()
-
-    if (error || !user) {
-        return null
-    }
-
-    const { data: profile } = await supabase
-        .from("profile")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle()
-
-    if (!isUniversityStaffRole(profile?.role)) {
-        return null
-    }
-
-    return fetchUniversityStudentDetail({
-        universityId: resolveUniversityScopeId(profile?.role, user.id),
-        profileId,
-    })
 }

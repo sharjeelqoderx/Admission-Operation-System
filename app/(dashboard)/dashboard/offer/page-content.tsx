@@ -11,7 +11,6 @@ import { OfferTable } from "./_component/OfferTable"
 import { OfferStatusFilter } from "./_component/offer-status-filter"
 import { OfferProgramFilter } from "./_component/offer-program-filter"
 import { withOfferPageLogic, type OfferPageLogicProps } from "./withOfferPageLogic"
-import type { OfferDashboardPageData } from "@/types/schemas/offer"
 import type { CourseProgram } from "@/types/schemas/program"
 
 const OfferPageView = memo(function OfferPageView({
@@ -98,14 +97,10 @@ const OfferPageView = memo(function OfferPageView({
 
 const OfferPageContent = withOfferPageLogic(OfferPageView)
 
-type PageContentProps = {
-    initialData?: OfferDashboardPageData
-}
-
-export function PageContent({ initialData }: PageContentProps) {
+export function PageContent() {
     return (
         <Suspense fallback={<Loading />}>
-            <OfferPageContent initialData={initialData} />
+            <OfferPageContent />
         </Suspense>
     )
 }

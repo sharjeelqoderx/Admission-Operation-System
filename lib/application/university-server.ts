@@ -5,11 +5,9 @@ import { COURSE_SELECT, attachLevelsToCourses, type CourseRow } from "@/lib/api/
 import { formatFullName } from "@/lib/utils/profile"
 import { resolveIntakeLabel } from "@/lib/utils/program"
 import { formatLocation } from "@/lib/utils/location"
-import { resolveStudentPipelineStatus } from "@/lib/student/pipeline-status"
 import { resolveQualificationLabel } from "@/lib/education/resolve-qualification"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
 import {
-    applyUniversityIdFilter,
     resolveUniversityApplicationScope,
     type UniversityApplicationScope,
 } from "@/lib/auth/university-scope"
@@ -20,12 +18,10 @@ import { rpcUniversityApplicationsList, toUniversityIdsParam } from "@/lib/rpc/d
 import type { StudentPipelineStatus } from "@/types/schemas/university-student"
 import type {
     UniversityApplicationDetail,
-    UniversityApplicationDetailPageData,
     UniversityApplicationListItem,
     UniversityApplicationListResponse,
     UniversityApplicationTab,
 } from "@/types/schemas/university-application"
-import type { ApplicationReviewHistoryEntry } from "@/types/schemas/application"
 
 export const EMPTY_UNIVERSITY_APPLICATION_LIST: UniversityApplicationListResponse = {
     tab_counts: {
@@ -94,15 +90,6 @@ type StudentProfileRow = {
     city: string | null
 }
 
-type ProfileRow = {
-    id: string
-    first_name: string | null
-    last_name: string | null
-    email: string | null
-    avatar_url: string | null
-    date_of_birth: string | null
-}
-
 type DocumentRow = {
     id: string
     document_type: { name: string | null } | { name: string | null }[] | null
@@ -110,7 +97,6 @@ type DocumentRow = {
     document_files: { id: string }[] | null
 }
 
-const RECENTLY_COMPLETED_DAYS = 90
 
 function formatSubmissionDate(value?: string | null) {
     if (!value) return null
@@ -162,45 +148,6 @@ function formatGpaLabel(education?: EducationRow | null) {
 
     return null
 }
-
-function isRecentlyCompleted(pipelineStatus: string, updatedAt: string, offer?: OfferRow) {
-    if (pipelineStatus !== "Completed" && pipelineStatus !== "Signed") {
-        return false
-    }
-
-    const referenceDate = offer?.accepted_at ?? offer?.created_at ?? updatedAt
-    const date = new Date(referenceDate)
-    if (Number.isNaN(date.getTime())) return false
-
-    const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - RECENTLY_COMPLETED_DAYS)
-    return date >= cutoff
-}
-
-function matchesTab(
-    tab: UniversityApplicationTab,
-    pipelineStatus: string,
-    applicationStatus: string,
-    updatedAt: string,
-    offer?: OfferRow,
-    isDeferred = false
-) {
-    switch (tab) {
-        case "defer-intake":
-            return isDeferred
-        case "pending-review":
-            return applicationStatus === "PENDING" && pipelineStatus === "Created"
-        case "awaiting-signature":
-            return pipelineStatus === "Contract Sent"
-        case "recently-completed":
-            return isRecentlyCompleted(pipelineStatus, updatedAt, offer)
-        case "rejected":
-            return applicationStatus === "REJECTED"
-        default:
-            return true
-    }
-}
-
 function resolveDocumentStatus(reviewStatus?: string | null): UniversityApplicationDetail["documents"][number]["status"] {
     if (!reviewStatus) return "missing"
 
@@ -277,118 +224,6 @@ async function loadAgentOrganizations(
         ])
     )
 }
-
-function mapListItem(params: {
-    application: ApplicationRow
-    studentName: string
-    studentCode: string | null
-    avatarUrl: string | null
-    course: CourseRow | undefined
-    agentLabel: string
-    offer: OfferRow | undefined
-    rejectionHistory: ApplicationReviewHistoryEntry[]
-    viewerRole: string | null | undefined
-}): UniversityApplicationListItem {
-    const hasOffer = Boolean(params.offer)
-
-    return {
-        id: params.application.id,
-        student_name: params.studentName,
-        student_code: params.studentCode,
-        avatar_url: params.avatarUrl,
-        course_name: getProgramName(params.course),
-        intake_label: buildIntakeLabel(params.course, params.application.custom_intake_date),
-        agent_name: params.agentLabel,
-        pipeline_status: resolveStudentPipelineStatus({
-            applicationStatus: params.application.status,
-            offerStatus: params.offer?.status,
-            hasOffer,
-        }),
-        submission_date: formatSubmissionDate(params.application.created_at),
-        rejection_history: params.rejectionHistory,
-        is_deferred: params.application.is_deferred,
-        custom_intake_date: params.application.custom_intake_date,
-        can_approve_for_signature: canApproveApplicationForSignature({
-            role: params.viewerRole,
-            applicationStatus: params.application.status,
-            hasOffer,
-        }),
-        can_reject: canRejectApplication({
-            role: params.viewerRole,
-            applicationStatus: params.application.status,
-            hasOffer,
-        }),
-    }
-}
-
-async function loadOffersByApplicationIds(
-    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-    applicationIds: string[]
-) {
-    if (applicationIds.length === 0) {
-        return [] as OfferRow[]
-    }
-
-    const { data, error } = await fetchInChunks<OfferRow>(applicationIds, async (chunkIds) =>
-        supabase
-            .from("offer_letter")
-            .select("application_id, status, created_at, accepted_at")
-            .in("application_id", chunkIds)
-    )
-
-    if (error) {
-        console.error("[fetchUniversityApplicationList] offers", error.message)
-        return []
-    }
-
-    return data ?? []
-}
-
-async function loadProfilesByIds(
-    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-    profileIds: string[]
-) {
-    if (profileIds.length === 0) {
-        return [] as ProfileRow[]
-    }
-
-    const { data, error } = await fetchInChunks<ProfileRow>(profileIds, async (chunkIds) =>
-        supabase
-            .from("profile")
-            .select("id, first_name, last_name, email, avatar_url, date_of_birth")
-            .in("id", chunkIds)
-    )
-
-    if (error) {
-        console.error("[fetchUniversityApplicationList] profiles", error.message)
-        return []
-    }
-
-    return data ?? []
-}
-
-async function loadStudentsByProfileIds(
-    supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-    profileIds: string[]
-) {
-    if (profileIds.length === 0) {
-        return [] as { profile_id: string; student_code: string | null }[]
-    }
-
-    const { data, error } = await fetchInChunks<{ profile_id: string; student_code: string | null }>(
-        profileIds,
-        async (chunkIds) =>
-            supabase.from("student").select("profile_id, student_code").in("profile_id", chunkIds)
-    )
-
-    if (error) {
-        console.error("[fetchUniversityApplicationList] students", error.message)
-        return []
-    }
-
-    return data ?? []
-}
-
 export async function fetchUniversityApplicationList(params: {
     universityScope?: UniversityApplicationScope
     q?: string
@@ -722,104 +557,5 @@ export async function fetchUniversityApplicationDetail(params: {
         has_offer: Boolean(offerRow),
         review_history: reviewMeta.review_history,
         rejection_history: reviewMeta.rejection_history,
-    }
-}
-
-export async function fetchUniversityApplicationsForPage(params?: {
-    q?: string
-    tab?: UniversityApplicationTab
-    page?: number
-    limit?: number
-}) {
-    const supabase = await createSupabaseServerClient()
-    const {
-        data: { user },
-        error,
-    } = await supabase.auth.getUser()
-
-    if (error || !user) {
-        return null
-    }
-
-    const { data: profile } = await supabase
-        .from("profile")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle()
-
-    const scope = await resolveUniversityScope(user.id, profile?.role ?? "")
-    if (!scope) {
-        return null
-    }
-
-    try {
-        return await fetchUniversityApplicationList({
-            universityScope: scope,
-            q: params?.q,
-            tab: params?.tab,
-            page: params?.page,
-            limit: params?.limit,
-            viewerRole: profile?.role ?? null,
-        })
-    } catch (error) {
-        console.error("[fetchUniversityApplicationsForPage]", error)
-        return {
-            ...EMPTY_UNIVERSITY_APPLICATION_LIST,
-            pagination: {
-                ...EMPTY_UNIVERSITY_APPLICATION_LIST.pagination,
-                page: params?.page ?? 1,
-                limit: params?.limit ?? 10,
-            },
-        }
-    }
-}
-
-export async function fetchUniversityApplicationDetailForPage(
-    applicationId: string
-): Promise<UniversityApplicationDetailPageData> {
-    const supabase = await createSupabaseServerClient()
-    const {
-        data: { user },
-        error,
-    } = await supabase.auth.getUser()
-
-    if (error || !user) {
-        return {
-            detail: null,
-            error: "Unauthorized",
-        }
-    }
-
-    const { data: profile } = await supabase
-        .from("profile")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle()
-
-    const scope = await resolveUniversityScope(user.id, profile?.role ?? "")
-    if (!scope) {
-        return {
-            detail: null,
-            error: "Profile not found",
-        }
-    }
-
-    const detail = await fetchUniversityApplicationDetail({
-        applicationId,
-        universityScope: scope,
-        viewerRole: profile?.role ?? null,
-        viewerId: user.id,
-    })
-
-    if (!detail) {
-        return {
-            detail: null,
-            error: "Application not found",
-        }
-    }
-
-    return {
-        detail,
-        error: null,
     }
 }

@@ -91,19 +91,6 @@ export type OfferListItem = z.infer<typeof offerListItemSchema>
 export type OfferListPagination = z.infer<typeof offerListPaginationSchema>
 export type OfferListResponse = z.infer<typeof offerListResponseSchema>
 
-export const offerDashboardPageDataSchema = z.object({
-    offers: offerListResponseSchema,
-    query: z.object({
-        q: z.string(),
-        page: z.string(),
-        limit: z.string(),
-        status: z.string(),
-        course_id: z.string(),
-    }),
-})
-
-export type OfferDashboardPageData = z.infer<typeof offerDashboardPageDataSchema>
-
 export const OfferChecklistPreviewQuerySchema = z.object({
     application_id: PostgresUuidSchema,
 })

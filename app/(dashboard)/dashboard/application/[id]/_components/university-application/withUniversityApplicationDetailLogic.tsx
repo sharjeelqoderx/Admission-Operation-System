@@ -4,10 +4,7 @@ import type { ComponentType } from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCreateOfferAction } from "@/app/(dashboard)/dashboard/all-application-view/_component/useCreateOfferAction"
-import type {
-    UniversityApplicationDetail,
-    UniversityApplicationDetailPageData,
-} from "@/types/schemas/university-application"
+import type { UniversityApplicationDetail } from "@/types/schemas/university-application"
 
 export type UniversityApplicationDetailLogicProps = {
     applicationId: string
@@ -62,10 +59,8 @@ export function withUniversityApplicationDetailLogic(
 ) {
     return function UniversityApplicationDetailContainer({
         applicationId,
-        initialData,
     }: {
         applicationId: string
-        initialData: UniversityApplicationDetailPageData
     }) {
         const queryClient = useQueryClient()
         const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
@@ -74,7 +69,6 @@ export function withUniversityApplicationDetailLogic(
         const detailQuery = useQuery({
             queryKey: ["university-application-detail", applicationId],
             queryFn: () => fetchUniversityApplicationDetail(applicationId),
-            initialData: initialData.detail ?? undefined,
             retry: false,
         })
 
@@ -108,16 +102,13 @@ export function withUniversityApplicationDetailLogic(
             },
         })
 
-        const detail = detailQuery.data ?? initialData.detail ?? undefined
-
-        const isLoading = detailQuery.isLoading && !detail
-        const isError =
-            !detail && !isLoading && (Boolean(initialData.error) || detailQuery.isError)
+        const detail = detailQuery.data
+        const isLoading = detailQuery.isLoading
+        const isError = detailQuery.isError
         const errorMessage =
-            initialData.error ??
-            (detailQuery.error instanceof Error
+            detailQuery.error instanceof Error
                 ? detailQuery.error.message
-                : "Application not found")
+                : "Application not found"
 
         const handleRejectRequest = useCallback(() => {
             setRejectDialogOpen(true)

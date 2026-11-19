@@ -22,12 +22,6 @@ import {
     withAllApplicationViewLogic,
     type AllApplicationViewLogicProps,
 } from "./withAllApplicationViewLogic"
-import type { ApplicationDashboardPageData } from "@/types/schemas/application"
-
-type PageContentProps = {
-    initialData?: ApplicationDashboardPageData
-}
-
 const AllApplicationView = memo(function AllApplicationView({
     role,
     applications,
@@ -248,10 +242,10 @@ const AllApplicationView = memo(function AllApplicationView({
 
 const AllApplicationViewContent = withAllApplicationViewLogic(AllApplicationView)
 
-export function PageContent({ initialData }: PageContentProps) {
+export function PageContent() {
     return (
         <Suspense fallback={<Loading />}>
-            <AllApplicationViewContent initialData={initialData} />
+            <AllApplicationViewContent />
         </Suspense>
     )
 }

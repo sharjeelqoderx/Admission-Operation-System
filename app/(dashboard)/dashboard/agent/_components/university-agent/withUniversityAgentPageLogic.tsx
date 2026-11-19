@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react"
 import { useCallback, useMemo, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import type { UniversityAgentListResponse } from "@/types/schemas/university-agent"
 
@@ -46,14 +46,16 @@ async function fetchUniversityAgents(params: {
     return json.data as UniversityAgentListResponse
 }
 
+const EMPTY_OVERVIEW: UniversityAgentListResponse = {
+    stats: { total_agents: 0, verified: 0 },
+    data: [],
+    pagination: { total: 0, page: 1, limit: 10, totalPages: 0 },
+}
+
 export function withUniversityAgentPageLogic(
     Component: ComponentType<UniversityAgentPageLogicProps>
 ) {
-    return function UniversityAgentPageContainer({
-        initialOverview,
-    }: {
-        initialOverview: UniversityAgentListResponse
-    }) {
+    return function UniversityAgentPageContainer() {
         const router = useRouter()
         const pathname = usePathname()
         const searchParams = useSearchParams()
@@ -66,16 +68,16 @@ export function withUniversityAgentPageLogic(
         const agentsQuery = useQuery({
             queryKey: ["university-agents", status, country, sortBy, page],
             queryFn: () => fetchUniversityAgents({ status, country, sortBy, page }),
-            initialData: initialOverview,
+            placeholderData: keepPreviousData,
         })
 
         const allCountries = useMemo(() => {
             const countries = new Set<string>()
-            initialOverview.data.forEach(agent => {
+            agentsQuery.data?.data.forEach((agent) => {
                 if (agent.country) countries.add(agent.country)
             })
             return Array.from(countries).sort()
-        }, [initialOverview.data])
+        }, [agentsQuery.data])
 
         const updateParams = useCallback(
             (updates: Record<string, string | null>) => {
@@ -89,15 +91,7 @@ export function withUniversityAgentPageLogic(
             [pathname, router, searchParams]
         )
 
-        const overview = useMemo(
-            () =>
-                agentsQuery.data ?? {
-                    stats: initialOverview.stats,
-                    data: [],
-                    pagination: initialOverview.pagination,
-                },
-            [agentsQuery.data, initialOverview.pagination, initialOverview.stats]
-        )
+        const overview = agentsQuery.data ?? EMPTY_OVERVIEW
 
         return (
             <Component

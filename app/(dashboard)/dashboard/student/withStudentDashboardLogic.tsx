@@ -4,12 +4,10 @@ import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import type { StudentDashboardPageData } from "@/lib/student/server"
 import type { StudentListItem, StudentsListResult } from "@/lib/student/list"
 import type { StudentDashboardStats } from "@/lib/student/list"
 
 export type StudentDashboardViewProps = {
-    initialData?: StudentDashboardPageData
     stats: StudentDashboardStats
     statsLoading: boolean
     students: StudentListItem[]
@@ -31,10 +29,7 @@ export type StudentDashboardViewProps = {
 export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
     Component: React.ComponentType<T>
 ) {
-    return function WrappedComponent({
-        initialData,
-        ...props
-    }: Partial<Pick<T, "initialData">> & Omit<T, keyof StudentDashboardViewProps | "initialData">) {
+    return function WrappedComponent(props: Omit<T, keyof StudentDashboardViewProps>) {
         const queryClient = useQueryClient()
         const [deletingId, setDeletingId] = useState<string | null>(null)
 
@@ -61,13 +56,6 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
         }, [searchParams])
 
         const pageStr = String(page)
-
-        const matchesInitialQuery = Boolean(
-            initialData &&
-                q === initialData.query.q &&
-                status === initialData.query.status &&
-                pageStr === initialData.query.page
-        )
 
         const updateParams = useCallback(
             (updates: Record<string, string>) => {
@@ -122,7 +110,6 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
                 const json = await res.json()
                 return json.data as StudentDashboardStats
             },
-            initialData: initialData?.stats,
             staleTime: 5 * 60 * 1000,
         })
 
@@ -142,7 +129,6 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
                 }
                 return res.json() as Promise<StudentsListResult>
             },
-            initialData: matchesInitialQuery ? initialData?.students : undefined,
             placeholderData: keepPreviousData,
             staleTime: 5 * 60 * 1000,
             retry: false,
@@ -184,7 +170,6 @@ export function withStudentDashboardLogic<T extends StudentDashboardViewProps>(
         const pagination = queryPagination ? { ...queryPagination, page } : undefined
 
         const logicProps: StudentDashboardViewProps = {
-            initialData,
             stats: statsQuery.data ?? {
                 total_students: 0,
                 active_applications: 0,

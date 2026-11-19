@@ -4,9 +4,11 @@ import type { ComponentType } from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { applyUrlSearchParamUpdates, readUrlSearchParam } from "@/lib/navigation/replace-url-search-params"
-import type { ApplicationDashboardPageData, ApplicationListResponse } from "@/types/schemas/application"
-import type { ApplicationListStats } from "@/types/schemas/application"
-import type { ApplicationProfileRole } from "@/types/schemas/application"
+import type {
+    ApplicationListResponse,
+    ApplicationListStats,
+    ApplicationProfileRole,
+} from "@/types/schemas/application"
 import { Role } from "@/types/enums/role"
 
 export type ApplicationPageLogicProps = {
@@ -63,18 +65,12 @@ function readApplicationFiltersFromUrl(): ApplicationFilters {
 }
 
 export function withApplicationPageLogic(Component: ComponentType<ApplicationPageLogicProps>) {
-    return function ApplicationPageContainer({
-        initialData,
-    }: {
-        initialData?: ApplicationDashboardPageData
-    }) {
+    return function ApplicationPageContainer() {
         const timeoutRef = useRef<NodeJS.Timeout | null>(null)
         const urlFilters = readApplicationFiltersFromUrl()
 
-        const [filters, setFilters] = useState<ApplicationFilters>(
-            initialData?.query ?? urlFilters
-        )
-        const [searchInput, setSearchInput] = useState(initialData?.query.q ?? urlFilters.q)
+        const [filters, setFilters] = useState<ApplicationFilters>(urlFilters)
+        const [searchInput, setSearchInput] = useState(urlFilters.q)
 
         const updateParams = useCallback((updates: Record<string, string>) => {
             setFilters((current) => {
@@ -100,15 +96,6 @@ export function withApplicationPageLogic(Component: ComponentType<ApplicationPag
             window.addEventListener("popstate", syncFiltersFromUrl)
             return () => window.removeEventListener("popstate", syncFiltersFromUrl)
         }, [])
-
-        const matchesInitialQuery = Boolean(
-            initialData &&
-                filters.q === initialData.query.q &&
-                filters.status === initialData.query.status &&
-                filters.degree_id === initialData.query.degree_id &&
-                filters.date_from === initialData.query.date_from &&
-                filters.date_to === initialData.query.date_to
-        )
 
         const handleSearch = useCallback(
             (term: string) => {
@@ -143,7 +130,6 @@ export function withApplicationPageLogic(Component: ComponentType<ApplicationPag
                 filters.date_to,
             ],
             queryFn: () => fetchApplicationsFromApi(filters),
-            initialData: matchesInitialQuery ? initialData?.applications : undefined,
             placeholderData: (previous) => previous,
             retry: false,
             staleTime: Infinity,

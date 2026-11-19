@@ -1,11 +1,8 @@
 import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
-import { fetchUniversityApplicationDetailForPage } from "@/lib/application/university-server"
-import { fetchApplicationDetailForPage } from "@/lib/application/server"
 import { PageContent } from "./_components/page-content"
 import { UniversityApplicationDetailPageContent } from "./_components/university-application/page-content"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
-import { Role } from "@/types/enums/role"
 
 type ApplicationDetailPageProps = {
     params: Promise<{ id: string }>
@@ -20,17 +17,8 @@ export default async function ApplicationDetailPage({ params }: ApplicationDetai
     }
 
     if (isUniversityStaffRole(role)) {
-        const initialData = await fetchUniversityApplicationDetailForPage(id)
-
-        return (
-            <UniversityApplicationDetailPageContent
-                applicationId={id}
-                initialData={initialData}
-            />
-        )
+        return <UniversityApplicationDetailPageContent applicationId={id} />
     }
 
-    const initialData = await fetchApplicationDetailForPage(id)
-
-    return <PageContent applicationId={id} initialData={initialData} />
+    return <PageContent applicationId={id} />
 }

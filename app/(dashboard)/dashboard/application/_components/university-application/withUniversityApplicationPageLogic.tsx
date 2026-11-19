@@ -14,7 +14,7 @@ import type {
     UniversityApplicationTab,
 } from "@/types/schemas/university-application"
 
-export type UniversityApplicationInitialQuery = {
+type UniversityApplicationFilters = {
     q: string
     tab: UniversityApplicationTab
     page: string
@@ -24,6 +24,7 @@ export type UniversityApplicationPageLogicProps = {
     overview: UniversityApplicationListResponse
     searchValue: string
     activeTab: UniversityApplicationTab
+    isLoading: boolean
     isFetching: boolean
     reviewingApplicationId: string | null
     rejectDialogOpen: boolean
@@ -109,19 +110,13 @@ function readUniversityFiltersFromUrl() {
 export function withUniversityApplicationPageLogic(
     Component: ComponentType<UniversityApplicationPageLogicProps>
 ) {
-    return function UniversityApplicationPageContainer({
-        initialOverview,
-        initialQuery,
-    }: {
-        initialOverview?: UniversityApplicationListResponse
-        initialQuery?: UniversityApplicationInitialQuery
-    }) {
+    return function UniversityApplicationPageContainer() {
         const queryClient = useQueryClient()
         const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
         const urlQuery = readUniversityFiltersFromUrl()
 
-        const [filters, setFilters] = useState(initialQuery ?? urlQuery)
-        const [searchInput, setSearchInput] = useState((initialQuery ?? urlQuery).q)
+        const [filters, setFilters] = useState(urlQuery)
+        const [searchInput, setSearchInput] = useState(urlQuery.q)
         const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
         const [rejectTarget, setRejectTarget] = useState<UniversityApplicationListItem | null>(
             null
@@ -141,7 +136,7 @@ export function withUniversityApplicationPageLogic(
             invalidateQueryKeys: [["university-applications"]],
         })
 
-        const updateFilters = useCallback((updates: Partial<UniversityApplicationInitialQuery>) => {
+        const updateFilters = useCallback((updates: Partial<UniversityApplicationFilters>) => {
             setFilters((current) => {
                 const next = { ...current, ...updates }
                 applyUrlSearchParamUpdates({
@@ -176,14 +171,6 @@ export function withUniversityApplicationPageLogic(
             [filters.q, queryClient]
         )
 
-        const matchesInitialQuery = Boolean(
-            initialOverview &&
-                initialQuery &&
-                filters.q === initialQuery.q &&
-                filters.page === initialQuery.page &&
-                filters.tab === initialQuery.tab
-        )
-
         const applicationsQuery = useQuery({
             queryKey: ["university-applications", filters.q, filters.tab, filters.page],
             queryFn: () =>
@@ -192,7 +179,6 @@ export function withUniversityApplicationPageLogic(
                     tab: filters.tab,
                     page: filters.page,
                 }),
-            initialData: matchesInitialQuery ? initialOverview : undefined,
             placeholderData: keepPreviousData,
             staleTime: 60_000,
             gcTime: 300_000,
@@ -235,7 +221,7 @@ export function withUniversityApplicationPageLogic(
 
         const overview = useMemo(() => {
             const data = applicationsQuery.data ?? {
-                tab_counts: initialOverview?.tab_counts ?? {
+                tab_counts: {
                     all: 0,
                     pending_review: 0,
                     awaiting_signature: 0,
@@ -244,7 +230,7 @@ export function withUniversityApplicationPageLogic(
                     defer_intake: 0,
                 },
                 data: [],
-                pagination: initialOverview?.pagination ?? {
+                pagination: {
                     total: 0,
                     page: 1,
                     limit: 10,
@@ -262,12 +248,7 @@ export function withUniversityApplicationPageLogic(
                     totalPages: data.pagination?.totalPages ?? 0,
                 },
             }
-        }, [
-            applicationsQuery.data,
-            filters.page,
-            initialOverview?.pagination,
-            initialOverview?.tab_counts,
-        ])
+        }, [applicationsQuery.data, filters.page])
 
         useEffect(() => {
             const applications = applicationsQuery.data?.data ?? []
@@ -384,6 +365,7 @@ export function withUniversityApplicationPageLogic(
                 overview={overview}
                 searchValue={searchInput}
                 activeTab={filters.tab}
+                isLoading={applicationsQuery.isLoading}
                 isFetching={applicationsQuery.isFetching}
                 reviewingApplicationId={reviewingApplicationId}
                 rejectDialogOpen={rejectDialogOpen}

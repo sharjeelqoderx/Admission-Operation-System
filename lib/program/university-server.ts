@@ -1,8 +1,6 @@
 import "server-only"
 
 import { createSupabaseServerClient, tryCreateSupabaseServiceClient } from "@/lib/supabase/server"
-import { COURSE_SELECT, attachLevelsToCourses, type CourseRow } from "@/lib/api/course-program"
-import { formatIntakeDate, formatProgramDate } from "@/lib/utils/program"
 import type {
     UniversityProgramDetail,
     UniversityProgramListItem,
@@ -13,67 +11,10 @@ import { isUniversityRole, isUniversityStaffRole } from "@/lib/auth/university-r
 import { rpcUniversityProgramsList } from "@/lib/rpc/dashboard"
 import { Role } from "@/types/enums/role"
 
-function formatDeadlineLabel(value?: string | null) {
-    if (!value) return "Rolling"
-
-    const deadline = new Date(value)
-    if (Number.isNaN(deadline.getTime())) return value
-
-    const days = Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-    if (days > 0) return `${days} Days`
-
-    return formatProgramDate(value)
-}
-
-function buildIntakeLabel(degree?: {
-    intake_starts_on?: string | null
-    intake_date?: string | null
-}) {
-    if (degree?.intake_starts_on) {
-        const date = new Date(degree.intake_starts_on)
-        if (!Number.isNaN(date.getTime())) {
-            return `${date.toLocaleDateString("en-US", { month: "long" })} Intake ${date.getFullYear()}`
-        }
-    }
-
-    const formatted = formatIntakeDate(degree?.intake_date ?? null)
-    return formatted === "N/A" ? null : `${formatted} Intake`
-}
-
 function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
     if (value == null) return null
     return Array.isArray(value) ? value[0] ?? null : value
 }
-
-function mapListItem(
-    course: CourseRow & {
-        degree: (CourseRow["degree"] & {
-            level?: { id: string; name: string } | null
-            agent_commission?: number | null
-            intake_starts_on?: string | null
-        }) | null
-        category?: string | null
-    }
-): UniversityProgramListItem {
-    const degree = course.degree
-
-    return {
-        id: course.id,
-        name: course.name,
-        category: course.category ?? (typeof degree?.name === "string" ? degree.name : null),
-        level_name: degree?.level?.name ?? null,
-        intake_label: buildIntakeLabel(degree ?? undefined),
-        deadline_label: formatDeadlineLabel(course.deadline_date),
-        location: typeof degree?.location === "string" ? degree.location : null,
-        duration: typeof degree?.duration === "string" ? degree.duration : null,
-        tuition_fees: typeof degree?.fees === "string" ? degree.fees : null,
-        agent_commission:
-            typeof degree?.agent_commission === "number" ? degree.agent_commission : null,
-        created_at: course.created_at,
-        updated_at: course.updated_at,
-    }
-}
-
 export async function fetchUniversityProgramList(params: {
     q?: string
     level_id?: string
@@ -478,55 +419,6 @@ async function resolveOwnerProfileId(userId: string, role: string, payload: Univ
     }
 
     return universityProfile.id
-}
-
-export async function fetchUniversityProgramsForPage(params?: {
-    q?: string
-    level_id?: string
-    page?: number
-    limit?: number
-}) {
-    const supabase = await createSupabaseServerClient()
-    const {
-        data: { user },
-        error,
-    } = await supabase.auth.getUser()
-
-    if (error || !user) return null
-
-    const { data: profile } = await supabase
-        .from("profile")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle()
-
-    if (!isUniversityStaffRole(profile?.role)) {
-        return null
-    }
-
-    return fetchUniversityProgramList(params ?? {})
-}
-
-export async function fetchUniversityProgramDetailForPage(courseId: string) {
-    const supabase = await createSupabaseServerClient()
-    const {
-        data: { user },
-        error,
-    } = await supabase.auth.getUser()
-
-    if (error || !user) return null
-
-    const { data: profile } = await supabase
-        .from("profile")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle()
-
-    if (!isUniversityStaffRole(profile?.role)) {
-        return null
-    }
-
-    return fetchUniversityProgramDetail(courseId)
 }
 
 export async function saveUniversityProgramForPage(params: {

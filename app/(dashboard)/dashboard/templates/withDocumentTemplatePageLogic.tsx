@@ -69,11 +69,9 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplateListLogi
     Component: React.ComponentType<P>
 ) {
     return function DocumentTemplatePageContainer({
-        initialTemplates,
         canCreateTemplate,
         canDeleteTemplate,
     }: {
-        initialTemplates?: DocumentTemplateListItem[]
         canCreateTemplate: boolean
         canDeleteTemplate: boolean
     }) {
@@ -85,7 +83,6 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplateListLogi
         const templatesQuery = useQuery({
             queryKey: DOCUMENT_TEMPLATES_QUERY_KEY,
             queryFn: fetchDocumentTemplates,
-            initialData: initialTemplates !== undefined ? { data: initialTemplates } : undefined,
             staleTime: Infinity,
             refetchOnWindowFocus: false,
             refetchOnMount: false,

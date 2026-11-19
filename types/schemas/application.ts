@@ -215,26 +215,6 @@ export type ApplicationListResponse = {
   pagination?: ApplicationListPagination;
 };
 
-export type ApplicationDashboardPageQuery = {
-  q: string;
-  status: string;
-  degree_id: string;
-  date_from: string;
-  date_to: string;
-  page: string;
-  limit: string;
-};
-
-export type ApplicationDashboardPageData = {
-  applications: ApplicationListResponse;
-  query: ApplicationDashboardPageQuery;
-};
-
-export type ApplicationDetailPageData = {
-  detail: ApplicationDetail | null;
-  error: string | null;
-};
-
 export const ApplicationReviewActionSchema = z
   .object({
     status: z.enum(["APPROVED", "REJECTED", "NEEDS_REVISION"]),

@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import type {
-    ApplicationDashboardPageData,
     ApplicationListItem,
     ApplicationListPagination,
     ApplicationListResponse,
@@ -59,11 +58,7 @@ async function fetchAllApplicationsFromApi(params: {
 }
 
 export function withAllApplicationViewLogic(Component: ComponentType<AllApplicationViewLogicProps>) {
-    return function AllApplicationViewContainer({
-        initialData,
-    }: {
-        initialData?: ApplicationDashboardPageData
-    }) {
+    return function AllApplicationViewContainer() {
         const searchParams = useSearchParams()
         const router = useRouter()
         const pathname = usePathname()
@@ -89,17 +84,6 @@ export function withAllApplicationViewLogic(Component: ComponentType<AllApplicat
             }
             setPage(syncedPage)
         }, [searchParams])
-
-        const matchesInitialQuery = Boolean(
-            initialData &&
-                q === initialData.query.q &&
-                status === initialData.query.status &&
-                degreeId === initialData.query.degree_id &&
-                dateFrom === initialData.query.date_from &&
-                dateTo === initialData.query.date_to &&
-                String(page) === initialData.query.page &&
-                String(limit) === initialData.query.limit
-        )
 
         const replaceParams = useCallback(
             (mutator: (params: URLSearchParams) => void) => {
@@ -157,7 +141,6 @@ export function withAllApplicationViewLogic(Component: ComponentType<AllApplicat
                     page,
                     limit,
                 }),
-            initialData: matchesInitialQuery ? initialData?.applications : undefined,
             placeholderData: keepPreviousData,
             staleTime: Infinity,
             retry: false,
@@ -210,16 +193,11 @@ export function withAllApplicationViewLogic(Component: ComponentType<AllApplicat
                 (filteredTotal === 0 ? 0 : Math.max(1, Math.ceil(filteredTotal / limit))),
         }
 
-        const stats = applicationsQuery.data?.stats ??
-            initialData?.applications.stats ?? {
-                total: 0,
-                pending: 0,
-                accepted: 0,
-            }
+        const stats = applicationsQuery.data?.stats ?? { total: 0, pending: 0, accepted: 0 }
 
         return (
             <Component
-                role={applicationsQuery.data?.role ?? initialData?.applications.role}
+                role={applicationsQuery.data?.role}
                 applications={applicationsQuery.data?.data ?? []}
                 pagination={pagination}
                 stats={stats}

@@ -163,7 +163,7 @@ export default function OfferSignPage() {
     }, [offerId])
 
     const { data: offer, isLoading, isError, refetch } = useQuery({
-        queryKey: ["offer", offerId],
+        queryKey: ["public-offer", offerId],
         queryFn: fetchOffer,
         enabled: Boolean(offerId),
     })

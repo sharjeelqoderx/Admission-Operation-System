@@ -1,16 +1,9 @@
 "use client"
 
-import { memo } from "react"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
 import { StudentForm } from "../../_components/student-form"
-import type { StudentFormCreatePageData } from "@/lib/student/server"
-
-type PageContentProps = {
-    initialData: StudentFormCreatePageData
-}
-
-function NewStudentPageView({ initialData }: PageContentProps) {
+export function PageContent() {
     return (
         <BluryCard
             isCentered={false}
@@ -35,14 +28,7 @@ function NewStudentPageView({ initialData }: PageContentProps) {
                 </div>
             </div>
 
-            <StudentForm mode="create" initialUser={initialData.user} />
+            <StudentForm mode="create" />
         </BluryCard>
     )
-}
-
-const NewStudentPageContent = memo(NewStudentPageView)
-NewStudentPageContent.displayName = "NewStudentPageContent"
-
-export function PageContent({ initialData }: PageContentProps) {
-    return <NewStudentPageContent initialData={initialData} />
 }

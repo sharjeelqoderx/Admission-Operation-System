@@ -8,7 +8,6 @@ import {
     readUrlSearchParam,
 } from "@/lib/navigation/replace-url-search-params"
 import type {
-    OfferDashboardPageData,
     OfferListItem,
     OfferListPagination,
     OfferListResponse,
@@ -78,18 +77,12 @@ function syncOfferFiltersToUrl(filters: OfferFilters) {
 }
 
 export function withOfferPageLogic(Component: ComponentType<OfferPageLogicProps>) {
-    return function OfferPageContainer({
-        initialData,
-    }: {
-        initialData?: OfferDashboardPageData
-    }) {
+    return function OfferPageContainer() {
         const timeoutRef = useRef<NodeJS.Timeout | null>(null)
         const urlFilters = readOfferFiltersFromUrl()
 
-        const [filters, setFilters] = useState<OfferFilters>(
-            initialData?.query ?? urlFilters
-        )
-        const [searchInput, setSearchInput] = useState(initialData?.query.q ?? urlFilters.q)
+        const [filters, setFilters] = useState<OfferFilters>(urlFilters)
+        const [searchInput, setSearchInput] = useState(urlFilters.q)
 
         const updateParams = useCallback((updates: Record<string, string>) => {
             setFilters((current) => {
@@ -139,15 +132,6 @@ export function withOfferPageLogic(Component: ComponentType<OfferPageLogicProps>
         const page = parseInt(filters.page, 10) || 1
         const limit = parseInt(filters.limit, 10) || 10
 
-        const matchesInitialQuery = Boolean(
-            initialData &&
-                filters.q === initialData.query.q &&
-                filters.status === initialData.query.status &&
-                filters.course_id === initialData.query.course_id &&
-                filters.page === initialData.query.page &&
-                filters.limit === initialData.query.limit
-        )
-
         const offersQuery = useQuery({
             queryKey: ["offers", filters.q, filters.status, filters.course_id, page, limit],
             queryFn: () =>
@@ -158,7 +142,6 @@ export function withOfferPageLogic(Component: ComponentType<OfferPageLogicProps>
                     page,
                     limit,
                 }),
-            initialData: matchesInitialQuery ? initialData?.offers : undefined,
             placeholderData: keepPreviousData,
             staleTime: 5 * 60 * 1000, // Cache for 5 minutes for smoother navigation
             retry: false,

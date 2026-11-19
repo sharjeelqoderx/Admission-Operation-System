@@ -55,10 +55,6 @@ const UniversityOverviewView = memo(function UniversityOverviewView({
 
 const UniversityOverviewContent = withUniversityOverviewLogic(UniversityOverviewView)
 
-type PageContentProps = {
-    initialOverview?: UniversityOverview
-}
-
-export function UniversityOverviewPageContent({ initialOverview }: PageContentProps) {
-    return <UniversityOverviewContent initialOverview={initialOverview} />
+export function UniversityOverviewPageContent() {
+    return <UniversityOverviewContent />
 }

@@ -38,19 +38,3 @@ export const queryClientConfig = {
         },
     },
 }
-
-/**
- * Check if a query matches initial data for optimistic rendering
- */
-export function matchesInitialQuery<T extends Record<string, string | number>>({
-    params,
-    initialQuery,
-}: {
-    params: T
-    initialQuery: Partial<T>
-}): boolean {
-    return Object.entries(params).every(([key, value]) => {
-        const initialValue = initialQuery[key as keyof typeof initialQuery]
-        return String(value) === String(initialValue)
-    })
-}

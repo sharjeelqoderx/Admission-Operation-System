@@ -22,12 +22,6 @@ import {
     withApplicationPageLogic,
     type ApplicationPageLogicProps,
 } from "./withApplicationPageLogic"
-import type { ApplicationDashboardPageData } from "@/types/schemas/application"
-
-type PageContentProps = {
-    initialData?: ApplicationDashboardPageData
-}
-
 const ApplicationDashboardView = memo(function ApplicationDashboardView({
     role,
     canCreateApplication,
@@ -251,9 +245,5 @@ const ApplicationDashboardView = memo(function ApplicationDashboardView({
     )
 })
 
-const ApplicationDashboardPageContent = memo(withApplicationPageLogic(ApplicationDashboardView))
-ApplicationDashboardPageContent.displayName = "ApplicationDashboardPageContent"
-
-export function PageContent({ initialData }: PageContentProps) {
-    return <ApplicationDashboardPageContent initialData={initialData} />
-}
+export const PageContent = memo(withApplicationPageLogic(ApplicationDashboardView))
+PageContent.displayName = "PageContent"

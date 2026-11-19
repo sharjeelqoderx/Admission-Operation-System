@@ -1,17 +1,30 @@
 "use client"
 
-import { memo } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { Typography } from "@/components/shared/Typography"
 import { BluryCard } from "@/components/shared/blury-card"
-import { StudentForm } from "../../../_components/student-form"
-import type { StudentFormPageData } from "@/lib/student/server"
+import { ErrorView } from "@/components/shared/error-view"
+import { StudentForm, type StudentFormPageData } from "../../../_components/student-form"
+import Loading from "../../loading"
 
-type PageContentProps = {
-    studentId: string
-    initialData: StudentFormPageData
-}
+export function PageContent({ studentId }: { studentId: string }) {
+    const { data, isLoading, isError, error } = useQuery({
+        queryKey: ["students", studentId, "form"],
+        queryFn: async () => {
+            const res = await fetch(`/api/student/${studentId}`)
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error ?? "Student not found")
+            return json.data as StudentFormPageData
+        },
+        staleTime: Infinity,
+        gcTime: 0,
+    })
 
-function EditStudentPageView({ studentId, initialData }: PageContentProps) {
+    if (isLoading) return <Loading />
+    if (isError || !data) {
+        return <ErrorView message={error instanceof Error ? error.message : "Student not found"} />
+    }
+
     return (
         <BluryCard
             isCentered={false}
@@ -33,18 +46,7 @@ function EditStudentPageView({ studentId, initialData }: PageContentProps) {
                 </Typography>
             </div>
 
-            <StudentForm
-                mode="edit"
-                studentId={studentId}
-                defaultData={initialData}
-            />
+            <StudentForm mode="edit" studentId={studentId} defaultData={data} />
         </BluryCard>
     )
-}
-
-const EditStudentPageContent = memo(EditStudentPageView)
-EditStudentPageContent.displayName = "EditStudentPageContent"
-
-export function PageContent({ studentId, initialData }: PageContentProps) {
-    return <EditStudentPageContent studentId={studentId} initialData={initialData} />
 }

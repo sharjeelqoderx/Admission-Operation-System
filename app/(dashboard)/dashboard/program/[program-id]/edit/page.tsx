@@ -1,9 +1,7 @@
-import { notFound, redirect } from "next/navigation"
+import { redirect } from "next/navigation"
 import { getDashboardRole } from "@/lib/dashboard/server"
-import { fetchUniversityProgramDetailForPage } from "@/lib/program/university-server"
 import { UniversityProgramFormPageContent } from "../../_components/university-program/form-page-content"
 import { isUniversityStaffRole } from "@/lib/auth/university-role"
-import { Role } from "@/types/enums/role"
 
 type EditProgramPageProps = {
     params: Promise<{ "program-id": string }>
@@ -21,17 +19,5 @@ export default async function EditProgramPage({ params }: EditProgramPageProps) 
         redirect(`/dashboard/program/${programId}`)
     }
 
-    const initialDetail = await fetchUniversityProgramDetailForPage(programId)
-
-    if (!initialDetail) {
-        notFound()
-    }
-
-    return (
-        <UniversityProgramFormPageContent
-            mode="edit"
-            courseId={programId}
-            initialDetail={initialDetail}
-        />
-    )
+    return <UniversityProgramFormPageContent mode="edit" courseId={programId} />
 }

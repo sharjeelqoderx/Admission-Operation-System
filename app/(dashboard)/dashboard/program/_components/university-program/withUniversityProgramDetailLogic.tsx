@@ -2,6 +2,8 @@
 
 import type { ComponentType } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { ErrorView } from "@/components/shared/error-view"
+import Loading from "../../[program-id]/loading"
 import type { UniversityProgramDetail } from "@/types/schemas/university-program"
 
 export type UniversityProgramDetailLogicProps = {
@@ -23,19 +25,24 @@ export function withUniversityProgramDetailLogic(
 ) {
     return function UniversityProgramDetailContainer({
         courseId,
-        initialDetail,
         canEditProgram,
     }: {
         courseId: string
-        initialDetail: UniversityProgramDetail
         canEditProgram: boolean
     }) {
         const detailQuery = useQuery({
             queryKey: ["university-program-detail", courseId],
             queryFn: () => fetchUniversityProgramDetail(courseId),
-            initialData: initialDetail,
             staleTime: Infinity, // Cache indefinitely to avoid refetch on navigation
         })
+
+        if (detailQuery.isError) {
+            return <ErrorView message={detailQuery.error.message} />
+        }
+
+        if (!detailQuery.data) {
+            return <Loading />
+        }
 
         return <Component detail={detailQuery.data} canEditProgram={canEditProgram} />
     }

@@ -44,10 +44,8 @@ export function withUniversityProgramPageLogic(
     Component: ComponentType<UniversityProgramPageLogicProps>
 ) {
     return function UniversityProgramPageContainer({
-        initialOverview,
         canManagePrograms,
     }: {
-        initialOverview?: UniversityProgramListResponse
         canManagePrograms: boolean
     }) {
         const queryClient = useQueryClient()
@@ -60,11 +58,6 @@ export function withUniversityProgramPageLogic(
         const page = searchParams.get("page") ?? "1"
         const [searchInput, setSearchInput] = useState(q)
         const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-        const initialQueryRef = useRef<{ q: string; level_id: string; page: string } | null>(null)
-
-        if (initialQueryRef.current === null) {
-            initialQueryRef.current = { q, level_id: levelId, page }
-        }
 
         useEffect(() => {
             setSearchInput(q)
@@ -78,11 +71,6 @@ export function withUniversityProgramPageLogic(
             }
         }, [])
 
-        const matchesInitialQuery =
-            q === initialQueryRef.current.q &&
-            levelId === initialQueryRef.current.level_id &&
-            page === initialQueryRef.current.page
-
         const programsQuery = useQuery({
             queryKey: ["university-programs", q, levelId, page],
             queryFn: () =>
@@ -91,7 +79,6 @@ export function withUniversityProgramPageLogic(
                     level_id: levelId === "all" ? undefined : levelId,
                     page,
                 }),
-            initialData: matchesInitialQuery && initialOverview ? initialOverview : undefined,
             placeholderData: keepPreviousData,
             staleTime: Infinity,
         })
@@ -158,7 +145,7 @@ export function withUniversityProgramPageLogic(
         const overview = useMemo(() => {
             const data = programsQuery.data ?? {
                 data: [],
-                pagination: initialOverview?.pagination ?? {
+                pagination: {
                     total: 0,
                     page: 1,
                     limit: 10,
@@ -175,7 +162,7 @@ export function withUniversityProgramPageLogic(
                     totalPages: data.pagination?.totalPages ?? 0,
                 },
             }
-        }, [currentPage, initialOverview?.pagination, programsQuery.data])
+        }, [currentPage, programsQuery.data])
 
         return (
             <Component

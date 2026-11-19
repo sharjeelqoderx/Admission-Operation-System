@@ -41,11 +41,7 @@ async function fetchUniversityStudents(params: {
 export function withUniversityStudentPageLogic(
     Component: ComponentType<UniversityStudentPageLogicProps>
 ) {
-    return function UniversityStudentPageContainer({
-        initialOverview,
-    }: {
-        initialOverview?: UniversityStudentListResponse
-    }) {
+    return function UniversityStudentPageContainer() {
         const router = useRouter()
         const pathname = usePathname()
         const searchParams = useSearchParams()
@@ -55,25 +51,14 @@ export function withUniversityStudentPageLogic(
         const page = searchParams.get("page") ?? "1"
         const [searchInput, setSearchInput] = useState(q)
         const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-        const initialQueryRef = useRef<{ q: string; status: string; page: string } | null>(null)
-
-        if (initialQueryRef.current === null) {
-            initialQueryRef.current = { q, status, page }
-        }
 
         useEffect(() => {
             setSearchInput(q)
         }, [q])
 
-        const matchesInitialQuery =
-            q === initialQueryRef.current.q &&
-            status === initialQueryRef.current.status &&
-            page === initialQueryRef.current.page
-
         const studentsQuery = useQuery({
             queryKey: ["university-students", q, status, page],
             queryFn: () => fetchUniversityStudents({ q, status, page }),
-            initialData: matchesInitialQuery && initialOverview ? initialOverview : undefined,
             placeholderData: keepPreviousData,
             staleTime: Infinity,
         })
@@ -110,13 +95,13 @@ export function withUniversityStudentPageLogic(
 
         const overview = useMemo(() => {
             const data = studentsQuery.data ?? {
-                stats: initialOverview?.stats ?? {
+                stats: {
                     total_students: 0,
                     applied: 0,
                     enrolled: 0,
                 },
                 data: [],
-                pagination: initialOverview?.pagination ?? {
+                pagination: {
                     total: 0,
                     page: 1,
                     limit: 10,
@@ -133,7 +118,7 @@ export function withUniversityStudentPageLogic(
                     totalPages: data.pagination?.totalPages ?? 0,
                 },
             }
-        }, [currentPage, initialOverview?.pagination, initialOverview?.stats, studentsQuery.data])
+        }, [currentPage, studentsQuery.data])
 
         return (
             <Component

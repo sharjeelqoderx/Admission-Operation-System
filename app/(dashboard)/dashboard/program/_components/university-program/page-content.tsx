@@ -90,19 +90,10 @@ const UniversityProgramPageView = memo(function UniversityProgramPageView({
 
 const UniversityProgramPageContent = withUniversityProgramPageLogic(UniversityProgramPageView)
 
-type PageContentProps = {
-    initialOverview?: UniversityProgramListResponse
-    canManagePrograms: boolean
-}
-
 export function UniversityProgramListPageContent({
-    initialOverview,
     canManagePrograms,
-}: PageContentProps) {
-    return (
-        <UniversityProgramPageContent
-            initialOverview={initialOverview}
-            canManagePrograms={canManagePrograms}
-        />
-    )
+}: {
+    canManagePrograms: boolean
+}) {
+    return <UniversityProgramPageContent canManagePrograms={canManagePrograms} />
 }

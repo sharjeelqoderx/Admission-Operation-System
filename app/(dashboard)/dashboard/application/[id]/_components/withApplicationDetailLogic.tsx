@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react"
 import { useQuery } from "@tanstack/react-query"
-import type { ApplicationDetail, ApplicationDetailPageData } from "@/types/schemas/application"
+import type { ApplicationDetail } from "@/types/schemas/application"
 
 export type ApplicationDetailLogicProps = {
     application?: ApplicationDetail
@@ -22,38 +22,23 @@ async function fetchApplicationDetailFromApi(applicationId: string) {
 }
 
 export function withApplicationDetailLogic(Component: ComponentType<ApplicationDetailLogicProps>) {
-    return function ApplicationDetailContainer({
-        applicationId,
-        initialData,
-    }: {
-        applicationId: string
-        initialData: ApplicationDetailPageData
-    }) {
+    return function ApplicationDetailContainer({ applicationId }: { applicationId: string }) {
         const detailQuery = useQuery({
             queryKey: ["application", applicationId],
             queryFn: () => fetchApplicationDetailFromApi(applicationId),
-            initialData: initialData.detail ?? undefined,
             retry: false,
         })
 
-        const application = detailQuery.data ?? initialData.detail ?? undefined
-        const isLoading = detailQuery.isLoading && !application
-        const isError =
-            !application &&
-            !isLoading &&
-            (Boolean(initialData.error) || detailQuery.isError)
-        const errorMessage =
-            initialData.error ??
-            (detailQuery.error instanceof Error
-                ? detailQuery.error.message
-                : "Application not found")
-
         return (
             <Component
-                application={application}
-                isLoading={isLoading}
-                isError={isError}
-                errorMessage={errorMessage}
+                application={detailQuery.data}
+                isLoading={detailQuery.isLoading}
+                isError={detailQuery.isError}
+                errorMessage={
+                    detailQuery.error instanceof Error
+                        ? detailQuery.error.message
+                        : "Application not found"
+                }
                 onRetry={() => {
                     void detailQuery.refetch()
                 }}

@@ -69,12 +69,4 @@ const UniversityAgentPageView = memo(function UniversityAgentPageView({
     )
 })
 
-const UniversityAgentPageContent = withUniversityAgentPageLogic(UniversityAgentPageView)
-
-type PageContentProps = {
-    initialOverview: UniversityAgentListResponse
-}
-
-export function UniversityAgentListPageContent({ initialOverview }: PageContentProps) {
-    return <UniversityAgentPageContent initialOverview={initialOverview} />
-}
+export const UniversityAgentListPageContent = withUniversityAgentPageLogic(UniversityAgentPageView)

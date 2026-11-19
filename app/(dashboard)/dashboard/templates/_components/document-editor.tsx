@@ -1115,6 +1115,12 @@ type DocumentEditorProps = {
     onBodyChange: (html: string) => void
     onTemplateDatesChange: (d: DocumentTemplateDates) => void
     onWatermarkChange: (w: DocumentTemplateWatermark) => void
+    /**
+     * Sticky offset of the formatting toolbar. The edit page has its own sticky bar (Back /
+     * title / Save) above it — without an offset the toolbar slid over the Save button once
+     * you scrolled down to page 2, so Save could not be clicked.
+     */
+    toolbarTopClass?: string
 }
 
 export const DocumentEditor = memo(function DocumentEditor({
@@ -1125,6 +1131,7 @@ export const DocumentEditor = memo(function DocumentEditor({
     onBodyChange,
     onTemplateDatesChange,
     onWatermarkChange,
+    toolbarTopClass = "top-0",
 }: DocumentEditorProps) {
     const initial = parseDocumentLayout(bodyHtml)
     const layoutRef = useRef({
@@ -1593,7 +1600,7 @@ export const DocumentEditor = memo(function DocumentEditor({
     return (
         <div className="relative flex flex-col">
             {/* Toolbar — above canvas; below side sheets (z-[100]). */}
-            <div className="sticky top-0 z-30 border-b bg-background/95 px-3 py-2 backdrop-blur-sm">
+            <div className={cn("sticky z-30 border-b bg-background/95 px-3 py-2 backdrop-blur-sm", toolbarTopClass)}>
                 <div className="flex flex-wrap items-center gap-0.5">
                     <IconBtn label="H1" active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}><Heading1 className="size-3.5" /></IconBtn>
                     <IconBtn label="H2" active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}><Heading2 className="size-3.5" /></IconBtn>
@@ -2656,9 +2663,16 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
 
     return (
         <div className="flex flex-col bg-background">
-            <header className="sticky top-0 z-30 flex shrink-0 items-center gap-3 border-b bg-background px-4 py-2">
+            <header className="sticky top-0 z-40 flex h-[3.3125rem] shrink-0 items-center gap-3 border-b bg-background px-4 py-2">
                 <Button variant="ghost" size="sm" className="gap-1.5 shrink-0" asChild>
-                    <Link href={`/dashboard/templates/${templateId}`}>
+                    <Link
+                        href={`/dashboard/templates/${templateId}`}
+                        onClick={(event) => {
+                            if (isDirty && !window.confirm("You have unsaved changes. Leave without saving?")) {
+                                event.preventDefault()
+                            }
+                        }}
+                    >
                         <ArrowLeft className="size-4" />
                         Back
                     </Link>
@@ -2692,6 +2706,7 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
                 locale={locale}
                 templateDates={templateDates}
                 watermark={watermark}
+                toolbarTopClass="top-[3.3125rem]"
                 onBodyChange={handleBodyChange}
                 onTemplateDatesChange={(value) => { markDirty(); setTemplateDates(value) }}
                 onWatermarkChange={(value) => { markDirty(); setWatermark(value) }}
