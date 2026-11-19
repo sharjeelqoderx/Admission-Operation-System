@@ -1,7 +1,7 @@
 import { Node, mergeAttributes } from "@tiptap/core"
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model"
 import { NodeSelection, TextSelection } from "@tiptap/pm/state"
-import { DOCUMENT_PAGE_BREAK_CLASS } from "@/lib/document-template/a4-document"
+import { DOCUMENT_PAGE_BREAK_CLASS, DOCUMENT_PAGE_LANG_ATTR } from "@/lib/document-template/a4-document"
 
 function findPageBreakPosNear(doc: ProseMirrorNode, anchor: number) {
     let breakPos: number | null = null
@@ -34,6 +34,16 @@ export const DocumentPageBreak = Node.create({
                 renderHTML: (attributes) =>
                     attributes.auto ? { "data-auto-page-break": "true" } : {},
             },
+            /** Language of the page that starts after this break ("de" | "en" | null = inherit). */
+            lang: {
+                default: null,
+                parseHTML: (element) => {
+                    const value = element.getAttribute(DOCUMENT_PAGE_LANG_ATTR)
+                    return value === "de" || value === "en" ? value : null
+                },
+                renderHTML: (attributes) =>
+                    attributes.lang ? { [DOCUMENT_PAGE_LANG_ATTR]: attributes.lang } : {},
+            },
         }
     },
 
@@ -55,14 +65,14 @@ export const DocumentPageBreak = Node.create({
     addCommands() {
         return {
             insertDocumentPageBreak:
-                () =>
+                (lang?: "de" | "en" | null) =>
                 ({ chain, state }) => {
                     const insertPos = state.selection.from
 
                     return chain()
                         .insertContentAt(insertPos, {
                             type: this.name,
-                            attrs: { auto: false },
+                            attrs: { auto: false, lang: lang ?? null },
                         })
                         .command(({ tr, dispatch }) => {
                             if (!dispatch) {
@@ -125,7 +135,7 @@ export const DocumentPageBreak = Node.create({
 declare module "@tiptap/core" {
     interface Commands<ReturnType> {
         documentPageBreak: {
-            insertDocumentPageBreak: () => ReturnType
+            insertDocumentPageBreak: (lang?: "de" | "en" | null) => ReturnType
         }
     }
 }

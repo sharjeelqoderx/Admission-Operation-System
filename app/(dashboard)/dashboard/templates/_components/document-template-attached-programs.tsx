@@ -1,7 +1,7 @@
 "use client"
 
 import { memo } from "react"
-import { GraduationCap } from "lucide-react"
+import { GraduationCap, Unlink } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { Badge } from "@/components/ui/badge"
 import type { DocumentTemplateCourseSummary } from "@/types/schemas/document-template"
@@ -10,12 +10,17 @@ type DocumentTemplateAttachedProgramsProps = {
     programs: DocumentTemplateCourseSummary[]
     compact?: boolean
     emptyLabel?: string
+    /** When set, each program gets an "Unlink" button (the template itself is kept). */
+    onUnlink?: (program: DocumentTemplateCourseSummary) => void
+    unlinkingId?: string | null
 }
 
 export const DocumentTemplateAttachedPrograms = memo(function DocumentTemplateAttachedPrograms({
     programs,
     compact = false,
     emptyLabel = "No programs linked to this template yet.",
+    onUnlink,
+    unlinkingId = null,
 }: DocumentTemplateAttachedProgramsProps) {
     if (programs.length === 0) {
         return (
@@ -68,6 +73,19 @@ export const DocumentTemplateAttachedPrograms = memo(function DocumentTemplateAt
                         >
                             {program.label}
                         </Typography>
+                        {onUnlink ? (
+                            <button
+                                type="button"
+                                disabled={unlinkingId === program.id}
+                                className="ml-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                                aria-label={`Unlink ${program.label}`}
+                                title="Unlink this program from the template (the template is kept)"
+                                onClick={() => onUnlink(program)}
+                            >
+                                <Unlink className="size-3" />
+                                {unlinkingId === program.id ? "Unlinking…" : "Unlink"}
+                            </button>
+                        ) : null}
                     </Badge>
                 ))}
             </div>

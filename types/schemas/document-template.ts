@@ -35,6 +35,8 @@ export const DocumentTemplateFormSchema = z.object({
     course_id: PostgresUuidSchema.nullable().optional(),
     /** @deprecated Use course_id / course_ids */
     program_id: PostgresUuidSchema.nullable().optional(),
+    /** Programs (from course_ids) to move here from the other template that currently owns them. */
+    reassign_course_ids: z.array(PostgresUuidSchema).optional(),
     locale: TemplateLocaleSchema.default("en"),
     template_dates: DocumentTemplateDatesSchema.optional(),
     watermark: DocumentTemplateWatermarkSchema.optional(),
@@ -51,6 +53,8 @@ export type DocumentTemplateProgramOption = {
     is_assigned: boolean
     assigned_template_id: string | null
     assigned_template_title: string | null
+    /** Assigned to a template other than the one being edited (selecting it reassigns it). */
+    assigned_to_other_template?: boolean
 }
 
 export type DocumentTemplateProgramOptionsResponse = {
@@ -62,6 +66,10 @@ export type TemplateLocale = z.infer<typeof TemplateLocaleSchema>
 export type DocumentTemplateCourseSummary = {
     id: string
     label: string
+    /** Program name without category / campus (used for the preview). */
+    name?: string
+    category?: string | null
+    location?: string | null
 }
 
 export type DocumentTemplateListItem = {
@@ -99,6 +107,10 @@ export type DocumentTemplateDetailResponse = {
 
 export type DocumentTemplateAsset = {
     name: string
+    /** Friendly name shown in the library (built-in brand assets). */
+    label?: string
+    /** Ships with the app (logo, seal, signature) — not stored in the media bucket. */
+    builtin?: boolean
     path: string
     url: string
     created_at: string | null

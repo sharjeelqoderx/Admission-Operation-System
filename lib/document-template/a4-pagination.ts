@@ -1,9 +1,11 @@
 import {
     A4_PAGE_HEIGHT_PX,
     A4_PAGE_STACK_GAP_PX,
-    splitTemplateBodyIntoPages,
+    resolvePageSegmentLocales,
+    splitTemplateBodyIntoPageSegments,
     stripAutoPageBreakMarkers,
 } from "@/lib/document-template/a4-document"
+import type { TemplateLocale } from "@/lib/document-template/locale"
 import { DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX } from "@/lib/document-template/header-footer"
 
 export function calculateA4PageCount(contentHeightPx: number, bodySlotHeightPx?: number): number {
@@ -147,22 +149,39 @@ function paginateSegmentByA4Height(
     return distributeBlocksByHeight(normalized, options)
 }
 
+export type PaginatedBodyPage = {
+    html: string
+    /** Language of the page (follows the page-break markers). */
+    locale: TemplateLocale
+}
+
 /**
  * Splits body HTML into A4-sized pages. Manual page-break markers take
  * priority (one page per marker segment); each segment that overflows a
  * single page is additionally split by measured height so no content is
- * clipped in preview or print.
+ * clipped in preview or print. Overflow pages inherit the language of the
+ * segment they came from.
  */
+export function paginateBodyHtmlByA4HeightWithLocale(
+    bodyHtml: string,
+    options: PaginateHtmlOptions,
+    templateLocale: TemplateLocale = "en"
+): PaginatedBodyPage[] {
+    const normalizedBody = stripAutoPageBreakMarkers(bodyHtml)
+    const segments = splitTemplateBodyIntoPageSegments(normalizedBody)
+    const locales = resolvePageSegmentLocales(segments, templateLocale)
+
+    return segments.flatMap((segment, index) =>
+        paginateSegmentByA4Height(segment.html, options).map((html) => ({
+            html,
+            locale: locales[index],
+        }))
+    )
+}
+
 export function paginateBodyHtmlByA4Height(
     bodyHtml: string,
     options: PaginateHtmlOptions
 ): string[] {
-    const normalizedBody = stripAutoPageBreakMarkers(bodyHtml)
-    const manualPages = splitTemplateBodyIntoPages(normalizedBody)
-
-    if (manualPages.length > 1) {
-        return manualPages.flatMap((page) => paginateSegmentByA4Height(page, options))
-    }
-
-    return paginateSegmentByA4Height(manualPages[0] ?? "", options)
+    return paginateBodyHtmlByA4HeightWithLocale(bodyHtml, options).map((page) => page.html)
 }

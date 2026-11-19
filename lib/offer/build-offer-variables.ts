@@ -38,6 +38,8 @@ import {
 
 } from "@/lib/document-template/locale"
 
+import { buildSemesterVariables } from "@/lib/document-template/semester"
+
 import { formatFullName } from "@/lib/utils/profile"
 
 import { formatPostalAddress } from "@/lib/utils/location"
@@ -86,11 +88,16 @@ export type OfferApplicationContext = {
 
     application_no?: string | null
 
+    /** Intake chosen on the application (deferral); wins over the program's intake. */
+    custom_intake_date?: string | null
+
     student?: OfferStudentTemplateContext | null
 
     course?: {
 
         name?: string | null
+
+        location?: string | null
 
         deadline_date?: string | null
 
@@ -105,6 +112,8 @@ export type OfferApplicationContext = {
             intake_starts_on?: string | null
 
             duration?: string | null
+
+            location?: string | null
 
         } | null
 
@@ -389,6 +398,30 @@ export function buildOfferTemplateVariables(
         fees: application.course?.degree?.fees ?? "—",
 
         duration: application.course?.degree?.duration?.trim() || "—",
+
+        campus:
+
+            application.course?.location?.trim() ||
+
+            application.course?.degree?.location?.trim() ||
+
+            "—",
+
+        ...buildSemesterVariables(
+
+            application.custom_intake_date ||
+
+                application.course?.degree?.intake_starts_on,
+
+            {
+
+                season: application.course?.degree?.intake_date,
+
+                referenceDate: issueDateSource,
+
+            }
+
+        ),
 
         ...buildTemplateDateVariables({
 

@@ -17,6 +17,19 @@ import {
 } from "@/components/ui/select"
 import { ErrorView } from "@/components/shared/error-view"
 import type { UniversityProgramUpsert } from "@/types/schemas/university-program"
+import { buildSemesterVariables } from "@/lib/document-template/semester"
+
+/** Campuses used in offer letters (`{{campus}}`). Free text is still accepted. */
+const CAMPUS_SUGGESTIONS = [
+    "Berlin",
+    "Bielefeld",
+    "Cologne",
+    "Düren",
+    "Frechen (near Cologne)",
+    "Online Study",
+    "Rostock",
+    "Waldshut",
+]
 
 type DocumentTypeOption = {
     id: string
@@ -138,13 +151,22 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                         />
                     </div>
                     <div>
-                        <FieldLabel>Location</FieldLabel>
+                        <FieldLabel>Location (Campus)</FieldLabel>
                         <Input
+                            list="program-campus-options"
                             value={values.location ?? ""}
                             onChange={(event) => onChange("location", event.target.value)}
-                            placeholder="Enter Location"
+                            placeholder="Pick or enter a campus"
                             className="h-11 bg-white"
                         />
+                        <datalist id="program-campus-options">
+                            {CAMPUS_SUGGESTIONS.map((campus) => (
+                                <option key={campus} value={campus} />
+                            ))}
+                        </datalist>
+                        <Typography as="p" font="small" className="mt-1 text-muted-foreground">
+                            Printed in letters as {"{{campus}}"}.
+                        </Typography>
                     </div>
                 </div>
 
@@ -183,6 +205,11 @@ export const UniversityProgramFormView = memo(function UniversityProgramFormView
                             placeholder="Enter intake date"
                             className="h-11 w-full"
                         />
+                        <Typography as="p" font="small" className="mt-1 text-muted-foreground">
+                            {values.intake_date
+                                ? `Letters print: ${buildSemesterVariables(values.intake_date).semester_en} / ${buildSemesterVariables(values.intake_date).semester_de}`
+                                : "Sets the semester printed in letters ({{semester_en}} / {{semester_de}})."}
+                        </Typography>
                     </div>
                 </div>
 

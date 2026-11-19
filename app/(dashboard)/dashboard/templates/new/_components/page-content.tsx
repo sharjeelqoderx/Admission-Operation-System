@@ -39,6 +39,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
         ...DEFAULT_DOCUMENT_TEMPLATE_WATERMARK,
     })
     const [programIds, setProgramIds] = useState<string[]>([])
+    const [reassignIds, setReassignIds] = useState<string[]>([])
     const [formError, setFormError] = useState<string | null>(null)
 
     const createMutation = useMutation({
@@ -49,6 +50,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
             template_dates: DocumentTemplateDates
             watermark: DocumentTemplateWatermark
             course_ids: string[]
+            reassign_course_ids: string[]
         }) => {
             const res = await fetch("/api/document-template", {
                 method: "POST",
@@ -92,6 +94,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
                 template_dates: templateDates,
                 watermark,
                 course_ids: programIds,
+                reassign_course_ids: reassignIds,
             })
             toast.success("Document template created successfully.", { id: toastId })
             router.push("/dashboard/templates")
@@ -101,7 +104,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
             setFormError(message)
             toast.error(message, { id: toastId })
         }
-    }, [bodyHtml, createMutation, locale, programIds, router, templateDates, title, watermark])
+    }, [bodyHtml, createMutation, locale, programIds, reassignIds, router, templateDates, title, watermark])
 
     return (
         <DocumentTemplateFormView
@@ -121,6 +124,7 @@ export const CreatePageContent = memo(function CreatePageContent() {
             onTemplateDatesChange={setTemplateDates}
             onWatermarkChange={setWatermark}
             onProgramIdsChange={setProgramIds}
+            onReassignChange={setReassignIds}
             onSave={handleSave}
             saveLabel="Create Template"
         />

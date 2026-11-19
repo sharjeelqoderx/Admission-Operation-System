@@ -5,8 +5,8 @@ export const DOCUMENT_TEMPLATE_SIGNATURE_STAMP_CLASS = "document-template-signat
 export const DOCUMENT_TEMPLATE_SIGNATURE_STAMP_GAP_PX = 8
 /** ~2 cm — typical scanned signature line height in Word. */
 export const DOCUMENT_TEMPLATE_SIGNATURE_IMG_HEIGHT_PX = 56
-/** ~4 cm — typical official stamp height in Word offer letters. */
-export const DOCUMENT_TEMPLATE_STAMP_IMG_HEIGHT_PX = 152
+/** ~2.5 cm stamp — fits the signature block on one page (the old 152px default overflowed onto the next page). */
+export const DOCUMENT_TEMPLATE_STAMP_IMG_HEIGHT_PX = 96
 export const DOCUMENT_TEMPLATE_SIGNATURE_STAMP_TEXT_FONT_SIZE_PX = 11
 
 export type DocumentTemplateSignatureStampAlign = "left" | "center" | "right"
@@ -30,7 +30,7 @@ export const DOCUMENT_TEMPLATE_SIGNATURE_FINE_OFFSET_MAX_PX = 48
 export const DOCUMENT_TEMPLATE_SIGNATURE_STAMP_COLUMN_GAP_MAX_PX = 48
 
 /** Floor for layout reserve — stamp + greeting/name/title; never smaller than visual block. */
-export const DOCUMENT_TEMPLATE_SIGNATURE_STAMP_MIN_HEIGHT_PX = 150
+export const DOCUMENT_TEMPLATE_SIGNATURE_STAMP_MIN_HEIGHT_PX = 100
 
 /**
  * Stable content height for signature+stamp (independent of off-screen DOM measure quirks).
@@ -77,6 +77,10 @@ export const DEFAULT_STAMP_IMAGE_URL = "/assets/conditional-letter-stamp.png"
 
 export type DocumentTemplateSignatureStampFields = {
     greeting: string
+    /** Greeting used on pages in the *other* language (falls back to that language's default). */
+    greetingAlt?: string
+    /** Title used on pages in the *other* language (falls back to that language's default). */
+    titleAlt?: string
     signatureUrl: string
     name: string
     title: string
@@ -328,6 +332,19 @@ function extractAlign(html: string, attr: string, fallback: DocumentTemplateSign
     return fallback
 }
 
+function unescapeHtml(value: string): string {
+    return value
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&amp;/g, "&")
+}
+
+function extractStringAttr(html: string, attr: string): string {
+    const match = html.match(new RegExp(`\\b${attr}="([^"]*)"`, "i"))
+    return match ? unescapeHtml(match[1]).trim() : ""
+}
+
 function extractBoolAttr(html: string, attr: string, fallback: boolean): boolean {
     const match = html.match(new RegExp(`${attr}="(true|false)"`, "i"))
     if (!match) return fallback
@@ -390,6 +407,12 @@ export function buildSignatureStampHtml(
         `data-block-offset="${fields.blockOffsetPx}"`,
         `data-stamp-offset="${fields.stampFineOffsetPx}"`,
         `data-signature-offset="${fields.signatureFineOffsetPx}"`,
+        ...(fields.greetingAlt?.trim()
+            ? [`data-greeting-alt="${escapeHtml(fields.greetingAlt.trim())}"`]
+            : []),
+        ...(fields.titleAlt?.trim()
+            ? [`data-title-alt="${escapeHtml(fields.titleAlt.trim())}"`]
+            : []),
     ].join(" ")
 
     let rowInner = ""
@@ -441,6 +464,8 @@ export function parseSignatureStampHtml(
     const rowAlign = extractAlign(normalized, "data-signature-align", "left")
 
     return normalizeSignatureStampFields({
+        greetingAlt: extractStringAttr(normalized, "data-greeting-alt") || undefined,
+        titleAlt: extractStringAttr(normalized, "data-title-alt") || undefined,
         greeting:
             extractDataText(normalized, "data-signature-greeting") ||
             DEFAULT_SIGNATURE_STAMP_FIELDS.greeting,
@@ -496,4 +521,48 @@ export function hasTemplateSignatureStamp(html: string): boolean {
         html.includes(`data-document-region="signature-stamp"`) ||
         html.includes(DOCUMENT_TEMPLATE_SIGNATURE_STAMP_CLASS)
     )
+}
+
+function isDefaultSignatureText(value: string, key: "greeting" | "title"): boolean {
+    const trimmed = value.trim().replace(/,$/, "")
+    return (["de", "en"] as const).some(
+        (locale) => getDefaultSignatureStampFields(locale)[key].trim().replace(/,$/, "") === trimmed
+    )
+}
+
+/**
+ * Greeting/title for a page in `pageLocale`. Pages in the template language use the
+ * stored text; pages in the other language use the alt text, otherwise the
+ * default wording for that language (only when the stored text is still a default).
+ */
+export function resolveSignatureStampFieldsForLocale(
+    fields: DocumentTemplateSignatureStampFields,
+    pageLocale: TemplateLocale,
+    templateLocale: TemplateLocale
+): DocumentTemplateSignatureStampFields {
+    if (pageLocale === templateLocale) return fields
+
+    const defaults = getDefaultSignatureStampFields(pageLocale)
+
+    return {
+        ...fields,
+        greeting:
+            fields.greetingAlt?.trim() ||
+            (isDefaultSignatureText(fields.greeting, "greeting") ? defaults.greeting : fields.greeting),
+        title:
+            fields.titleAlt?.trim() ||
+            (isDefaultSignatureText(fields.title, "title") ? defaults.title : fields.title),
+    }
+}
+
+/** Re-renders a stored sign-and-stamp block for a page in another language. */
+export function localizeSignatureStampHtml(
+    html: string | null,
+    pageLocale: TemplateLocale,
+    templateLocale: TemplateLocale
+): string | null {
+    if (!html || pageLocale === templateLocale) return html
+    const fields = parseSignatureStampHtml(html)
+    if (!fields) return html
+    return buildSignatureStampHtml(resolveSignatureStampFieldsForLocale(fields, pageLocale, templateLocale))
 }

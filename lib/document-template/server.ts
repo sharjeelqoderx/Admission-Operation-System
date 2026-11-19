@@ -41,6 +41,9 @@ function toCourseSummaries(
     return list.map((course) => ({
         id: course.id,
         label: formatCourseLabel(course),
+        name: course.name,
+        category: course.category,
+        location: course.location,
     }))
 }
 

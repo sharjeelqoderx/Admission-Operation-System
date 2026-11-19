@@ -67,7 +67,6 @@ import {
     SeparatorHorizontal,
     Settings2,
     Strikethrough,
-    Table2,
     Type,
     UnderlineIcon,
     Undo2,
@@ -78,6 +77,8 @@ import { ErrorView } from "@/components/shared/error-view"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { DocumentEditorTableMenu } from "./document-editor-table-menu"
+import { DocumentEditorPageLanguage, getPageLanguageAtCursor } from "./document-editor-page-language"
 import {
     Select,
     SelectContent,
@@ -123,6 +124,7 @@ import {
     isDocumentTemplateLayoutSyncActive,
     isDocumentTemplateLayoutTransaction,
     measureDocumentTemplateRegionContentHeight,
+    resolveEditorPageLocales,
     measureVisualContentExtent,
     resolveA4SheetLayout,
     resolveEditorPageCount,
@@ -151,6 +153,7 @@ import {
     DEFAULT_FOOTER_FIELDS,
     DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES,
     getDefaultHeaderFields,
+    localizePageChrome,
     parseDocumentLayout,
     parseFooterHtml,
     parseHeaderHtml,
@@ -217,6 +220,7 @@ import {
 } from "@/lib/document-template/variables"
 import type {
     DocumentTemplateAsset,
+    DocumentTemplateCourseSummary,
     DocumentTemplateDetailResponse,
     DocumentTemplateListItem,
     DocumentTemplatesListResponse,
@@ -226,6 +230,7 @@ import { DocumentTemplateDetailError } from "./document-template-detail-error"
 import { DocumentPageWatermark } from "./document-center-logo-placeholder"
 import { DocumentTemplateAttachedPrograms } from "./document-template-attached-programs"
 import { DocumentTemplateProgramSelect } from "./document-template-program-select"
+import { useUnlinkTemplateProgram } from "./use-unlink-template-program"
 import { cn } from "@/lib/utils"
 
 const EDITOR_LOADING_PULSE = "bg-gray-200/60 rounded animate-pulse"
@@ -526,6 +531,7 @@ const A4EditorPageShell = memo(function A4EditorPageShell({
 
 const EditorCanvas = memo(function EditorCanvas({
     editor,
+    locale,
     hasHeader,
     hasFooter,
     hasSignatureStamp,
@@ -536,6 +542,8 @@ const EditorCanvas = memo(function EditorCanvas({
     children,
 }: {
     editor: Editor | null
+    /** Template language — the first page, and pages without an explicit language. */
+    locale: TemplateLocale
     hasHeader: boolean
     hasFooter: boolean
     hasSignatureStamp: boolean
@@ -569,6 +577,23 @@ const EditorCanvas = memo(function EditorCanvas({
     const layoutDebounceRef = useRef<number | null>(null)
     const lineSpacerPassRef = useRef(0)
     const [, bump] = useReducer((n: number) => n + 1, 0)
+    const [pageLocales, setPageLocales] = useState<TemplateLocale[]>([])
+    const localeRef = useRef(locale)
+    localeRef.current = locale
+
+    // Header + signature wording per page language (page breaks can switch the language).
+    const chromeByLocale = useMemo(() => {
+        const build = (pageLocale: TemplateLocale) =>
+            localizePageChrome(
+                {
+                    headerHtml: hasHeader ? headerHtml : null,
+                    signatureStampHtml: hasSignatureStamp ? signatureStampHtml : null,
+                },
+                pageLocale,
+                locale
+            )
+        return { de: build("de"), en: build("en") } as const
+    }, [hasHeader, hasSignatureStamp, headerHtml, locale, signatureStampHtml])
 
     const padX = mmToPx(A4_PAGE_PADDING_X_MM)
     const pageW = mmToPx(A4_PAGE_WIDTH_MM)
@@ -712,6 +737,20 @@ const EditorCanvas = memo(function EditorCanvas({
                 })
                 const contentExtentPx = measureVisualContentExtent(pm, layoutRoot)
                 const stackHeightPx = calculateA4StackHeightPx(pageCount)
+
+                const nextLocales = resolveEditorPageLocales({
+                    proseMirror: pm,
+                    layoutRoot,
+                    sheetLayout,
+                    pageCount,
+                    templateLocale: localeRef.current,
+                })
+                setPageLocales((previous) =>
+                    previous.length === nextLocales.length &&
+                    previous.every((value, index) => value === nextLocales[index])
+                        ? previous
+                        : nextLocales
+                )
 
                 applyMetrics({
                     pageCount,
@@ -983,10 +1022,14 @@ const EditorCanvas = memo(function EditorCanvas({
                             const topReservePx = hasHeader
                                 ? sheetLayout.headerZonePx
                                 : sheetLayout.verticalPaddingPx
+                            const pageLocale = pageLocales[pageIndex] ?? locale
+                            const pageChrome = chromeByLocale[pageLocale]
 
                             return (
                                 <div
                                     key={pageIndex}
+                                    lang={pageLocale}
+                                    data-page-lang={pageLocale}
                                     className="absolute left-0 w-full"
                                     style={{ top: band.pageTopPx, height: A4_PAGE_HEIGHT_PX }}
                                 >
@@ -1005,7 +1048,7 @@ const EditorCanvas = memo(function EditorCanvas({
                                                 boxSizing: "border-box",
                                                 backgroundColor: "#ffffff",
                                             }}
-                                            dangerouslySetInnerHTML={{ __html: headerHtml }}
+                                            dangerouslySetInnerHTML={{ __html: pageChrome.headerHtml ?? headerHtml }}
                                         />
                                     ) : null}
                                     {hasBottomChrome ? (
@@ -1038,7 +1081,7 @@ const EditorCanvas = memo(function EditorCanvas({
                                                     className="w-full min-w-0 overflow-visible"
                                                     style={{ backgroundColor: "#ffffff" }}
                                                     dangerouslySetInnerHTML={{
-                                                        __html: signatureStampHtml,
+                                                        __html: pageChrome.signatureStampHtml ?? signatureStampHtml,
                                                     }}
                                                 />
                                             ) : null}
@@ -1100,6 +1143,8 @@ export const DocumentEditor = memo(function DocumentEditor({
             : getDefaultSignatureStampFields(locale),
     })
     const lastEmit = useRef<string | null>(null)
+    const localeRef = useRef(locale)
+    localeRef.current = locale
 
     const [hasHeader, setHasHeader] = useState(layoutRef.current.hasHeader)
     const [hasFooter, setHasFooter] = useState(layoutRef.current.hasFooter)
@@ -1132,6 +1177,8 @@ export const DocumentEditor = memo(function DocumentEditor({
     }
 
     const handleImageFileRef = useRef<(file: File) => void>(() => {})
+    const otherLocale: TemplateLocale = locale === "de" ? "en" : "de"
+    const otherLocaleLabel = otherLocale === "de" ? "German" : "English"
 
     const emit = useCallback(
         (rawBody: string) => {
@@ -1144,6 +1191,8 @@ export const DocumentEditor = memo(function DocumentEditor({
                 signatureStampFields: sf,
             } = layoutRef.current
             const composed = composeDocumentLayout({
+                // Stamp the template language so offers / print know the first page's language.
+                locale: localeRef.current,
                 headerHtml: h ? buildHeaderHtml(hf) : null,
                 bodyHtml: stripAutoPageBreakMarkers(rawBody),
                 signatureStampHtml: s ? buildSignatureStampHtml(sf) : null,
@@ -1236,6 +1285,14 @@ export const DocumentEditor = memo(function DocumentEditor({
         const norm = stripAutoPageBreakMarkers(layout.bodyHtml)
         if (editor.getHTML() !== norm) editor.commands.setContent(norm, { emitUpdate: false })
     }, [bodyHtml, editor, locale])
+
+    // Keep the stamped template language in the saved HTML in sync with Letter language.
+    const previousLocaleRef = useRef(locale)
+    useEffect(() => {
+        if (!editor || previousLocaleRef.current === locale) return
+        previousLocaleRef.current = locale
+        emit(editor.getHTML())
+    }, [editor, emit, locale])
 
     useEffect(() => {
         if (!editor || !hasHeader) return
@@ -1494,7 +1551,7 @@ export const DocumentEditor = memo(function DocumentEditor({
     const filteredAssets = useMemo(() => {
         const list = assetsQuery.data ?? []
         const q = assetSearch.trim().toLowerCase()
-        return q ? list.filter((a) => a.name.toLowerCase().includes(q)) : list
+        return q ? list.filter((a) => (a.label ?? a.name).toLowerCase().includes(q)) : list
     }, [assetSearch, assetsQuery.data])
 
     const dateOption = getTemplateDateInsertOptionById(dateOptionId) ?? TEMPLATE_DATE_INSERT_OPTIONS[0]
@@ -1582,9 +1639,10 @@ export const DocumentEditor = memo(function DocumentEditor({
                     </label>
                     <span className="mx-1 h-4 w-px bg-border" />
                     <Button type="button" variant="ghost" size="xs" className="gap-1" onClick={() => openAssets("inline")}><ImageIcon className="size-3.5" />Image</Button>
-                    <Button type="button" variant="ghost" size="xs" className="gap-1" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 className="size-3.5" />Table</Button>
+                    <DocumentEditorTableMenu editor={editor} />
                     <Button type="button" variant="ghost" size="xs" className="gap-1" onClick={() => { editor.chain().focus().insertContent(buildLogoLineBlock({ align: "left" })).run(); openAssets("logo") }}><Columns3 className="size-3.5" />Logo</Button>
-                    <Button type="button" variant="ghost" size="xs" className="gap-1" onClick={() => editor.chain().focus().insertDocumentPageBreak().run()}><SeparatorHorizontal className="size-3.5" />Break</Button>
+                    <Button type="button" variant="ghost" size="xs" className="gap-1" onClick={() => editor.chain().focus().insertDocumentPageBreak(getPageLanguageAtCursor(editor, locale).locale).run()}><SeparatorHorizontal className="size-3.5" />Break</Button>
+                    <DocumentEditorPageLanguage editor={editor} templateLocale={locale} />
                     <Button type="button" variant="ghost" size="xs" className="gap-1" onClick={() => setSheet("variables")}><Braces className="size-3.5" />Variables</Button>
                     <span className="mx-1 h-4 w-px bg-border" />
                     <Button type="button" variant={hasHeader ? "secondary" : "ghost"} size="xs" className="gap-1" onClick={() => setSheet("header")}><PanelTop className="size-3.5" />Header</Button>
@@ -1609,6 +1667,7 @@ export const DocumentEditor = memo(function DocumentEditor({
 
             <EditorCanvas
                 editor={editor}
+                locale={locale}
                 hasHeader={hasHeader}
                 hasFooter={hasFooter}
                 hasSignatureStamp={hasSignatureStamp}
@@ -1651,6 +1710,18 @@ export const DocumentEditor = memo(function DocumentEditor({
                                 <div className="space-y-1">
                                     <Typography as="label" font="small">Contact text</Typography>
                                     <Textarea rows={3} value={headerFields.contactText} onChange={(e) => patchHeader({ ...headerFields, contactText: e.target.value })} />
+                                </div>
+                                <div className="space-y-1">
+                                    <Typography as="label" font="small">Contact text — {otherLocaleLabel} pages</Typography>
+                                    <Textarea
+                                        rows={3}
+                                        value={headerFields.contactTextAlt ?? ""}
+                                        placeholder={getDefaultHeaderFields(otherLocale).contactText}
+                                        onChange={(e) => patchHeader({ ...headerFields, contactTextAlt: e.target.value })}
+                                    />
+                                    <Typography as="p" font="small" className="text-muted-foreground">
+                                        Shown on pages whose language is {otherLocaleLabel}. Leave empty for the standard wording.
+                                    </Typography>
                                 </div>
                             </>
                         ) : null}
@@ -2094,6 +2165,40 @@ export const DocumentEditor = memo(function DocumentEditor({
                                         }
                                     />
                                 </div>
+                                <div className="space-y-3 rounded-lg border border-dashed p-3">
+                                    <Typography as="span" font="small" className="font-semibold">
+                                        {otherLocaleLabel} pages
+                                    </Typography>
+                                    <Typography as="p" font="small" className="text-muted-foreground">
+                                        Used on pages whose language is set to {otherLocaleLabel} (page break → page language). Leave empty to use the standard wording.
+                                    </Typography>
+                                    <div className="space-y-1">
+                                        <Typography as="label" font="small">Greeting ({otherLocaleLabel})</Typography>
+                                        <Input
+                                            value={signatureStampFields.greetingAlt ?? ""}
+                                            placeholder={getDefaultSignatureStampFields(otherLocale).greeting}
+                                            onChange={(e) =>
+                                                patchSignatureStamp({
+                                                    ...signatureStampFields,
+                                                    greetingAlt: e.target.value,
+                                                })
+                                            }
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Typography as="label" font="small">Title ({otherLocaleLabel})</Typography>
+                                        <Input
+                                            value={signatureStampFields.titleAlt ?? ""}
+                                            placeholder={getDefaultSignatureStampFields(otherLocale).title}
+                                            onChange={(e) =>
+                                                patchSignatureStamp({
+                                                    ...signatureStampFields,
+                                                    titleAlt: e.target.value,
+                                                })
+                                            }
+                                        />
+                                    </div>
+                                </div>
                             </>
                         ) : null}
                     </div>
@@ -2332,9 +2437,9 @@ export const DocumentEditor = memo(function DocumentEditor({
                                 >
                                     <div className="aspect-[4/3] bg-muted/30 p-2">
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={asset.url} alt={asset.name} className="size-full object-contain" />
+                                        <img src={asset.url} alt={asset.label ?? asset.name} className="size-full object-contain" />
                                     </div>
-                                    <Typography as="p" font="small" className="truncate border-t px-2 py-1 text-[11px]">{asset.name}</Typography>
+                                    <Typography as="p" font="small" className="truncate border-t px-2 py-1 text-[11px]" title={asset.label ?? asset.name}>{asset.label ?? asset.name}</Typography>
                                 </button>
                             ))}
                         </div>
@@ -2419,16 +2524,40 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
     const [templateDates, setTemplateDates] = useState<DocumentTemplateDates>({ ...EMPTY_DOCUMENT_TEMPLATE_DATES })
     const [watermark, setWatermark] = useState<DocumentTemplateWatermark>({ ...DEFAULT_DOCUMENT_TEMPLATE_WATERMARK })
     const [programIds, setProgramIds] = useState<string[]>([])
+    const [reassignIds, setReassignIds] = useState<string[]>([])
     const [settingsOpen, setSettingsOpen] = useState(false)
     const [formError, setFormError] = useState<string | null>(null)
     const [loadedTemplateKey, setLoadedTemplateKey] = useState<string | null>(null)
+    // True once the user changed anything since the last load / save.
+    const [isDirty, setIsDirty] = useState(false)
+    const markDirty = useCallback(() => setIsDirty(true), [])
+    // Always-current copy of the document HTML — the editor pushes every change here, and
+    // Save sends exactly this (never a stale closure value).
+    const latestBodyHtmlRef = useRef("")
+    const handleBodyChange = useCallback((html: string) => {
+        latestBodyHtmlRef.current = html
+        setBodyHtml(html)
+        setIsDirty(true)
+    }, [])
+
+    useEffect(() => {
+        if (!isDirty) return
+        const warn = (event: BeforeUnloadEvent) => {
+            event.preventDefault()
+            event.returnValue = ""
+        }
+        window.addEventListener("beforeunload", warn)
+        return () => window.removeEventListener("beforeunload", warn)
+    }, [isDirty])
 
     useEffect(() => {
         if (!template) return
         const key = `${template.id}-${template.updated_at}`
         if (loadedTemplateKey === key) return
         setTitle(template.title)
+        latestBodyHtmlRef.current = template.body_html || DEFAULT_TEMPLATE_BODY_HTML
         setBodyHtml(template.body_html || DEFAULT_TEMPLATE_BODY_HTML)
+        setIsDirty(false)
         setLocale(template.locale ?? "en")
         setTemplateDates(template.template_dates ?? { ...EMPTY_DOCUMENT_TEMPLATE_DATES })
         setWatermark(template.watermark ?? { ...DEFAULT_DOCUMENT_TEMPLATE_WATERMARK })
@@ -2438,23 +2567,36 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
 
     const saveMut = useMutation({
         mutationFn: async () => {
+            const sentBodyHtml = latestBodyHtmlRef.current || bodyHtml
             const res = await fetch(`/api/document-template/${templateId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     title: title.trim(),
-                    body_html: bodyHtml,
+                    body_html: sentBodyHtml,
                     locale,
                     template_dates: templateDates,
                     watermark,
                     course_ids: programIds,
+                    reassign_course_ids: reassignIds,
                 }),
             })
             const json = await res.json()
             if (!res.ok) throw new Error(json?.error ?? "Save failed")
-            return json as DocumentTemplateDetailResponse
+            const saved = json as DocumentTemplateDetailResponse
+            // Verify the stored letter text is what we sent (guards against silently lost edits;
+            // markup normalisation on the server does not change the visible text).
+            const visibleText = (html: string) =>
+                html.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/\s+/g, "")
+            if (visibleText(saved.data?.body_html ?? "") !== visibleText(sentBodyHtml)) {
+                throw new Error(
+                    "Saved, but the stored letter text does not match what you edited. Reload the template and check your changes before leaving."
+                )
+            }
+            return saved
         },
         onSuccess: (response) => {
+            setIsDirty(false)
             const cached = queryClient.getQueryData<DocumentTemplatesListResponse>(DOCUMENT_TEMPLATES_QUERY_KEY)
             const prev = cached?.data.find((r) => r.id === templateId)
             upsertDocumentTemplateInCache(queryClient, response.data)
@@ -2462,6 +2604,13 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
             queryClient.setQueryData(documentTemplateQueryKey(templateId), response)
         },
     })
+
+    const { unlink: unlinkProgram, unlinkingId } = useUnlinkTemplateProgram(
+        templateId,
+        useCallback((program: DocumentTemplateCourseSummary) => {
+            setProgramIds((ids) => ids.filter((id) => id !== program.id))
+        }, [])
+    )
 
     const linkedPrograms = useMemo(() => {
         const labelById = new Map<string, string>()
@@ -2480,7 +2629,6 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
     const handleSave = useCallback(async () => {
         setFormError(null)
         if (!title.trim()) { setFormError("Title is required."); return }
-        if (!programIds.length) { setFormError("Select at least one program."); return }
         const id = toast.loading("Saving…")
         try {
             await saveMut.mutateAsync()
@@ -2491,7 +2639,7 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
             setFormError(msg)
             toast.error(msg, { id })
         }
-    }, [programIds.length, router, saveMut, templateId, title])
+    }, [router, saveMut, templateId, title])
 
     if (templateQuery.isLoading || !template || loadedTemplateKey !== `${template.id}-${template.updated_at}`) {
         return <DocumentEditorInlineLoading />
@@ -2519,10 +2667,10 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
                     value={title}
                     className="h-9 max-w-md flex-1 border-transparent bg-transparent text-base font-medium shadow-none focus-visible:border-border"
                     placeholder="Template title"
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(e) => { markDirty(); setTitle(e.target.value) }}
                 />
                 <Typography as="span" font="small" className="hidden shrink-0 text-muted-foreground sm:inline">
-                    {saveMut.isPending ? "Saving…" : saveMut.isSuccess ? "Saved" : ""}
+                    {saveMut.isPending ? "Saving…" : isDirty ? "Unsaved changes" : saveMut.isSuccess ? "Saved" : ""}
                 </Typography>
                 <Button variant="ghost" size="icon-sm" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
                     <Settings2 className="size-4" />
@@ -2536,7 +2684,7 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
             {formError ? <div className="px-4 pt-2"><ErrorView message={formError} /></div> : null}
 
             <div className="border-b bg-muted/20 px-4 py-3">
-                <DocumentTemplateAttachedPrograms programs={linkedPrograms} />
+                <DocumentTemplateAttachedPrograms programs={linkedPrograms} onUnlink={unlinkProgram} unlinkingId={unlinkingId} />
             </div>
 
             <DocumentEditor
@@ -2544,9 +2692,9 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
                 locale={locale}
                 templateDates={templateDates}
                 watermark={watermark}
-                onBodyChange={setBodyHtml}
-                onTemplateDatesChange={setTemplateDates}
-                onWatermarkChange={setWatermark}
+                onBodyChange={handleBodyChange}
+                onTemplateDatesChange={(value) => { markDirty(); setTemplateDates(value) }}
+                onWatermarkChange={(value) => { markDirty(); setWatermark(value) }}
             />
 
             <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
@@ -2559,7 +2707,7 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
                     <div className="space-y-4 px-4 pb-4">
                         <div className="space-y-2">
                             <Typography as="label" font="small">Letter language</Typography>
-                            <Select value={locale} onValueChange={(v) => setLocale(v as TemplateLocale)}>
+                            <Select value={locale} onValueChange={(v) => { markDirty(); setLocale(v as TemplateLocale) }}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent className="z-[110]">{TEMPLATE_LOCALE_OPTIONS.map((o) => (
                                     <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -2571,7 +2719,8 @@ export const DocumentEditorPage = memo(function DocumentEditorPage({ templateId 
                             excludeTemplateId={templateId}
                             assignedPrograms={linkedPrograms}
                             popoverInModal
-                            onChange={setProgramIds}
+                            onChange={(ids) => { markDirty(); setProgramIds(ids) }}
+                            onReassignChange={setReassignIds}
                         />
                     </div>
                 </SheetContent>

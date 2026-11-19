@@ -9,6 +9,7 @@ import {
     resolveLinkedCourseIds,
     syncDocumentTemplateCourses,
 } from "@/lib/document-template/program-assignment"
+import { stampTemplateLocale } from "@/lib/document-template/header-footer"
 import { extractTemplateVariables } from "@/lib/document-template/variables"
 import { DocumentTemplateUpdateSchema } from "@/types/schemas/document-template"
 
@@ -111,19 +112,19 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         }
 
         if (validated.body_html !== undefined) {
-            updatePayload.body_html = validated.body_html
-            updatePayload.variables = extractTemplateVariables(validated.body_html)
+            // Record the template language on the body (page 1's language for offers / print).
+            const bodyHtml = validated.locale
+                ? stampTemplateLocale(validated.body_html, validated.locale)
+                : validated.body_html
+            updatePayload.body_html = bodyHtml
+            updatePayload.variables = extractTemplateVariables(bodyHtml)
         }
 
         const linkedCourseIds = resolveLinkedCourseIds(validated)
 
         if (linkedCourseIds !== undefined) {
-            if (linkedCourseIds.length === 0) {
-                return NextResponse.json(
-                    { error: "Select at least one program for this offer template." },
-                    { status: 400 }
-                )
-            }
+            // A template may be left without programs (e.g. after unlinking) — it simply
+            // isn't used for any offer until it is linked again.
             updatePayload.course_id = linkedCourseIds[0] ?? null
         }
 
@@ -163,7 +164,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
         if (linkedCourseIds !== undefined) {
             try {
-                await syncDocumentTemplateCourses(supabase, id, linkedCourseIds)
+                await syncDocumentTemplateCourses(supabase, id, linkedCourseIds, {
+                    reassignCourseIds: validated.reassign_course_ids,
+                })
             } catch (syncError) {
                 const message =
                     syncError instanceof Error

@@ -3,6 +3,7 @@ import "server-only"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { uploadPublicImage } from "@/lib/supabase/upload-public-image"
 import type { DocumentTemplateAsset } from "@/types/schemas/document-template"
+import { DOCUMENT_TEMPLATE_BRAND_ASSETS } from "@/lib/document-template/brand-assets"
 
 /** Supabase Storage → Files → Buckets → media → assets/ */
 export const DOCUMENT_TEMPLATE_ASSETS_BUCKET = "media"
@@ -78,7 +79,7 @@ export async function listDocumentTemplateAssets(
         throw new Error(error.message)
     }
 
-    return (data ?? [])
+    const uploaded = (data ?? [])
         .filter((entry) => entry.name && !entry.name.startsWith(".") && isImageStorageObject(entry.name))
         .map((entry) => {
             const path = `${DOCUMENT_TEMPLATE_ASSETS_FOLDER}/${entry.name}`
@@ -89,6 +90,9 @@ export async function listDocumentTemplateAssets(
                 created_at: entry.created_at ?? null,
             }
         })
+
+    // Brand assets (full logo, seal, signature) always come first.
+    return [...DOCUMENT_TEMPLATE_BRAND_ASSETS, ...uploaded]
 }
 
 export async function uploadDocumentTemplateAsset(

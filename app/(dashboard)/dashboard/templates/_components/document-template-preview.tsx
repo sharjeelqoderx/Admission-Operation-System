@@ -21,7 +21,10 @@ import {
     mmToPx,
     prepareDocumentBodyHtmlForStaticRender,
 } from "@/lib/document-template/a4-document"
-import { measureDocumentTemplateRegionContentHeight } from "@/lib/document-template/a4-editor-pagination"
+import {
+    measureDocumentTemplateRegionContentHeight,
+    measureDocumentTemplateStackedRegionsHeight,
+} from "@/lib/document-template/a4-editor-pagination"
 import { calculateA4BodySlotHeightPx } from "@/lib/document-template/a4-pagination"
 import {
     DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES,
@@ -30,9 +33,13 @@ import {
     type DocumentTemplatePageSlice,
 } from "@/lib/document-template/header-footer"
 import {
-    renderTemplateHtml,
+    renderTemplateHtmlByPageLocale,
     buildTemplatePreviewSampleData,
+    type TemplatePreviewProgram,
 } from "@/lib/document-template/variables"
+import type { AdmissionRequirementId } from "@/lib/document-template/checklist-items"
+import { DOCUMENT_TEMPLATE_FOOTER_MIN_HEIGHT_PX } from "@/lib/document-template/a4-editor-pagination"
+import { DOCUMENT_TEMPLATE_SIGNATURE_STAMP_MIN_HEIGHT_PX } from "@/lib/document-template/signature-stamp"
 import type { DocumentTemplateDates } from "@/lib/document-template/date-variables"
 import type { DocumentTemplateWatermark } from "@/lib/document-template/watermark"
 import type { TemplateLocale } from "@/types/schemas/document-template"
@@ -46,6 +53,10 @@ type DocumentTemplatePreviewProps = {
     templateDates?: DocumentTemplateDates | null
     watermark?: DocumentTemplateWatermark | null
     useSampleData?: boolean
+    /** Template checklist rows — the preview checklist follows them. */
+    checklistItems?: AdmissionRequirementId[] | null
+    /** A program linked to the template: its real name / campus replace dummy sample text. */
+    previewProgram?: TemplatePreviewProgram | null
     className?: string
     printable?: boolean
 }
@@ -57,6 +68,8 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
     templateDates = null,
     watermark = null,
     useSampleData = true,
+    checklistItems = null,
+    previewProgram = null,
     className,
     printable = false,
 }: DocumentTemplatePreviewProps) {
@@ -68,11 +81,19 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
     const renderedHtml = useMemo(
         () => {
             const withVariables = useSampleData
-                ? renderTemplateHtml(bodyHtml, buildTemplatePreviewSampleData(locale, templateDates))
+                ? renderTemplateHtmlByPageLocale(
+                      bodyHtml,
+                      (pageLocale) =>
+                          buildTemplatePreviewSampleData(pageLocale, templateDates, {
+                              checklistItems,
+                              program: previewProgram,
+                          }),
+                      locale
+                  )
                 : bodyHtml
             return prepareDocumentBodyHtmlForStaticRender(withVariables)
         },
-        [bodyHtml, locale, templateDates, useSampleData]
+        [bodyHtml, checklistItems, locale, previewProgram, templateDates, useSampleData]
     )
 
     const layout = useMemo(() => parseDocumentLayout(renderedHtml), [renderedHtml])
@@ -95,15 +116,21 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
         const headerHeightPx = hasHeader
             ? measureDocumentTemplateRegionContentHeight(headerMeasureRef.current)
             : 0
-        const footerHeightPx = hasBottomChrome
-            ? measureDocumentTemplateRegionContentHeight(footerMeasureRef.current)
+        // Signature block + footer are stacked in one measure container: sum them all
+        // (the first child alone left the footer out and clipped body text).
+        const measuredBottomPx = hasBottomChrome
+            ? measureDocumentTemplateStackedRegionsHeight(footerMeasureRef.current)
             : 0
+        const minBottomPx =
+            (hasSignatureStamp ? DOCUMENT_TEMPLATE_SIGNATURE_STAMP_MIN_HEIGHT_PX : 0) +
+            (hasFooter ? DOCUMENT_TEMPLATE_FOOTER_MIN_HEIGHT_PX : 0)
+        const footerHeightPx = hasBottomChrome ? Math.max(measuredBottomPx, minBottomPx) : 0
 
         if (hasHeader && headerHeightPx <= 0) {
             return
         }
 
-        if (hasBottomChrome && footerHeightPx <= 0) {
+        if (hasBottomChrome && measuredBottomPx <= 0) {
             return
         }
 
@@ -119,12 +146,13 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
             containerWidthPx: bodyWidthPx,
             contentClassName: A4_DOCUMENT_CONTENT_CLASS,
             maxBodyHeightPx,
-        })
+        }, locale)
 
         setPages(nextPages)
         setIsPaginated(true)
     }, [
         bodyWidthPx,
+        locale,
         layout.footerHtml,
         layout.headerHtml,
         layout.signatureStampHtml,
@@ -181,6 +209,7 @@ export const DocumentTemplatePreview = memo(function DocumentTemplatePreview({
     const renderPage = (page: DocumentTemplatePageSlice, key: string, print: boolean) => (
         <DocumentTemplateA4PageFrame
             key={key}
+            lang={page.locale}
             headerHtml={page.headerHtml}
             signatureStampHtml={page.signatureStampHtml}
             footerHtml={page.footerHtml}

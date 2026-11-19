@@ -94,8 +94,8 @@ Multi-select of degree/program options.
 
 - **Required:** At least one program must be selected before save.
 - One template can be linked to **multiple programs**.
-- Each program can belong to **only one** offer template at a time.
-- Programs already assigned to another template are excluded from the dropdown (except the current template’s own assignments when editing).
+- Each program belongs to **one** offer template at a time, but programs used by another template stay in the list (marked "select to reassign"): saving moves them here and the other template is kept, just unlinked from them. No need to delete the old template first.
+- **Unlink**: every linked program badge on the template view/edit page has an Unlink button (template is kept; the program becomes free). A template may exist without programs — it is simply not used until linked again.
 - Selected programs appear as removable badges below the dropdown.
 
 ---
@@ -193,7 +193,7 @@ Preset swatches:
 
 | Button | Action |
 |--------|--------|
-| **Insert table** | Inserts a 3×3 table with header row |
+| **Table** | Menu: choose **rows × columns** (presets 3×3 / 2×4 / 4×4, optional header row) and insert. With the cursor inside a table the same menu resizes it and adds / removes rows, columns, toggles the header row or deletes the table. A new table inserted while the cursor is in a table goes *after* it (never nested). |
 | **Header image** | Opens assets library → inserts a centered header image at the **top** of the document body |
 | **Insert image** | Opens assets library → inserts an inline/logo-style image at cursor |
 
@@ -255,7 +255,17 @@ Default footer text is pre-filled with FHM Bielefeld address, contact, managemen
 
 | Button | Action |
 |--------|--------|
-| **Page break** | Inserts a **manual page break** at the cursor; content **after** the break starts on the next page |
+| **Break** | Inserts a **manual page break** at the cursor; content **after** the break starts on the next page (inherits the current page language) |
+| **Page language** (select next to Break) | Language of the page the cursor is on. Page 1 always follows **Letter language**; every later page takes its language from the page break above it. Header contact text, Sign & Stamp wording, dates, titles and greetings of that page follow it |
+
+### Per-page language
+
+A bilingual letter = one template with Letter language **Deutsch** and a page break (language **English**) before the English page.
+Stored as `data-page-lang="en"` on the page-break marker; the template language is stamped on the body wrapper as `data-template-locale`.
+
+- **Header** and **Sign & Stamp** have an extra "pages in the other language" field (contact text / greeting / title). Left empty, the standard wording of that language is used (`FHM // International Office // …`, `With kind regards,` / `Prorector for International Affairs`).
+- Variables are rendered per page: `{{issue_date}}`, `{{student_title}}`, `{{student_greeting}}`, `{{program_period}}` … use the language of the page they are on.
+- Templates that fake the second page with blank paragraphs keep working, but get no per-page language until a real page break is added (see `scripts/cleanup-document-templates.mjs --pages`).
 
 ### Automatic pagination
 
@@ -362,6 +372,9 @@ Additional fields (same `{{key}}` insertion pattern):
 | `{{application_no}}` | Application Number | Application |
 | `{{fees}}` | Fees | Program / offer |
 | `{{duration}}` | Course Duration | Program |
+| `{{campus}}` | Campus | Program (`course.location`, else `degree.location`) — edit it on the Programs page |
+| `{{semester_de}}` | Semester (German), e.g. `Wintersemester 2026/27` | Application's custom intake date → program intake date (→ summer/winter season as a last resort) |
+| `{{semester_en}}` | Semester (English), e.g. `winter semester 2026/27` | same as above |
 
 *(Salutation variables also appear in this section’s sibling group — see above.)*
 
@@ -392,7 +405,7 @@ Opened from: **Header image**, **Insert image**, **Attach logo**, **Add logo**, 
 | **Grid select** | Click an asset to use it for the current intent |
 | **Intents** | `header`, `header-logo`, `inline`, `logo`, `watermark` — same library, different placement |
 
-Assets are stored once and reused across all templates.
+Assets are stored once and reused across all templates. The library always starts with the built-in FHM brand assets (full logo with wordmark, seal / stamp, signature of Prof. Dr. Volker Wittberg) from `/public/assets/brand`.
 
 ---
 
@@ -479,6 +492,9 @@ Body HTML **does not** include automatic page-break nodes — only manual `data-
 {{application_no}}
 {{fees}}
 {{duration}}
+{{campus}}
+{{semester_de}}
+{{semester_en}}
 {{issue_date}}
 {{student_date_of_birth}}
 {{application_deadline}}

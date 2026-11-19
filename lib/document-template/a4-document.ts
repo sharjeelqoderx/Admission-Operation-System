@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import type { TemplateLocale } from "@/lib/document-template/locale"
 
 export const DOCUMENT_HEADER_IMAGE_CLASS = "document-header-image"
 export const DOCUMENT_IMAGE_CLASS = "document-image"
@@ -17,35 +18,71 @@ export const DOCUMENT_PAGE_BREAK_MARKER_REGEX =
 export const DOCUMENT_AUTO_PAGE_BREAK_MARKER_REGEX =
     /<div[^>]*data-auto-page-break=["']true["'][^>]*>[\s\S]*?<\/div>/gi
 
-/** Canonical serialized page-break marker used when normalizing template HTML. */
+/** Canonical serialized page-break marker (no explicit page language). */
 export const PAGE_BREAK_MARKER_HTML = `<div class="${DOCUMENT_PAGE_BREAK_CLASS}" data-page-break="true"></div>`
+
+/** Attribute on a page-break marker: language of the page that STARTS after the break. */
+export const DOCUMENT_PAGE_LANG_ATTR = "data-page-lang"
+
+const PAGE_BREAK_MARKER_SPLIT_REGEX = new RegExp(
+    `(${DOCUMENT_PAGE_BREAK_MARKER_REGEX.source})`,
+    "gi"
+)
+
+function isTemplateLocale(value: string | null | undefined): value is TemplateLocale {
+    return value === "de" || value === "en"
+}
+
+/** Serialized page-break marker, optionally pinning the language of the next page. */
+export function buildPageBreakMarkerHtml(lang?: TemplateLocale | null): string {
+    if (!lang) return PAGE_BREAK_MARKER_HTML
+    return `<div class="${DOCUMENT_PAGE_BREAK_CLASS}" data-page-break="true" ${DOCUMENT_PAGE_LANG_ATTR}="${lang}"></div>`
+}
+
+export function getPageBreakMarkerLang(markerHtml: string): TemplateLocale | null {
+    const match = markerHtml.match(new RegExp(`${DOCUMENT_PAGE_LANG_ATTR}=["'](de|en)["']`, "i"))
+    const value = match?.[1]?.toLowerCase()
+    return isTemplateLocale(value) ? value : null
+}
 
 function isBlankPageSegment(segment: string): boolean {
     return segment.trim().length === 0
 }
 
+export type TemplateBodyPageSegment = {
+    html: string
+    /** Language pinned by the break that starts this page (null = inherit). */
+    lang: TemplateLocale | null
+}
+
 /**
- * Splits template body HTML into one segment per page.
+ * Splits template body HTML into one segment per page, keeping the language
+ * pinned on each page-break marker.
  *
  * - Empty segments in the middle are preserved (intentional blank pages).
  * - Stray page breaks at the very start/end are ignored so they never create
  *   phantom pages or collapse the document back into auto pagination.
  */
-export function splitTemplateBodyIntoPages(bodyHtml: string): string[] {
+export function splitTemplateBodyIntoPageSegments(bodyHtml: string): TemplateBodyPageSegment[] {
     const normalized = bodyHtml.trim()
-    if (!normalized) return [""]
+    if (!normalized) return [{ html: "", lang: null }]
 
-    const parts = normalized
-        .split(DOCUMENT_PAGE_BREAK_MARKER_REGEX)
-        .map((part) => part.trim())
+    const tokens = normalized.split(PAGE_BREAK_MARKER_SPLIT_REGEX)
+    const parts: TemplateBodyPageSegment[] = [{ html: tokens[0].trim(), lang: null }]
+    for (let index = 1; index < tokens.length; index += 2) {
+        parts.push({
+            html: (tokens[index + 1] ?? "").trim(),
+            lang: getPageBreakMarkerLang(tokens[index]),
+        })
+    }
 
     let start = 0
-    while (start < parts.length && isBlankPageSegment(parts[start])) {
+    while (start < parts.length && isBlankPageSegment(parts[start].html)) {
         start += 1
     }
 
     let end = parts.length
-    while (end > start && isBlankPageSegment(parts[end - 1])) {
+    while (end > start && isBlankPageSegment(parts[end - 1].html)) {
         end -= 1
     }
 
@@ -53,28 +90,49 @@ export function splitTemplateBodyIntoPages(bodyHtml: string): string[] {
 
     if (pages.length === 0) {
         // The body contained nothing but stray page-break markers.
-        return [""]
+        return [{ html: "", lang: null }]
     }
 
     if (pages.length === 1 && start === 0 && end === parts.length) {
         // No page-break markers at all — return the body untouched so callers
         // can distinguish "single manual page" from "auto paginated" content.
-        return [normalized]
+        return [{ html: normalized, lang: null }]
     }
 
     return pages
 }
 
+/** Splits stored template HTML into one block per page (page-break markers are removed). */
+export function splitTemplateBodyIntoPages(bodyHtml: string): string[] {
+    return splitTemplateBodyIntoPageSegments(bodyHtml).map((segment) => segment.html)
+}
+
 /**
- * Removes stray page-break markers at the very start/end of template body HTML
- * and normalizes the remaining markers to the canonical serialized form.
- * Middle markers (including intentional blank pages) are preserved.
+ * Language of every page: the first page uses the template language; each later
+ * page uses the language pinned on its page break, otherwise inherits the previous page.
  */
+export function resolvePageSegmentLocales(
+    segments: TemplateBodyPageSegment[],
+    templateLocale: TemplateLocale
+): TemplateLocale[] {
+    let current = templateLocale
+    return segments.map((segment, index) => {
+        if (index > 0 && segment.lang) current = segment.lang
+        return current
+    })
+}
+
 /** Removes invisible auto page breaks inserted by the editor layout engine. */
 export function stripAutoPageBreakMarkers(html: string): string {
     return html.replace(DOCUMENT_AUTO_PAGE_BREAK_MARKER_REGEX, "").trim()
 }
 
+/**
+ * Removes stray page-break markers at the very start/end of template body HTML
+ * and normalizes the remaining markers to the canonical serialized form
+ * (page language is preserved). Middle markers (including intentional blank
+ * pages) are preserved.
+ */
 export function stripLeadingTrailingPageBreakMarkers(html: string): string {
     const normalized = html.trim()
     if (!normalized) return ""
@@ -84,7 +142,11 @@ export function stripLeadingTrailingPageBreakMarkers(html: string): string {
         return normalized
     }
 
-    return splitTemplateBodyIntoPages(normalized).join(PAGE_BREAK_MARKER_HTML)
+    return splitTemplateBodyIntoPageSegments(normalized)
+        .map((segment, index) =>
+            index === 0 ? segment.html : `${buildPageBreakMarkerHtml(segment.lang)}${segment.html}`
+        )
+        .join("")
 }
 
 export function buildDocumentPageWatermarkHtml(
@@ -336,7 +398,7 @@ export const A4_DOCUMENT_PRINT_STYLES = `
         flex: 0 1 auto;
     }
     .document-template-header-logo {
-        max-height: 72px;
+        max-height: 52px;
         width: auto;
         object-fit: contain;
     }

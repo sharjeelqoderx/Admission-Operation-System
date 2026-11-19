@@ -9,7 +9,8 @@ import {
     mapTemplateRow,
     fetchDocumentTemplateForCourseId,
 } from "@/lib/document-template/server";
-import { renderTemplateHtml } from "@/lib/document-template/variables";
+import { renderTemplateHtmlByPageLocale } from "@/lib/document-template/variables";
+import { stampTemplateLocale } from "@/lib/document-template/header-footer";
 import { buildOfferTemplateVariables } from "@/lib/offer/build-offer-variables";
 import { fetchAdmissionRequirementsContext } from "@/lib/offer/admission-requirements-context";
 import { buildChecklistProofsSnapshot } from "@/lib/document-template/checklist-items";
@@ -136,14 +137,16 @@ export async function POST(req: NextRequest) {
             .select(`
                 id,
                 application_no,
+                custom_intake_date,
                 profile_id,
                 submitted_by_profile_id,
                 university_id,
                 student:profile!profile_id ( first_name, last_name, title, date_of_birth ),
                 course:course_id (
                     name,
+                    location,
                     deadline_date,
-                    degree:degree_id ( name, fees, intake_date, intake_starts_on, duration )
+                    degree:degree_id ( name, fees, intake_date, intake_starts_on, duration, location )
                 ),
                 university:profile!university_id ( first_name, last_name )
             `)
@@ -382,9 +385,10 @@ export async function POST(req: NextRequest) {
                 ? buildChecklistProofsSnapshot(requirementsContext, checklistItems)
                 : null;
 
-        const variables = buildOfferTemplateVariables(
+        const buildVariablesFor = (locale: "de" | "en") => buildOfferTemplateVariables(
             {
                 application_no: application.application_no,
+                custom_intake_date: application.custom_intake_date,
                 student: {
                     ...student,
                     title: studentProfile?.title ?? null,
@@ -408,12 +412,17 @@ export async function POST(req: NextRequest) {
                 proofs: checklistProofs,
             },
             {
-                locale: template.locale,
+                locale,
                 templateDates: template.template_dates,
             }
         );
 
-        const renderedBodyHtml = renderTemplateHtml(template.body_html, variables);
+        // Each page is rendered in its own language (page breaks can switch to English/German).
+        const renderedBodyHtml = renderTemplateHtmlByPageLocale(
+            stampTemplateLocale(template.body_html, template.locale),
+            buildVariablesFor,
+            template.locale
+        );
 
         const insertPayload = {
             application_id: validated.application_id,
@@ -514,11 +523,14 @@ export async function POST(req: NextRequest) {
 
 type OfferApplicationCourse = {
     name?: string | null
+    location?: string | null
     degree?: {
         name?: string | null
         fees?: string | null
         intake_date?: string | null
+        intake_starts_on?: string | null
         duration?: string | null
+        location?: string | null
     } | null
 } | null
 

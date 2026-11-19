@@ -28,6 +28,7 @@ type CloneTemplateDialogProps = {
     onOpenChange: (open: boolean) => void
     onTitleChange: (value: string) => void
     onProgramIdsChange: (value: string[]) => void
+    onReassignChange?: (value: string[]) => void
     onView: (template: DocumentTemplateListItem) => void
     onConfirm: () => void
 }
@@ -76,6 +77,7 @@ export const CloneTemplateDialog = memo(function CloneTemplateDialog({
     onOpenChange,
     onTitleChange,
     onProgramIdsChange,
+    onReassignChange,
     onView,
     onConfirm,
 }: CloneTemplateDialogProps) {
@@ -133,6 +135,7 @@ export const CloneTemplateDialog = memo(function CloneTemplateDialog({
                             disabled={isCloning}
                             popoverInModal
                             onChange={onProgramIdsChange}
+                            onReassignChange={onReassignChange}
                         />
 
                         <Button

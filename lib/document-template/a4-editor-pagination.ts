@@ -6,6 +6,10 @@ import {
     mmToPx,
 } from "@/lib/document-template/a4-document"
 import {
+    DOCUMENT_PAGE_LANG_ATTR,
+} from "@/lib/document-template/a4-document"
+import type { TemplateLocale } from "@/lib/document-template/locale"
+import {
     DOCUMENT_TEMPLATE_HEADER_BODY_GAP_PX,
     DOCUMENT_TEMPLATE_HEADER_LOGO_MAX_HEIGHT_PX,
 } from "@/lib/document-template/header-footer"
@@ -90,6 +94,39 @@ export function measureDocumentTemplateRegionContentHeight(
             : element
 
     return Math.max(region.offsetHeight, region.scrollHeight, region.getBoundingClientRect().height)
+}
+
+/**
+ * Total height of a measure container that stacks several bottom regions
+ * (signature + stamp block, then footer). `measureDocumentTemplateRegionContentHeight`
+ * only looks at the FIRST child, which silently dropped the footer from the
+ * reserved space and let body text run under it.
+ */
+export function measureDocumentTemplateStackedRegionsHeight(
+    container: HTMLElement | null
+): number {
+    if (!container) {
+        return 0
+    }
+
+    const children = Array.from(container.children).filter(
+        (child): child is HTMLElement => child instanceof HTMLElement
+    )
+
+    if (children.length === 0) {
+        return 0
+    }
+
+    return children.reduce((total, child) => {
+        const style = window.getComputedStyle(child)
+        const margins =
+            (Number.parseFloat(style.marginTop) || 0) + (Number.parseFloat(style.marginBottom) || 0)
+        return (
+            total +
+            Math.max(child.offsetHeight, child.scrollHeight, child.getBoundingClientRect().height) +
+            margins
+        )
+    }, 0)
 }
 
 export function resolveEditorRegionHeights(options: {
@@ -1869,4 +1906,41 @@ export function applyEditorVisualPageFlow(
         flowBlocks,
         blockElements,
     }
+}
+
+/**
+ * Language of every visual page in the editor. A page break with `data-page-lang`
+ * switches the language from the page that starts after it (until the next switch).
+ */
+export function resolveEditorPageLocales(options: {
+    proseMirror: HTMLElement
+    layoutRoot: HTMLElement
+    sheetLayout: A4SheetLayout
+    pageCount: number
+    templateLocale: TemplateLocale
+}): TemplateLocale[] {
+    const { proseMirror, layoutRoot, sheetLayout, pageCount, templateLocale } = options
+    const rootTop = layoutRoot.getBoundingClientRect().top
+    const switchAtPage = new Map<number, TemplateLocale>()
+
+    proseMirror
+        .querySelectorAll<HTMLElement>(`.${DOCUMENT_PAGE_BREAK_CLASS}[${DOCUMENT_PAGE_LANG_ATTR}]`)
+        .forEach((element) => {
+            const lang = element.getAttribute(DOCUMENT_PAGE_LANG_ATTR)
+            if (lang !== "de" && lang !== "en") return
+            // The break element is stretched to the bottom of its page: content after it
+            // starts on the next page.
+            const y = element.getBoundingClientRect().bottom - rootTop + 1
+            const pageIndex = Math.max(0, getPageIndexForLayoutY(y, sheetLayout))
+            switchAtPage.set(pageIndex, lang)
+        })
+
+    const locales: TemplateLocale[] = []
+    let current = templateLocale
+    for (let index = 0; index < Math.max(1, pageCount); index += 1) {
+        // Page 0 is always the template language.
+        if (index > 0) current = switchAtPage.get(index) ?? current
+        locales.push(current)
+    }
+    return locales
 }

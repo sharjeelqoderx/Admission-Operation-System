@@ -36,6 +36,7 @@ const APPLICATION_DETAIL_RELATIONS = `
         application_no,
         status,
         created_at,
+        custom_intake_date,
         profile_id,
         submitted_by_profile_id,
         university_id,
@@ -53,12 +54,14 @@ const APPLICATION_DETAIL_RELATIONS = `
         course:course_id (
             id,
             name,
+            location,
             deadline_date,
             degree:degree_id (
                 id,
                 name,
                 fees,
                 intake_date,
+                intake_starts_on,
                 study_mode,
                 duration,
                 location,

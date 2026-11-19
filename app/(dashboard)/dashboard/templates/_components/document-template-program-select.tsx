@@ -1,8 +1,8 @@
 "use client"
 
-import { memo, useCallback, useMemo } from "react"
+import { memo, useCallback, useEffect, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Check, ChevronsUpDown, X } from "lucide-react"
+import { ArrowRightLeft, Check, ChevronsUpDown, X } from "lucide-react"
 import { Typography } from "@/components/shared/Typography"
 import { PanelSkeleton } from "@/components/shared/page-skeleton"
 import { ErrorView } from "@/components/shared/error-view"
@@ -29,6 +29,11 @@ type DocumentTemplateProgramSelectProps = {
     /** Keep popover width aligned with the field; allow vertical overflow (e.g. inside dialogs). */
     popoverInModal?: boolean
     onChange: (programIds: string[]) => void
+    /**
+     * Reports the selected programs that currently belong to ANOTHER template. Saving
+     * with these ids moves them here (the other template is kept, just unlinked).
+     */
+    onReassignChange?: (reassignProgramIds: string[]) => void
 }
 
 function mergeProgramOptions(
@@ -92,6 +97,7 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
     disabled = false,
     popoverInModal = false,
     onChange,
+    onReassignChange,
 }: DocumentTemplateProgramSelectProps) {
     const programOptionsQuery = useQuery({
         queryKey: [...DOCUMENT_TEMPLATE_PROGRAM_OPTIONS_QUERY_KEY, excludeTemplateId ?? "new"],
@@ -118,16 +124,21 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
         [options, value]
     )
 
+    const reassignOptions = useMemo(
+        () => selectedOptions.filter((option) => option.assigned_to_other_template),
+        [selectedOptions]
+    )
+
+    useEffect(() => {
+        onReassignChange?.(reassignOptions.map((option) => option.id))
+    }, [onReassignChange, reassignOptions])
+
     const emptyOptionsMessage = useMemo(() => {
         if (value.length > 0) {
             return "No additional programs available"
         }
 
-        if (excludeTemplateId) {
-            return "No programs linked yet. Every active program may already belong to another template."
-        }
-
-        return "Every active program is already linked to another offer template. Edit an existing template to manage assignments."
+        return "No active programs found."
     }, [excludeTemplateId, value.length])
 
     const toggleProgram = useCallback(
@@ -167,8 +178,9 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                     Offer programs
                 </Typography>
                 <Typography as="p" font="small" className="text-muted-foreground">
-                    One template can power multiple programs. Each program can still only belong
-                    to one offer template.
+                    One template can power multiple programs. A program belongs to one offer
+                    template at a time — pick one that is already used elsewhere to move it here
+                    (the other template is kept, it just loses that program).
                 </Typography>
             </div>
 
@@ -260,7 +272,17 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                                                     >
                                                         {option.label}
                                                     </Typography>
-                                                    {option.is_assigned ? (
+                                                    {option.assigned_to_other_template ? (
+                                                        <Typography
+                                                            as="span"
+                                                            className="flex items-center gap-1 text-[11px] text-amber-700"
+                                                        >
+                                                            <ArrowRightLeft className="size-3" />
+                                                            {option.assigned_template_title
+                                                                ? `Used by “${option.assigned_template_title}” — select to reassign`
+                                                                : "Used by another template — select to reassign"}
+                                                        </Typography>
+                                                    ) : option.is_assigned ? (
                                                         <Typography
                                                             as="span"
                                                             className="block text-[11px] text-muted-foreground"
@@ -279,6 +301,20 @@ export const DocumentTemplateProgramSelect = memo(function DocumentTemplateProgr
                             )}
                         </PopoverContent>
                     </Popover>
+
+                    {reassignOptions.length > 0 ? (
+                        <div className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                            <ArrowRightLeft className="mt-0.5 size-3.5 shrink-0" />
+                            <span>
+                                On save, {reassignOptions.length === 1 ? "this program moves" : `these ${reassignOptions.length} programs move`} here from{" "}
+                                {[...new Set(reassignOptions.map((o) => o.assigned_template_title ?? "another template"))]
+                                    .map((title) => `“${title}”`)
+                                    .join(", ")}
+                                . {reassignOptions.length === 1 ? "That template" : "Those templates"} will no
+                                longer be used for {reassignOptions.length === 1 ? "it" : "them"}.
+                            </span>
+                        </div>
+                    ) : null}
 
                     {selectedOptions.length > 0 ? (
                         <div className="flex flex-wrap gap-2">

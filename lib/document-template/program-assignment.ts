@@ -100,19 +100,15 @@ export async function fetchDocumentTemplateProgramOptions(
                         Boolean(excludeTemplateId) &&
                         assignment?.template_id === excludeTemplateId
 
-                    if (assignment && !isCurrentTemplate) {
-                        return null
-                    }
-
                     return {
                         id: course.id,
                         label: formatCourseLabel(course),
                         is_assigned: Boolean(assignment),
                         assigned_template_id: assignment?.template_id ?? null,
                         assigned_template_title: assignment?.template_title ?? null,
+                        assigned_to_other_template: Boolean(assignment) && !isCurrentTemplate,
                     }
                 })
-                .filter((option): option is DocumentTemplateProgramOption => option !== null)
         }
 
         throw new Error(assignmentsError.message)
@@ -146,25 +142,23 @@ export async function fetchDocumentTemplateProgramOptions(
         })
     }
 
-    return (courses ?? [])
-        .map((course) => {
-            const assignment = assignedByCourseId.get(course.id)
-            const isCurrentTemplate =
-                Boolean(excludeTemplateId) && assignment?.template_id === excludeTemplateId
+    // Programs that belong to another template stay in the list: they can be
+    // reassigned (the other template is unlinked from them) instead of forcing the
+    // old template to be deleted first.
+    return (courses ?? []).map((course) => {
+        const assignment = assignedByCourseId.get(course.id)
+        const isCurrentTemplate =
+            Boolean(excludeTemplateId) && assignment?.template_id === excludeTemplateId
 
-            if (assignment && !isCurrentTemplate) {
-                return null
-            }
-
-            return {
-                id: course.id,
-                label: formatCourseLabel(course),
-                is_assigned: Boolean(assignment),
-                assigned_template_id: assignment?.template_id ?? null,
-                assigned_template_title: assignment?.template_title ?? null,
-            }
-        })
-        .filter((option): option is DocumentTemplateProgramOption => option !== null)
+        return {
+            id: course.id,
+            label: formatCourseLabel(course),
+            is_assigned: Boolean(assignment),
+            assigned_template_id: assignment?.template_id ?? null,
+            assigned_template_title: assignment?.template_title ?? null,
+            assigned_to_other_template: Boolean(assignment) && !isCurrentTemplate,
+        }
+    })
 }
 
 export async function resolveApplicationCourseId(
@@ -300,12 +294,93 @@ export const fetchProgramSummaryById = fetchCourseSummaryById
 export async function assertCoursesAvailableForTemplate(
     supabase: AppSupabase,
     courseIds: string[],
-    templateId?: string | null
+    templateId?: string | null,
+    reassignCourseIds: string[] = []
 ) {
     const uniqueIds = [...new Set(courseIds.filter(Boolean))]
+    const reassign = new Set(reassignCourseIds)
     for (const courseId of uniqueIds) {
+        if (reassign.has(courseId)) continue
         await assertCourseAvailableForTemplate(supabase, courseId, templateId)
     }
+}
+
+/**
+ * Unlinks a program from every template except `exceptTemplateId`, so it can be
+ * reassigned. The other templates are kept (they simply lose that program).
+ */
+export async function releaseCourseFromOtherTemplates(
+    supabase: AppSupabase,
+    courseId: string,
+    exceptTemplateId?: string | null
+) {
+    let junctionDelete = supabase
+        .from("document_template_course")
+        .delete()
+        .eq("course_id", courseId)
+    if (exceptTemplateId) {
+        junctionDelete = junctionDelete.neq("document_template_id", exceptTemplateId)
+    }
+    const { error: junctionError } = await junctionDelete
+    if (junctionError) throw new Error(junctionError.message)
+
+    let legacyQuery = supabase
+        .from("document_template")
+        .select("id")
+        .eq("course_id", courseId)
+        .eq("is_deleted", false)
+    if (exceptTemplateId) {
+        legacyQuery = legacyQuery.neq("id", exceptTemplateId)
+    }
+    const { data: legacyTemplates, error: legacyError } = await legacyQuery
+    if (legacyError) throw new Error(legacyError.message)
+
+    for (const template of legacyTemplates ?? []) {
+        const { data: remaining } = await supabase
+            .from("document_template_course")
+            .select("course_id")
+            .eq("document_template_id", template.id)
+            .limit(1)
+
+        const { error } = await supabase
+            .from("document_template")
+            .update({
+                course_id: remaining?.[0]?.course_id ?? null,
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", template.id)
+        if (error) throw new Error(error.message)
+    }
+}
+
+/** Unlinks one program from one template (the template itself is kept). */
+export async function unlinkCourseFromTemplate(
+    supabase: AppSupabase,
+    templateId: string,
+    courseId: string
+) {
+    const { error: junctionError } = await supabase
+        .from("document_template_course")
+        .delete()
+        .eq("document_template_id", templateId)
+        .eq("course_id", courseId)
+    if (junctionError) throw new Error(junctionError.message)
+
+    const { data: remaining, error: remainingError } = await supabase
+        .from("document_template_course")
+        .select("course_id")
+        .eq("document_template_id", templateId)
+        .limit(1)
+    if (remainingError) throw new Error(remainingError.message)
+
+    const { error: updateError } = await supabase
+        .from("document_template")
+        .update({
+            course_id: remaining?.[0]?.course_id ?? null,
+            updated_at: new Date().toISOString(),
+        })
+        .eq("id", templateId)
+    if (updateError) throw new Error(updateError.message)
 }
 
 export async function assertCourseAvailableForTemplate(
@@ -333,7 +408,7 @@ export async function assertCourseAvailableForTemplate(
             templateRelation.id !== templateId
         ) {
             throw new Error(
-                `Program is already linked to the "${templateRelation.title}" template. Each program can only have one offer template.`
+                `Program is already linked to the "${templateRelation.title}" template. Use Reassign to move it to this template, or unlink it from the other template first.`
             )
         }
 
@@ -353,7 +428,7 @@ export async function assertCourseAvailableForTemplate(
 
     if (data && data.id !== templateId) {
         throw new Error(
-            `Program is already linked to the "${data.title}" template. Each program can only have one offer template.`
+            `Program is already linked to the "${data.title}" template. Use Reassign to move it to this template, or unlink it from the other template first.`
         )
     }
 }
@@ -364,11 +439,17 @@ export const assertProgramAvailableForTemplate = assertCourseAvailableForTemplat
 export async function syncDocumentTemplateCourses(
     supabase: AppSupabase,
     templateId: string,
-    courseIds: string[]
+    courseIds: string[],
+    options?: { reassignCourseIds?: string[] }
 ) {
     const uniqueIds = [...new Set(courseIds.filter(Boolean))]
+    const reassignIds = (options?.reassignCourseIds ?? []).filter((id) => uniqueIds.includes(id))
 
-    await assertCoursesAvailableForTemplate(supabase, uniqueIds, templateId)
+    await assertCoursesAvailableForTemplate(supabase, uniqueIds, templateId, reassignIds)
+
+    for (const courseId of reassignIds) {
+        await releaseCourseFromOtherTemplates(supabase, courseId, templateId)
+    }
 
     const { error: deleteError } = await supabase
         .from("document_template_course")

@@ -41,6 +41,7 @@ type Props = {
     onTemplateDatesChange: (value: DocumentTemplateDates) => void
     onWatermarkChange: (value: DocumentTemplateWatermark) => void
     onProgramIdsChange: (programIds: string[]) => void
+    onReassignChange?: (reassignProgramIds: string[]) => void
     onSave: () => void
     saveLabel?: string
 }
@@ -65,6 +66,7 @@ export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
     onTemplateDatesChange,
     onWatermarkChange,
     onProgramIdsChange,
+    onReassignChange,
     onSave,
     saveLabel = "Save Template",
 }: Props) {
@@ -120,6 +122,7 @@ export const DocumentTemplateFormView = memo(function DocumentTemplateFormView({
                     disabled={isSaving}
                     popoverInModal
                     onChange={onProgramIdsChange}
+                    onReassignChange={onReassignChange}
                 />
 
                 {formError ? <ErrorView message={formError} /> : null}

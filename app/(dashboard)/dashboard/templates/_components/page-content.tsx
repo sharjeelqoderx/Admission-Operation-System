@@ -109,6 +109,7 @@ function DocumentTemplateListPageView({
     const [templateToClone, setTemplateToClone] = useState<DocumentTemplateListItem | null>(null)
     const [cloneTitle, setCloneTitle] = useState("")
     const [cloneProgramIds, setCloneProgramIds] = useState<string[]>([])
+    const [cloneReassignIds, setCloneReassignIds] = useState<string[]>([])
     const [cloneError, setCloneError] = useState<string | null>(null)
 
     const handleOpenCloneDialog = useCallback((template: DocumentTemplateListItem) => {
@@ -156,6 +157,7 @@ function DocumentTemplateListPageView({
                 template_dates: templateToClone.template_dates,
                 watermark: templateToClone.watermark,
                 course_ids: cloneProgramIds,
+                reassign_course_ids: cloneReassignIds,
             })
             setTemplateToClone(null)
             setCloneTitle("")
@@ -166,7 +168,7 @@ function DocumentTemplateListPageView({
         } catch {
             // Error toast is handled in cloneTemplate.
         }
-    }, [cloneProgramIds, cloneTemplate, cloneTitle, router, templateToClone, templates])
+    }, [cloneProgramIds, cloneReassignIds, cloneTemplate, cloneTitle, router, templateToClone, templates])
 
     const handleViewFromClone = useCallback(
         (template: DocumentTemplateListItem) => {
@@ -269,6 +271,7 @@ function DocumentTemplateListPageView({
                     template={templateToClone}
                     cloneTitle={cloneTitle}
                     cloneProgramIds={cloneProgramIds}
+                    onReassignChange={setCloneReassignIds}
                     cloneError={cloneError}
                     open={templateToClone !== null}
                     isCloning={cloningId !== null}

@@ -17,6 +17,8 @@ type DocumentTemplateA4PageFrameProps = {
     bodyHtml?: string | null
     watermark?: DocumentTemplateWatermark | null
     bodyClassName?: string
+    /** Page language — marks the page for screen readers / hyphenation. */
+    lang?: string
     pageRef?: Ref<HTMLDivElement>
     children?: ReactNode
     className?: string
@@ -29,6 +31,7 @@ export const DocumentTemplateA4PageFrame = memo(function DocumentTemplateA4PageF
     bodyHtml,
     watermark,
     bodyClassName,
+    lang,
     pageRef,
     children,
     className,
@@ -36,6 +39,8 @@ export const DocumentTemplateA4PageFrame = memo(function DocumentTemplateA4PageF
     return (
         <div
             ref={pageRef}
+            lang={lang}
+            data-page-lang={lang}
             className={cn(
                 A4_DOCUMENT_PAGE_CLASS,
                 "relative flex flex-col",

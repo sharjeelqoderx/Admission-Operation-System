@@ -1,16 +1,19 @@
 import { cn } from "@/lib/utils"
 
 import {
-    splitTemplateBodyIntoPages,
+    resolvePageSegmentLocales,
+    splitTemplateBodyIntoPageSegments,
     stripLeadingTrailingPageBreakMarkers,
 } from "@/lib/document-template/a4-document"
-import { paginateBodyHtmlByA4Height } from "@/lib/document-template/a4-pagination"
+import { paginateBodyHtmlByA4HeightWithLocale } from "@/lib/document-template/a4-pagination"
 import {
     getDefaultHeaderContactText,
+    isDefaultHeaderContactText,
     type TemplateLocale,
 } from "@/lib/document-template/locale"
 import {
     buildSignatureStampHtml,
+    localizeSignatureStampHtml,
     DOCUMENT_TEMPLATE_SIGNATURE_STAMP_CLASS,
     DOCUMENT_TEMPLATE_SIGNATURE_STAMP_STYLES,
     parseSignatureStampHtml,
@@ -98,7 +101,12 @@ function extractDocumentRegionBlock(
     }
 }
 
+/** Attribute on the body wrapper: language of the first page (the template language). */
+export const DOCUMENT_TEMPLATE_LOCALE_ATTR = "data-template-locale"
+
 export type DocumentTemplateLayout = {
+    /** Template language stamped on the body wrapper, when present. */
+    locale?: TemplateLocale | null
     headerHtml: string | null
     bodyHtml: string
     signatureStampHtml: string | null
@@ -106,6 +114,8 @@ export type DocumentTemplateLayout = {
 }
 
 export type DocumentTemplatePageSlice = {
+    /** Language of this page (header / signature wording follow it). */
+    locale: TemplateLocale
     headerHtml: string | null
     bodyHtml: string
     signatureStampHtml: string | null
@@ -115,6 +125,8 @@ export type DocumentTemplatePageSlice = {
 export type DocumentTemplateHeaderFields = {
     logoUrl: string
     contactText: string
+    /** Contact text for pages in the *other* language (falls back to that language's default). */
+    contactTextAlt?: string
 }
 
 export type DocumentTemplateFooterFields = {
@@ -223,12 +235,62 @@ export function buildHeaderHtml(fields: DocumentTemplateHeaderFields): string {
         ? `<img data-header-logo src="${escapeHtml(fields.logoUrl.trim())}" alt="University logo" class="${DOCUMENT_TEMPLATE_HEADER_LOGO_CLASS}" style="max-height:${DOCUMENT_TEMPLATE_HEADER_LOGO_MAX_HEIGHT_PX}px;width:auto;object-fit:contain;display:block;" />`
         : `<span class="document-template-header-logo-placeholder" data-header-logo aria-hidden="true"></span>`
 
-    return `<div class="${DOCUMENT_TEMPLATE_HEADER_CLASS}" data-document-region="header">
+    const altAttr = fields.contactTextAlt?.trim()
+        ? ` data-contact-alt="${escapeHtml(fields.contactTextAlt.trim())}"`
+        : ""
+
+    return `<div class="${DOCUMENT_TEMPLATE_HEADER_CLASS}" data-document-region="header"${altAttr}>
   <div class="${DOCUMENT_TEMPLATE_HEADER_INNER_CLASS}" style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:16px;">
     <div class="${DOCUMENT_TEMPLATE_HEADER_BRAND_CLASS}" style="display:flex;align-items:center;flex:0 0 auto;min-height:${DOCUMENT_TEMPLATE_HEADER_LOGO_MAX_HEIGHT_PX}px;">${logoBlock}</div>
     <span data-header-contact class="${DOCUMENT_TEMPLATE_HEADER_CONTACT_CLASS}" style="display:block;margin:0;margin-left:auto;flex:0 1 auto;align-self:center;text-align:right;font-size:10px;font-weight:400;font-family:Arial,Helvetica,sans-serif;color:${DOCUMENT_TEMPLATE_HEADER_CONTACT_COLOR};line-height:1.4;white-space:nowrap;">${textToHtmlParagraph(fields.contactText)}</span>
   </div>
 </div>`
+}
+
+/** Contact text shown in the header of a page written in `pageLocale`. */
+export function resolveHeaderContactTextForLocale(
+    fields: DocumentTemplateHeaderFields,
+    pageLocale: TemplateLocale,
+    templateLocale: TemplateLocale
+): string {
+    if (pageLocale === templateLocale) return fields.contactText
+    return (
+        fields.contactTextAlt?.trim() ||
+        (isDefaultHeaderContactText(fields.contactText)
+            ? getDefaultHeaderContactText(pageLocale)
+            : fields.contactText)
+    )
+}
+
+/** Re-renders a stored header block for a page in another language. */
+export function localizeHeaderHtml(
+    html: string | null,
+    pageLocale: TemplateLocale,
+    templateLocale: TemplateLocale
+): string | null {
+    if (!html || pageLocale === templateLocale) return html
+    const fields = parseHeaderHtml(html)
+    if (!fields) return html
+    return buildHeaderHtml({
+        ...fields,
+        contactText: resolveHeaderContactTextForLocale(fields, pageLocale, templateLocale),
+    })
+}
+
+/** Header + signature block for one page, in that page's language. */
+export function localizePageChrome(
+    chrome: { headerHtml: string | null; signatureStampHtml: string | null },
+    pageLocale: TemplateLocale,
+    templateLocale: TemplateLocale
+): { headerHtml: string | null; signatureStampHtml: string | null } {
+    return {
+        headerHtml: localizeHeaderHtml(chrome.headerHtml, pageLocale, templateLocale),
+        signatureStampHtml: localizeSignatureStampHtml(
+            chrome.signatureStampHtml,
+            pageLocale,
+            templateLocale
+        ),
+    }
 }
 
 export function buildFooterHtml(fields: DocumentTemplateFooterFields): string {
@@ -263,9 +325,12 @@ export function parseHeaderHtml(html: string): DocumentTemplateHeaderFields | nu
         /data-header-contact[^>]*>([\s\S]*?)<\/(?:p|span)>/i
     )
 
+    const altMatch = normalized.match(/\bdata-contact-alt="([^"]*)"/i)
+
     return {
         logoUrl: extractHeaderLogoUrl(normalized),
         contactText: contactMatch ? stripHtml(contactMatch[1]) : DEFAULT_HEADER_FIELDS.contactText,
+        contactTextAlt: altMatch ? stripHtml(altMatch[1]) || undefined : undefined,
     }
 }
 
@@ -306,6 +371,7 @@ export function parseDocumentLayout(fullHtml: string): DocumentTemplateLayout {
     const normalized = fullHtml.trim()
     if (!normalized) {
         return {
+            locale: null,
             headerHtml: null,
             bodyHtml: "",
             signatureStampHtml: null,
@@ -356,6 +422,10 @@ export function parseDocumentLayout(fullHtml: string): DocumentTemplateLayout {
     const bodyHtml = stripLeadingTrailingPageBreakMarkers(
         bodyBlock ? bodyBlock.innerHtml : remaining
     )
+    const localeMatch = bodyBlock?.fullBlock
+        .slice(0, bodyBlock.fullBlock.indexOf(">") + 1)
+        .match(new RegExp(`${DOCUMENT_TEMPLATE_LOCALE_ATTR}=["'](de|en)["']`, "i"))
+    const locale = (localeMatch?.[1]?.toLowerCase() as TemplateLocale | undefined) ?? null
 
     if (headerHtml) {
         const headerFields = parseHeaderHtml(headerHtml)
@@ -371,7 +441,7 @@ export function parseDocumentLayout(fullHtml: string): DocumentTemplateLayout {
         }
     }
 
-    return { headerHtml, bodyHtml, signatureStampHtml, footerHtml }
+    return { locale, headerHtml, bodyHtml, signatureStampHtml, footerHtml }
 }
 
 export function composeDocumentLayout(layout: DocumentTemplateLayout): string {
@@ -383,8 +453,9 @@ export function composeDocumentLayout(layout: DocumentTemplateLayout): string {
 
     const body = stripLeadingTrailingPageBreakMarkers(layout.bodyHtml)
     if (body) {
+        const localeAttr = layout.locale ? ` ${DOCUMENT_TEMPLATE_LOCALE_ATTR}="${layout.locale}"` : ""
         parts.push(
-            `<div class="${DOCUMENT_TEMPLATE_BODY_CLASS}" data-document-region="body">${body}</div>`
+            `<div class="${DOCUMENT_TEMPLATE_BODY_CLASS}" data-document-region="body"${localeAttr}>${body}</div>`
         )
     }
 
@@ -399,14 +470,30 @@ export function composeDocumentLayout(layout: DocumentTemplateLayout): string {
     return parts.join("\n")
 }
 
-export function splitTemplateLayoutIntoPages(fullHtml: string): DocumentTemplatePageSlice[] {
+/** Records the template language on the body wrapper so downstream renderers know page 1's language. */
+export function stampTemplateLocale(fullHtml: string, locale: TemplateLocale): string {
+    if (!fullHtml.trim()) return fullHtml
     const layout = parseDocumentLayout(fullHtml)
-    const bodyPages = splitTemplateBodyIntoPages(layout.bodyHtml)
+    if (layout.locale === locale) return fullHtml
+    return composeDocumentLayout({ ...layout, locale })
+}
 
-    return bodyPages.map((bodyHtml) => ({
-        headerHtml: layout.headerHtml,
-        bodyHtml,
-        signatureStampHtml: layout.signatureStampHtml,
+export function splitTemplateLayoutIntoPages(
+    fullHtml: string,
+    templateLocale: TemplateLocale = "en"
+): DocumentTemplatePageSlice[] {
+    const layout = parseDocumentLayout(fullHtml)
+    const segments = splitTemplateBodyIntoPageSegments(layout.bodyHtml)
+    const locales = resolvePageSegmentLocales(segments, templateLocale)
+
+    return segments.map((segment, index) => ({
+        locale: locales[index],
+        ...localizePageChrome(
+            { headerHtml: layout.headerHtml, signatureStampHtml: layout.signatureStampHtml },
+            locales[index],
+            templateLocale
+        ),
+        bodyHtml: segment.html,
         footerHtml: layout.footerHtml,
     }))
 }
@@ -421,29 +508,30 @@ type PaginateTemplateLayoutOptions = {
  * Splits a full template (header / body / footer) into fixed A4 page slices.
  * Manual page breaks are honoured first; each segment that still exceeds one
  * page is further split by measured block height so overflow starts on a new page.
+ * Each slice carries its page language; header/signature wording is localized to it.
  */
 export function paginateTemplateLayoutByA4Height(
     fullHtml: string,
-    options: PaginateTemplateLayoutOptions
+    options: PaginateTemplateLayoutOptions,
+    templateLocale: TemplateLocale = "en"
 ): DocumentTemplatePageSlice[] {
     const layout = parseDocumentLayout(fullHtml)
-    const bodyPages = paginateBodyHtmlByA4Height(layout.bodyHtml, options)
+    const bodyPages = paginateBodyHtmlByA4HeightWithLocale(layout.bodyHtml, options, templateLocale)
+
+    const toSlice = (bodyHtml: string, locale: TemplateLocale): DocumentTemplatePageSlice => ({
+        locale,
+        ...localizePageChrome(
+            { headerHtml: layout.headerHtml, signatureStampHtml: layout.signatureStampHtml },
+            locale,
+            templateLocale
+        ),
+        bodyHtml,
+        footerHtml: layout.footerHtml,
+    })
 
     if (bodyPages.length === 0) {
-        return [
-            {
-                headerHtml: layout.headerHtml,
-                bodyHtml: "",
-                signatureStampHtml: layout.signatureStampHtml,
-                footerHtml: layout.footerHtml,
-            },
-        ]
+        return [toSlice("", templateLocale)]
     }
 
-    return bodyPages.map((bodyHtml) => ({
-        headerHtml: layout.headerHtml,
-        bodyHtml,
-        signatureStampHtml: layout.signatureStampHtml,
-        footerHtml: layout.footerHtml,
-    }))
+    return bodyPages.map((page) => toSlice(page.html, page.locale))
 }

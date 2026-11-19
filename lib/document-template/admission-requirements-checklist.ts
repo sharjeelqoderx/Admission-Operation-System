@@ -94,7 +94,14 @@ export function buildLocalizedChecklistHtml(
     return buildAdmissionRequirementsChecklistHtml(evaluations)
 }
 
-export function buildAdmissionRequirementsChecklistPreviewHtml(locale: ChecklistLocale = "en") {
+/**
+ * Sample checklist for previews. Uses the template's own checklist rows when it has
+ * some (a Bachelor template previously always previewed the 6-row Master list).
+ */
+export function buildAdmissionRequirementsChecklistPreviewHtml(
+    locale: ChecklistLocale = "en",
+    templateItemIds?: AdmissionRequirementId[] | null
+) {
     return buildLocalizedChecklistHtml(
         {
             paymentStatus: "CONFIRMED",
@@ -109,14 +116,17 @@ export function buildAdmissionRequirementsChecklistPreviewHtml(locale: Checklist
         },
         {
             locale,
-            itemIds: [
-                "tuition_payment",
-                "bachelor_authentication",
-                "entrance_qualification",
-                "aps_examination",
-                "work_experience",
-                "english_b2",
-            ],
+            itemIds:
+                templateItemIds && templateItemIds.length > 0
+                    ? templateItemIds
+                    : [
+                          "tuition_payment",
+                          "bachelor_authentication",
+                          "entrance_qualification",
+                          "aps_examination",
+                          "work_experience",
+                          "english_b2",
+                      ],
         }
     )
 }

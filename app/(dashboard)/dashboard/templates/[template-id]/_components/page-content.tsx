@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { fetchDocumentTemplate } from "@/lib/document-template/client"
 import { documentTemplateQueryKey } from "@/lib/document-template/query-cache"
 import { DocumentTemplateAttachedPrograms } from "../../_components/document-template-attached-programs"
+import { useUnlinkTemplateProgram } from "../../_components/use-unlink-template-program"
 import { DocumentTemplateDetailError } from "../../_components/document-template-detail-error"
 import { DocumentTemplatePreview } from "../../_components/document-template-preview"
 
@@ -28,6 +29,8 @@ export const ViewPageContent = memo(function ViewPageContent({
         queryFn: () => fetchDocumentTemplate(templateId),
         enabled: Boolean(templateId),
     })
+
+    const { unlink: unlinkProgram, unlinkingId } = useUnlinkTemplateProgram(templateId)
 
     const handlePrint = useCallback(() => {
         window.print()
@@ -89,7 +92,11 @@ export const ViewPageContent = memo(function ViewPageContent({
                     </div>
                 </div>
 
-                <DocumentTemplateAttachedPrograms programs={template.courses} />
+                <DocumentTemplateAttachedPrograms
+                    programs={template.courses}
+                    onUnlink={canEditTemplate ? unlinkProgram : undefined}
+                    unlinkingId={unlinkingId}
+                />
 
                 <DocumentTemplatePreview
                     title={template.title}
@@ -97,6 +104,16 @@ export const ViewPageContent = memo(function ViewPageContent({
                     locale={template.locale}
                     templateDates={template.template_dates}
                     watermark={template.watermark}
+                    checklistItems={template.checklist_items}
+                    previewProgram={
+                        template.courses[0]?.name
+                            ? {
+                                  name: template.courses[0].name,
+                                  campus: template.courses[0].location,
+                                  category: template.courses[0].category,
+                              }
+                            : null
+                    }
                     useSampleData
                     printable
                 />

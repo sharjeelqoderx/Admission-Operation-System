@@ -2,7 +2,8 @@ import "server-only"
 
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
-import { extractTemplateVariables, renderTemplateHtml } from "@/lib/document-template/variables"
+import { extractTemplateVariables, renderTemplateHtmlByPageLocale } from "@/lib/document-template/variables"
+import { stampTemplateLocale } from "@/lib/document-template/header-footer"
 import { normalizeTemplateLocale } from "@/lib/document-template/locale"
 import { parseDocumentTemplateDates } from "@/lib/document-template/date-variables"
 import {
@@ -60,6 +61,7 @@ export async function renderOfferBodyHtml(
         application: {
             id: string
             application_no?: string | null
+            custom_intake_date?: string | null
             profile_id: string
             student?: ProfileRelation | ProfileRelation[] | null
             course?: OfferApplicationContext["course"]
@@ -81,11 +83,12 @@ export async function renderOfferBodyHtml(
             .eq("is_deleted", false)
             .maybeSingle()
 
+        templateLocale = normalizeTemplateLocale(templateRow?.locale)
+
         if (templateRow?.body_html?.trim()) {
-            sourceHtml = templateRow.body_html
+            sourceHtml = stampTemplateLocale(templateRow.body_html, templateLocale)
         }
 
-        templateLocale = normalizeTemplateLocale(templateRow?.locale)
         templateDates = parseDocumentTemplateDates(templateRow?.template_dates)
 
         templateChecklistProfile =
@@ -133,43 +136,49 @@ export async function renderOfferBodyHtml(
         templateChecklistProfile,
     })
 
-    const variables = buildOfferTemplateVariables(
-        {
-            application_no: params.application.application_no,
-            student: student
-                ? {
-                      ...student,
-                      title: studentProfile?.title ?? null,
-                      date_of_birth: studentProfile?.date_of_birth ?? null,
-                      street_1: studentRecord?.street_1 ?? null,
-                      street_2: studentRecord?.street_2 ?? null,
-                      street_3: studentRecord?.street_3 ?? null,
-                      post_code: studentRecord?.post_code ?? null,
-                      address: studentRecord?.address ?? null,
-                      city: studentRecord?.city ?? null,
-                      state: studentRecord?.state ?? null,
-                      country: studentRecord?.country ?? null,
-                      zip_code: studentRecord?.zip_code ?? null,
-                  }
-                : null,
-            course: params.application.course,
-            university,
-        },
-        requirementsContext,
-        {
-            itemIds: resolvedChecklistItems,
-            proofs: parseChecklistProofs(params.checklistProofs),
-        },
-        {
-            locale: templateLocale,
-            issueDate: params.createdAt,
-            templateDates,
-        }
-    )
+    const buildVariablesFor = (locale: "de" | "en") => {
+        const variables = buildOfferTemplateVariables(
+            {
+                application_no: params.application.application_no,
+                custom_intake_date: params.application.custom_intake_date,
+                student: student
+                    ? {
+                          ...student,
+                          title: studentProfile?.title ?? null,
+                          date_of_birth: studentProfile?.date_of_birth ?? null,
+                          street_1: studentRecord?.street_1 ?? null,
+                          street_2: studentRecord?.street_2 ?? null,
+                          street_3: studentRecord?.street_3 ?? null,
+                          post_code: studentRecord?.post_code ?? null,
+                          address: studentRecord?.address ?? null,
+                          city: studentRecord?.city ?? null,
+                          state: studentRecord?.state ?? null,
+                          country: studentRecord?.country ?? null,
+                          zip_code: studentRecord?.zip_code ?? null,
+                      }
+                    : null,
+                course: params.application.course,
+                university,
+            },
+            requirementsContext,
+            {
+                itemIds: resolvedChecklistItems,
+                proofs: parseChecklistProofs(params.checklistProofs),
+            },
+            {
+                locale,
+                issueDate: params.createdAt,
+                templateDates,
+            }
+        )
 
-    if (params.createdAt) {
-        variables.issue_date = formatIssueDate(params.createdAt, templateLocale)
+        if (params.createdAt) {
+            variables.issue_date = formatIssueDate(params.createdAt, locale)
+        }
+
+        return variables
     }
 
-    return renderTemplateHtml(sourceHtml, variables)
+    // Each page is rendered in its own language (page breaks can switch to English/German).
+    return renderTemplateHtmlByPageLocale(sourceHtml, buildVariablesFor, templateLocale)
 }

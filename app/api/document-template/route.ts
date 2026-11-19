@@ -5,6 +5,7 @@ import {
     syncDocumentTemplateCourses,
 } from "@/lib/document-template/program-assignment"
 import { loadMappedDocumentTemplate } from "@/lib/document-template/server"
+import { stampTemplateLocale } from "@/lib/document-template/header-footer"
 import { extractTemplateVariables } from "@/lib/document-template/variables"
 import { DocumentTemplateFormSchema } from "@/types/schemas/document-template"
 import { fetchDocumentTemplatesForPage } from "@/lib/document-template/server"
@@ -45,7 +46,9 @@ export async function POST(req: NextRequest) {
 
         const json = await req.json()
         const validated = DocumentTemplateFormSchema.parse(json)
-        const variables = extractTemplateVariables(validated.body_html)
+        // Record the template language on the body so offers / print know page 1's language.
+        const bodyHtml = stampTemplateLocale(validated.body_html, validated.locale)
+        const variables = extractTemplateVariables(bodyHtml)
         const courseIds = resolveLinkedCourseIds(validated) ?? []
 
         if (courseIds.length === 0) {
@@ -59,7 +62,7 @@ export async function POST(req: NextRequest) {
             .from("document_template")
             .insert({
                 title: validated.title,
-                body_html: validated.body_html,
+                body_html: bodyHtml,
                 variables,
                 locale: validated.locale,
                 template_dates: validated.template_dates ?? {},
@@ -78,7 +81,9 @@ export async function POST(req: NextRequest) {
         }
 
         try {
-            await syncDocumentTemplateCourses(supabase, data.id, courseIds)
+            await syncDocumentTemplateCourses(supabase, data.id, courseIds, {
+                reassignCourseIds: validated.reassign_course_ids,
+            })
         } catch (syncError) {
             await supabase.from("document_template").delete().eq("id", data.id)
             const message =

@@ -39,6 +39,7 @@ export type DocumentTemplateListLogicProps = {
         template_dates: DocumentTemplateDates
         watermark: DocumentTemplateWatermark
         course_ids: string[]
+        reassign_course_ids?: string[]
     }) => Promise<DocumentTemplateListItem | null>
     clearDeleteError: () => void
     refetchTemplates: () => void
@@ -132,6 +133,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplateListLogi
                 template_dates: DocumentTemplateDates
                 watermark: DocumentTemplateWatermark
                 course_ids: string[]
+                reassign_course_ids?: string[]
             }) => {
                 const res = await fetch("/api/document-template", {
                     method: "POST",
@@ -183,6 +185,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplateListLogi
                 template_dates: DocumentTemplateDates
                 watermark: DocumentTemplateWatermark
                 course_ids: string[]
+                reassign_course_ids?: string[]
             }) => {
                 setCloningId(payload.sourceId)
                 const toastId = toast.loading("Cloning template...")
@@ -195,6 +198,7 @@ export function withDocumentTemplatePageLogic<P extends DocumentTemplateListLogi
                         template_dates: payload.template_dates,
                         watermark: payload.watermark,
                         course_ids: payload.course_ids,
+                        reassign_course_ids: payload.reassign_course_ids,
                     })
                     toast.success("Document template cloned successfully.", { id: toastId })
                     return response.data

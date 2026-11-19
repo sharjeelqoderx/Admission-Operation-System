@@ -1,35 +1,101 @@
 import {
     A4_DOCUMENT_PRINT_STYLES,
-    A4_PAGE_HEIGHT_PX,
     A4_PAGE_PADDING_Y_MM,
     A4_DOCUMENT_CONTENT_CLASS,
     mmToPx,
     buildDocumentPageWatermarkHtml,
-    splitTemplateBodyIntoPages,
+    buildPageBreakMarkerHtml,
     prepareDocumentBodyHtmlForStaticRender,
+    resolvePageSegmentLocales,
+    splitTemplateBodyIntoPageSegments,
 } from "@/lib/document-template/a4-document"
 import {
     composeDocumentLayout,
+    DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES,
+    localizePageChrome,
     parseDocumentLayout,
 } from "@/lib/document-template/header-footer"
-import { paginateBodyHtmlByA4Height } from "@/lib/document-template/a4-pagination"
+import {
+    DOCUMENT_TEMPLATE_FOOTER_MIN_HEIGHT_PX,
+    measureDocumentTemplateRegionContentHeight,
+    measureDocumentTemplateStackedRegionsHeight,
+} from "@/lib/document-template/a4-editor-pagination"
+import {
+    calculateA4BodySlotHeightPx,
+    paginateBodyHtmlByA4HeightWithLocale,
+} from "@/lib/document-template/a4-pagination"
+import { DOCUMENT_TEMPLATE_SIGNATURE_STAMP_MIN_HEIGHT_PX } from "@/lib/document-template/signature-stamp"
 
 const OFFER_BODY_WIDTH_PX = 794 - mmToPx(15) * 2
-const OFFER_BODY_HEIGHT_PX = A4_PAGE_HEIGHT_PX - mmToPx(A4_PAGE_PADDING_Y_MM) * 2
+/** The standalone print document has no Tailwind prose styles — keep a small reserve so no last line is clipped. */
+const OFFER_PRINT_SAFETY_PX = 24
 
+function measureHiddenHtml(html: string, measure: (el: HTMLElement) => number): number {
+    const holder = document.createElement("div")
+    holder.className = DOCUMENT_TEMPLATE_HEADER_FOOTER_STYLES
+    holder.style.cssText = `position:fixed;left:-10000px;top:0;visibility:hidden;pointer-events:none;width:${OFFER_BODY_WIDTH_PX}px;`
+    holder.innerHTML = html
+    document.body.appendChild(holder)
+    const height = measure(holder)
+    holder.remove()
+    return height
+}
+
+/**
+ * Splits a rendered offer letter into pages. The body slot height accounts for the
+ * header, signature/stamp block and footer that repeat on every page — without that
+ * reserve the last lines of each page were clipped.
+ */
 export function paginateOfferLetterHtml(fullHtml: string): string {
   if (typeof document === "undefined") return fullHtml
 
   const layout = parseDocumentLayout(fullHtml)
-  const pages = paginateBodyHtmlByA4Height(layout.bodyHtml, {
-    containerWidthPx: OFFER_BODY_WIDTH_PX,
-    contentClassName: A4_DOCUMENT_CONTENT_CLASS,
-    maxBodyHeightPx: OFFER_BODY_HEIGHT_PX,
-  })
+  const templateLocale = layout.locale ?? "en"
+  const hasHeader = Boolean(layout.headerHtml)
+  const hasBottom = Boolean(layout.signatureStampHtml || layout.footerHtml)
+
+  const headerHeightPx = hasHeader
+    ? measureHiddenHtml(layout.headerHtml ?? "", measureDocumentTemplateRegionContentHeight)
+    : 0
+  const measuredBottomPx = hasBottom
+    ? measureHiddenHtml(
+        `${layout.signatureStampHtml ?? ""}${layout.footerHtml ?? ""}`,
+        measureDocumentTemplateStackedRegionsHeight
+      )
+    : 0
+  const bottomPx = hasBottom
+    ? Math.max(
+        measuredBottomPx,
+        (layout.signatureStampHtml ? DOCUMENT_TEMPLATE_SIGNATURE_STAMP_MIN_HEIGHT_PX : 0) +
+          (layout.footerHtml ? DOCUMENT_TEMPLATE_FOOTER_MIN_HEIGHT_PX : 0)
+      )
+    : 0
+
+  const maxBodyHeightPx = calculateA4BodySlotHeightPx({
+    hasHeader,
+    hasFooter: hasBottom,
+    headerHeightPx,
+    footerHeightPx: bottomPx,
+    verticalPaddingPx: mmToPx(A4_PAGE_PADDING_Y_MM),
+  }) - OFFER_PRINT_SAFETY_PX
+
+  const pages = paginateBodyHtmlByA4HeightWithLocale(
+    layout.bodyHtml,
+    {
+      containerWidthPx: OFFER_BODY_WIDTH_PX,
+      contentClassName: A4_DOCUMENT_CONTENT_CLASS,
+      maxBodyHeightPx,
+    },
+    templateLocale
+  )
 
   return composeDocumentLayout({
+    locale: layout.locale,
     headerHtml: layout.headerHtml,
-    bodyHtml: pages.join('<div data-page-break="true"></div>'),
+    // Every page keeps its language so the header / signature follow it.
+    bodyHtml: pages
+      .map((page, index) => (index === 0 ? page.html : `${buildPageBreakMarkerHtml(page.locale)}${page.html}`))
+      .join(""),
     signatureStampHtml: layout.signatureStampHtml,
     footerHtml: layout.footerHtml,
   })
@@ -165,21 +231,29 @@ export function buildTemplateOfferLetterHtml(
     const title = options?.title ?? "Offer Letter"
     const signatureHtml = options?.signatureHtml ?? ""
     const layout = parseDocumentLayout(prepareDocumentBodyHtmlForStaticRender(bodyHtml))
-    const pages = splitTemplateBodyIntoPages(layout.bodyHtml)
+    const templateLocale = layout.locale ?? "en"
+    const segments = splitTemplateBodyIntoPageSegments(layout.bodyHtml)
+    const pages = segments.map((segment) => segment.html)
+    const pageLocales = resolvePageSegmentLocales(segments, templateLocale)
 
     const pageSections = pages
         .map((pageBody, index) => {
             const isLastPage = index === pages.length - 1
             const footerHtml = isLastPage ? signatureHtml : ""
-            const headerBlock = layout.headerHtml ?? ""
+            const chrome = localizePageChrome(
+                { headerHtml: layout.headerHtml, signatureStampHtml: layout.signatureStampHtml },
+                pageLocales[index],
+                templateLocale
+            )
+            const headerBlock = chrome.headerHtml ?? ""
             const documentFooterBlock = layout.footerHtml ?? ""
 
-            return `<section class="a4-page">
+            return `<section class="a4-page" lang="${pageLocales[index]}">
                 ${buildDocumentPageWatermarkHtml(options?.watermark)}
                 <div class="page-inner">
                     ${headerBlock}
                     <div class="page-body">${pageBody}${footerHtml}</div>
-                    ${layout.signatureStampHtml ?? ""}
+                    ${chrome.signatureStampHtml ?? ""}
                     ${documentFooterBlock}
                 </div>
             </section>`
